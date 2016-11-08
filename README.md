@@ -13,8 +13,9 @@ The trace contains the following information:
 
 # Requirements
 
+ * Linux (>= 4.1)
  * libradare (somewhat recent)
- * OTF2 (> 2.0)
+ * OTF2 (>= 2.0)
  * libbfd
 
 # Installation
