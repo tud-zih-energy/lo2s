@@ -1,0 +1,22 @@
+MAINTAINERS
+===========
+Current maintainers:
+ * Thomas Ilsche (TU Dresden, ZIH) - thomas.ilsche@tu-dresden.de
+ * Mario Bielert (TU Dresden, ZIH) - mario.bielert@tu-dresden.de
+ * Robert Schoene (TU Dresden, ZIH) - robert.schoene@tu-dresden.de
+
+
+ACKNOWLEDGEMENTS
+================
+This software was developed with support from the following projects:
+
+     HAEC - Highly Adaptive Energy-Efficient Computing
+     Phase II (2015-2019)
+     Subproject A04: Analysis of Applications on a High Performance
+                     - Low Energy Computer
+     Visit http://tu-dresden.de/sfb912 for more information.
+
+     Score-E - Scalable Tools for the Analysis and Optimization
+               of Energy Consumption in HPC
+     BMBF 01IH13001B
+     Visit http://www.vi-hps.org/projects/score-e for more information.
