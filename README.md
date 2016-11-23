@@ -17,6 +17,7 @@ The trace contains the following information:
  * libradare (somewhat recent)
  * OTF2 (>= 2.0)
  * libbfd
+ * boost (1.62, older versions might also work)
 
 # Installation
 

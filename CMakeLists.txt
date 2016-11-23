@@ -5,6 +5,17 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
 
+# Intialize git submodules if not done already
+file(GLOB SUBMODULE_FILES "lib/otf2xx/*")
+list(LENGTH SUBMODULE_FILES COUNT_OTF2XX)
+file(GLOB SUBMODULE_FILES "lib/nitro/*")
+list(LENGTH SUBMODULE_FILES COUNT_NITRO)
+if(${COUNT_OTF2XX} EQUAL 0 OR ${COUNT_NITRO} EQUAL 0)
+    message(STATUS "Initializing git submodule")
+    execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+    execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+endif()
+
 include(lib/otf2xx/OTF2XX.cmake)
 
 include(lib/nitro/Nitro.cmake)
