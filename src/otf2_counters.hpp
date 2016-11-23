@@ -26,7 +26,6 @@
 #include "time.hpp"
 
 #include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
 
 #include <cstdint>
 
@@ -53,7 +52,7 @@ private:
     otf2::definition::metric_instance metric_instance_;
     std::array<perf_counter, 5> counters_;
     std::vector<otf2::event::metric::value_container> values_;
-    fs::ifstream proc_stat_;
+    boost::filesystem::ifstream proc_stat_;
 };
 }
 

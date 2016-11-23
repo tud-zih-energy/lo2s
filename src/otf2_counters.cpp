@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -33,7 +33,8 @@ otf2_counters::otf2_counters(pid_t pid, pid_t tid, otf2_trace& trace,
                { tid, get_mem_event(MEM_LEVEL_L2), PERF_TYPE_RAW },
                { tid, get_mem_event(MEM_LEVEL_L3), PERF_TYPE_RAW },
                { tid, get_mem_event(MEM_LEVEL_RAM), PERF_TYPE_RAW } } },
-  proc_stat_(fs::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) / "stat")
+  proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
+             "stat")
 {
     auto mc = metric_instance_.metric_class();
     assert(counters_.size() <= mc.size());
