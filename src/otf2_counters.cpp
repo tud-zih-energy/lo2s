@@ -61,10 +61,10 @@ otf2::definition::metric_class otf2_counters::get_metric_class(otf2_trace& trace
     c.add_member(trace.metric_member("L3", "Level 3 cache accesses",
                                      otf2::common::metric_mode::accumulated_start,
                                      otf2::common::type::Double, "#"));
-    c.add_member(trace.metric_member("ram", "Ram accesses",
+    c.add_member(trace.metric_member("RAM", "Ram accesses",
                                      otf2::common::metric_mode::accumulated_start,
                                      otf2::common::type::Double, "#"));
-    c.add_member(trace.metric_member("cpu", "cpu executing the task",
+    c.add_member(trace.metric_member("CPU", "cpu executing the task",
                                      otf2::common::metric_mode::absolute_last,
                                      otf2::common::type::int64, "cpuid"));
     c.add_member(trace.metric_member("time_enabled", "time event active",
