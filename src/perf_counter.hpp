@@ -40,6 +40,11 @@ public:
     perf_counter& operator=(const perf_counter&) = delete;
     perf_counter& operator=(perf_counter&&) = delete;
 
+    ~perf_counter()
+    {
+        close(fd_);
+    }
+
     double read();
     uint64_t enabled() {
         return previous_.enabled;
