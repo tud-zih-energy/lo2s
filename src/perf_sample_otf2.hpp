@@ -32,6 +32,7 @@
 #include "time.hpp"
 #include "platform.hpp"
 
+#include <otf2xx/chrono/time_point.hpp>
 #include <otf2xx/writer/fwd.hpp>
 
 #include <map>
@@ -87,6 +88,7 @@ private:
     perf_time_converter time_converter_;
 
     bool first_event_ = true;
+    otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 };
 }
 

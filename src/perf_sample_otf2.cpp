@@ -134,6 +134,7 @@ bool perf_sample_otf2::handle(const perf_sample_reader::record_sample_type* samp
 
     writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                          trace_.interrupt_generator().ref());
+    last_time_point_ = tp;
     return false;
 }
 
