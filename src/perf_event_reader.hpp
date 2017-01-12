@@ -24,6 +24,7 @@
 #include "error.hpp"
 #include "log.hpp"
 #include "util.hpp"
+#include "platform.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -31,8 +32,6 @@
 #include <cstdint>
 
 extern "C" {
-#include "mem_event.h"
-
 #include <linux/perf_event.h>
 }
 

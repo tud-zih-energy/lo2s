@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -36,7 +36,7 @@ extern "C" {
 
 namespace lo2s
 {
-perf_counter::perf_counter(pid_t tid, uint64_t config, perf_type_id type)
+perf_counter::perf_counter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -44,6 +44,7 @@ perf_counter::perf_counter(pid_t tid, uint64_t config, perf_type_id type)
     attr.sample_period = 0;
     attr.type = type;
     attr.config = config;
+    attr.config1 = config1;
     // Needed when scaling multiplexed events, and recognize activation phases
     attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
     fd_ = syscall(__NR_perf_event_open, &attr, tid, -1, -1, 0);

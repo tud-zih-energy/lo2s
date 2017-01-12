@@ -25,15 +25,11 @@
 #include "perf_counter.hpp"
 #include "time.hpp"
 
+#include <otf2xx/writer/local.hpp>
+
 #include <boost/filesystem.hpp>
 
 #include <cstdint>
-
-extern "C" {
-#include "mem_levels.h"
-}
-
-#include <otf2xx/writer/local.hpp>
 
 namespace lo2s
 {
@@ -50,7 +46,7 @@ public:
 private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
-    std::array<perf_counter, 5> counters_;
+    std::vector<perf_counter> memory_counters_;
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
 };

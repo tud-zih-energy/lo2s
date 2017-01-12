@@ -30,11 +30,7 @@
 #include "perf_counter.hpp"
 #include "perf_sample_reader.hpp"
 #include "time.hpp"
-
-extern "C" {
-#include "mem_event.h"
-#include "mem_levels.h"
-}
+#include "platform.hpp"
 
 #include <otf2xx/writer/fwd.hpp>
 

@@ -36,7 +36,7 @@ include_directories(include)
 
 set(SOURCE_FILES
         src/main.cpp src/monitor.cpp src/thread_map.cpp src/thread_monitor.cpp
-        src/mem_event.c src/perf_sample_otf2.cpp src/otf2_trace.cpp src/time.cpp src/radare.cpp
+        src/platform.cpp src/perf_sample_otf2.cpp src/otf2_trace.cpp src/time.cpp src/radare.cpp
         src/bfd_resolve.cpp src/pipe.cpp src/address.hpp src/mmap.cpp src/perf_counter.cpp
         src/otf2_counters.hpp src/otf2_counters.cpp src/metric_plugin.cpp src/metric_channel.cpp
         src/metrics.cpp

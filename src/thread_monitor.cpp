@@ -20,8 +20,7 @@
  */
 #include "thread_monitor.hpp"
 #include "log.hpp"
-#include "mem_event.h"
-#include "mem_levels.h"
+#include "platform.hpp"
 #include "monitor.hpp"
 #include "monitor_config.hpp"
 #include "perf_sample_otf2.hpp"

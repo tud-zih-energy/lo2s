@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -25,11 +25,22 @@
  *      Author: rschoene
  */
 
-#ifndef MEM_EVENT_H_
-#define MEM_EVENT_H_
+#ifndef PLATFORM_H_
+#define PLATFORM_H_
+
+#include <string>
+#include <vector>
+
+extern "C" {
+#include <linux/perf_event.h>
+}
 
 /* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
 
+namespace lo2s
+{
+namespace platform
+{
 #ifdef __powerpc__
 #define rmb() asm volatile("sync" : : : "memory")
 #elif defined(__s390__)
@@ -77,57 +88,74 @@
 #error See the kernel source directory: tools/perf/perf.h file
 #endif
 
-int get_latency_load_event(unsigned long long* config, unsigned long long* config1,
-                           int* precise_ip);
-int get_latency_store_event(unsigned long long* config, unsigned long long* config1,
-                            int* precise_ip);
+    enum class vendor
+    {
+        UNKNOWN = -1,
+        INTEL = 1,
+        AMD = 2,
+        IBM = 3,
+        ARM = 4,
+    };
 
-uint64_t get_mem_event(int mem_level);
+    enum class processor
+    {
+        UNKNOWN = -1,
+        PENTIUM_PRO = 1,
+        PENTIUM_II = 2,
+        PENTIUM_III = 3,
+        PENTIUM_4 = 4,
+        PENTIUM_M = 5,
+        COREDUO = 6,
+        CORE2 = 7,
+        NEHALEM = 8,
+        NEHALEM_EX = 9,
+        WESTMERE = 10,
+        WESTMERE_EX = 11,
+        SANDYBRIDGE = 12,
+        ATOM = 13,
+        K7 = 14,
+        K8 = 15,
+        AMD_FAM10H = 16,
+        AMD_FAM11H = 17,
+        AMD_FAM14H = 18,
+        AMD_FAM15H = 19,
+        IVYBRIDGE = 20,
+        KNIGHTSCORNER = 21,
+        SANDYBRIDGE_EP = 22,
+        AMD_FAM16H = 23,
+        IVYBRIDGE_EP = 24,
+        HASWELL = 25,
+        ATOM_CEDARVIEW = 26,
+        ATOM_SILVERMONT = 27,
+        BROADWELL = 28,
+        HASWELL_EP = 29,
+        POWER3 = 103,
+        POWER4 = 104,
+        POWER5 = 105,
+        POWER6 = 106,
+        POWER7 = 107,
+        CORTEX_A8 = 200,
+        CORTEX_A9 = 201,
+        CORTEX_A5 = 202,
+        CORTEX_A15 = 203,
+        ARM1176 = 204,
+    };
 
-#define VENDOR_UNKNOWN -1
-#define VENDOR_INTEL 1
-#define VENDOR_AMD 2
-#define VENDOR_IBM 3
-#define VENDOR_ARM 4
-#define PROCESSOR_UNKNOWN -1
-#define PROCESSOR_PENTIUM_PRO 1
-#define PROCESSOR_PENTIUM_II 2
-#define PROCESSOR_PENTIUM_III 3
-#define PROCESSOR_PENTIUM_4 4
-#define PROCESSOR_PENTIUM_M 5
-#define PROCESSOR_COREDUO 6
-#define PROCESSOR_CORE2 7
-#define PROCESSOR_NEHALEM 8
-#define PROCESSOR_NEHALEM_EX 9
-#define PROCESSOR_WESTMERE 10
-#define PROCESSOR_WESTMERE_EX 11
-#define PROCESSOR_SANDYBRIDGE 12
-#define PROCESSOR_ATOM 13
-#define PROCESSOR_K7 14
-#define PROCESSOR_K8 15
-#define PROCESSOR_AMD_FAM10H 16
-#define PROCESSOR_AMD_FAM11H 17
-#define PROCESSOR_AMD_FAM14H 18
-#define PROCESSOR_AMD_FAM15H 19
-#define PROCESSOR_IVYBRIDGE 20
-#define PROCESSOR_KNIGHTSCORNER 21
-#define PROCESSOR_SANDYBRIDGE_EP 22
-#define PROCESSOR_AMD_FAM16H 23
-#define PROCESSOR_IVYBRIDGE_EP 24
-#define PROCESSOR_HASWELL 25
-#define PROCESSOR_ATOM_CEDARVIEW 26
-#define PROCESSOR_ATOM_SILVERMONT 27
-#define PROCESSOR_BROADWELL 28
-#define PROCESSOR_HASWELL_EP 29
-#define PROCESSOR_POWER3 103
-#define PROCESSOR_POWER4 104
-#define PROCESSOR_POWER5 105
-#define PROCESSOR_POWER6 106
-#define PROCESSOR_POWER7 107
-#define PROCESSOR_CORTEX_A8 200
-#define PROCESSOR_CORTEX_A9 201
-#define PROCESSOR_CORTEX_A5 202
-#define PROCESSOR_CORTEX_A15 203
-#define PROCESSOR_ARM1176 204
+    struct counter_description
+    {
+        counter_description(const std::string& name, perf_type_id type, uint64_t config,
+                            uint64_t config1 = 0)
+        : name(name), type(type), config(config), config1(config1)
+        {
+        }
 
-#endif /* MEM_EVENT_H_ */
+        std::string name;
+        perf_type_id type;
+        uint64_t config;
+        uint64_t config1;
+    };
+
+    std::vector<counter_description> get_mem_events();
+}
+}
+#endif /* PLATFORM_H_ */

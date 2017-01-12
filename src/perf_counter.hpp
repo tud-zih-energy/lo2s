@@ -9,17 +9,19 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef X86_RECORD_OTF2_PERF_COUNTER_HPP
 #define X86_RECORD_OTF2_PERF_COUNTER_HPP
+
+#include <utility>
 
 #include <cinttypes>
 
@@ -34,22 +36,33 @@ namespace lo2s
 class perf_counter
 {
 public:
-    perf_counter(pid_t tid, uint64_t config, perf_type_id type = PERF_TYPE_HARDWARE);
+    perf_counter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1 = 0);
     perf_counter(const perf_counter&) = delete;
-    perf_counter(perf_counter&&) = delete;
+    perf_counter(perf_counter&& other)
+    : fd_(-1), previous_(other.previous_), accumulated_(other.accumulated_)
+    {
+        std::swap(fd_, other.fd_);
+    }
+
     perf_counter& operator=(const perf_counter&) = delete;
+
     perf_counter& operator=(perf_counter&&) = delete;
 
     ~perf_counter()
     {
-        close(fd_);
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
     }
 
     double read();
-    uint64_t enabled() {
+    uint64_t enabled()
+    {
         return previous_.enabled;
     }
-    uint64_t running() {
+    uint64_t running()
+    {
         return previous_.running;
     }
 
