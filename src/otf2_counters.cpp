@@ -35,14 +35,16 @@ otf2_counters::otf2_counters(pid_t pid, pid_t tid, otf2_trace& trace,
 {
     auto mc = metric_instance_.metric_class();
     const auto& mem_events = platform::get_mem_events();
-    memory_counters_.reserve(mem_events.size());
+    counters_.reserve(mem_events.size());
     for (const auto& description : mem_events)
     {
-        memory_counters_.emplace_back(tid, description.type, description.config,
+        counters_.emplace_back(tid, description.type, description.config,
                                       description.config1);
     }
+    counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
+    counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
 
-    assert(memory_counters_.size() <= mc.size());
+    assert(counters_.size() <= mc.size());
 
     values_.resize(mc.size());
     for (std::size_t i = 0; i < mc.size(); i++)
@@ -62,7 +64,14 @@ otf2::definition::metric_class otf2_counters::get_metric_class(otf2_trace& trace
                                          otf2::common::type::Double, "#"));
     }
 
-    c.add_member(trace.metric_member("CPU", "cpu executing the task",
+    c.add_member(trace.metric_member("instructions", "instructions",
+                                     otf2::common::metric_mode::accumulated_start,
+                                     otf2::common::type::Double, "#"));
+    c.add_member(trace.metric_member("cycles", "CPU cycles",
+                                     otf2::common::metric_mode::accumulated_start,
+                                     otf2::common::type::Double, "#"));
+
+    c.add_member(trace.metric_member("CPU", "CPU executing the task",
                                      otf2::common::metric_mode::absolute_last,
                                      otf2::common::type::int64, "cpuid"));
     c.add_member(trace.metric_member("time_enabled", "time event active",
@@ -78,15 +87,15 @@ void otf2_counters::write()
 {
     auto read_time = get_time();
 
-    assert(memory_counters_.size() <= values_.size());
-    for (std::size_t i = 0; i < memory_counters_.size(); i++)
+    assert(counters_.size() <= values_.size());
+    for (std::size_t i = 0; i < counters_.size(); i++)
     {
-        values_[i].set(memory_counters_[i].read());
+        values_[i].set(counters_[i].read());
     }
-    auto index = memory_counters_.size();
+    auto index = counters_.size();
     values_[index++].set(get_task_last_cpu_id(proc_stat_));
-    values_[index++].set(memory_counters_[0].enabled());
-    values_[index].set(memory_counters_[0].running());
+    values_[index++].set(counters_[0].enabled());
+    values_[index].set(counters_[0].running());
 
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(read_time, metric_instance_, values_));

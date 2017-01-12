@@ -46,7 +46,7 @@ public:
 private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
-    std::vector<perf_counter> memory_counters_;
+    std::vector<perf_counter> counters_;
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
 };
