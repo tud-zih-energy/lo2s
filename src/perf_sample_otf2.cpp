@@ -114,6 +114,7 @@ bool perf_sample_otf2::handle(const perf_sample_reader::record_sample_type* samp
     //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
     auto tp = time_converter_(sample->time);
     /*
+    Note: This is the inefficient verison with a fake calling context that we don't use
     otf2::definition::calling_context cctx(cctx_ref(sample),
                                             otf2::definition::region::undefined(),
                                            otf2::definition::source_code_location::undefined(),
@@ -126,6 +127,7 @@ bool perf_sample_otf2::handle(const perf_sample_reader::record_sample_type* samp
         first_event_ = false;
         writer_ << otf2::event::thread_begin(tp - otf2::chrono::time_point::duration(1),
                                              trace_.self_comm(), -1);
+        // TODO: figure out what we actually need to write here to be a correct OTF2 trace...
         // writer_ << otf2::event::thread_team_begin(tp - otf2::chrono::time_point::duration(1),
         //                                          trace_.self_comm());
     }
