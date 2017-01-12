@@ -152,4 +152,11 @@ bool perf_sample_otf2::handle(const perf_sample_reader::record_mmap_type* mmap_e
                          mmap_event->filename);
     return false;
 }
+
+void perf_sample_otf2::end()
+{
+    // get_time() sometims can be in the past :-(
+    writer_ << otf2::event::thread_end(last_time_point_, trace_.self_comm(), -1);
+    // TODO, or thread_team_end?
+}
 }

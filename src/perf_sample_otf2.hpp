@@ -67,6 +67,7 @@ public:
     {
         return writer_.location();
     }
+    void end();
 
 private:
     otf2::definition::calling_context::reference_type

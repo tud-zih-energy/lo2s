@@ -113,10 +113,7 @@ void thread_monitor::run()
         deadline += read_interval;
         std::this_thread::sleep_until(deadline);
     }
-    sample_reader_.writer() << otf2::event::thread_end(get_time(),
-                                                       parent_monitor_.trace().self_comm(), -1);
-    //    sample_reader_.writer() << otf2::event::thread_team_end(get_time(),
-    //                                                            parent_monitor_.trace().self_comm());
+    sample_reader_.end();
     log::debug() << "Monitoring thread finished_";
     finished_ = true;
 }
