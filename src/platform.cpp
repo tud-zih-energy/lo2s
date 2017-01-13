@@ -229,8 +229,8 @@ namespace platform
 
     std::vector<counter_description> get_mem_events()
     {
-        auto processor = detect_processor();
-        switch (processor)
+        auto proc = detect_processor();
+        switch (proc)
         {
         case processor::HASWELL_EP:
             return { { "L1-read", PERF_TYPE_HW_CACHE, PERF_COUNT_HW_CACHE_L1D |
