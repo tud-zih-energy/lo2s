@@ -233,18 +233,24 @@ namespace platform
         switch (proc)
         {
         case processor::HASWELL_EP:
-            return { { "L1-read", PERF_TYPE_HW_CACHE, PERF_COUNT_HW_CACHE_L1D |
-                                                          PERF_COUNT_HW_CACHE_OP_READ << 8 |
-                                                          PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16 },
-                     { "L1-write", PERF_TYPE_HW_CACHE,
-                       PERF_COUNT_HW_CACHE_L1D | PERF_COUNT_HW_CACHE_OP_WRITE << 8 |
-                           PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16 },
-                     { "L2-read", PERF_TYPE_RAW,
-                       0x3f0 }, /*(L2_TRANS:DEMAND_DATA_RD_HIT+L2_TRANS:RFO)*/
-                     { "L2-write", PERF_TYPE_RAW, 0x10f0 }, /*(L2_TRANS:L1D_WB)*/
-                     { "L3-read", PERF_TYPE_RAW, 0x5301b7, 0x3fb84101b3 },
-                     { "L3-write", PERF_TYPE_RAW, 0x40f0 }, /*(L2_TRANS:L2_WB)*/
-                     { "RAM", PERF_TYPE_RAW, 0x5301bb, 0x3fb84001b3 } };
+            return {
+                { "L1-read", PERF_TYPE_HW_CACHE, PERF_COUNT_HW_CACHE_L1D |
+                                                     PERF_COUNT_HW_CACHE_OP_READ << 8 |
+                                                     PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16 },
+                { "L1-write", PERF_TYPE_HW_CACHE, PERF_COUNT_HW_CACHE_L1D |
+                                                      PERF_COUNT_HW_CACHE_OP_WRITE << 8 |
+                                                      PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16 },
+                { "L2", PERF_TYPE_HW_CACHE,
+                  ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+                   (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)) },
+                // { "L2-read", PERF_TYPE_RAW,
+                //   0x3f0 }, /*(L2_TRANS:DEMAND_DATA_RD_HIT+L2_TRANS:RFO)*/
+                // { "L2-write", PERF_TYPE_RAW, 0x10f0 }, /*(L2_TRANS:L1D_WB)*/
+                { "L3", PERF_TYPE_RAW, 0x5301b7, 0x3fb84101b3 },
+                // { "L3-read", PERF_TYPE_RAW, 0x5301b7, 0x3fb84101b3 },
+                // { "L3-write", PERF_TYPE_RAW, 0x40f0 }, /*(L2_TRANS:L2_WB)*/
+                { "RAM", PERF_TYPE_RAW, 0x5301bb, 0x3fb84001b3 }
+            };
         default:
             return { { "L2", PERF_TYPE_RAW, 0xff24 },
                      { "L3", PERF_TYPE_RAW, 0x4f26 },
