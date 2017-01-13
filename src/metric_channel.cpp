@@ -57,11 +57,13 @@ metric_channel::metric_channel(const char* name, const char* description, const 
         unit_ = unit;
     }
 
-    metric_.metric_class().add_member(
+    auto mc = metric_.metric_class();
+
+    mc.add_member(
         trace.metric_member(name_, description_, static_cast<otf2::common::metric_mode>(mode_),
                             convert_type(value_type_), unit_));
 
-    values_[0].metric = metric_.metric_class()[0];
+    values_[0].metric = mc[0];
 }
 
 const std::string& metric_channel::name() const
