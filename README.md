@@ -22,11 +22,12 @@ The trace contains the following information:
 
 # Requirements for running
 
- * kernel.perf_event_paranoid should be less or equal than 1
-   sudo sysctl kernel.perf_event_paranoid=1 if you have any trouble
+ * kernel.perf_event_paranoid should be less or equal than 1. If you have any trouble, use:
+ 
+   `sudo sysctl kernel.perf_event_paranoid=1` 
 
 # Installation
 
- * cmake /path/to/lo2s
- * make
- * make install
+ * `cmake /path/to/lo2s`
+ * `make`
+ * `make install`
