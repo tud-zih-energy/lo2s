@@ -141,6 +141,11 @@ protected:
         }
     }
 
+    perf_sample_reader(const perf_sample_reader&) = delete;
+    perf_sample_reader(perf_sample_reader&&) = delete;
+    perf_sample_reader& operator=(const perf_sample_reader&) = delete;
+    perf_sample_reader& operator=(perf_sample_reader&&) = delete;
+
     ~perf_sample_reader()
     {
         close(fd_);

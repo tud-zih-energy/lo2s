@@ -27,6 +27,8 @@
 #include "thread_map.hpp"
 #include "time.hpp"
 
+#include "perf_sample_raw/otf2_counters_raw.hpp"
+
 #include <otf2xx/definition/definitions.hpp>
 
 extern "C" {
@@ -78,6 +80,8 @@ private:
     otf2::definition::metric_class counters_metric_class_;
     monitor_config config_;
     metrics metrics_;
+
+    otf2_counters_raw raw_counters_;
 };
 }
 #endif // X86_RECORD_OTF2_CONTROL_HPP

@@ -222,7 +222,6 @@ private:
     const static fs::path base_path;
 };
 
-const fs::path topology::base_path = "/sys/devices/system/cpu";
 }
 
 #endif // INCLUDE_ROCO2_CPU_TOPOLOGY_HPP

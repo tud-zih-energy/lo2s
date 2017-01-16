@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,8 +23,8 @@
 
 #include "error.hpp"
 #include "log.hpp"
-#include "util.hpp"
 #include "platform.hpp"
+#include "util.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -33,6 +33,7 @@
 
 extern "C" {
 #include <linux/perf_event.h>
+#include <sys/mman.h>
 }
 
 /* perf sample has 16 bits size limit */
@@ -116,7 +117,8 @@ protected:
     {
         base = mmap(NULL, (buffer_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
                     fd, 0);
-        if (base == MAP_FAILED)
+        // Should not be necessary to check for nullptr, but we've seen it!
+        if (base == MAP_FAILED || base == nullptr)
         {
             log::error() << "mmap failed. You can decrease the buffer size or try to increase "
                             "/proc/sys/kernel/perf_event_mlock_kb";

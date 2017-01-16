@@ -74,7 +74,7 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
                  const monitor_config& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
   time_converter_(), trace_(trace), counters_metric_class_(otf2_counters::get_metric_class(trace_)),
-  config_(config), metrics_(trace_)
+  config_(config), metrics_(trace_), raw_counters_(trace_, time_converter_)
 {
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
