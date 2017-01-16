@@ -22,11 +22,12 @@ public:
         auto mc = trace.metric_class();
         mc.add_member(trace.metric_member("cstate", "C state",
                                           otf2::common::metric_mode::absolute_next,
-                                          otf2::common::type::int64, "cpuid"));
+                                          otf2::common::type::int64, "state"));
 
-        //perf_recorders_.reserve(topology::instance().cpus().size());
+        perf_recorders_.reserve(topology::instance().cpus().size());
         for (const auto& cpu : topology::instance().cpus())
         {
+            log::debug() << "Create cstate recorder for cpu #" << cpu.id;
             perf_recorders_.emplace_back(cpu.id, trace, mc, time_converter);
         }
     }

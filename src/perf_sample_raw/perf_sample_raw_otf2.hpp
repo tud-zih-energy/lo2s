@@ -22,14 +22,16 @@ public:
                          const otf2::definition::metric_class& metric_class,
                          const perf_time_converter& time_converter);
 
-    perf_sample_raw_otf2(perf_sample_raw_otf2&& other) = default;
-    /* will probably do this:
+    perf_sample_raw_otf2(const perf_sample_raw_otf2& other) = delete;
+
+    perf_sample_raw_otf2(perf_sample_raw_otf2&& other)
     : perf_sample_raw_reader<perf_sample_raw_otf2>(
           std::forward<perf_sample_raw_reader<perf_sample_raw_otf2>>(other)),
       writer_(other.writer_), metric_instance_(std::move(other.metric_instance_)),
       time_converter_(other.time_converter_), counter_values_(std::move(other.counter_values_))
     {
-    }*/
+        other.valid_ = false;
+    }
 
     ~perf_sample_raw_otf2();
 
@@ -44,6 +46,8 @@ private:
     const perf_time_converter& time_converter_;
 
     std::vector<otf2::event::metric::value_container> counter_values_;
+
+    bool valid_ = true;
 };
 }
 

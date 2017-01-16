@@ -33,6 +33,9 @@ bool perf_sample_raw_otf2::handle(const perf_sample_raw_reader::record_sample_ty
 
 perf_sample_raw_otf2::~perf_sample_raw_otf2()
 {
-    this->read();
+    if (valid_)
+    {
+        this->read();
+    }
 }
 }

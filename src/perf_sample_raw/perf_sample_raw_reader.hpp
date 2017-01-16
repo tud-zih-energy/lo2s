@@ -29,7 +29,7 @@ public:
         unsigned char common_flags;
         unsigned char common_preempt_count;
         int common_pid;
-        uint32_t state;
+        int32_t state;
         uint32_t cpu_id;
     };
     struct record_sample_type
@@ -48,14 +48,25 @@ public:
         fs::path path_event = base_path / "power" / "cpu_idle";
         fs::ifstream ifs_id;
         ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
-        ifs_id.open(path_event / "id");
-        ifs_id >> id_;
+
+        try
+        {
+            ifs_id.open(path_event / "id");
+            ifs_id >> id_;
+        }
+        catch(...)
+        {
+            log::error() << "Couldn't read ID from " << (path_event / "id");
+            throw;
+        }
 
         struct perf_event_attr attr;
         memset(&attr, 0, sizeof(attr));
         attr.type = PERF_TYPE_TRACEPOINT;
         attr.size = sizeof(attr);
         attr.config = id_;
+        attr.disabled = 1;
+        attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
         fd_ = syscall(__NR_perf_event_open, &attr, -1, cpu_, -1, 0);
