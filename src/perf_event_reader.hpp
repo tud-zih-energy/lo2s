@@ -30,6 +30,7 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
+#include <cstring>
 
 extern "C" {
 #include <linux/perf_event.h>

@@ -103,7 +103,7 @@ monitor::~monitor()
 
     if (raw_counters_)
     {
-        raw_counters_.stop();
+        raw_counters_->stop();
     }
 }
 

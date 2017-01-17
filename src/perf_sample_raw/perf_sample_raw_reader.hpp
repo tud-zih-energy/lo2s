@@ -10,6 +10,7 @@
 #include <ios>
 
 extern "C" {
+#include <fcntl.h>
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>

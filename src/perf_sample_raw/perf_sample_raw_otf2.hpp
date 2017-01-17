@@ -5,6 +5,7 @@
 #include "perf_sample_raw_reader.hpp"
 
 #include "../monitor_config.hpp"
+#include "../otf2_trace.hpp"
 #include "../time.hpp"
 
 #include <otf2xx/definition/metric_instance.hpp>
