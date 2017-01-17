@@ -113,9 +113,9 @@ public:
     }
 
 protected:
-    void init_mmap(int fd)
+    void init_mmap(int fd, size_t mmap_pages)
     {
-        base = mmap(NULL, (buffer_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
+        base = mmap(NULL, (mmap_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
                     fd, 0);
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
@@ -280,9 +280,6 @@ public:
     }
 
 protected:
-    // TODO read default from /proc/sys/kernel/perf_event_mlock_kb
-    // TODO make configurable
-    std::size_t buffer_pages = 16;
     int64_t total_samples = 0;
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;

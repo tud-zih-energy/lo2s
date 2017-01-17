@@ -33,8 +33,6 @@ extern "C" {
 #include <unistd.h>
 }
 
-using namespace std::chrono_literals;
-
 namespace lo2s
 {
 class monitor;
@@ -107,10 +105,10 @@ private:
     std::array<int, 3> memory_fd{ { -1, -1, -1 } };
 
     std::thread thread;
-    std::chrono::nanoseconds read_interval = 100ms;
 
     perf_sample_otf2 sample_reader_;
     otf2_counters counters_;
+    std::chrono::nanoseconds read_interval_;
 };
 }
 

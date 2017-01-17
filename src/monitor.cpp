@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -74,7 +74,7 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
                  const monitor_config& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
   time_converter_(), trace_(trace), counters_metric_class_(otf2_counters::get_metric_class(trace_)),
-  config_(config), metrics_(trace_), raw_counters_(trace_, time_converter_)
+  config_(config), metrics_(trace_), raw_counters_(trace_, config_, time_converter_)
 {
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
@@ -89,6 +89,7 @@ monitor::~monitor()
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace
     trace_.end_record();
+    raw_counters_.stop();
 }
 
 void monitor::run()

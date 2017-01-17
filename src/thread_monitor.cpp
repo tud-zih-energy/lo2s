@@ -9,21 +9,21 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "thread_monitor.hpp"
 #include "log.hpp"
-#include "platform.hpp"
 #include "monitor.hpp"
 #include "monitor_config.hpp"
 #include "perf_sample_otf2.hpp"
+#include "platform.hpp"
 
 #include <memory>
 
@@ -52,7 +52,8 @@ thread_monitor::thread_monitor(pid_t pid, pid_t tid, monitor& parent_monitor, pr
   sample_reader_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
                  parent_monitor_.time_converter(), enable_on_exec),
   counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
-            sample_reader_.location())
+            sample_reader_.location()),
+  read_interval_(parent_monitor_.config().read_interval)
 {
     (void)pid; // Unused
     /* setup the sampling counter(s) and start a monitoring thread */
@@ -89,13 +90,15 @@ void thread_monitor::check_affinity(bool force)
 
 void thread_monitor::run()
 {
-    log::info() << "New monitoring thread for: " << pid_ << "/" << tid_;
+    log::info() << "New monitoring thread for: " << pid_ << "/" << tid_ << "with read interval of "
+                << std::chrono::duration_cast<std::chrono::milliseconds>(read_interval_).count()
+                << " ms";
 
     check_affinity(true);
 
     auto deadline = clock::now();
     // Move deadline to be the same for all thread, reducing noise imbalances
-    deadline -= (deadline.time_since_epoch() % read_interval) + read_interval;
+    deadline -= (deadline.time_since_epoch() % read_interval_) + read_interval_;
     while (true)
     {
         log::trace() << "Monitoring thread active";
@@ -110,7 +113,9 @@ void thread_monitor::run()
             break;
         }
 
-        deadline += read_interval;
+        // TODO skip samples if we cannot keep up with the deadlines
+        deadline += read_interval_;
+        // TODO wait here for overflows in the sampling buffers in addition to the deadline!
         std::this_thread::sleep_until(deadline);
     }
     sample_reader_.end();

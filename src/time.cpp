@@ -40,7 +40,7 @@ time_reader::time_reader()
     attr.wakeup_events = 1;
     attr.sample_period = 1;
 
-    init(attr, 0, false);
+    init(attr, 0, false, 1);
     local_time = get_time();
 }
 

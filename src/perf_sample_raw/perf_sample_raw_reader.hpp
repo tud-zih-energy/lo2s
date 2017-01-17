@@ -2,6 +2,7 @@
 #define LO2S_PERF_SAMPLE_RAW_HPP
 
 #include "../perf_event_reader.hpp"
+#include "../util.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -43,7 +44,7 @@ public:
 
     using perf_event_reader<T>::init_mmap;
 
-    perf_sample_raw_reader(int cpu) : cpu_(cpu)
+    perf_sample_raw_reader(int cpu, size_t mmap_pages) : cpu_(cpu)
     {
         fs::path path_event = base_path / "power" / "cpu_idle";
         fs::ifstream ifs_id;
@@ -54,7 +55,7 @@ public:
             ifs_id.open(path_event / "id");
             ifs_id >> id_;
         }
-        catch(...)
+        catch (...)
         {
             log::error() << "Couldn't read ID from " << (path_event / "id");
             throw;
@@ -68,6 +69,9 @@ public:
         attr.disabled = 1;
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
+
+        attr.watermark = 1;
+        attr.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * get_page_size());
 
         fd_ = syscall(__NR_perf_event_open, &attr, -1, cpu_, -1, 0);
         if (fd_ < 0)
@@ -86,7 +90,7 @@ public:
                 throw_errno();
             }
 
-            init_mmap(fd_);
+            init_mmap(fd_, mmap_pages);
             log::debug() << "perf_sample_raw_reader mmap initialized";
 
             auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
@@ -116,6 +120,22 @@ public:
         {
             close(fd_);
         }
+    }
+
+    int fd() const
+    {
+        return fd_;
+    }
+
+    void stop()
+    {
+        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        log::debug() << "perf_sample_raw_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        if (ret == -1)
+        {
+            throw_errno();
+        }
+        this->read();
     }
 
 private:

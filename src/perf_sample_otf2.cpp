@@ -50,7 +50,7 @@ perf_sample_otf2::perf_sample_otf2(pid_t pid, pid_t tid, const monitor_config& c
     // not used yet
     // attr.task = 1;
 
-    init(attr, tid, enable_on_exec);
+    init(attr, tid, enable_on_exec, config.mmap_pages);
 }
 
 perf_sample_otf2::~perf_sample_otf2()

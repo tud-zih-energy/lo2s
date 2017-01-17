@@ -22,14 +22,19 @@
 #define LO2S_CONFIG_HPP
 
 #include <cstdint>
+#include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace lo2s
 {
 struct monitor_config
 {
-    uint64_t sampling_period = 11010113;
-    bool enable_cct = false;
-    bool suppress_ip = false;
+    uint64_t sampling_period;
+    size_t mmap_pages;
+    bool enable_cct;
+    bool suppress_ip;
+    std::chrono::nanoseconds read_interval;
 };
 }
 #endif // LO2S_CONFIG_HPP

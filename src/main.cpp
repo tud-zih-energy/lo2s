@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -69,7 +69,7 @@ static void run_command(const std::vector<std::string>& command_and_args, pipe& 
 
     if (ret != 1)
     {
-        log::info() << "measurement aborted prematurely, will not run the command";
+        log::info() << "Measurement aborted prematurely, will not run the command";
         exit(0);
     }
 
@@ -107,13 +107,13 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
         if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1)
         {
             log::error() << "Could not attach to pid " << pid
-                         << ". You can try setting /proc/sys/kernel/yama/ptrace_scope to 0";
+                         << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
             throw_errno();
         }
     }
     if (pid == -1)
     {
-        log::error() << "fork failed";
+        log::error() << "Fork failed.";
         throw_errno();
     }
     else if (pid == 0)
@@ -173,21 +173,36 @@ int main(int argc, const char** argv)
     po::options_description desc("Allowed options");
     std::vector<std::string> command;
     lo2s::monitor_config config;
-    bool quiet = false;
-    bool debug = false;
-    bool trace = false;
+    bool quiet;
+    bool debug;
+    bool trace;
     // clang-format off
+    uint64_t read_interval_ms;
+
+    // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     desc.add_options()
-            ("help", "produce help message")
-            ("output-trace,o", po::value(&output_trace), "output trace directory")
-            ("sampling_period,s", po::value(&config.sampling_period), "sampling period (# instructions)")
-            ("call-graph,g", po::bool_switch(&config.enable_cct), "call-graph recording")
-            ("no-ip,n", po::bool_switch(&config.suppress_ip),
-             "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-            ("pid,p", po::value(&pid), "attach to specific pid")
-            ("quiet,q", po::bool_switch(&quiet), "suppress output")
-            ("verbose,v", po::bool_switch(&debug), "verbose output")
-            ("extra-verbose,t", po::bool_switch(&trace), "extra verbose output")
+            ("help",
+                 "produce help message")
+            ("output-trace,o", po::value(&output_trace),
+                 "output trace directory")
+            ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
+                 "sampling period (# instructions)")
+            ("call-graph,g", po::bool_switch(&config.enable_cct)->default_value(false),
+                 "call-graph recording")
+            ("no-ip,n", po::bool_switch(&config.suppress_ip)->default_value(false),
+                 "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
+            ("pid,p", po::value(&pid),
+                 "attach to specific pid")
+            ("quiet,q", po::bool_switch(&quiet)->default_value(false),
+                 "suppress output")
+            ("verbose,v", po::bool_switch(&debug)->default_value(false),
+                 "verbose output")
+            ("extra-verbose,t", po::bool_switch(&trace)->default_value(false),
+                 "extra verbose output")
+            ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
+                 "number of pages to be used by each internal buffer")
+            ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
+                 "time interval between metric and sampling buffer readouts in milliseconds")
             ("command", po::value(&command));
     // clang-format on
 
@@ -199,6 +214,8 @@ int main(int argc, const char** argv)
         po::command_line_parser(argc, argv).options(desc).positional(p).run();
     po::store(parsed, vm);
     po::notify(vm);
+
+    config.read_interval = std::chrono::milliseconds(read_interval_ms);
 
     if (vm.count("help") || (pid == -1 && command.empty()))
     {

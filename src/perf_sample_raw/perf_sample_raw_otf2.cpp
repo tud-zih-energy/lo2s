@@ -7,10 +7,10 @@
 namespace lo2s
 {
 
-perf_sample_raw_otf2::perf_sample_raw_otf2(int cpu, otf2_trace& trace,
+perf_sample_raw_otf2::perf_sample_raw_otf2(int cpu, const monitor_config& config, otf2_trace& trace,
                                            const otf2::definition::metric_class& metric_class,
                                            const perf_time_converter& time_converter)
-: perf_sample_raw_reader(cpu),
+: perf_sample_raw_reader(cpu, config.mmap_pages),
   writer_(trace.metric_writer((boost::format("raw metrics for CPU %d") % cpu).str())),
   metric_instance_(
       trace.metric_instance(metric_class, writer_.location(), trace.system_tree_cpu_node(cpu))),
@@ -29,13 +29,5 @@ bool perf_sample_raw_otf2::handle(const perf_sample_raw_reader::record_sample_ty
     counter_values_[0].set(sample->data.state);
     writer_.write(otf2::event::metric(tp, metric_instance_, counter_values_));
     return false;
-}
-
-perf_sample_raw_otf2::~perf_sample_raw_otf2()
-{
-    if (valid_)
-    {
-        this->read();
-    }
 }
 }

@@ -66,7 +66,7 @@ protected:
     }
 
     using perf_event_reader<T>::init_mmap;
-    void init(struct perf_event_attr& perf_attr, pid_t tid, bool enable_on_exec)
+    void init(struct perf_event_attr& perf_attr, pid_t tid, bool enable_on_exec, size_t mmap_pages)
     {
         log::debug() << "initializing perf_event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
@@ -121,7 +121,7 @@ protected:
                 throw_errno();
             }
 
-            init_mmap(fd_);
+            init_mmap(fd_, mmap_pages);
             log::debug() << "mmap initialized";
 
             if (!enable_on_exec)
