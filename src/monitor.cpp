@@ -74,8 +74,19 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
                  const monitor_config& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
   time_converter_(), trace_(trace), counters_metric_class_(otf2_counters::get_metric_class(trace_)),
-  config_(config), metrics_(trace_), raw_counters_(trace_, config_, time_converter_)
+  config_(config), metrics_(trace_)
 {
+    // try to initialize raw counter metrics
+    try
+    {
+        raw_counters_ = std::make_unique<otf2_counters_raw>(trace_, config_, time_converter_);
+    }
+    catch (std::exception& e)
+    {
+        log::warn() << "Failed to initialize raw counters due to: " << e.what();
+        log::warn() << "The cstate metric will not be included in the trace.";
+    }
+
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
     trace_.begin_record();
@@ -89,7 +100,11 @@ monitor::~monitor()
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace
     trace_.end_record();
-    raw_counters_.stop();
+
+    if (raw_counters_)
+    {
+        raw_counters_.stop();
+    }
 }
 
 void monitor::run()

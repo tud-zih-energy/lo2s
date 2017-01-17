@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,6 +30,8 @@
 #include "perf_sample_raw/otf2_counters_raw.hpp"
 
 #include <otf2xx/definition/definitions.hpp>
+
+#include <memory>
 
 extern "C" {
 #include <signal.h>
@@ -81,7 +83,7 @@ private:
     monitor_config config_;
     metrics metrics_;
 
-    otf2_counters_raw raw_counters_;
+    std::unique_ptr<otf2_counters_raw> raw_counters_;
 };
 }
 #endif // X86_RECORD_OTF2_CONTROL_HPP
