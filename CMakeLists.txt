@@ -41,6 +41,7 @@ set(SOURCE_FILES
         src/mmap.cpp src/perf_counter.cpp src/otf2_counters.hpp src/otf2_counters.cpp
         src/metric_plugin.cpp src/metric_channel.cpp src/metrics.cpp
         src/perf_sample_raw/perf_sample_raw_otf2.cpp src/perf_sample_raw/otf2_counters_raw.cpp
+        src/perf_sample_raw/event_format.cpp
     )
 
 add_executable(lo2s ${SOURCE_FILES})

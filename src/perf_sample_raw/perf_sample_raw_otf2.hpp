@@ -1,7 +1,7 @@
-
 #ifndef LO2S_PERF_SAMPLE_RAW_OTF2_HPP
 #define LO2S_PERF_SAMPLE_RAW_OTF2_HPP
 
+#include "event_format.hpp"
 #include "perf_sample_raw_reader.hpp"
 
 #include "../monitor_config.hpp"
@@ -20,8 +20,8 @@ namespace lo2s
 class perf_sample_raw_otf2 : public perf_sample_raw_reader<perf_sample_raw_otf2>
 {
 public:
-    perf_sample_raw_otf2(int cpu, const monitor_config& config, otf2_trace& trace,
-                         const otf2::definition::metric_class& metric_class,
+    perf_sample_raw_otf2(int cpu, const event_format& event, const monitor_config& config,
+                         otf2_trace& trace, const otf2::definition::metric_class& metric_class,
                          const perf_time_converter& time_converter);
 
     perf_sample_raw_otf2(const perf_sample_raw_otf2& other) = delete;
@@ -41,6 +41,7 @@ public:
     bool handle(const perf_sample_raw_reader::record_sample_type* sample);
 
 private:
+    event_format event_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
 

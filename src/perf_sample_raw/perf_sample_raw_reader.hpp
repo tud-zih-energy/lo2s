@@ -1,6 +1,8 @@
 #ifndef LO2S_PERF_SAMPLE_RAW_HPP
 #define LO2S_PERF_SAMPLE_RAW_HPP
 
+#include "event_format.hpp"
+
 #include "../perf_event_reader.hpp"
 #include "../util.hpp"
 
@@ -25,48 +27,58 @@ template <class T>
 class perf_sample_raw_reader : public perf_event_reader<T>
 {
 public:
-    struct record_power_cpu_idle
+    struct record_dynamic_format
     {
-        unsigned short common_type;
-        unsigned char common_flags;
-        unsigned char common_preempt_count;
-        int common_pid;
-        int32_t state;
-        uint32_t cpu_id;
+        uint64_t get(const event_field& field) const
+        {
+            switch (field.size())
+            {
+            case 1:
+                return _get<int8_t>(field.offset());
+            case 2:
+                return _get<int16_t>(field.offset());
+            case 4:
+                return _get<int32_t>(field.offset());
+            case 8:
+                return _get<int64_t>(field.offset());
+            default:
+                // We do check this before setting up the event
+                assert(!"Trying to get field of invalid size.");
+                return 0;
+            }
+        }
+
+        template <typename TT>
+        const TT _get(ptrdiff_t offset) const
+        {
+            assert(offset >= 0);
+            assert(offset + sizeof(TT) <= size_);
+            return *(reinterpret_cast<const TT*>(raw_data_ + offset));
+        }
+
+        // DO NOT TOUCH, MUST NOT BE size_t!!!!
+        uint32_t size_;
+        char raw_data_[1]; // Can I still not [0] with ISO-C++ :-(
     };
+
     struct record_sample_type
     {
         struct perf_event_header header;
         uint64_t time;
-        uint32_t size;
+        // uint32_t size;
         // char data[size];
-        record_power_cpu_idle data;
+        record_dynamic_format raw_data;
     };
 
     using perf_event_reader<T>::init_mmap;
 
-    perf_sample_raw_reader(int cpu, size_t mmap_pages) : cpu_(cpu)
+    perf_sample_raw_reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
     {
-        fs::path path_event = base_path / "power" / "cpu_idle";
-        fs::ifstream ifs_id;
-        ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
-
-        try
-        {
-            ifs_id.open(path_event / "id");
-            ifs_id >> id_;
-        }
-        catch (...)
-        {
-            log::error() << "Couldn't read ID from " << (path_event / "id");
-            throw;
-        }
-
         struct perf_event_attr attr;
         memset(&attr, 0, sizeof(attr));
         attr.type = PERF_TYPE_TRACEPOINT;
         attr.size = sizeof(attr);
-        attr.config = id_;
+        attr.config = event_id;
         attr.disabled = 1;
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
@@ -80,7 +92,7 @@ public:
             log::error() << "perf_event_open for raw perf_sample_raw failed.";
             throw_errno();
         }
-        log::debug() << "Opened perf_sample_raw_reader for cpu " << cpu_ << " with id " << id_;
+        log::debug() << "Opened perf_sample_raw_reader for cpu " << cpu_ << " with id " << event_id;
 
         try
         {
@@ -109,8 +121,7 @@ public:
     }
 
     perf_sample_raw_reader(perf_sample_raw_reader&& other)
-    : perf_event_reader<T>(std::forward<perf_event_reader<T>>(other)), cpu_(other.cpu_),
-      id_(other.id_)
+    : perf_event_reader<T>(std::forward<perf_event_reader<T>>(other)), cpu_(other.cpu_)
     {
         std::swap(fd_, other.fd_);
     }
@@ -141,7 +152,6 @@ public:
 
 private:
     int cpu_;
-    int id_;
     int fd_ = -1;
     const static fs::path base_path;
 };

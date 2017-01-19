@@ -16,8 +16,8 @@ namespace lo2s
 class otf2_counters_raw
 {
 public:
-    otf2_counters_raw(otf2_trace& trace, const monitor_config& config,
-                      const perf_time_converter& time_converter);
+    otf2_counters_raw(otf2_trace& trace, const std::string& event_name,
+                      const monitor_config& config, const perf_time_converter& time_converter);
     ~otf2_counters_raw();
 
 public:

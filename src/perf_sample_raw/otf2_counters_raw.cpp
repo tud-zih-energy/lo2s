@@ -1,5 +1,7 @@
 #include "otf2_counters_raw.hpp"
 
+#include "event_format.hpp"
+
 #include "../error.hpp"
 #include "../log.hpp"
 #include "../topology.hpp"
@@ -15,18 +17,25 @@ extern "C" {
 namespace lo2s
 {
 
-otf2_counters_raw::otf2_counters_raw(otf2_trace& trace, const monitor_config& config,
+otf2_counters_raw::otf2_counters_raw(otf2_trace& trace, const std::string& event_name,
+                                     const monitor_config& config,
                                      const perf_time_converter& time_converter)
 {
+    event_format event(event_name);
     auto mc = trace.metric_class();
-    mc.add_member(trace.metric_member("cstate", "C state", otf2::common::metric_mode::absolute_next,
-                                      otf2::common::type::int64, "state"));
+
+    for (const auto& field : event.fields())
+    {
+        mc.add_member(trace.metric_member(event_name + "::" + field.name(), "?",
+                                          otf2::common::metric_mode::absolute_next,
+                                          otf2::common::type::int64, "#"));
+    }
 
     perf_recorders_.reserve(topology::instance().cpus().size());
     for (const auto& cpu : topology::instance().cpus())
     {
         log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-        perf_recorders_.emplace_back(cpu.id, config, trace, mc, time_converter);
+        perf_recorders_.emplace_back(cpu.id, event, config, trace, mc, time_converter);
     }
     start();
 }

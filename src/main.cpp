@@ -203,6 +203,8 @@ int main(int argc, const char** argv)
                  "number of pages to be used by each internal buffer")
             ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
                  "time interval between metric and sampling buffer readouts in milliseconds")
+            ("raw-tracepoint-event,e", po::value(&config.raw_tracepoint_events),
+                 "enable global recording of a raw tracepoint event (usually requires root)")
             ("command", po::value(&command));
     // clang-format on
 

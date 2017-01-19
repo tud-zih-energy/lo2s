@@ -77,14 +77,18 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
   config_(config), metrics_(trace_)
 {
     // try to initialize raw counter metrics
-    try
+    for (const auto& event_name : config.raw_tracepoint_events)
     {
-        raw_counters_ = std::make_unique<otf2_counters_raw>(trace_, config_, time_converter_);
-    }
-    catch (std::exception& e)
-    {
-        log::warn() << "Failed to initialize raw counters due to: " << e.what();
-        log::warn() << "The cstate metric will not be included in the trace.";
+        try
+        {
+            raw_counters_ =
+                std::make_unique<otf2_counters_raw>(trace_, event_name, config_, time_converter_);
+        }
+        catch (std::exception& e)
+        {
+            log::warn() << "Failed to initialize raw tracepoint event " << event_name
+                        << " due to: " << e.what();
+        }
     }
 
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
