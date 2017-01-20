@@ -148,7 +148,7 @@ protected:
 
     ~perf_sample_reader()
     {
-        if ((total_samples > 0) && ((throttle_samples * 100) / total_samples) > 20)
+        if ((this->total_samples > 0) && ((this->throttle_samples * 100) / this->total_samples) > 20)
         {
             log::warn() << "The given sample period is too low and the kernel assumes it has an "
                            "overwhelming influence on the runtime!\n"
