@@ -12,7 +12,7 @@ namespace lo2s
 
 event_format::event_format(const std::string& name) : name_(name)
 {
-    boost::filesystem::path path_event = base_path_ / "power" / "cpu_idle";
+    boost::filesystem::path path_event = base_path_ / name;
     boost::filesystem::ifstream ifs_id, ifs_format;
 
     ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
