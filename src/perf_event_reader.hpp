@@ -96,20 +96,10 @@ public:
 
     ~perf_event_reader()
     {
-        if ((total_samples > 0) && ((throttle_samples * 100) / total_samples) > 20)
-        {
-            log::warn() << "The given sample period is too low and the kernel assumes it has an "
-                           "overwhelming influence on the runtime!\n"
-                           "Thus, the kernel increased and decreased this period often "
-                           "(> 20 % of the throttling events, < 80 % sampling events)."
-                           "You can increase /proc/sys/kernel/perf_event_max_sample_rate to some "
-                           "extend to prevent the kernel from doing that"
-                           " or you can increase your sampling period.";
-        }
         if (lost_samples > 0)
         {
-            log::warn() << "Lost a total of " << lost_samples << " samples. Try increasing "
-                                                                 "the sampling period.";
+            log::warn() << "Lost a total of " << lost_samples << " samples in perf_event_reader<"
+                        << typeid(CRTP).name() << ">.";
         }
     }
 
@@ -192,6 +182,7 @@ public:
                 case PERF_RECORD_UNTHROTTLE:
                     throttle_samples++;
                     break;
+                case PERF_RECORD_LOST:
                 case PERF_RECORD_LOST_SAMPLES:
                 {
                     auto lost = (const record_lost_type*)event_header_p;

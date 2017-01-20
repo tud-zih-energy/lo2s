@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -148,6 +148,16 @@ protected:
 
     ~perf_sample_reader()
     {
+        if ((total_samples > 0) && ((throttle_samples * 100) / total_samples) > 20)
+        {
+            log::warn() << "The given sample period is too low and the kernel assumes it has an "
+                           "overwhelming influence on the runtime!\n"
+                           "Thus, the kernel increased and decreased this period often "
+                           "(> 20 % of the throttling events, < 80 % sampling events)."
+                           "You can increase /proc/sys/kernel/perf_event_max_sample_rate to some "
+                           "extend to prevent the kernel from doing that"
+                           " or you can increase your sampling period.";
+        }
         close(fd_);
     }
 
