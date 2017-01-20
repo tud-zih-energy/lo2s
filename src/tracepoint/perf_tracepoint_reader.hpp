@@ -24,7 +24,7 @@ namespace fs = boost::filesystem;
 namespace lo2s
 {
 template <class T>
-class perf_sample_raw_reader : public perf_event_reader<T>
+class perf_tracepoint_reader : public perf_event_reader<T>
 {
 public:
     struct record_dynamic_format
@@ -72,7 +72,7 @@ public:
 
     using perf_event_reader<T>::init_mmap;
 
-    perf_sample_raw_reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
+    perf_tracepoint_reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
     {
         struct perf_event_attr attr;
         memset(&attr, 0, sizeof(attr));
@@ -89,10 +89,11 @@ public:
         fd_ = syscall(__NR_perf_event_open, &attr, -1, cpu_, -1, 0);
         if (fd_ < 0)
         {
-            log::error() << "perf_event_open for raw perf_sample_raw failed.";
+            log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-        log::debug() << "Opened perf_sample_raw_reader for cpu " << cpu_ << " with id " << event_id;
+        log::debug() << "Opened perf_sample_tracepoint_reader for cpu " << cpu_ << " with id "
+                     << event_id;
 
         try
         {
@@ -104,10 +105,10 @@ public:
             }
 
             init_mmap(fd_, mmap_pages);
-            log::debug() << "perf_sample_raw_reader mmap initialized";
+            log::debug() << "perf_tracepoint_reader mmap initialized";
 
             auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-            log::debug() << "perf_sample_raw_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
             if (ret == -1)
             {
                 throw_errno();
@@ -120,13 +121,13 @@ public:
         }
     }
 
-    perf_sample_raw_reader(perf_sample_raw_reader&& other)
+    perf_tracepoint_reader(perf_tracepoint_reader&& other)
     : perf_event_reader<T>(std::forward<perf_event_reader<T>>(other)), cpu_(other.cpu_)
     {
         std::swap(fd_, other.fd_);
     }
 
-    ~perf_sample_raw_reader()
+    ~perf_tracepoint_reader()
     {
         if (fd_ != -1)
         {
@@ -142,7 +143,7 @@ public:
     void stop()
     {
         auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
-        log::debug() << "perf_sample_raw_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
             throw_errno();
@@ -157,6 +158,6 @@ private:
 };
 
 template <typename T>
-const fs::path perf_sample_raw_reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
+const fs::path perf_tracepoint_reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
 }
 #endif // LO2S_PERF_SAMPLE_RAW_HPP

@@ -40,8 +40,8 @@ set(SOURCE_FILES
         src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp src/address.hpp
         src/mmap.cpp src/perf_counter.cpp src/otf2_counters.hpp src/otf2_counters.cpp
         src/metric_plugin.cpp src/metric_channel.cpp src/metrics.cpp
-        src/perf_sample_raw/perf_sample_raw_otf2.cpp src/perf_sample_raw/otf2_counters_raw.cpp
-        src/perf_sample_raw/event_format.cpp
+        src/tracepoint/perf_tracepoint_otf2.cpp src/tracepoint/otf2_tracepoints.cpp
+        src/tracepoint/event_format.cpp
     )
 
 add_executable(lo2s ${SOURCE_FILES})

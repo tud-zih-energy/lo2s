@@ -27,7 +27,7 @@
 #include "thread_map.hpp"
 #include "time.hpp"
 
-#include "perf_sample_raw/otf2_counters_raw.hpp"
+#include "tracepoint/otf2_tracepoints.hpp"
 
 #include <otf2xx/definition/definitions.hpp>
 
@@ -83,7 +83,7 @@ private:
     monitor_config config_;
     metrics metrics_;
 
-    std::unique_ptr<otf2_counters_raw> raw_counters_;
+    std::unique_ptr<otf2_tracepoints> raw_counters_;
 };
 }
 #endif // X86_RECORD_OTF2_CONTROL_HPP

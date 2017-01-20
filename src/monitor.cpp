@@ -77,17 +77,15 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
   config_(config), metrics_(trace_)
 {
     // try to initialize raw counter metrics
-    for (const auto& event_name : config.raw_tracepoint_events)
+    if (!config_.tracepoint_events.empty())
     {
         try
         {
-            raw_counters_ =
-                std::make_unique<otf2_counters_raw>(trace_, event_name, config_, time_converter_);
+            raw_counters_ = std::make_unique<otf2_tracepoints>(trace_, config_, time_converter_);
         }
         catch (std::exception& e)
         {
-            log::warn() << "Failed to initialize raw tracepoint event " << event_name
-                        << " due to: " << e.what();
+            log::warn() << "Failed to initialize tracepoint events: " << e.what();
         }
     }
 

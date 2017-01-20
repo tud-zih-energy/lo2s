@@ -1,4 +1,4 @@
-#include "otf2_counters_raw.hpp"
+#include "otf2_tracepoints.hpp"
 
 #include "event_format.hpp"
 
@@ -17,42 +17,46 @@ extern "C" {
 namespace lo2s
 {
 
-otf2_counters_raw::otf2_counters_raw(otf2_trace& trace, const std::string& event_name,
-                                     const monitor_config& config,
-                                     const perf_time_converter& time_converter)
+otf2_tracepoints::otf2_tracepoints(otf2_trace& trace, const monitor_config& config,
+                                   const perf_time_converter& time_converter)
 {
-    event_format event(event_name);
-    auto mc = trace.metric_class();
-
-    for (const auto& field : event.fields())
+    perf_recorders_.reserve(topology::instance().cpus().size() * config.tracepoint_events.size());
+    // Note any of those setups might fail.
+    // TODO: Currently is's all or nothing here, allow partial failure
+    for (const auto& event_name : config.tracepoint_events)
     {
-        mc.add_member(trace.metric_member(event_name + "::" + field.name(), "?",
-                                          otf2::common::metric_mode::absolute_next,
-                                          otf2::common::type::int64, "#"));
-    }
+        event_format event(event_name);
+        auto mc = trace.metric_class();
 
-    perf_recorders_.reserve(topology::instance().cpus().size());
-    for (const auto& cpu : topology::instance().cpus())
-    {
-        log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-        perf_recorders_.emplace_back(cpu.id, event, config, trace, mc, time_converter);
+        for (const auto& field : event.fields())
+        {
+            mc.add_member(trace.metric_member(event_name + "::" + field.name(), "?",
+                                              otf2::common::metric_mode::absolute_next,
+                                              otf2::common::type::int64, "#"));
+        }
+
+        for (const auto& cpu : topology::instance().cpus())
+        {
+            log::debug() << "Create cstate recorder for cpu #" << cpu.id;
+            perf_recorders_.emplace_back(cpu.id, event, config, trace, mc, time_converter);
+        }
     }
     start();
 }
 
-otf2_counters_raw::~otf2_counters_raw()
+otf2_tracepoints::~otf2_tracepoints()
 {
     // Thread MUST be stopped...
     stop();
     thread_.join();
 }
 
-void otf2_counters_raw::start()
+void otf2_tracepoints::start()
 {
     thread_ = std::thread([this]() { this->poll(); });
 }
 
-void otf2_counters_raw::poll()
+void otf2_tracepoints::poll()
 {
     std::vector<struct pollfd> pfds;
     pfds.reserve(perf_recorders_.size());
@@ -119,7 +123,7 @@ void otf2_counters_raw::poll()
     perf_recorders_.clear();
 }
 
-void otf2_counters_raw::stop_all()
+void otf2_tracepoints::stop_all()
 {
     for (auto& recorder : perf_recorders_)
     {
@@ -127,7 +131,7 @@ void otf2_counters_raw::stop_all()
     }
 }
 
-void otf2_counters_raw::stop()
+void otf2_tracepoints::stop()
 {
     stop_pipe_.write();
 }

@@ -2,7 +2,7 @@
 #define LO2S_PERF_SAMPLE_RAW_OTF2_HPP
 
 #include "event_format.hpp"
-#include "perf_sample_raw_reader.hpp"
+#include "perf_tracepoint_reader.hpp"
 
 #include "../monitor_config.hpp"
 #include "../otf2_trace.hpp"
@@ -17,28 +17,20 @@
 namespace lo2s
 {
 
-class perf_sample_raw_otf2 : public perf_sample_raw_reader<perf_sample_raw_otf2>
+class perf_tracepoint_otf2 : public perf_tracepoint_reader<perf_tracepoint_otf2>
 {
 public:
-    perf_sample_raw_otf2(int cpu, const event_format& event, const monitor_config& config,
+    perf_tracepoint_otf2(int cpu, const event_format& event, const monitor_config& config,
                          otf2_trace& trace, const otf2::definition::metric_class& metric_class,
                          const perf_time_converter& time_converter);
 
-    perf_sample_raw_otf2(const perf_sample_raw_otf2& other) = delete;
+    perf_tracepoint_otf2(const perf_tracepoint_otf2& other) = delete;
 
-    perf_sample_raw_otf2(perf_sample_raw_otf2&& other) = default;
-    /*
-    : perf_sample_raw_reader<perf_sample_raw_otf2>(
-          std::forward<perf_sample_raw_reader<perf_sample_raw_otf2>>(other)),
-      writer_(other.writer_), metric_instance_(std::move(other.metric_instance_)),
-      time_converter_(other.time_converter_), counter_values_(std::move(other.counter_values_))
-    {
-    }
-     */
+    perf_tracepoint_otf2(perf_tracepoint_otf2&& other) = default;
 
 public:
-    using perf_sample_raw_reader<perf_sample_raw_otf2>::handle;
-    bool handle(const perf_sample_raw_reader::record_sample_type* sample);
+    using perf_tracepoint_reader<perf_tracepoint_otf2>::handle;
+    bool handle(const perf_tracepoint_reader::record_sample_type* sample);
 
 private:
     event_format event_;

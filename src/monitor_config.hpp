@@ -38,7 +38,7 @@ struct monitor_config
     bool enable_cct;
     bool suppress_ip;
     std::chrono::nanoseconds read_interval;
-    std::vector<std::string> raw_tracepoint_events;
+    std::vector<std::string> tracepoint_events;
 };
 }
 #endif // LO2S_CONFIG_HPP
