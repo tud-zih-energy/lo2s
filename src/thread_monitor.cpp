@@ -90,7 +90,7 @@ void thread_monitor::check_affinity(bool force)
 
 void thread_monitor::run()
 {
-    log::info() << "New monitoring thread for: " << pid_ << "/" << tid_ << "with read interval of "
+    log::info() << "New monitoring thread for: " << pid_ << "/" << tid_ << " with read interval of "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(read_interval_).count()
                 << " ms";
 
