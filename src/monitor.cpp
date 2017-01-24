@@ -40,12 +40,31 @@ extern "C" {
 #include <sys/wait.h>
 }
 
+// used for attaching to a running process.
+// Its a special case, so ... OH, look behind you, a three headed monkey playing cards.
+static volatile bool running;
+static volatile pid_t attached_pid;
+
 namespace lo2s
 {
 
 /* this signal handler is called once to print out stats on abort */
 void sig_handler(int signum)
 {
+    // If we attached to a running process, we initiate the detaching now. Sick.
+    if (signum == SIGINT && attached_pid != -1)
+    {
+        log::info() << "Received SIGINT. Trying to detach";
+
+        // set global running to false
+        running = false;
+
+        // send attached process SIGSTOP, so the tracee enters signal-delivery-stop
+        kill(attached_pid, SIGSTOP);
+
+        return;
+    }
+
     log::debug() << "sig_handler called, what should I do with signal " << signum;
     // TODO: check signum
     /* restore default signal hander */
@@ -76,6 +95,16 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
   time_converter_(), trace_(trace), counters_metric_class_(otf2_counters::get_metric_class(trace_)),
   config_(config), metrics_(trace_)
 {
+    if (spawn)
+    {
+        attached_pid = -1;
+    }
+    else
+    {
+        attached_pid = child;
+    }
+    running = true;
+
     // try to initialize raw counter metrics
     if (!config_.tracepoint_events.empty())
     {
@@ -168,6 +197,24 @@ void monitor::handle_signal(pid_t child, int status)
     if (WIFSTOPPED(status)) // signal-delivery-stop
     {
         log::debug() << "signal-delivery-stop from child " << child << ": " << WSTOPSIG(status);
+
+        // Special handling for detaching, then we had just attached to a process
+        if (attached_pid != -1  && !running)
+        {
+            log::debug() << "Detaching from child: " << child;
+
+            // Tracee is in signal-delivery-stop, so we can detach
+            ptrace(PTRACE_DETACH, child, 0, status);
+
+            // exit if detached from first child (the original sampled process) 
+            if (child == first_child_)
+            {
+                // TODO actually throw success here.
+                log::info() << "Exiting monitor with status " << WEXITSTATUS(status);
+                throw std::system_error(WEXITSTATUS(status), std::system_category());
+            }
+        }
+
         switch (WSTOPSIG(status))
         {
         case SIGSTOP:
