@@ -209,9 +209,8 @@ void monitor::handle_signal(pid_t child, int status)
             // exit if detached from first child (the original sampled process) 
             if (child == first_child_)
             {
-                // TODO actually throw success here.
-                log::info() << "Exiting monitor with status " << WEXITSTATUS(status);
-                throw std::system_error(WEXITSTATUS(status), std::system_category());
+                log::info() << "Exiting monitor with status " << 0;
+                throw std::system_error(0, std::system_category());
             }
         }
 
