@@ -106,8 +106,11 @@ public:
 protected:
     void init_mmap(int fd, size_t mmap_pages)
     {
+        assert(mmap_pages > 0);
         base = mmap(NULL, (mmap_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
                     fd, 0);
+        assert(mmap_pages_ == 0);
+        mmap_pages_ = mmap_pages;
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
@@ -253,13 +256,16 @@ private:
 
     uint64_t data_size() const
     {
-        // FIXME PLEASE workaround for old kernels
-        return header()->data_size;
+        // workaround for old kernels
+        // assert(header()->data_size == mmap_pages_ * get_page_size());
+        return mmap_pages_ * get_page_size();
     }
 
     char* data()
     {
-        return (char*)base + header()->data_offset;
+        // workaround for old kernels
+        // assert(header()->data_offset == get_page_size());
+        return (char*)base + get_page_size();
     }
 
 public:
@@ -275,6 +281,7 @@ protected:
     int64_t total_samples = 0;
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;
+    size_t mmap_pages_ = 0;
 
 private:
     void* base;
