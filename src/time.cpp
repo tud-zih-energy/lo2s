@@ -26,10 +26,6 @@
 
 #include <hw_breakpoint_compat.h>
 
-extern "C" {
-#include <linux/hw_breakpoint.h>
-}
-
 namespace lo2s
 {
 time_reader::time_reader()
