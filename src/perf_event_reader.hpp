@@ -186,7 +186,6 @@ public:
                     throttle_samples++;
                     break;
                 case PERF_RECORD_LOST:
-                case PERF_RECORD_LOST_SAMPLES:
                 {
                     auto lost = (const record_lost_type*)event_header_p;
                     lost_samples += lost->lost;
