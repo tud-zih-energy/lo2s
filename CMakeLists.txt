@@ -30,6 +30,23 @@ include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
 #include_directories(SYSTEM ${BFD_INCLUDE_DIRS})
 set(BFD_LIBRARIES "-lbfd -lz -ldl -liberty")
 
+INCLUDE(CheckIncludeFiles)
+CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
+
+option(HW_BREAKPOINT_COMPAT "Evil workaround to enable HW breakpoint for old kernels with
+backported support but missing headers. Damn you Red Hat!" OFF)
+
+if (HW_BREAKPOINT_COMPAT)
+    add_definitions(-DHW_BREAKPOINT_COMPAT)
+    if (HAVE_HW_BREAKPOINT_H)
+        message(WARNING "Using evil hw_breakpoint compatibility headers while the nice clean ones are available. Consider deactivating HW_BREAKPOINT_COMPAT")
+    endif()
+else()
+    if (NOT HAVE_HW_BREAKPOINT_H)
+        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with backported support.")
+    endif()
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthread")
 
 include_directories(include)

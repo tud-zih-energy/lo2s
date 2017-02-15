@@ -31,7 +31,6 @@ extern "C" {
 #include <syscall.h>
 #include <unistd.h>
 
-#include <linux/hw_breakpoint.h>
 #include <linux/perf_event.h>
 
 #include <sys/ioctl.h>
