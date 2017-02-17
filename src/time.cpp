@@ -24,7 +24,11 @@
 
 #include <otf2xx/chrono/chrono.hpp>
 
-#include <hw_breakpoint_compat.h>
+#ifndef HW_BREAKPOINT_COMPAT
+extern "C" {
+#include <linux/hw_breakpoint.h>
+}
+#endif
 
 namespace lo2s
 {
@@ -35,21 +39,35 @@ time_reader::time_reader()
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(struct perf_event_attr));
     attr.size = sizeof(struct perf_event_attr);
+
+#ifndef HW_BREAKPOINT_COMPAT
     attr.type = PERF_TYPE_BREAKPOINT;
     attr.bp_type = HW_BREAKPOINT_W;
     attr.bp_addr = (uint64_t)(&local_time);
     attr.bp_len = HW_BREAKPOINT_LEN_8;
     attr.wakeup_events = 1;
     attr.sample_period = 1;
+#else
+    attr.type = PERF_TYPE_HARDWARE;
+    attr.config = PERF_COUNT_HW_INSTRUCTIONS;
+    attr.sample_period = 100000000;
+#endif
 
     init(attr, 0, false, 1);
+
+#ifdef HW_BREAKPOINT_COMPAT
+    auto pid = fork();
+    if (pid == 0) {
+        exit(0);
+    }
+#endif
     local_time = get_time();
 }
 
-bool time_reader::handle(const record_sample_type* sample)
+bool time_reader::handle(const record_sync_type* sync_event)
 {
     log::trace() << "time_reader::handle called";
-    perf_time = perf_tp(sample->time);
+    perf_time = perf_tp(sync_event->time);
     return true;
 }
 
@@ -60,7 +78,7 @@ perf_time_converter::perf_time_converter()
 
     if (reader.perf_time.time_since_epoch().count() == 0)
     {
-        log::error() << "Could not determine perf_time offset. HW_BREAKPOINT was not triggered.";
+        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
         offset = otf2::chrono::duration(0);
         return;
     }

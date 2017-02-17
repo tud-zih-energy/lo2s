@@ -63,7 +63,13 @@ public:
 
 public:
     using perf_sample_reader<time_reader>::handle;
-    bool handle(const record_sample_type* sample);
+#ifndef HW_BREAKPOINT_COMPAT
+    using record_sync_type = perf_sample_reader::record_sample_type;
+#else
+    using record_sync_type = perf_sample_reader::record_fork_type;
+#endif
+    bool handle(const record_sync_type* sync_event);
+
 
 public:
     otf2::chrono::time_point local_time = otf2::chrono::genesis();

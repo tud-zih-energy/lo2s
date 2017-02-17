@@ -93,6 +93,17 @@ public:
         uint64_t lost;
         // struct sample_id		sample_id;
     };
+    struct record_fork_type
+    {
+        struct perf_event_header header;
+        uint32_t pid;
+        uint32_t ppid;
+        uint32_t tid;
+        uint32_t ptid;
+        uint64_t time;
+        // struct sample_id sample_id;
+    };
+
 
     ~perf_event_reader()
     {
@@ -193,7 +204,7 @@ public:
                     break;
                 }
                 case PERF_RECORD_FORK:
-                    log::debug() << "encountered fork event.";
+                    stop = crtp_this->handle((const record_fork_type*)event_header_p);
                     break;
                 case PERF_RECORD_SAMPLE:
                 {
