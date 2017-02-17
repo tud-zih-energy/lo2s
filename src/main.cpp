@@ -24,19 +24,25 @@
 #include "monitor_config.hpp"
 #include "otf2_trace.hpp"
 #include "pipe.hpp"
-
-#include <otf2xx/writer/archive.hpp>
+#include "util.hpp"
 
 #include <boost/program_options.hpp>
 
 #include <iostream>
 #include <system_error>
-#include <thread>
+#include <vector>
+#include <algorithm>
+#include <chrono>
+#include <iterator>
+#include <memory>
 
 #include <cstdlib>
+#include <cstdint>
+#include <cassert>
 
 extern "C" {
 #include <signal.h>
+#include <unistd.h>
 
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
