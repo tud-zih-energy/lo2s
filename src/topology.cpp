@@ -1,4 +1,4 @@
-#include "topology.hpp"
+#include <lo2s/topology.hpp>
 
 namespace lo2s
 {

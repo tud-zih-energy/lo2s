@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,25 +19,36 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/time/converter.hpp>
-#include <lo2s/log.hpp>
+#pragma once
+
+#include <lo2s/otf2_trace.hpp>
+#include <lo2s/perf_counter.hpp>
+#include <lo2s/time/time.hpp>
+
+#include <otf2xx/writer/local.hpp>
+
+#include <boost/filesystem.hpp>
+
+#include <cstdint>
 
 namespace lo2s
 {
-perf_time_converter::perf_time_converter()
+class otf2_counters
 {
-    time_reader reader;
-    reader.read();
+public:
+    otf2_counters(pid_t pid, pid_t tid, otf2_trace& trace,
+                  otf2::definition::metric_class metric_class, otf2::definition::location scope);
 
-    if (reader.perf_time.time_since_epoch().count() == 0)
-    {
-        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
-        return;
-    }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
+    static otf2::definition::metric_class get_metric_class(otf2_trace& trace);
+
+    void write();
+
+private:
+    otf2::writer::local& writer_;
+    otf2::definition::metric_instance metric_instance_;
+    std::vector<perf_counter> counters_;
+    std::vector<otf2::event::metric::value_container> values_;
+    boost::filesystem::ifstream proc_stat_;
+};
 }
-}
+

@@ -19,10 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "perf_counter.hpp"
+#include <lo2s/perf_counter.hpp>
 
-#include "error.hpp"
-#include "log.hpp"
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 
 #include <cinttypes>
 #include <cstring>

@@ -1,6 +1,6 @@
-#include "event_format.hpp"
+#include <lo2s/tracepoint/event_format.hpp>
 
-#include "../log.hpp"
+#include <lo2s/log.hpp>
 
 #include <regex>
 #include <string>

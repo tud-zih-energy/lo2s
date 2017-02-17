@@ -19,25 +19,38 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/time/converter.hpp>
-#include <lo2s/log.hpp>
+#pragma once
+
+#include <lo2s/time/time.hpp>
+#include <lo2s/time/reader.hpp>
+
+#include <otf2xx/chrono/chrono.hpp>
+
+#include <cstdint>
 
 namespace lo2s
 {
-perf_time_converter::perf_time_converter()
+class perf_time_converter
 {
-    time_reader reader;
-    reader.read();
+public:
+    perf_time_converter();
 
-    if (reader.perf_time.time_since_epoch().count() == 0)
+    otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
     {
-        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
-        return;
+        return operator()(perf_tp(perf_raw));
     }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
-}
+
+    otf2::chrono::time_point operator()(perf_clock::time_point perf_tp) const
+    {
+        return otf2::chrono::time_point(perf_tp.time_since_epoch() + offset);
+    }
+
+    perf_clock::time_point operator()(otf2::chrono::time_point local_tp) const
+    {
+        return perf_clock::time_point(local_tp.time_since_epoch() - offset);
+    }
+
+private:
+    otf2::chrono::duration offset;
+};
 }

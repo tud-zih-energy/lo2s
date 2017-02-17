@@ -18,9 +18,11 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "pipe.hpp"
-#include "error.hpp"
-#include "log.hpp"
+
+#include <lo2s/pipe.hpp>
+
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 
 #include <utility>
 

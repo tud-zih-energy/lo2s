@@ -19,10 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "reader.hpp"
-#include "time.hpp"
+#include <lo2s/time/reader.hpp>
+#include <lo2s/time/time.hpp>
 
-#include "../log.hpp"
+#include <lo2s/log.hpp>
 
 #include <otf2xx/chrono/chrono.hpp>
 

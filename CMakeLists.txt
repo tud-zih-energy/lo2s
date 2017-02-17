@@ -53,8 +53,8 @@ include_directories(include)
 set(SOURCE_FILES
         src/main.cpp src/monitor.cpp src/thread_map.cpp src/thread_monitor.cpp
         src/platform.cpp src/perf_sample_otf2.cpp src/otf2_trace.cpp
-        src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp src/address.hpp
-        src/mmap.cpp src/perf_counter.cpp src/otf2_counters.hpp src/otf2_counters.cpp
+        src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp
+        src/mmap.cpp src/perf_counter.cpp src/otf2_counters.cpp
         src/metric_plugin.cpp src/metric_channel.cpp src/metrics.cpp
         src/tracepoint/perf_tracepoint_otf2.cpp src/tracepoint/otf2_tracepoints.cpp
         src/tracepoint/event_format.cpp
@@ -64,6 +64,16 @@ set(SOURCE_FILES
 add_executable(lo2s ${SOURCE_FILES})
 target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES} ${Radare_LIBRARIES}
         ${BFD_LIBRARIES})
+
+option(IWYU "Developer option for include what you use." OFF)
+
+if (IWYU)
+    find_program(iwyu_path NAMES include-what-you-use iwyu)
+    if(NOT iwyu_path)
+        message(FATAL_ERROR "Could not find the program include-what-you-use")
+    endif()
+    set_property(TARGET lo2s PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
+endif()
 
 
 # Convince clion to accept headers as part of the project by adding them to a dummy target

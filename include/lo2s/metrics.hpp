@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,25 +19,28 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/time/converter.hpp>
-#include <lo2s/log.hpp>
+#pragma once
+
+#include <lo2s/otf2_trace.hpp>
+#include <lo2s/time/time.hpp>
+
+#include <string>
+#include <vector>
+#include <memory>
 
 namespace lo2s
 {
-perf_time_converter::perf_time_converter()
-{
-    time_reader reader;
-    reader.read();
 
-    if (reader.perf_time.time_since_epoch().count() == 0)
-    {
-        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
-        return;
-    }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
-}
+class metric_plugin;
+
+class metrics
+{
+public:
+    metrics(otf2_trace& trace);
+    ~metrics();
+
+private:
+    otf2_trace& trace_;
+    std::vector<std::unique_ptr<metric_plugin>> metric_plugins_;
+};
 }

@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "metric_channel.hpp"
+#include <lo2s/metric_channel.hpp>
 
 namespace lo2s
 {

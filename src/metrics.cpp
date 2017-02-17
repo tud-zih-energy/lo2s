@@ -18,8 +18,9 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "metrics.hpp"
-#include "metric_plugin.hpp"
+
+#include <lo2s/metrics.hpp>
+#include <lo2s/metric_plugin.hpp>
 
 #include <nitro/env/get.hpp>
 

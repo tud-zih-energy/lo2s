@@ -18,20 +18,15 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "thread_monitor.hpp"
-#include "log.hpp"
-#include "monitor.hpp"
-#include "monitor_config.hpp"
-#include "perf_sample_otf2.hpp"
-#include "platform.hpp"
 
-#include <memory>
+#include <lo2s/thread_monitor.hpp>
 
-#include <cstring>
-extern "C" {
-#include <fcntl.h>
-#include <sys/signal.h>
-}
+#include <lo2s/log.hpp>
+#include <lo2s/monitor.hpp>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/perf_sample_otf2.hpp>
+
+#include <cassert>
 
 namespace lo2s
 {

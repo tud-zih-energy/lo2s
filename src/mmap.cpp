@@ -18,9 +18,10 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "mmap.hpp"
-#include "line_info.hpp"
-#include "util.hpp"
+
+#include <lo2s/mmap.hpp>
+#include <lo2s/line_info.hpp>
+#include <lo2s/util.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
 

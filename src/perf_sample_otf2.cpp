@@ -9,22 +9,35 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "perf_sample_otf2.hpp"
 
-#include "address.hpp"
-#include "thread_monitor.hpp"
-#include "time/time.hpp"
+#include <lo2s/perf_sample_otf2.hpp>
+
+#include <lo2s/address.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/otf2_trace.hpp>
+#include <lo2s/perf_sample_reader.hpp>
+#include <lo2s/process_info.hpp>
+#include <lo2s/thread_monitor.hpp>
+#include <lo2s/time/converter.hpp>
 
 #include <otf2xx/otf2.hpp>
+
+#include <cassert>
+#include <cstring>
+
+extern "C" {
+#include <linux/perf_event.h>
+}
 
 namespace lo2s
 {
@@ -114,7 +127,7 @@ bool perf_sample_otf2::handle(const perf_sample_reader::record_sample_type* samp
     //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
     auto tp = time_converter_(sample->time);
     /*
-    Note: This is the inefficient verison with a fake calling context that we don't use
+    Note: This is the inefficient version with a fake calling context that we don't use
     otf2::definition::calling_context cctx(cctx_ref(sample),
                                             otf2::definition::region::undefined(),
                                            otf2::definition::source_code_location::undefined(),

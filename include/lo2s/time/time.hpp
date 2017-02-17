@@ -19,25 +19,37 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/time/converter.hpp>
+#pragma once
+
 #include <lo2s/log.hpp>
 
+#include <otf2xx/chrono/chrono.hpp>
+
+#include <chrono>
+
+#include <cstdint>
+
+// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
-perf_time_converter::perf_time_converter()
-{
-    time_reader reader;
-    reader.read();
 
-    if (reader.perf_time.time_since_epoch().count() == 0)
-    {
-        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
-        return;
-    }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
+using clock = std::chrono::steady_clock;
+
+struct perf_clock
+{
+    using duration = std::chrono::nanoseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<perf_clock, duration>;
+};
+
+inline perf_clock::time_point perf_tp(std::uint64_t raw_time)
+{
+    return perf_clock::time_point(otf2::chrono::nanoseconds(raw_time));
+}
+
+inline otf2::chrono::time_point get_time()
+{
+    return otf2::chrono::convert_time_point(clock::now());
 }
 }

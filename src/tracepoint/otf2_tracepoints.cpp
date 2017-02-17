@@ -1,10 +1,9 @@
-#include "otf2_tracepoints.hpp"
+#include <lo2s/tracepoint/otf2_tracepoints.hpp>
+#include <lo2s/tracepoint/event_format.hpp>
 
-#include "event_format.hpp"
-
-#include "../error.hpp"
-#include "../log.hpp"
-#include "../topology.hpp"
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/topology.hpp>
 
 #include <nitro/lang/enumerate.hpp>
 

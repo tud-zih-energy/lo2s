@@ -18,20 +18,10 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*
- * mem_event.c
- *
- *  Created on: 20.02.2015
- *      Author: rschoene
- */
+/* In parts from https://github.com/deater/perf_event_tests/blob/master/ */
 
-/* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
+#include <lo2s/platform.hpp>
 
-#include "platform.hpp"
-
-#include <string>
-
-#include <cstdint>
 #include <cstdio>
 #include <cstring>
 

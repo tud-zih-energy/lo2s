@@ -18,19 +18,20 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "monitor.hpp"
 
-#include "error.hpp"
-#include "log.hpp"
-#include "otf2_counters.hpp"
-#include "otf2_trace.hpp"
-#include "perf_sample_reader.hpp"
-#include "time/time.hpp"
-#include "time/converter.hpp"
+#include <lo2s/monitor.hpp>
 
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/otf2_counters.hpp>
+#include <lo2s/otf2_trace.hpp>
+#include <lo2s/tracepoint/otf2_tracepoints.hpp>
+#include <lo2s/util.hpp>
+
+#include <exception>
 #include <system_error>
 
-#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 
@@ -200,14 +201,14 @@ void monitor::handle_signal(pid_t child, int status)
         log::debug() << "signal-delivery-stop from child " << child << ": " << WSTOPSIG(status);
 
         // Special handling for detaching, then we had just attached to a process
-        if (attached_pid != -1  && !running)
+        if (attached_pid != -1 && !running)
         {
             log::debug() << "Detaching from child: " << child;
 
             // Tracee is in signal-delivery-stop, so we can detach
             ptrace(PTRACE_DETACH, child, 0, status);
 
-            // exit if detached from first child (the original sampled process) 
+            // exit if detached from first child (the original sampled process)
             if (child == first_child_)
             {
                 log::info() << "Exiting monitor with status " << 0;
@@ -258,6 +259,7 @@ void monitor::handle_signal(pid_t child, int status)
             break;
         default:
             log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
+            // TODO prevent warning -Wint-to-void-pointer-cast
             check_ptrace(PTRACE_CONT, child, nullptr, (void*)WSTOPSIG(status));
             return;
         }

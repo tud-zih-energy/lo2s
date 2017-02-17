@@ -19,11 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "metric_plugin.hpp"
-#include "metric_plugin_wrapper.hpp"
-
-#include "log.hpp"
-#include "time/time.hpp"
+#include <lo2s/metric_plugin.hpp>
+#include <lo2s/metric_plugin_wrapper.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/time/time.hpp>
 
 #include <memory>
 #include <stdexcept>

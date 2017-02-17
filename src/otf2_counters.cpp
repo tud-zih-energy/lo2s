@@ -18,9 +18,10 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "otf2_counters.hpp"
 
-#include "platform.hpp"
+#include <lo2s/otf2_counters.hpp>
+
+#include <lo2s/platform.hpp>
 
 namespace lo2s
 {

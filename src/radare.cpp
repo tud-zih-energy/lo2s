@@ -18,7 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "radare.hpp"
+
+#include <lo2s/radare.hpp>
 
 namespace lo2s
 {

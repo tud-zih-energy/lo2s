@@ -19,25 +19,33 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/time/converter.hpp>
+#pragma once
+
 #include <lo2s/log.hpp>
+#include <lo2s/perf_sample_reader.hpp>
+#include <lo2s/time/time.hpp>
+
+#include <otf2xx/chrono/chrono.hpp>
 
 namespace lo2s
 {
-perf_time_converter::perf_time_converter()
+class time_reader : public perf_sample_reader<time_reader>
 {
-    time_reader reader;
-    reader.read();
+public:
+    time_reader();
 
-    if (reader.perf_time.time_since_epoch().count() == 0)
-    {
-        log::error() << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
-        return;
-    }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
-}
+public:
+    using perf_sample_reader<time_reader>::handle;
+#ifndef HW_BREAKPOINT_COMPAT
+    using record_sync_type = perf_sample_reader::record_sample_type;
+#else
+    using record_sync_type = perf_sample_reader::record_fork_type;
+#endif
+    bool handle(const record_sync_type* sync_event);
+
+
+public:
+    otf2::chrono::time_point local_time = otf2::chrono::genesis();
+    perf_clock::time_point perf_time;
+};
 }

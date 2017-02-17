@@ -18,15 +18,16 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "otf2_trace.hpp"
 
-#include "address.hpp"
-#include "bfd_resolve.hpp"
-#include "line_info.hpp"
-#include "mmap.hpp"
-#include "time/time.hpp"
-#include "topology.hpp"
-#include "util.hpp"
+#include <lo2s/otf2_trace.hpp>
+
+#include <lo2s/address.hpp>
+#include <lo2s/bfd_resolve.hpp>
+#include <lo2s/line_info.hpp>
+#include <lo2s/mmap.hpp>
+#include <lo2s/time/time.hpp>
+#include <lo2s/topology.hpp>
+#include <lo2s/util.hpp>
 
 #include <map>
 #include <mutex>

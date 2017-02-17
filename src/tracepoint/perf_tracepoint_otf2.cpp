@@ -1,8 +1,8 @@
-#include "../otf2_trace.hpp"
+#include <lo2s/tracepoint/perf_tracepoint_otf2.hpp>
+
+#include <lo2s/otf2_trace.hpp>
 
 #include <nitro/lang/enumerate.hpp>
-
-#include "perf_tracepoint_otf2.hpp"
 
 namespace lo2s
 {

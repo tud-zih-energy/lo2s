@@ -18,29 +18,32 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "error.hpp"
-#include "log.hpp"
-#include "monitor.hpp"
-#include "monitor_config.hpp"
-#include "otf2_trace.hpp"
-#include "pipe.hpp"
-#include "util.hpp"
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/monitor.hpp>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/otf2_trace.hpp>
+#include <lo2s/pipe.hpp>
+#include <lo2s/util.hpp>
 
 #include <boost/program_options.hpp>
 
-#include <iostream>
-#include <system_error>
-#include <vector>
 #include <algorithm>
 #include <chrono>
+#include <iostream>
 #include <iterator>
 #include <memory>
+#include <string>
+#include <system_error>
+#include <vector>
 
-#include <cstdlib>
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
 
 extern "C" {
+#include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -183,7 +186,7 @@ int main(int argc, const char** argv)
     bool debug;
     bool trace;
     // clang-format off
-    uint64_t read_interval_ms;
+    std::uint64_t read_interval_ms;
 
     // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     desc.add_options()
