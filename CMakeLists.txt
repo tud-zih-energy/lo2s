@@ -33,17 +33,16 @@ set(BFD_LIBRARIES "-lbfd -lz -ldl -liberty")
 INCLUDE(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 
-option(HW_BREAKPOINT_COMPAT "Evil workaround to enable HW breakpoint for old kernels with
-backported support but missing headers. Damn you Red Hat!" OFF)
+option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 
 if (HW_BREAKPOINT_COMPAT)
     add_definitions(-DHW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
-        message(WARNING "Using evil hw_breakpoint compatibility headers while the nice clean ones are available. Consider deactivating HW_BREAKPOINT_COMPAT")
+        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
     endif()
 else()
     if (NOT HAVE_HW_BREAKPOINT_H)
-        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with backported support.")
+        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
     endif()
 endif()
 
