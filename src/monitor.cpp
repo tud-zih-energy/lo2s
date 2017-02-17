@@ -25,7 +25,8 @@
 #include "otf2_counters.hpp"
 #include "otf2_trace.hpp"
 #include "perf_sample_reader.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
+#include "time/converter.hpp"
 
 #include <system_error>
 

@@ -24,7 +24,7 @@
 #include "bfd_resolve.hpp"
 #include "line_info.hpp"
 #include "mmap.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 #include "topology.hpp"
 #include "util.hpp"
 

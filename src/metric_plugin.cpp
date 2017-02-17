@@ -23,7 +23,7 @@
 #include "metric_plugin_wrapper.hpp"
 
 #include "log.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 
 #include <memory>
 #include <stdexcept>

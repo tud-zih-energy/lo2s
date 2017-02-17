@@ -22,7 +22,7 @@
 #define X86_RECORD_METRICS_HPP
 
 #include "otf2_trace.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 
 #include <string>
 #include <vector>

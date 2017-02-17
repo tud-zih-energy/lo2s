@@ -23,7 +23,7 @@
 
 #include "metric_channel.hpp"
 #include "otf2_trace.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 
 #include <nitro/dl/dl.hpp>
 

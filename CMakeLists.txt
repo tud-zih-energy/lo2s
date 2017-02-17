@@ -52,12 +52,13 @@ include_directories(include)
 
 set(SOURCE_FILES
         src/main.cpp src/monitor.cpp src/thread_map.cpp src/thread_monitor.cpp
-        src/platform.cpp src/perf_sample_otf2.cpp src/otf2_trace.cpp src/time.cpp
+        src/platform.cpp src/perf_sample_otf2.cpp src/otf2_trace.cpp
         src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp src/address.hpp
         src/mmap.cpp src/perf_counter.cpp src/otf2_counters.hpp src/otf2_counters.cpp
         src/metric_plugin.cpp src/metric_channel.cpp src/metrics.cpp
         src/tracepoint/perf_tracepoint_otf2.cpp src/tracepoint/otf2_tracepoints.cpp
         src/tracepoint/event_format.cpp
+        src/time/reader.cpp src/time/converter.cpp
     )
 
 add_executable(lo2s ${SOURCE_FILES})

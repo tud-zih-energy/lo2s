@@ -25,7 +25,8 @@
 #include "monitor_config.hpp"
 #include "otf2_trace.hpp"
 #include "thread_map.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
+#include "time/converter.hpp"
 
 #include "tracepoint/otf2_tracepoints.hpp"
 

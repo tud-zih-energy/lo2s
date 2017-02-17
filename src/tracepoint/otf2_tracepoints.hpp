@@ -6,7 +6,9 @@
 #include "../monitor_config.hpp"
 #include "../otf2_trace.hpp"
 #include "../pipe.hpp"
-#include "../time.hpp"
+#include "../time/time.hpp"
+
+#include <thread>
 
 namespace lo2s
 {

@@ -23,7 +23,7 @@
 
 #include "otf2_trace.hpp"
 #include "perf_counter.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 
 #include <otf2xx/writer/local.hpp>
 

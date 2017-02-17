@@ -6,7 +6,7 @@
 
 #include "../monitor_config.hpp"
 #include "../otf2_trace.hpp"
-#include "../time.hpp"
+#include "../time/converter.hpp"
 
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/event/metric.hpp>

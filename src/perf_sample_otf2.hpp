@@ -29,7 +29,8 @@
 #include "otf2_trace.hpp"
 #include "perf_counter.hpp"
 #include "perf_sample_reader.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
+#include "time/converter.hpp"
 #include "platform.hpp"
 
 #include <otf2xx/chrono/time_point.hpp>

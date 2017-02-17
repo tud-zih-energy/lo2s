@@ -22,7 +22,7 @@
 
 #include "address.hpp"
 #include "thread_monitor.hpp"
-#include "time.hpp"
+#include "time/time.hpp"
 
 #include <otf2xx/otf2.hpp>
 
