@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,24 +21,38 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <lo2s/metric/perf_counter.hpp>
+#include <lo2s/time/time.hpp>
 
-#include <chrono>
+#include <otf2xx/writer/local.hpp>
+
+#include <boost/filesystem.hpp>
 
 #include <cstdint>
 
-// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
-namespace time
+namespace trace
 {
-using clock = std::chrono::steady_clock;
+class counters
+{
+public:
+    counters(pid_t pid, pid_t tid, trace& trace, otf2::definition::metric_class metric_class,
+             otf2::definition::location scope);
 
-inline otf2::chrono::time_point now()
-{
-    return otf2::chrono::convert_time_point(clock::now());
-}
+    static otf2::definition::metric_class get_metric_class(trace& trace);
+
+    void write();
+
+private:
+    otf2::writer::local& writer_;
+    otf2::definition::metric_instance metric_instance_;
+    // XXX this should depend here!
+    std::vector<metric::perf_counter> counters_;
+    std::vector<otf2::event::metric::value_container> values_;
+    boost::filesystem::ifstream proc_stat_;
+};
 }
 }

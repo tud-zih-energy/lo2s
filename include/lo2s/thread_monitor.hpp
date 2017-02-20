@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <lo2s/otf2_counters.hpp>
-#include <lo2s/perf_sample_otf2.hpp>
+#include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/trace/counters.hpp>
 
 #include <array>
 #include <chrono>
@@ -109,8 +109,9 @@ private:
 
     std::thread thread;
 
-    perf_sample_otf2 sample_reader_;
-    otf2_counters counters_;
+    // XXX rename
+    perf::sample::writer sample_reader_;
+    trace::counters counters_;
     std::chrono::nanoseconds read_interval_;
 };
 }

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,24 +21,33 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
+#include <lo2s/time/time.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include <chrono>
-
-#include <cstdint>
-
-// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
-namespace time
+namespace metric
 {
-using clock = std::chrono::steady_clock;
+namespace plugin
+{
 
-inline otf2::chrono::time_point now()
+class plugin;
+
+class metrics
 {
-    return otf2::chrono::convert_time_point(clock::now());
+public:
+    metrics(trace::trace& trace);
+
+    ~metrics();
+
+private:
+    trace::trace& trace_;
+    std::vector<std::unique_ptr<plugin>> metric_plugins_;
+};
 }
 }
 }

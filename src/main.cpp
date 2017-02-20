@@ -22,8 +22,8 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor.hpp>
 #include <lo2s/monitor_config.hpp>
-#include <lo2s/otf2_trace.hpp>
 #include <lo2s/pipe.hpp>
+#include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
 #include <boost/program_options.hpp>
@@ -144,7 +144,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             child_ready_pipe->close_write_fd();
             go_pipe->close_read_fd();
         }
-        otf2_trace trace(config.sampling_period, trace_path);
+        trace::trace trace_(config.sampling_period, trace_path);
 
         std::string proc_name;
         if (spawn)
@@ -162,7 +162,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             proc_name = get_process_exe(pid);
         }
 
-        monitor m(pid, proc_name, trace, spawn, config);
+        monitor m(pid, proc_name, trace_, spawn, config);
 
         if (spawn)
         {

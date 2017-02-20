@@ -19,26 +19,33 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/log.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
-
-#include <chrono>
-
-#include <cstdint>
-
-// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
+{
+namespace perf
 {
 namespace time
 {
-using clock = std::chrono::steady_clock;
-
-inline otf2::chrono::time_point now()
+converter::converter()
 {
-    return otf2::chrono::convert_time_point(clock::now());
+    reader reader;
+    reader.read();
+
+    if (reader.perf_time.time_since_epoch().count() == 0)
+    {
+        log::error()
+            << "Could not determine perf_time offset. Synchronization event was not triggered.";
+        offset = otf2::chrono::duration(0);
+        return;
+    }
+    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
+    log::info() << "perf time offset: " << offset.count() << " ns ("
+                << reader.local_time.time_since_epoch().count() << " - "
+                << reader.perf_time.time_since_epoch().count() << ").";
+}
 }
 }
 }

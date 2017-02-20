@@ -21,24 +21,49 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
+#include <lo2s/perf/tracepoint/event_format.hpp>
+#include <lo2s/perf/tracepoint/writer.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/pipe.hpp>
+#include <lo2s/time/time.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <chrono>
+#include <thread>
+#include <vector>
 
-#include <cstdint>
-
-// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
-namespace time
+namespace perf
 {
-using clock = std::chrono::steady_clock;
+namespace tracepoint
+{
+/*
+ * NOTE: Encapsulates counters for ALL cpus, totally different than counters!
+ */
+class recorder
+{
+public:
+    recorder(trace::trace& trace, const monitor_config& config,
+             const time::converter& time_converter);
 
-inline otf2::chrono::time_point now()
-{
-    return otf2::chrono::convert_time_point(clock::now());
+    ~recorder();
+
+public:
+    void stop();
+
+private:
+    void start();
+
+    void poll();
+
+    void stop_all();
+
+private:
+    pipe stop_pipe_;
+    std::vector<writer> perf_recorders_;
+    std::thread thread_;
+};
 }
 }
 }

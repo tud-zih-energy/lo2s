@@ -24,7 +24,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor.hpp>
 #include <lo2s/monitor_config.hpp>
-#include <lo2s/perf_sample_otf2.hpp>
+#include <lo2s/perf/sample/writer.hpp>
 
 #include <cassert>
 

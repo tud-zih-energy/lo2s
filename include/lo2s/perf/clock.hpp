@@ -30,15 +30,18 @@
 #include <cstdint>
 
 // All the time stuff is based on the assumption that all times are nanoseconds.
+// XXX check if we need this exposed or can just move it to time/converter.hpp
 namespace lo2s
 {
-namespace time
+namespace perf
 {
-using clock = std::chrono::steady_clock;
 
-inline otf2::chrono::time_point now()
+struct clock
 {
-    return otf2::chrono::convert_time_point(clock::now());
-}
+    using duration = std::chrono::nanoseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<clock, duration>;
+};
 }
 }

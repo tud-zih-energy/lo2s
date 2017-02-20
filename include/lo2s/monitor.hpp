@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include <lo2s/metrics.hpp>
+#include <lo2s/metric/plugin/metrics.hpp>
 #include <lo2s/monitor_config.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/thread_map.hpp>
-#include <lo2s/time/converter.hpp>
 
 #include <otf2xx/definition/metric_class.hpp>
 
@@ -37,25 +37,34 @@ extern "C" {
 
 namespace lo2s
 {
-class otf2_trace;
-class otf2_tracepoints;
+namespace trace
+{
+class trace;
+}
+namespace perf
+{
+namespace tracepoint
+{
+class recorder;
+}
+}
 
 class monitor
 {
 public:
-    monitor(pid_t child, const std::string& name, otf2_trace& trace, bool spawn,
+    monitor(pid_t child, const std::string& name, trace::trace& trace, bool spawn,
             const monitor_config& config);
 
     ~monitor();
 
     void run();
 
-    otf2_trace& trace()
+    trace::trace& trace()
     {
         return trace_;
     }
 
-    const perf_time_converter& time_converter() const
+    const perf::time::converter& time_converter() const
     {
         return time_converter_;
     }
@@ -77,12 +86,11 @@ private:
     const pid_t first_child_;
     thread_map threads_;
     sighandler_t default_signal_handler;
-    perf_time_converter time_converter_;
-    otf2_trace& trace_;
+    perf::time::converter time_converter_;
+    trace::trace& trace_;
     otf2::definition::metric_class counters_metric_class_;
     monitor_config config_;
-    metrics metrics_;
-
-    std::unique_ptr<otf2_tracepoints> raw_counters_;
+    metric::plugin::metrics metrics_;
+    std::unique_ptr<perf::tracepoint::recorder> raw_counters_;
 };
 }

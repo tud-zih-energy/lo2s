@@ -24,9 +24,9 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor_config.hpp>
-#include <lo2s/otf2_counters.hpp>
-#include <lo2s/otf2_trace.hpp>
-#include <lo2s/tracepoint/otf2_tracepoints.hpp>
+#include <lo2s/perf/tracepoint/recorder.hpp>
+#include <lo2s/trace/counters.hpp>
+#include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
 #include <exception>
@@ -91,11 +91,12 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool spawn,
+monitor::monitor(pid_t child, const std::string& name, trace::trace& trace_, bool spawn,
                  const monitor_config& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
-  time_converter_(), trace_(trace), counters_metric_class_(otf2_counters::get_metric_class(trace_)),
-  config_(config), metrics_(trace_)
+  time_converter_(), trace_(trace_),
+  counters_metric_class_(trace::counters::get_metric_class(trace_)), config_(config),
+  metrics_(trace_)
 {
     if (spawn)
     {
@@ -112,7 +113,8 @@ monitor::monitor(pid_t child, const std::string& name, otf2_trace& trace, bool s
     {
         try
         {
-            raw_counters_ = std::make_unique<otf2_tracepoints>(trace_, config_, time_converter_);
+            raw_counters_ = std::make_unique<perf::tracepoint::recorder>(trace_, config_,
+                                                                  time_converter_);
         }
         catch (std::exception& e)
         {

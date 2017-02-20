@@ -21,24 +21,44 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
+#include <lo2s/perf/time/reader.hpp>
+
+#include <lo2s/perf/clock.hpp>
 
 #include <otf2xx/chrono/chrono.hpp>
 
-#include <chrono>
-
 #include <cstdint>
 
-// All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
+{
+namespace perf
 {
 namespace time
 {
-using clock = std::chrono::steady_clock;
 
-inline otf2::chrono::time_point now()
+class converter
 {
-    return otf2::chrono::convert_time_point(clock::now());
+public:
+    converter();
+
+    otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
+    {
+        return operator()(convert_time_point(perf_raw));
+    }
+
+    otf2::chrono::time_point operator()(perf::clock::time_point perf_tp) const
+    {
+        return otf2::chrono::time_point(perf_tp.time_since_epoch() + offset);
+    }
+
+    perf::clock::time_point operator()(otf2::chrono::time_point local_tp) const
+    {
+        return perf::clock::time_point(local_tp.time_since_epoch() - offset);
+    }
+
+private:
+    otf2::chrono::duration offset;
+};
 }
 }
 }

@@ -26,9 +26,16 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 find_package(Radare REQUIRED)
 include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
 
+# TODO this seems broken enough
 #find_package(BFD REQUIRED)
 #include_directories(SYSTEM ${BFD_INCLUDE_DIRS})
 set(BFD_LIBRARIES "-lbfd -lz -ldl -liberty")
+
+find_package(X86Adapt)
+if (X86Adapt_FOUND)
+    message(STATUS "X86Adapt found.")
+    add_definitions(-DHAVE_X86ADAPT)
+endif()
 
 INCLUDE(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -51,14 +58,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthr
 include_directories(include)
 
 set(SOURCE_FILES
+        src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
+        src/metric/perf_counter.cpp
+
+        src/perf/sample/writer.cpp
+        src/perf/time/converter.cpp src/perf/time/reader.cpp
+        src/perf/tracepoint/event_format.cpp src/perf/tracepoint/recorder.cpp
+        src/perf/tracepoint/writer.cpp
+
+        src/trace/counters.cpp src/trace/trace.cpp
+
         src/main.cpp src/monitor.cpp src/thread_map.cpp src/thread_monitor.cpp
-        src/platform.cpp src/perf_sample_otf2.cpp src/otf2_trace.cpp
+        src/platform.cpp
         src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp
-        src/mmap.cpp src/perf_counter.cpp src/otf2_counters.cpp
-        src/metric_plugin.cpp src/metric_channel.cpp src/metrics.cpp
-        src/tracepoint/perf_tracepoint_otf2.cpp src/tracepoint/otf2_tracepoints.cpp
-        src/tracepoint/event_format.cpp
-        src/time/reader.cpp src/time/converter.cpp
+        src/mmap.cpp
     )
 
 add_executable(lo2s ${SOURCE_FILES})
