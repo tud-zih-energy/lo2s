@@ -36,12 +36,13 @@ namespace lo2s
 namespace perf
 {
 
-struct clock
+struct Clock
 {
+    // This is except from the type = CamelCase naming convention to be compatible
     using duration = std::chrono::nanoseconds;
     using rep = duration::rep;
     using period = duration::period;
-    using time_point = std::chrono::time_point<clock, duration>;
+    using time_point = std::chrono::time_point<Clock, duration>;
 };
 }
 }

@@ -37,23 +37,23 @@ extern "C" {
 
 namespace lo2s
 {
-class monitor;
-class process_info;
+class Monitor;
+class ProcessInfo;
 
-class thread_monitor
+class ThreadMonitor
 {
 public:
-    using clock = std::chrono::high_resolution_clock;
-    thread_monitor(pid_t pid, pid_t tid, monitor& parent_monitor, process_info& info,
+    using Clock = std::chrono::high_resolution_clock;
+    ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
                    bool enable_on_exec);
-    ~thread_monitor();
+    ~ThreadMonitor();
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
-    thread_monitor(const thread_monitor&) = delete;
-    thread_monitor& operator=(const thread_monitor&) = delete;
+    ThreadMonitor(const ThreadMonitor&) = delete;
+    ThreadMonitor& operator=(const ThreadMonitor&) = delete;
     // Moving is still a bit tricky (keep moved-from in a useful state), avoid it for now.
-    thread_monitor(thread_monitor&&) = delete;
-    thread_monitor& operator=(thread_monitor&&) = delete;
+    ThreadMonitor(ThreadMonitor&&) = delete;
+    ThreadMonitor& operator=(ThreadMonitor&&) = delete;
 
     void disable();
 
@@ -83,12 +83,12 @@ public:
         return tid_;
     }
 
-    monitor& parent_monitor()
+    Monitor& parent_monitor()
     {
         return parent_monitor_;
     }
 
-    process_info& info()
+    ProcessInfo& info()
     {
         return info_;
     }
@@ -96,8 +96,8 @@ public:
 private:
     pid_t pid_;
     pid_t tid_;
-    monitor& parent_monitor_;
-    process_info& info_;
+    Monitor& parent_monitor_;
+    ProcessInfo& info_;
 
     bool enabled_ = false;
     bool finished_ = false;
@@ -110,8 +110,8 @@ private:
     std::thread thread;
 
     // XXX rename
-    perf::sample::writer sample_reader_;
-    trace::counters counters_;
+    perf::sample::Writer sample_reader_;
+    trace::Counters counters_;
     std::chrono::nanoseconds read_interval_;
 };
 }

@@ -48,10 +48,10 @@ namespace perf
 namespace sample
 {
 template <class T>
-class reader : public event_reader<T>
+class Reader : public EventReader<T>
 {
 public:
-    struct record_sample_type
+    struct RecordSampleType
     {
         struct perf_event_header header;
         uint64_t ip;
@@ -63,14 +63,14 @@ public:
     };
 
 protected:
-    reader(bool has_cct = false) : has_cct_(has_cct)
+    Reader(bool has_cct = false) : has_cct_(has_cct)
     {
     }
 
-    using event_reader<T>::init_mmap;
+    using EventReader<T>::init_mmap;
     void init(struct perf_event_attr& perf_attr, pid_t tid, bool enable_on_exec, size_t mmap_pages)
     {
-        log::debug() << "initializing event_reader for tid: " << tid
+        Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
 
         // We need this to get all mmap_events
@@ -108,10 +108,10 @@ protected:
         {
             // TODO if there is a EACCESS, we should retry without the kernel flag!
             // Test if it then works with paranoid=2
-            log::error() << "perf_event_open for sampling failed";
+            Log::error() << "perf_event_open for sampling failed";
             throw_errno();
         }
-        log::debug() << "Using precise_ip level: " << perf_attr.precise_ip;
+        Log::debug() << "Using precise_ip level: " << perf_attr.precise_ip;
 
         // Exception safe, so much wow!
         try
@@ -124,12 +124,12 @@ protected:
             }
 
             init_mmap(fd_, mmap_pages);
-            log::debug() << "mmap initialized";
+            Log::debug() << "mmap initialized";
 
             if (!enable_on_exec)
             {
                 auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-                log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+                Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
                 if (ret == -1)
                 {
                     throw_errno();
@@ -143,17 +143,17 @@ protected:
         }
     }
 
-    reader(const reader&) = delete;
-    reader(reader&&) = delete;
-    reader& operator=(const reader&) = delete;
-    reader& operator=(reader&&) = delete;
+    Reader(const Reader&) = delete;
+    Reader(Reader&&) = delete;
+    Reader& operator=(const Reader&) = delete;
+    Reader& operator=(Reader&&) = delete;
 
-    ~reader()
+    ~Reader()
     {
         if ((this->total_samples > 0) &&
             ((this->throttle_samples * 100) / this->total_samples) > 20)
         {
-            log::warn() << "The given sample period is too low and the kernel assumes it has an "
+            Log::warn() << "The given sample period is too low and the kernel assumes it has an "
                            "overwhelming influence on the runtime!\n"
                            "Thus, the kernel increased and decreased this period often "
                            "(> 20 % of the throttling events, < 80 % sampling events)."

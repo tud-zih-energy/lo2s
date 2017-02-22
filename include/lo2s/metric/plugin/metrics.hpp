@@ -35,18 +35,18 @@ namespace metric
 namespace plugin
 {
 
-class plugin;
+class Plugin;
 
-class metrics
+class Metrics
 {
 public:
-    metrics(trace::trace& trace);
+    Metrics(trace::Trace& trace);
 
-    ~metrics();
+    ~Metrics();
 
 private:
-    trace::trace& trace_;
-    std::vector<std::unique_ptr<plugin>> metric_plugins_;
+    trace::Trace& trace_;
+    std::vector<std::unique_ptr<Plugin>> metric_plugins_;
 };
 }
 }

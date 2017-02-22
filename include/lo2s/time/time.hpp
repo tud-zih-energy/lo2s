@@ -34,11 +34,11 @@ namespace lo2s
 {
 namespace time
 {
-using clock = std::chrono::steady_clock;
+using Clock = std::chrono::steady_clock;
 
 inline otf2::chrono::time_point now()
 {
-    return otf2::chrono::convert_time_point(clock::now());
+    return otf2::chrono::convert_time_point(Clock::now());
 }
 }
 }

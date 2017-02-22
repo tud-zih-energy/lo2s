@@ -34,7 +34,7 @@ namespace wrapper
 {
 
 template<class T>
-struct malloc_delete
+struct MallocDelete
 {
     void operator()(T *ptr) const
     {
@@ -92,7 +92,7 @@ enum SynchronizationMode
     END
 };
 
-struct properties
+struct Properties
 {
     /** Plugin name */
     char *name;
@@ -112,7 +112,7 @@ struct properties
     char *unit;
 };
 
-struct time_value_pair
+struct TimeValuePair
 {
     /** Timestamp in Score-P time! */
     std::uint64_t timestamp;
@@ -120,7 +120,7 @@ struct time_value_pair
     std::uint64_t value;
 };
 
-struct plugin_info
+struct PluginInfo
 {
 
     uint32_t plugin_version;
@@ -135,7 +135,7 @@ struct plugin_info
 
     void (*finalize)(void);
 
-    properties *(*get_event_info)(const char *token);
+    Properties *(*get_event_info)(const char *token);
 
     int32_t (*add_counter)(const char *metric_name);
 
@@ -145,7 +145,7 @@ struct plugin_info
 
     void (*set_clock_function)(uint64_t (*clock_time)(void));
 
-    uint64_t (*get_all_values)(int32_t id, time_value_pair **time_value_list);
+    uint64_t (*get_all_values)(int32_t id, TimeValuePair **time_value_list);
 
     void (*synchronize)(bool is_responsible, SynchronizationMode sync_mode);
 

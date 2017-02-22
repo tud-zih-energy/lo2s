@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/event_format.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
 
 #include <lo2s/monitor_config.hpp>
@@ -41,13 +41,13 @@ namespace tracepoint
 /*
  * NOTE: Encapsulates counters for ALL cpus, totally different than counters!
  */
-class recorder
+class Recorder
 {
 public:
-    recorder(trace::trace& trace, const monitor_config& config,
-             const time::converter& time_converter);
+    Recorder(trace::Trace& trace, const MonitorConfig& config,
+             const time::Converter& time_converter);
 
-    ~recorder();
+    ~Recorder();
 
 public:
     void stop();
@@ -60,8 +60,8 @@ private:
     void stop_all();
 
 private:
-    pipe stop_pipe_;
-    std::vector<writer> perf_recorders_;
+    Pipe stop_pipe_;
+    std::vector<Writer> perf_recorders_;
     std::thread thread_;
 };
 }

@@ -56,7 +56,7 @@ void sig_handler(int signum)
     // If we attached to a running process, we initiate the detaching now. Sick.
     if (signum == SIGINT && attached_pid != -1)
     {
-        log::info() << "Received SIGINT. Trying to detach";
+        Log::info() << "Received SIGINT. Trying to detach";
 
         // set global running to false
         running = false;
@@ -67,7 +67,7 @@ void sig_handler(int signum)
         return;
     }
 
-    log::debug() << "sig_handler called, what should I do with signal " << signum;
+    Log::debug() << "sig_handler called, what should I do with signal " << signum;
     // TODO: check signum
     /* restore default signal hander */
     // signal(SIGINT, default_signal_handler);
@@ -80,7 +80,7 @@ void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr
     if (retval == -1)
     {
         auto ex = make_system_error();
-        log::warn() << "Failed ptrace call: " << request << ", " << pid << ", " << addr << ", "
+        Log::warn() << "Failed ptrace call: " << request << ", " << pid << ", " << addr << ", "
                     << data << ": " << ex.what();
         throw ex;
     }
@@ -91,11 +91,11 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-monitor::monitor(pid_t child, const std::string& name, trace::trace& trace_, bool spawn,
-                 const monitor_config& config)
+Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, bool spawn,
+                 const MonitorConfig& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
   time_converter_(), trace_(trace_),
-  counters_metric_class_(trace::counters::get_metric_class(trace_)), config_(config),
+  counters_metric_class_(trace::Counters::get_metric_class(trace_)), config_(config),
   metrics_(trace_)
 {
     if (spawn)
@@ -113,12 +113,12 @@ monitor::monitor(pid_t child, const std::string& name, trace::trace& trace_, boo
     {
         try
         {
-            raw_counters_ = std::make_unique<perf::tracepoint::recorder>(trace_, config_,
+            raw_counters_ = std::make_unique<perf::tracepoint::Recorder>(trace_, config_,
                                                                   time_converter_);
         }
         catch (std::exception& e)
         {
-            log::warn() << "Failed to initialize tracepoint events: " << e.what();
+            Log::warn() << "Failed to initialize tracepoint events: " << e.what();
         }
     }
 
@@ -130,7 +130,7 @@ monitor::monitor(pid_t child, const std::string& name, trace::trace& trace_, boo
     threads_.insert(child, child, spawn);
 }
 
-monitor::~monitor()
+Monitor::~Monitor()
 {
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace
@@ -142,7 +142,7 @@ monitor::~monitor()
     }
 }
 
-void monitor::run()
+void Monitor::run()
 {
     // monitor fork/exit/... via ptrace
     while (1)
@@ -154,16 +154,16 @@ void monitor::run()
     }
 }
 
-void monitor::handle_ptrace_event_stop(pid_t child, int event)
+void Monitor::handle_ptrace_event_stop(pid_t child, int event)
 {
-    log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
+    Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
     if ((event == PTRACE_EVENT_FORK) || (event == PTRACE_EVENT_VFORK))
     {
         // we need the pid of the new process
         pid_t newpid;
         check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
         auto name = get_process_exe(newpid);
-        log::debug() << "New process is forked " << newpid << ": " << name << " parent: " << child
+        Log::debug() << "New process is forked " << newpid << ": " << name << " parent: " << child
                      << ": " << get_process_exe(child);
 
         trace_.process(newpid, name);
@@ -179,7 +179,7 @@ void monitor::handle_ptrace_event_stop(pid_t child, int event)
         // Parent may be a thread, get the process
         auto pid = threads_.get_thread(child).pid();
 
-        log::info() << "New thread is cloned " << newpid << " parent: " << child << " pid: " << pid;
+        Log::info() << "New thread is cloned " << newpid << " parent: " << child << " pid: " << pid;
 
         // register monitoring
         threads_.insert(pid, newpid, false);
@@ -188,24 +188,24 @@ void monitor::handle_ptrace_event_stop(pid_t child, int event)
     if (event == PTRACE_EVENT_EXIT)
     {
         auto& thread = threads_.get_thread(child);
-        log::info() << "Thread/process " << thread.tid() << " is about to exit";
+        Log::info() << "Thread/process " << thread.tid() << " is about to exit";
 
         thread.disable();
         threads_.try_join();
     }
 }
 
-void monitor::handle_signal(pid_t child, int status)
+void Monitor::handle_signal(pid_t child, int status)
 {
-    log::debug() << "Handling signal " << status << " from child: " << child;
+    Log::debug() << "Handling signal " << status << " from child: " << child;
     if (WIFSTOPPED(status)) // signal-delivery-stop
     {
-        log::debug() << "signal-delivery-stop from child " << child << ": " << WSTOPSIG(status);
+        Log::debug() << "signal-delivery-stop from child " << child << ": " << WSTOPSIG(status);
 
         // Special handling for detaching, then we had just attached to a process
         if (attached_pid != -1 && !running)
         {
-            log::debug() << "Detaching from child: " << child;
+            Log::debug() << "Detaching from child: " << child;
 
             // Tracee is in signal-delivery-stop, so we can detach
             ptrace(PTRACE_DETACH, child, 0, status);
@@ -213,7 +213,7 @@ void monitor::handle_signal(pid_t child, int status)
             // exit if detached from first child (the original sampled process)
             if (child == first_child_)
             {
-                log::info() << "Exiting monitor with status " << 0;
+                Log::info() << "Exiting monitor with status " << 0;
                 throw std::system_error(0, std::system_category());
             }
         }
@@ -222,7 +222,7 @@ void monitor::handle_signal(pid_t child, int status)
         {
         case SIGSTOP:
         {
-            log::debug() << "Set ptrace options for process: " << child;
+            Log::debug() << "Set ptrace options for process: " << child;
 
             // we are only interested in fork/join events
             check_ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
@@ -254,13 +254,13 @@ void monitor::handle_signal(pid_t child, int status)
             // exit if first child (the original sampled process) got killed by a signal
             if (child == first_child_)
             {
-                log::error() << "Process stopped with signal" << strsignal(WSTOPSIG(status));
+                Log::error() << "Process stopped with signal" << strsignal(WSTOPSIG(status));
                 throw std::system_error(std::make_error_code(std::errc::interrupted),
                                         strsignal(WSTOPSIG(status)));
             }
             break;
         default:
-            log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
+            Log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
             // TODO prevent warning -Wint-to-void-pointer-cast
             check_ptrace(PTRACE_CONT, child, nullptr, (void*)WSTOPSIG(status));
             return;
@@ -272,14 +272,14 @@ void monitor::handle_signal(pid_t child, int status)
         if (child == first_child_)
         {
             // NOTE: Yes we even throw the error success here!
-            log::info() << "Exiting monitor with status " << WEXITSTATUS(status);
+            Log::info() << "Exiting monitor with status " << WEXITSTATUS(status);
             throw std::system_error(WEXITSTATUS(status), std::system_category());
         }
         return;
     }
     else
     {
-        log::warn() << "Unknown signal for child " << child << ": " << status;
+        Log::warn() << "Unknown signal for child " << child << ": " << status;
     }
     // wait for next fork/exit/...
     check_ptrace(PTRACE_CONT, child);

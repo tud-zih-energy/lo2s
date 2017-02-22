@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/event_format.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 
 #include <lo2s/perf/event_reader.hpp>
 
@@ -49,12 +49,12 @@ namespace perf
 namespace tracepoint
 {
 template <class T>
-class reader : public event_reader<T>
+class Reader : public EventReader<T>
 {
 public:
-    struct record_dynamic_format
+    struct RecordDynamicFormat
     {
-        uint64_t get(const event_field& field) const
+        uint64_t get(const EventField& field) const
         {
             switch (field.size())
             {
@@ -86,18 +86,18 @@ public:
         char raw_data_[1]; // Can I still not [0] with ISO-C++ :-(
     };
 
-    struct record_sample_type
+    struct RecordSampleType
     {
         struct perf_event_header header;
         uint64_t time;
         // uint32_t size;
         // char data[size];
-        record_dynamic_format raw_data;
+        RecordDynamicFormat raw_data;
     };
 
-    using event_reader<T>::init_mmap;
+    using EventReader<T>::init_mmap;
 
-    reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
+    Reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
     {
         struct perf_event_attr attr;
         memset(&attr, 0, sizeof(attr));
@@ -114,10 +114,10 @@ public:
         fd_ = syscall(__NR_perf_event_open, &attr, -1, cpu_, -1, 0);
         if (fd_ < 0)
         {
-            log::error() << "perf_event_open for raw tracepoint failed.";
+            Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-        log::debug() << "Opened perf_sample_tracepoint_reader for cpu " << cpu_ << " with id "
+        Log::debug() << "Opened perf_sample_tracepoint_reader for cpu " << cpu_ << " with id "
                      << event_id;
 
         try
@@ -130,10 +130,10 @@ public:
             }
 
             init_mmap(fd_, mmap_pages);
-            log::debug() << "perf_tracepoint_reader mmap initialized";
+            Log::debug() << "perf_tracepoint_reader mmap initialized";
 
             auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-            log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
             if (ret == -1)
             {
                 throw_errno();
@@ -146,13 +146,13 @@ public:
         }
     }
 
-    reader(reader&& other)
-    : event_reader<T>(std::forward<perf::event_reader<T>>(other)), cpu_(other.cpu_)
+    Reader(Reader&& other)
+    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
     {
         std::swap(fd_, other.fd_);
     }
 
-    ~reader()
+    ~Reader()
     {
         if (fd_ != -1)
         {
@@ -168,7 +168,7 @@ public:
     void stop()
     {
         auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
-        log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
             throw_errno();
@@ -183,7 +183,7 @@ private:
 };
 
 template <typename T>
-const fs::path reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
+const fs::path Reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
 }
 }
 }

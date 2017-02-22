@@ -42,8 +42,8 @@ static otf2::common::type convert_type(wrapper::ValueType value_type)
     }
 }
 
-channel::channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-                 wrapper::ValueType value_type, trace::trace& trace)
+Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
+                 wrapper::ValueType value_type, trace::Trace& trace)
 : id_(-1), name_(name), description_(), unit_(), mode_(mode), value_type_(value_type),
   writer_(trace.metric_writer(name_)),
   metric_(trace.metric_instance(trace.metric_class(), writer_.location(),
@@ -69,17 +69,17 @@ channel::channel(const char* name, const char* description, const char* unit, wr
     values_[0].metric = (*mc)[0];
 }
 
-const std::string& channel::name() const
+const std::string& Channel::name() const
 {
     return name_;
 }
 
-int& channel::id()
+int& Channel::id()
 {
     return id_;
 }
 
-void channel::write_value(wrapper::time_value_pair tv)
+void Channel::write_value(wrapper::TimeValuePair tv)
 {
     values_[0].value.unsigned_int = tv.value;
 

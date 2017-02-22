@@ -43,16 +43,16 @@ namespace lo2s
 namespace logging
 {
 
-    using record =
+    using Record =
         nitro::log::record<nitro::log::message_attribute, nitro::log::timestamp_attribute,
                            nitro::log::severity_attribute, nitro::log::pid_attribute,
                            nitro::log::pthread_id_attribute>;
 
-    template <typename Record>
-    class lo2s_log_formater
+    template <typename R>
+    class Lo2sLogFormatter
     {
     public:
-        std::string format(Record& r)
+        std::string format(R& r)
         {
             std::stringstream s;
 
@@ -63,8 +63,8 @@ namespace logging
         }
     };
 
-    template <typename Record>
-    using lo2s_filter = nitro::log::filter::severity_filter<Record>;
+    template <typename R>
+    using Lo2sFilter = nitro::log::filter::severity_filter<R>;
 
     inline std::ostream& i_hate_init()
     {
@@ -74,7 +74,7 @@ namespace logging
     }
 
     template <bool Foo = false>
-    struct fileout
+    struct Fileout
     {
         static std::mutex stdout_mutex;
 
@@ -87,14 +87,14 @@ namespace logging
     };
 
     template <bool Foo>
-    std::mutex fileout<Foo>::stdout_mutex;
+    std::mutex Fileout<Foo>::stdout_mutex;
 
-    using logging = nitro::log::logger<record, lo2s_log_formater, nitro::log::sink::stderr_mt,
-                                       lo2s_filter>;
+    using Logging = nitro::log::logger<Record, Lo2sLogFormatter, nitro::log::sink::stderr_mt,
+                                       Lo2sFilter>;
 
     inline void set_min_severity_level(nitro::log::severity_level sev)
     {
-        lo2s_filter<record>::set_severity(sev);
+        Lo2sFilter<Record>::set_severity(sev);
     }
 
     inline void set_min_severity_level(std::string verbosity)
@@ -105,5 +105,5 @@ namespace logging
 
 } // namespace logging
 
-using log = logging::logging;
+using Log = logging::Logging;
 }

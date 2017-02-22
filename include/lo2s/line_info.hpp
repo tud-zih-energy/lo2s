@@ -28,27 +28,27 @@ using fmt = boost::format;
 
 namespace lo2s
 {
-struct line_info
+struct LineInfo
 {
     // Note: If line is not known, we write 1 anyway so the rest is shown in vampir
-    line_info(const std::string& fi, const std::string& fu, unsigned int l,
+    LineInfo(const std::string& fi, const std::string& fu, unsigned int l,
               const std::string& d)
             : file(fi), function(fu), line(l ? l : 1),
               dso(boost::filesystem::path(d).filename().string())
     {
     }
 
-    line_info(const char* fi, const char* fu, unsigned int l, const std::string& d)
-            : line_info(fi ? std::string(fi) : unknown_str, fu ? std::string(fu) : unknown_str, l, d)
+    LineInfo(const char* fi, const char* fu, unsigned int l, const std::string& d)
+            : LineInfo(fi ? std::string(fi) : unknown_str, fu ? std::string(fu) : unknown_str, l, d)
     {
     }
 
-    line_info(address addr) : line_info(addr, unknown_str)
+    LineInfo(Address addr) : LineInfo(addr, unknown_str)
     {
     }
 
-    line_info(address addr, const std::string& d)
-            : line_info(unknown_str, str(fmt("?@%dx") % addr), 0, d)
+    LineInfo(Address addr, const std::string& d)
+            : LineInfo(unknown_str, str(fmt("?@%dx") % addr), 0, d)
     {
     }
 
@@ -60,19 +60,19 @@ struct line_info
     static const std::string unknown_str;
 
     // For std::map
-    bool operator<(const line_info& other) const
+    bool operator<(const LineInfo& other) const
     {
         return std::tie(file, function, line, dso) <
                std::tie(other.file, other.function, other.line, dso);
     }
-    bool operator==(const line_info& other) const
+    bool operator==(const LineInfo& other) const
     {
         return std::tie(file, function, line, dso) ==
                std::tie(other.file, other.function, other.line, dso);
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const line_info& info)
+inline std::ostream& operator<<(std::ostream& os, const LineInfo& info)
 {
     return os << info.function << " @ " << info.file << ":" << info.line << " in " << info.dso;
 }

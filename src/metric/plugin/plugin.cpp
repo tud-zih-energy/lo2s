@@ -50,8 +50,8 @@ static std::string entry_name(const std::string& name)
     return std::string("SCOREP_MetricPlugin_") + name + "_get_info";
 }
 
-static void parse_properties(std::vector<channel>& channels, wrapper::properties* props,
-                             trace::trace& trace)
+static void parse_properties(std::vector<Channel>& channels, wrapper::Properties* props,
+                             trace::Trace& trace)
 {
     if (props == nullptr)
     {
@@ -71,26 +71,26 @@ static void parse_properties(std::vector<channel>& channels, wrapper::properties
     }
 }
 
-plugin::plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
-               trace::trace& trace)
+Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
+               trace::Trace& trace)
 : plugin_name_(plugin_name), plugin_events_(plugin_events), trace_(trace),
   lib_(lib_name(plugin_name)), plugin_()
 {
-    log::info() << "Loading plugin: " << plugin_name_;
+    Log::info() << "Loading plugin: " << plugin_name_;
 
     // open lib file and call entry point
-    auto plugin_entry = lib_.load<wrapper::plugin_info()>(entry_name(plugin_name_));
+    auto plugin_entry = lib_.load<wrapper::PluginInfo()>(entry_name(plugin_name_));
     plugin_ = plugin_entry();
 
     if (plugin_.sync != wrapper::Synchronicity::ASYNC)
     {
-        log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
+        Log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
         throw std::runtime_error("Only plugins, which are ASYNC are supported.");
     }
 
     if (plugin_.run_per != wrapper::Per::ONCE && plugin_.run_per != wrapper::Per::HOST)
     {
-        log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
+        Log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
         throw std::runtime_error("Only plugins, which are PER_HOST or ONCE are supported.");
     }
 
@@ -99,16 +99,16 @@ plugin::plugin(const std::string& plugin_name, const std::vector<std::string>& p
 
     for (auto token : plugin_events_)
     {
-        log::info() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
+        Log::info() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
 
         auto info =
-            std::unique_ptr<wrapper::properties, wrapper::malloc_delete<wrapper::properties>>(
+            std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
                 plugin_.get_event_info(token.c_str()));
 
         parse_properties(channels_, info.get(), trace);
     }
 
-    log::info() << "Plugin '" << plugin_name_ << "' reported " << channels_.size() << " channels.";
+    Log::info() << "Plugin '" << plugin_name_ << "' reported " << channels_.size() << " channels.";
 
     for (auto& channel : channels_)
     {
@@ -116,7 +116,7 @@ plugin::plugin(const std::string& plugin_name, const std::vector<std::string>& p
 
         if (id == -1)
         {
-            log::warn() << "Error in Plugin: " << plugin_name_
+            Log::warn() << "Error in Plugin: " << plugin_name_
                         << " Failed to call add_counter for token: " << channel.name();
 
             continue;
@@ -126,30 +126,30 @@ plugin::plugin(const std::string& plugin_name, const std::vector<std::string>& p
     }
 }
 
-plugin::~plugin()
+Plugin::~Plugin()
 {
-    log::info() << "Unloading plugin: " << plugin_name_;
+    Log::info() << "Unloading plugin: " << plugin_name_;
     plugin_.finalize();
 }
 
-void plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point to)
+void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point to)
 {
     for (auto& channel : channels_)
     {
         if (channel.id() == -1)
         {
-            log::warn() << "In plugin: " << plugin_name_ << " skipping channel '" << channel.name()
+            Log::warn() << "In plugin: " << plugin_name_ << " skipping channel '" << channel.name()
                         << "' in data acquisition.";
             // something went wrong, skipping this channel
             continue;
         }
 
-        wrapper::time_value_pair* tv_list;
+        wrapper::TimeValuePair* tv_list;
         auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
-        std::unique_ptr<wrapper::time_value_pair, wrapper::malloc_delete<wrapper::time_value_pair>>
+        std::unique_ptr<wrapper::TimeValuePair, wrapper::MallocDelete<wrapper::TimeValuePair>>
             tv_list_owner(tv_list);
 
-        log::info() << "In plugin: " << plugin_name_ << " received for channel '" << channel.name()
+        Log::info() << "In plugin: " << plugin_name_ << " received for channel '" << channel.name()
                     << "' " << num_entries << " data points.";
 
         for (std::size_t i = 0; i < num_entries; ++i)
@@ -163,18 +163,18 @@ void plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
     }
 }
 
-void plugin::start_recording()
+void Plugin::start_recording()
 {
-    log::info() << "Start recording for plugin: " << plugin_name_;
+    Log::info() << "Start recording for plugin: " << plugin_name_;
 
     if (plugin_.synchronize != nullptr)
     {
         plugin_.synchronize(true, wrapper::SynchronizationMode::BEGIN);
     }
 }
-void plugin::stop_recording()
+void Plugin::stop_recording()
 {
-    log::info() << "Stop recording for plugin: " << plugin_name_;
+    Log::info() << "Stop recording for plugin: " << plugin_name_;
 
     if (plugin_.synchronize != nullptr)
     {

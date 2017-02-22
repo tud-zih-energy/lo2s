@@ -25,17 +25,17 @@
 
 namespace lo2s
 {
-class pipe
+class Pipe
 {
 public:
-    pipe();
-    ~pipe();
+    Pipe();
+    ~Pipe();
 
-    pipe(const pipe&) = delete;
-    pipe& operator=(const pipe&) = delete;
+    Pipe(const Pipe&) = delete;
+    Pipe& operator=(const Pipe&) = delete;
 
-    pipe(pipe&&) noexcept;
-    pipe& operator=(pipe&&) noexcept;
+    Pipe(Pipe&&) noexcept;
+    Pipe& operator=(Pipe&&) noexcept;
 
     void read_fd_flags(int flags);
     void write_fd_flags(int flags);

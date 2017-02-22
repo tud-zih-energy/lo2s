@@ -35,29 +35,29 @@ namespace perf
 namespace time
 {
 
-inline perf::clock::time_point convert_time_point(std::uint64_t raw_time)
+inline perf::Clock::time_point convert_time_point(std::uint64_t raw_time)
 {
-    return perf::clock::time_point(otf2::chrono::nanoseconds(raw_time));
+    return perf::Clock::time_point(otf2::chrono::nanoseconds(raw_time));
 }
 
-class reader : public sample::reader<reader>
+class Reader : public sample::Reader<Reader>
 {
 public:
-    reader();
+    Reader();
 
 public:
-    using sample::reader<reader>::handle;
+    using sample::Reader<Reader>::handle;
 #ifndef HW_BREAKPOINT_COMPAT
-    using record_sync_type = sample::reader<reader>::record_sample_type;
+    using RecordSyncType = sample::Reader<Reader>::RecordSampleType;
 #else
-    using record_sync_type = sample::reader<reader>::record_fork_type;
+    using RecordSyncType = sample::reader<reader>::record_fork_type;
 #endif
 
-    bool handle(const record_sync_type* sync_event);
+    bool handle(const RecordSyncType* sync_event);
 
 public:
     otf2::chrono::time_point local_time = otf2::chrono::genesis();
-    perf::clock::time_point perf_time;
+    perf::Clock::time_point perf_time;
 };
 }
 }

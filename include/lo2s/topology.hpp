@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -76,7 +76,7 @@ namespace detail
     }
 }
 
-class topology
+class Topology
 {
 
     void read_proc()
@@ -107,20 +107,20 @@ class topology
             package_stream >> package_id;
             core_stream >> core_id;
 
-            auto insert_package = packages_.insert(std::make_pair(package_id, package(package_id)));
+            auto insert_package = packages_.insert(std::make_pair(package_id, Package(package_id)));
             auto& package = insert_package.first->second;
             assert(package.id == package_id);
             package.core_ids.insert(core_id);
             package.cpu_ids.insert(cpu_id);
 
             auto insert_core = cores_.insert(
-                std::make_pair(std::make_tuple(package_id, core_id), core(core_id, package_id)));
+                std::make_pair(std::make_tuple(package_id, core_id), Core(core_id, package_id)));
             auto& core = insert_core.first->second;
             assert(core.id == core_id && core.package_id == package_id);
             core.cpu_ids.insert(cpu_id);
 
             auto insert_cpu =
-                cpus_.insert(std::make_pair(cpu_id, cpu(cpu_id, core_id, package_id)));
+                cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
             auto& cpu = insert_cpu.first->second;
             (void)cpu;
             assert(cpu.id == cpu_id && cpu.core_id == core_id && cpu.package_id == package_id);
@@ -132,35 +132,35 @@ class topology
     }
 
 public:
-    struct cpu
+    struct Cpu
     {
         uint32_t id;
         uint32_t core_id;
         uint32_t package_id;
 
-        cpu(uint32_t id, uint32_t core_id, uint32_t package_id)
+        Cpu(uint32_t id, uint32_t core_id, uint32_t package_id)
         : id(id), core_id(core_id), package_id(package_id)
         {
         }
     };
 
-    struct core
+    struct Core
     {
         uint32_t id;
         uint32_t package_id;
 
-        core(uint32_t id, uint32_t package_id) : id(id), package_id(package_id)
+        Core(uint32_t id, uint32_t package_id) : id(id), package_id(package_id)
         {
         }
 
         std::set<uint32_t> cpu_ids;
     };
 
-    struct package
+    struct Package
     {
         uint32_t id;
 
-        package(uint32_t id) : id(id)
+        Package(uint32_t id) : id(id)
         {
         }
 
@@ -169,15 +169,15 @@ public:
     };
 
 private:
-    topology()
+    Topology()
     {
         read_proc();
     }
 
 public:
-    static topology& instance()
+    static Topology& instance()
     {
-        static topology t;
+        static Topology t;
 
         return t;
     }
@@ -192,32 +192,32 @@ public:
         return packages_.size();
     }
 
-    std::vector<cpu> cpus() const
+    std::vector<Cpu> cpus() const
     {
-        std::vector<cpu> r;
+        std::vector<Cpu> r;
         std::transform(cpus_.begin(), cpus_.end(), std::back_inserter(r),
                        [](const auto& elem) { return elem.second; });
         return r;
     }
-    std::vector<core> cores() const
+    std::vector<Core> cores() const
     {
-        std::vector<core> r;
+        std::vector<Core> r;
         std::transform(cores_.begin(), cores_.end(), std::back_inserter(r),
                        [](const auto& elem) { return elem.second; });
         return r;
     }
-    std::vector<package> packages() const
+    std::vector<Package> packages() const
     {
-        std::vector<package> r;
+        std::vector<Package> r;
         std::transform(packages_.begin(), packages_.end(), std::back_inserter(r),
                        [](const auto& elem) { return elem.second; });
         return r;
     }
 
 private:
-    std::map<int, cpu> cpus_;
-    std::map<std::tuple<int, int>, core> cores_;
-    std::map<int, package> packages_;
+    std::map<int, Cpu> cpus_;
+    std::map<std::tuple<int, int>, Core> cores_;
+    std::map<int, Package> packages_;
 
     const static fs::path base_path;
 };

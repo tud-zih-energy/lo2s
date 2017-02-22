@@ -38,7 +38,7 @@ namespace lo2s
 {
 namespace metric
 {
-perf_counter::perf_counter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1)
+PerfCounter::PerfCounter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -52,18 +52,18 @@ perf_counter::perf_counter(pid_t tid, perf_type_id type, uint64_t config, uint64
     fd_ = syscall(__NR_perf_event_open, &attr, tid, -1, -1, 0);
     if (fd_ < 0)
     {
-        log::error() << "perf_event_open for counter failed";
+        Log::error() << "perf_event_open for counter failed";
         throw_errno();
     }
 }
 
-double perf_counter::read()
+double PerfCounter::read()
 {
-    ver infos;
+    Ver infos;
     auto res = ::read(fd_, &infos, sizeof(infos));
     if (res != sizeof(infos))
     {
-        log::error() << "could not read counter values";
+        Log::error() << "could not read counter values";
         throw_errno();
     }
     double value = (infos - previous_).scale() + accumulated_;

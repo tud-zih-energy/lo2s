@@ -36,13 +36,13 @@ namespace lo2s
 {
 namespace trace
 {
-class counters
+class Counters
 {
 public:
-    counters(pid_t pid, pid_t tid, trace& trace, otf2::definition::metric_class metric_class,
+    Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_class metric_class,
              otf2::definition::location scope);
 
-    static otf2::definition::metric_class get_metric_class(trace& trace);
+    static otf2::definition::metric_class get_metric_class(Trace& trace);
 
     void write();
 
@@ -50,7 +50,7 @@ private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!
-    std::vector<metric::perf_counter> counters_;
+    std::vector<metric::PerfCounter> counters_;
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
 };

@@ -77,12 +77,12 @@ static auto read_env_variables()
     return v;
 }
 
-metrics::metrics(trace::trace& trace) : trace_(trace)
+Metrics::Metrics(trace::Trace& trace) : trace_(trace)
 {
     // initialize each plugin, which is set using the SCOREP_METRIC_PLUGINS variables
     for (const auto& plugin_name_options : read_env_variables())
     {
-        metric_plugins_.emplace_back(std::make_unique<plugin>(plugin_name_options.first,
+        metric_plugins_.emplace_back(std::make_unique<Plugin>(plugin_name_options.first,
                                                               plugin_name_options.second, trace_));
     }
 
@@ -93,7 +93,7 @@ metrics::metrics(trace::trace& trace) : trace_(trace)
     }
 }
 
-metrics::~metrics()
+Metrics::~Metrics()
 {
     // first we stop recording, after that, we collect the data from each plugin
     // and the destructor of the vector member will finalize each plugin

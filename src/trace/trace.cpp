@@ -39,7 +39,7 @@ namespace lo2s
 namespace trace
 {
 
-constexpr pid_t trace::METRIC_PID;
+constexpr pid_t Trace::METRIC_PID;
 
 std::string get_trace_name(std::string prefix = "", bool append_time = false)
 {
@@ -52,11 +52,11 @@ std::string get_trace_name(std::string prefix = "", bool append_time = false)
     {
         prefix += "_" + get_datetime();
     }
-    log::info() << "Using trace directory: " << prefix;
+    Log::info() << "Using trace directory: " << prefix;
     return prefix;
 }
 
-trace::trace(uint64_t sample_period, const std::string& trace_path)
+Trace::Trace(uint64_t sample_period, const std::string& trace_path)
 : archive_(get_trace_name(trace_path), "traces"),
   system_tree_root_node_(0, intern(get_hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
@@ -70,10 +70,10 @@ trace::trace(uint64_t sample_period, const std::string& trace_path)
     process(METRIC_PID, "Metric Location Group");
 
     int otf2_id = 1;
-    const auto& sys = topology::instance();
+    const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
     {
-        log::debug() << "Registering package " << package.id;
+        Log::debug() << "Registering package " << package.id;
         const auto& parent = system_tree_root_node_;
         system_tree_package_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(package.id),
@@ -82,7 +82,7 @@ trace::trace(uint64_t sample_period, const std::string& trace_path)
     }
     for (auto& core : sys.cores())
     {
-        log::debug() << "Registering core " << core.id << "@" << core.package_id;
+        Log::debug() << "Registering core " << core.id << "@" << core.package_id;
         const auto& parent = system_tree_package_nodes_.at(core.package_id);
         system_tree_core_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(core.id, core.package_id),
@@ -92,7 +92,7 @@ trace::trace(uint64_t sample_period, const std::string& trace_path)
     }
     for (auto& cpu : sys.cpus())
     {
-        log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
+        Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
         const auto& parent =
             system_tree_core_nodes_.at(std::make_pair(cpu.core_id, cpu.package_id));
         system_tree_cpu_nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
@@ -113,29 +113,29 @@ otf2::writer::archive& operator<<(otf2::writer::archive& ar, const std::map<IT, 
     return ar;
 }
 
-void trace::begin_record()
+void Trace::begin_record()
 {
-    log::info() << "Initialization done. Start recording...";
+    Log::info() << "Initialization done. Start recording...";
     starting_time_ = time::now();
 }
 
-void trace::end_record()
+void Trace::end_record()
 {
     stopping_time_ = time::now();
-    log::info() << "Recording done. Start finalization...";
+    Log::info() << "Recording done. Start finalization...";
 }
 
-otf2::chrono::time_point trace::record_from() const
+otf2::chrono::time_point Trace::record_from() const
 {
     return starting_time_;
 }
 
-otf2::chrono::time_point trace::record_to() const
+otf2::chrono::time_point Trace::record_to() const
 {
     return stopping_time_;
 }
 
-trace::~trace()
+Trace::~Trace()
 {
     auto function_groups_ = function_groups();
     otf2::definition::comm_locations_group comm_locations_group(
@@ -173,7 +173,7 @@ trace::~trace()
     archive_ << metric_instances_;
 }
 
-std::map<std::string, otf2::definition::regions_group> trace::function_groups()
+std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
 {
     std::map<std::string, otf2::definition::regions_group> groups;
     for (const auto& elem : regions_)
@@ -194,7 +194,7 @@ std::map<std::string, otf2::definition::regions_group> trace::function_groups()
     return groups;
 }
 
-void trace::process(pid_t pid, const std::string& name)
+void Trace::process(pid_t pid, const std::string& name)
 {
     location_groups_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
@@ -203,7 +203,7 @@ void trace::process(pid_t pid, const std::string& name)
                               system_tree_root_node_));
 }
 
-otf2::writer::local& trace::sample_writer(pid_t pid, pid_t tid)
+otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("thread %d") % tid).str();
     auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
@@ -211,7 +211,7 @@ otf2::writer::local& trace::sample_writer(pid_t pid, pid_t tid)
     return archive()(location);
 }
 
-otf2::writer::local& trace::metric_writer(pid_t pid, pid_t tid)
+otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
     auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
@@ -219,7 +219,7 @@ otf2::writer::local& trace::metric_writer(pid_t pid, pid_t tid)
     return archive()(location);
 }
 
-otf2::writer::local& trace::metric_writer(const std::string& name)
+otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     auto location =
         locations_.emplace(locations_.size(), intern(name), location_groups_.at(METRIC_PID),
@@ -227,7 +227,7 @@ otf2::writer::local& trace::metric_writer(const std::string& name)
     return archive()(location);
 }
 
-otf2::definition::metric_member trace::metric_member(const std::string& name,
+otf2::definition::metric_member Trace::metric_member(const std::string& name,
                                                      const std::string& description,
                                                      otf2::common::metric_mode mode,
                                                      otf2::common::type value_type,
@@ -240,7 +240,7 @@ otf2::definition::metric_member trace::metric_member(const std::string& name,
 }
 
 otf2::definition::metric_instance
-trace::metric_instance(otf2::definition::metric_class metric_class,
+Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder, otf2::definition::location scope)
 {
     auto ref = metric_instances_.size() + metric_classes_.size();
@@ -248,7 +248,7 @@ trace::metric_instance(otf2::definition::metric_class metric_class,
 }
 
 otf2::definition::metric_instance
-trace::metric_instance(otf2::definition::metric_class metric_class,
+Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder,
                        otf2::definition::system_tree_node scope)
 {
@@ -256,23 +256,23 @@ trace::metric_instance(otf2::definition::metric_class metric_class,
     return metric_instances_.emplace(ref, metric_class, recorder, scope);
 }
 
-otf2::definition::metric_class trace::metric_class()
+otf2::definition::metric_class Trace::metric_class()
 {
     auto ref = metric_instances_.size() + metric_classes_.size();
     return metric_classes_.emplace(ref, otf2::common::metric_occurence::async,
                                    otf2::common::recorder_kind::abstract);
 }
 
-static line_info region_info(line_info info)
+static LineInfo region_info(LineInfo info)
 {
     // TODO lookup actual line info
     info.line = 1;
     return info;
 }
 
-void trace::merge_ips(ip_ref_map& new_children, ip_cctx_map& children,
+void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context parent, const memory_map& maps)
+                      otf2::definition::calling_context parent, const MemoryMap& maps)
 {
 
     for (auto& elem : new_children)
@@ -281,7 +281,7 @@ void trace::merge_ips(ip_ref_map& new_children, ip_cctx_map& children,
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
         auto line_info = maps.lookup_line_info(ip);
-        log::debug() << "resolved " << ip << ": " << line_info;
+        Log::debug() << "resolved " << ip << ": " << line_info;
         auto cctx_it = children.find(ip);
         if (cctx_it == children.end())
         {
@@ -298,14 +298,14 @@ void trace::merge_ips(ip_ref_map& new_children, ip_cctx_map& children,
                 // TODO do not write properties for useless unknown stuff
                 OTF2_AttributeValue_union value;
                 auto instruction = maps.lookup_instruction(ip);
-                log::debug() << "mapped " << ip << " to " << instruction;
+                Log::debug() << "mapped " << ip << " to " << instruction;
                 value.stringRef = intern(instruction).ref();
                 calling_context_properties_.emplace(new_cctx, intern("instruction"),
                                                     otf2::common::type::string, value);
             }
             catch (std::exception& ex)
             {
-                log::debug() << "could not read instruction from " << ip << ": " << ex.what();
+                Log::debug() << "could not read instruction from " << ip << ": " << ex.what();
             }
         }
         const auto& cctx = cctx_it->second.cctx;
@@ -315,8 +315,8 @@ void trace::merge_ips(ip_ref_map& new_children, ip_cctx_map& children,
     }
 }
 
-otf2::definition::mapping_table trace::merge_ips(ip_ref_map& new_ips, uint64_t ip_count,
-                                                 const memory_map& maps)
+otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_count,
+                                                 const MemoryMap& maps)
 {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -345,7 +345,7 @@ otf2::definition::mapping_table trace::merge_ips(ip_ref_map& new_ips, uint64_t i
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
-otf2::definition::source_code_location trace::intern_scl(const line_info& info)
+otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)
 {
     auto ref = source_code_locations_.size();
     auto ret =
@@ -354,7 +354,7 @@ otf2::definition::source_code_location trace::intern_scl(const line_info& info)
     return ret.first->second;
 }
 
-otf2::definition::region trace::intern_region(const line_info& info)
+otf2::definition::region Trace::intern_region(const LineInfo& info)
 {
     auto ref = regions_.size();
     auto name_str = intern(info.function);
@@ -366,7 +366,7 @@ otf2::definition::region trace::intern_region(const line_info& info)
     return ret.first->second;
 }
 
-otf2::definition::string trace::intern(const std::string& name)
+otf2::definition::string Trace::intern(const std::string& name)
 {
     auto ref = strings_.size();
     auto ret = strings_.emplace(std::piecewise_construct, std::forward_as_tuple(name),

@@ -31,16 +31,16 @@ namespace lo2s
 /**
  * This type denotes a memory address in the observed program
  */
-class address
+class Address
 {
 public:
-    explicit address(const std::string s)
+    explicit Address(const std::string s)
     {
         std::stringstream ss;
         ss << std::hex << s;
         ss >> v_;
     }
-    address(uint64_t v) : v_(v)
+    Address(uint64_t v) : v_(v)
     {
     }
 
@@ -49,44 +49,44 @@ public:
         return v_;
     }
 
-    bool operator==(address rhs) const
+    bool operator==(Address rhs) const
     {
         return v_ == rhs.v_;
     }
 
-    bool operator!=(address rhs) const
+    bool operator!=(Address rhs) const
     {
         return v_ != rhs.v_;
     }
 
-    bool operator<(address rhs) const
+    bool operator<(Address rhs) const
     {
         return v_ < rhs.v_;
     }
-    bool operator<=(address rhs) const
+    bool operator<=(Address rhs) const
     {
         return v_ <= rhs.v_;
     }
-    bool operator>(address rhs) const
+    bool operator>(Address rhs) const
     {
         return v_ > rhs.v_;
     }
-    bool operator>=(address rhs) const
+    bool operator>=(Address rhs) const
     {
         return v_ >= rhs.v_;
     }
 
-    address operator+(address rhs) const
+    Address operator+(Address rhs) const
     {
-        return address(v_ + rhs.v_);
+        return Address(v_ + rhs.v_);
     }
 
-    address operator-(address rhs) const
+    Address operator-(Address rhs) const
     {
-        return address(v_ - rhs.v_);
+        return Address(v_ - rhs.v_);
     }
 
-    address truncate_bits(int bits) const
+    Address truncate_bits(int bits) const
     {
         uint64_t mask = -1;
         mask = (mask >> bits) << bits;
@@ -97,36 +97,36 @@ private:
     uint64_t v_;
 };
 
-inline std::ostream& operator<<(std::ostream& os, address a)
+inline std::ostream& operator<<(std::ostream& os, Address a)
 {
     static_assert(sizeof(a.value()) == sizeof(void*),
                   "internal address should be the same bit-width as void*");
     return os << reinterpret_cast<void*>(a.value());
 }
 
-struct range
+struct Range
 {
-    class error : public std::runtime_error
+    class Error : public std::runtime_error
     {
     public:
-        error(const std::string& what) : std::runtime_error(what)
+        Error(const std::string& what) : std::runtime_error(what)
         {
         }
     };
-    range(address point) : range(point, point + 1)
+    Range(Address point) : Range(point, point + 1)
     {
     }
-    range(address min_, address max_) : start(min_), end(max_)
+    Range(Address min_, Address max_) : start(min_), end(max_)
     {
         if (min_ >= max_)
         {
-            throw error("malformed range");
+            throw Error("malformed range");
         }
     }
-    address start;
-    address end;
+    Address start;
+    Address end;
 
-    bool operator<(const range& other) const
+    bool operator<(const Range& other) const
     {
         // Must not overlap!
         // [-----]
@@ -138,7 +138,7 @@ struct range
         if ((start < other.start && other.start < end && end < other.end) ||
             (other.start < start && start < other.end && other.end < end))
         {
-            throw error("overlapping ranges");
+            throw Error("overlapping ranges");
         }
 
         return end <= other.start;

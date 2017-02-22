@@ -39,32 +39,32 @@ namespace lo2s
 {
 namespace trace
 {
-class trace;
+class Trace;
 }
 namespace perf
 {
 namespace tracepoint
 {
-class recorder;
+class Recorder;
 }
 }
 
-class monitor
+class Monitor
 {
 public:
-    monitor(pid_t child, const std::string& name, trace::trace& trace, bool spawn,
-            const monitor_config& config);
+    Monitor(pid_t child, const std::string& name, trace::Trace& trace, bool spawn,
+            const MonitorConfig& config);
 
-    ~monitor();
+    ~Monitor();
 
     void run();
 
-    trace::trace& trace()
+    trace::Trace& trace()
     {
         return trace_;
     }
 
-    const perf::time::converter& time_converter() const
+    const perf::time::Converter& time_converter() const
     {
         return time_converter_;
     }
@@ -74,7 +74,7 @@ public:
         return counters_metric_class_;
     }
 
-    const monitor_config& config() const
+    const MonitorConfig& config() const
     {
         return config_;
     }
@@ -84,13 +84,13 @@ private:
     void handle_signal(pid_t child, int status);
 
     const pid_t first_child_;
-    thread_map threads_;
+    ThreadMap threads_;
     sighandler_t default_signal_handler;
-    perf::time::converter time_converter_;
-    trace::trace& trace_;
+    perf::time::Converter time_converter_;
+    trace::Trace& trace_;
     otf2::definition::metric_class counters_metric_class_;
-    monitor_config config_;
-    metric::plugin::metrics metrics_;
-    std::unique_ptr<perf::tracepoint::recorder> raw_counters_;
+    MonitorConfig config_;
+    metric::plugin::Metrics metrics_;
+    std::unique_ptr<perf::tracepoint::Recorder> raw_counters_;
 };
 }

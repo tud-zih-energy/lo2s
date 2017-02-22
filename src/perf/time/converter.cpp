@@ -29,20 +29,20 @@ namespace perf
 {
 namespace time
 {
-converter::converter()
+Converter::Converter()
 {
-    reader reader;
+    Reader reader;
     reader.read();
 
     if (reader.perf_time.time_since_epoch().count() == 0)
     {
-        log::error()
+        Log::error()
             << "Could not determine perf_time offset. Synchronization event was not triggered.";
         offset = otf2::chrono::duration(0);
         return;
     }
     offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    log::info() << "perf time offset: " << offset.count() << " ns ("
+    Log::info() << "perf time offset: " << offset.count() << " ns ("
                 << reader.local_time.time_since_epoch().count() << " - "
                 << reader.perf_time.time_since_epoch().count() << ").";
 }

@@ -35,9 +35,9 @@
 
 namespace lo2s
 {
-thread_map::~thread_map()
+ThreadMap::~ThreadMap()
 {
-    log::debug() << "Cleaning up global thread map.";
+    Log::debug() << "Cleaning up global thread map.";
     // I really hope noone accesses the thread_map while it's being deconstructed.
     std::lock_guard<std::recursive_mutex> lock(mutex_);
 
@@ -49,7 +49,7 @@ thread_map::~thread_map()
         return;
     }
 
-    log::debug() << "Going for a short nap while threads are finishing. This is totally fine.";
+    Log::debug() << "Going for a short nap while threads are finishing. This is totally fine.";
     // TODO Sleep for sampling_period instead.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     try_join();
@@ -58,7 +58,7 @@ thread_map::~thread_map()
         return;
     }
 
-    log::info() << "Waiting 1 second for all threads to finish.";
+    Log::info() << "Waiting 1 second for all threads to finish.";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     try_join();
     if (threads_.empty())
@@ -66,10 +66,10 @@ thread_map::~thread_map()
         return;
     }
 
-    log::warn() << "Not all monitoring threads finished, giving up.";
+    Log::warn() << "Not all monitoring threads finished, giving up.";
 }
 
-process_info& thread_map::insert_process(pid_t pid, bool enable_on_exec)
+ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     // TODO wait for C++17 and replace with try_emplace
@@ -83,7 +83,7 @@ process_info& thread_map::insert_process(pid_t pid, bool enable_on_exec)
     return processes_.at(pid);
 }
 
-void thread_map::insert(pid_t pid, pid_t tid, bool enable_on_exec)
+void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto& info = insert_process(pid, enable_on_exec);
@@ -104,21 +104,21 @@ void thread_map::insert(pid_t pid, pid_t tid, bool enable_on_exec)
                     << ", thread " << tid << ". This thread will not be sampled.";
     }
          */
-        log::debug() << "Registered thread " << tid << ", (pid " << pid << ")";
+        Log::debug() << "Registered thread " << tid << ", (pid " << pid << ")";
     }
     else
     {
-        log::warn() << "Thread " << tid << ", (pid " << pid << ") already registered";
+        Log::warn() << "Thread " << tid << ", (pid " << pid << ") already registered";
     }
 }
 
-void thread_map::disable(pid_t tid)
+void ThreadMap::disable(pid_t tid)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     get_thread(tid).disable();
 }
 
-void thread_map::disable()
+void ThreadMap::disable()
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto& elem : threads_)
@@ -130,12 +130,12 @@ void thread_map::disable()
     }
 }
 
-thread_monitor& thread_map::get_thread(pid_t tid)
+ThreadMonitor& ThreadMap::get_thread(pid_t tid)
 {
     return threads_.at(tid);
 }
 
-void thread_map::try_join()
+void ThreadMap::try_join()
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     const auto end = threads_.end();

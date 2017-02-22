@@ -39,39 +39,39 @@ namespace trace
 {
 
 template <typename RefMap>
-using ip_map = std::map<address, RefMap>;
+using IpMap = std::map<Address, RefMap>;
 
-struct ip_ref_entry
+struct IpRefEntry
 {
-    ip_ref_entry(otf2::definition::calling_context::reference_type r) : ref(r)
+    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
     {
     }
 
     otf2::definition::calling_context::reference_type ref;
-    ip_map<ip_ref_entry> children;
+    IpMap<IpRefEntry> children;
 };
 
-struct ip_cctx_entry
+struct IpCctxEntry
 {
-    ip_cctx_entry(otf2::definition::calling_context c) : cctx(c)
+    IpCctxEntry(otf2::definition::calling_context c) : cctx(c)
     {
     }
 
     otf2::definition::calling_context cctx;
-    ip_map<ip_cctx_entry> children;
+    IpMap<IpCctxEntry> children;
 };
 
-using ip_ref_map = ip_map<ip_ref_entry>;
-using ip_cctx_map = ip_map<ip_cctx_entry>;
+using IpRefMap = IpMap<IpRefEntry>;
+using IpCctxMap = IpMap<IpCctxEntry>;
 
-class trace
+class Trace
 {
 public:
     static constexpr pid_t METRIC_PID = 0;
 
-    trace(uint64_t sample_period, const std::string& trace_path);
+    Trace(uint64_t sample_period, const std::string& trace_path);
 
-    ~trace();
+    ~Trace();
 
     void begin_record();
 
@@ -110,12 +110,12 @@ public:
                                                       otf2::definition::location recorder,
                                                       otf2::definition::system_tree_node scope);
 
-    otf2::definition::mapping_table merge_ips(ip_ref_map& new_ips, uint64_t ip_count,
-                                              const memory_map& maps);
+    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, uint64_t ip_count,
+                                              const MemoryMap& maps);
 
-    void merge_ips(ip_ref_map& new_children, ip_cctx_map& children,
+    void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
-                   const memory_map& maps);
+                   const MemoryMap& maps);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -135,9 +135,9 @@ public:
 private:
     std::map<std::string, otf2::definition::regions_group> function_groups();
 
-    otf2::definition::source_code_location intern_scl(const line_info&);
+    otf2::definition::source_code_location intern_scl(const LineInfo&);
 
-    otf2::definition::region intern_region(const line_info&);
+    otf2::definition::region intern_region(const LineInfo&);
 
     otf2::definition::string intern(const std::string&);
 
@@ -162,9 +162,9 @@ private:
     // TODO add location groups (processes), read path from /proc/self/exe symlink
     otf2::definition::container<otf2::definition::location> locations_;
 
-    std::map<line_info, otf2::definition::source_code_location> source_code_locations_;
-    std::map<line_info, otf2::definition::region> regions_;
-    ip_cctx_map calling_context_tree_;
+    std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
+    std::map<LineInfo, otf2::definition::region> regions_;
+    IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
     otf2::definition::container<otf2::definition::calling_context_property>
         calling_context_properties_;

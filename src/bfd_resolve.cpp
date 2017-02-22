@@ -27,18 +27,18 @@
 
 namespace lo2s
 {
-const std::string line_info::unknown_str = "(unknown)";
+const std::string LineInfo::unknown_str = "(unknown)";
 
 namespace bfdr
 {
-    initializer lib::dummy_;
+    Initializer Lib::dummy_;
 
-    lib::lib(const std::string& name) : name_(name)
+    Lib::Lib(const std::string& name) : name_(name)
     {
         handle_ = bfd_openr(name.c_str(), nullptr);
         if (handle_ == nullptr)
         {
-            throw init_error("failed to open BFD handle", name);
+            throw InitError("failed to open BFD handle", name);
         }
         // init stuff
         //  Not sure if those are needed for side-effects
@@ -48,7 +48,7 @@ namespace bfdr
         {
             bfd_close(handle_);
             handle_ = nullptr;
-            throw init_error("Not a valid bfd_object", name);
+            throw InitError("Not a valid bfd_object", name);
         }
 
         char** matching;
@@ -56,7 +56,7 @@ namespace bfdr
         {
             bfd_close(handle_);
             handle_ = nullptr;
-            throw init_error("BFD format does not match.", name);
+            throw InitError("BFD format does not match.", name);
         }
 
         //            if (bfd_get_flavour(handle_) != bfd_target_elf_flavour)
@@ -78,7 +78,7 @@ namespace bfdr
         }
     }
 
-    lib::~lib()
+    Lib::~Lib()
     {
         if (handle_ != nullptr)
         {
@@ -87,7 +87,7 @@ namespace bfdr
         }
     }
 
-    line_info lib::lookup(address addr) const
+    LineInfo Lib::lookup(Address addr) const
     {
         const char* file = nullptr;
         const char* func = nullptr;
@@ -106,10 +106,10 @@ namespace bfdr
             {
                 // This should not happen as long as we lookup sections in the range-map by
                 // address, since base/size is the same as used for the ranges
-                log::error() << "address " << addr << " out of section bounds " << name_ << " "
+                Log::error() << "address " << addr << " out of section bounds " << name_ << " "
                              << bfd_get_section_name(handle_, section) << " filepos: " << hex
                              << base << ", size: " << hex << size;
-                throw lookup_error("address out of .symtab bounds", addr);
+                throw LookupError("address out of .symtab bounds", addr);
             }
             auto evil_symtab = const_cast<asymbol**>(symbols_.data());
             auto found = bfd_find_nearest_line(handle_, section, evil_symtab, local_addr.value(),
@@ -117,9 +117,9 @@ namespace bfdr
             // we probably don't need to free here.
             if (!found)
             {
-                log::debug() << "bfd_find_nearest_line failed " << addr << " in " << name_
+                Log::debug() << "bfd_find_nearest_line failed " << addr << " in " << name_
                              << bfd_get_section_name(handle_, section);
-                throw lookup_error("bfd_find_nearest_line failed", addr);
+                throw LookupError("bfd_find_nearest_line failed", addr);
             }
             if (func != nullptr)
             {
@@ -128,21 +128,21 @@ namespace bfdr
                 {
                     std::string demangled_str(demangled);
                     free(demangled);
-                    return line_info(file, demangled_str.c_str(), line, name_);
+                    return LineInfo(file, demangled_str.c_str(), line, name_);
                 }
             }
-            return line_info(file, func, line, name_);
+            return LineInfo(file, func, line, name_);
         }
         catch (std::out_of_range&)
         {
             // TODO handle better
             // unfortunately this happens often, so it's only debug
-            log::debug() << "could not find section for " << addr << " in " << name_;
-            throw lookup_error("could not find section", addr);
+            Log::debug() << "could not find section for " << addr << " in " << name_;
+            throw LookupError("could not find section", addr);
         }
     }
 
-    void lib::read_symbols()
+    void Lib::read_symbols()
     {
         // read this: https://blogs.oracle.com/ali/entry/inside_elf_symbol_tables
         try
@@ -153,12 +153,12 @@ namespace bfdr
             // filter_symbols();
             if (symbols_.size() <= 1)
             {
-                throw init_error("no symbols in symtab");
+                throw InitError("no symbols in symtab");
             }
         }
-        catch (init_error& e)
+        catch (InitError& e)
         {
-            log::debug() << "failed to get symtab: " << e.what();
+            Log::debug() << "failed to get symtab: " << e.what();
             symbols_.reserve(0);
         }
         if (symbols_.size() <= 1)
@@ -167,7 +167,7 @@ namespace bfdr
             // Usually regular symtab should be a superset. There also doesn't seem to be much
             // of a difference in how to handle them.
             // See linux/tools/perf/util/symbol-elf.c symsrc__init
-            log::debug() << "falling back to .dynsym";
+            Log::debug() << "falling back to .dynsym";
 
             symbols_.resize(check_symtab(bfd_get_dynamic_symtab_upper_bound(handle_)));
             symbols_.resize(
@@ -176,11 +176,11 @@ namespace bfdr
         }
         if (symbols_.size() <= 1)
         {
-            throw init_error("could not find any symbols in .symtab or .dynsym", name_);
+            throw InitError("could not find any symbols in .symtab or .dynsym", name_);
         }
     }
 
-    void lib::read_sections()
+    void Lib::read_sections()
     {
         // We could read *all* sections using bfd_map_ver_sections, however some sections are
         // overlapping :-(, so we couldn't put them in our range-map. So instead use only the
@@ -203,7 +203,7 @@ namespace bfdr
             auto size = bfd_get_section_size(section);
             if (size == 0)
             {
-                log::debug() << "skipping empty section: "
+                Log::debug() << "skipping empty section: "
                              << bfd_get_section_name(handle_, section);
                 continue;
             }
@@ -214,13 +214,13 @@ namespace bfdr
                                            std::forward_as_tuple(section));
                 if (r.second)
                 {
-                    log::trace() << "Added section: " << bfd_get_section_name(handle_, section)
+                    Log::trace() << "Added section: " << bfd_get_section_name(handle_, section)
                                  << " from symbol " << sym->name;
                 }
             }
-            catch (range::error& e)
+            catch (Range::Error& e)
             {
-                log::warn() << "failed to add section " << bfd_get_section_name(handle_, sym)
+                Log::warn() << "failed to add section " << bfd_get_section_name(handle_, sym)
                             << "due to " << e.what();
             }
         }

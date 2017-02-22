@@ -32,11 +32,11 @@
 namespace lo2s
 {
 
-memory_map::memory_map()
+MemoryMap::MemoryMap()
 {
 }
 
-memory_map::memory_map(pid_t pid, bool read_initial)
+MemoryMap::MemoryMap(pid_t pid, bool read_initial)
 {
     if (!read_initial)
     {
@@ -48,7 +48,7 @@ memory_map::memory_map(pid_t pid, bool read_initial)
     std::ifstream mapstream(filename);
     if (mapstream.fail())
     {
-        log::error() << "could not open maps file " << filename;
+        Log::error() << "could not open maps file " << filename;
         // Gracefully return an initially empty map that always fails.
         return;
     }
@@ -58,32 +58,32 @@ memory_map::memory_map(pid_t pid, bool read_initial)
     //                 device  inode   dso
     std::regex regex("([0-9a-f]+)\\-([0-9a-f]+)\\s+[r-][w-]x.?\\s+([0-9a-z]+)"
                      "\\s+\\S+\\s+\\d+\\s+(.*)");
-    log::debug() << "opening " << filename;
+    Log::debug() << "opening " << filename;
     while (getline(mapstream, line))
     {
-        log::trace() << "map entry: " << line;
+        Log::trace() << "map entry: " << line;
         std::smatch match;
         if (std::regex_match(line, match, regex))
         {
-            auto begin = address(match.str(1));
-            auto end = address(match.str(2));
-            auto pgoff = address(match.str(3));
+            auto begin = Address(match.str(1));
+            auto end = Address(match.str(2));
+            auto pgoff = Address(match.str(3));
             auto filename = match.str(4);
             mmap(begin, end, pgoff, filename);
         }
     }
 }
 
-void memory_map::mmap(address begin, address end, address pgoff, const std::string& dso_name)
+void MemoryMap::mmap(Address begin, Address end, Address pgoff, const std::string& dso_name)
 {
     if (dso_name.empty() || std::string("//anon") == dso_name ||
         std::string("/dev/zero") == dso_name || std::string("/anon_hugepage") == dso_name ||
         boost::starts_with(dso_name, "/SYSV"))
     {
-        log::debug() << "mmap: skipping " << dso_name;
+        Log::debug() << "mmap: skipping " << dso_name;
         return;
     }
-    log::debug() << "mmap: " << begin << "-" << end << " " << pgoff << ": " << dso_name;
+    Log::debug() << "mmap: " << begin << "-" << end << " " << pgoff << ": " << dso_name;
 
     auto ex_it = map_.find(begin);
     if (ex_it != map_.end())
@@ -97,7 +97,7 @@ void memory_map::mmap(address begin, address end, address pgoff, const std::stri
             // Truncate entry
             assert(ex_range.start < begin);
             ex_range.end = begin;
-            log::debug() << "truncating map entry at " << ex_range.start << " to " << ex_range.end;
+            Log::debug() << "truncating map entry at " << ex_range.start << " to " << ex_range.end;
             auto r = map_.emplace(ex_range, std::move(ex_elem));
             (void)r;
             assert(r.second);
@@ -106,14 +106,14 @@ void memory_map::mmap(address begin, address end, address pgoff, const std::stri
 
     try
     {
-        binary* lb;
+        Binary* lb;
         if (dso_name[0] == '[')
         {
-            lb = &named_binary::cache(dso_name);
+            lb = &NamedBinary::cache(dso_name);
         }
         else
         {
-            lb = &bfd_radare_binary::cache(dso_name);
+            lb = &BfdRadareBinary::cache(dso_name);
         }
         auto r = map_.emplace(std::piecewise_construct, std::forward_as_tuple(begin, end),
                               std::forward_as_tuple(begin, end, pgoff, *lb));
@@ -121,25 +121,25 @@ void memory_map::mmap(address begin, address end, address pgoff, const std::stri
         {
             // very common, so only debug
             // TODO handle better
-            log::debug() << "duplicate memory range from mmap event. new: " << begin << "-" << end
+            Log::debug() << "duplicate memory range from mmap event. new: " << begin << "-" << end
                          << "%" << pgoff << " " << dso_name << "\n"
                          << "OLD: " << r.first->second.start << "-" << r.first->second.end << "%"
                          << r.first->second.pgoff << " " << r.first->second.dso.name();
         }
     }
-    catch (bfdr::init_error& e)
+    catch (bfdr::InitError& e)
     {
-        log::info() << "could not initialize bfd: " << e.what();
+        Log::info() << "could not initialize bfd: " << e.what();
     }
-    catch (range::error& e)
+    catch (Range::Error& e)
     {
         // Very common, can't warn here
         // TODO consider handling this somehow...
-        log::debug() << "invalid address range in /proc/.../maps: " << e.what();
+        Log::debug() << "invalid address range in /proc/.../maps: " << e.what();
     }
 }
 
-line_info memory_map::lookup_line_info(address ip) const
+LineInfo MemoryMap::lookup_line_info(Address ip) const
 {
     try
     {
@@ -149,13 +149,13 @@ line_info memory_map::lookup_line_info(address ip) const
     catch (std::out_of_range&)
     {
         // This will just happen a lot in practice
-        log::debug() << "no mapping found for address " << ip;
+        Log::debug() << "no mapping found for address " << ip;
         // Graceful fallback
-        return line_info(ip.truncate_bits(48));
+        return LineInfo(ip.truncate_bits(48));
     }
 }
 
-std::string memory_map::lookup_instruction(address ip) const
+std::string MemoryMap::lookup_instruction(Address ip) const
 {
     auto& mapping = map_.at(ip);
     return mapping.dso.lookup_instruction(ip - mapping.start + mapping.pgoff);

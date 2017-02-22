@@ -60,36 +60,36 @@ namespace lo2s
 
 namespace bfdr
 {
-    struct initializer
+    struct Initializer
     {
-        initializer()
+        Initializer()
         {
             bfd_init();
         }
     };
 
-    class init_error : public std::runtime_error
+    class InitError : public std::runtime_error
     {
     public:
-        init_error(const std::string& what, const std::string& lib)
+        InitError(const std::string& what, const std::string& lib)
         : std::runtime_error(what + ": " + lib)
         {
         }
 
-        init_error(const std::string& what) : std::runtime_error(what)
+        InitError(const std::string& what) : std::runtime_error(what)
         {
         }
     };
 
-    class lookup_error : public std::runtime_error
+    class LookupError : public std::runtime_error
     {
     public:
-        lookup_error(const std::string& what, address addr) : std::runtime_error(msg(what, addr))
+        LookupError(const std::string& what, Address addr) : std::runtime_error(msg(what, addr))
         {
         }
 
     private:
-        static std::string msg(const std::string& what, address addr)
+        static std::string msg(const std::string& what, Address addr)
         {
             std::stringstream ss;
             ss << what << ": 0x" << hex << addr;
@@ -97,18 +97,18 @@ namespace bfdr
         }
     };
 
-    class lib
+    class Lib
     {
     public:
-        lib(const std::string& name);
-        lib(const lib&) = delete;
-        lib(lib&&) = delete;
-        lib& operator=(const lib&) = delete;
-        lib& operator=(lib&&) = delete;
+        Lib(const std::string& name);
+        Lib(const Lib&) = delete;
+        Lib(Lib&&) = delete;
+        Lib& operator=(const Lib&) = delete;
+        Lib& operator=(Lib&&) = delete;
 
-        ~lib();
+        ~Lib();
 
-        line_info lookup(address addr) const;
+        LineInfo lookup(Address addr) const;
 
         const std::string& name() const
         {
@@ -140,9 +140,9 @@ namespace bfdr
         std::string name_;
         bfd* handle_;
         std::vector<asymbol*> symbols_;
-        std::map<range, asection*> sections_;
+        std::map<Range, asection*> sections_;
 
-        static initializer dummy_;
+        static Initializer dummy_;
     };
 }
 }

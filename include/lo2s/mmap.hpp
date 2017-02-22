@@ -34,20 +34,20 @@
 namespace lo2s
 {
 
-class binary
+class Binary
 {
 protected:
-    binary(const std::string& name) : name_(name)
+    Binary(const std::string& name) : name_(name)
     {
     }
 
 public:
-    virtual ~binary()
+    virtual ~Binary()
     {
     }
 
-    virtual std::string lookup_instruction(address ip) = 0;
-    virtual line_info lookup_line_info(address ip) = 0;
+    virtual std::string lookup_instruction(Address ip) = 0;
+    virtual LineInfo lookup_line_info(Address ip) = 0;
     const std::string& name() const
     {
         return name_;
@@ -57,88 +57,88 @@ private:
     std::string name_;
 };
 
-class named_binary : public binary
+class NamedBinary : public Binary
 {
 public:
-    named_binary(const std::string& name) : binary(name)
+    NamedBinary(const std::string& name) : Binary(name)
     {
     }
 
-    static binary& cache(const std::string& name)
+    static Binary& cache(const std::string& name)
     {
-        return string_cache<named_binary>::instance()[name];
+        return StringCache<NamedBinary>::instance()[name];
     }
 
-    virtual std::string lookup_instruction(address) override
+    virtual std::string lookup_instruction(Address) override
     {
         throw std::domain_error("Unknown instruction.");
     }
 
-    virtual line_info lookup_line_info(address) override
+    virtual LineInfo lookup_line_info(Address) override
     {
-        return line_info(name(), name(), 0, name());
+        return LineInfo(name(), name(), 0, name());
     }
 };
 
-class bfd_radare_binary : public binary
+class BfdRadareBinary : public Binary
 {
 public:
-    bfd_radare_binary(const std::string& name) : binary(name), bfd_(name), radare_(name)
+    BfdRadareBinary(const std::string& name) : Binary(name), bfd_(name), radare_(name)
     {
     }
 
-    static binary& cache(const std::string& name)
+    static Binary& cache(const std::string& name)
     {
-        return string_cache<bfd_radare_binary>::instance()[name];
+        return StringCache<BfdRadareBinary>::instance()[name];
     }
 
-    virtual std::string lookup_instruction(address ip) override
+    virtual std::string lookup_instruction(Address ip) override
     {
         return radare_.instruction(ip);
     }
 
-    virtual line_info lookup_line_info(address ip) override
+    virtual LineInfo lookup_line_info(Address ip) override
     {
         try
         {
             return bfd_.lookup(ip);
         }
-        catch (bfdr::lookup_error&)
+        catch (bfdr::LookupError&)
         {
-            return line_info(ip, name());
+            return LineInfo(ip, name());
         }
     }
 
 private:
-    bfdr::lib bfd_;
-    radare_resolver radare_;
+    bfdr::Lib bfd_;
+    RadareResolver radare_;
 };
 
-class memory_map
+class MemoryMap
 {
 public:
-    memory_map();
-    memory_map(pid_t pid, bool read_initial);
+    MemoryMap();
+    MemoryMap(pid_t pid, bool read_initial);
 
-    void mmap(address begin, address end, address pgoff, const std::string& dso_name);
+    void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name);
 
-    line_info lookup_line_info(address ip) const;
+    LineInfo lookup_line_info(Address ip) const;
     // Will throw alot - catch it if you can
-    std::string lookup_instruction(address ip) const;
+    std::string lookup_instruction(Address ip) const;
 
 private:
-    struct mapping
+    struct Mapping
     {
-        mapping(address s, address e, address o, binary& d) : start(s), end(e), pgoff(o), dso(d)
+        Mapping(Address s, Address e, Address o, Binary& d) : start(s), end(e), pgoff(o), dso(d)
         {
         }
 
-        address start;
-        address end;
-        address pgoff;
-        binary& dso;
+        Address start;
+        Address end;
+        Address pgoff;
+        Binary& dso;
     };
 
-    std::map<range, mapping> map_;
+    std::map<Range, Mapping> map_;
 };
 }

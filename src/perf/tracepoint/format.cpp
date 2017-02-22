@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/tracepoint/event_format.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 
 #include <lo2s/log.hpp>
 
@@ -35,7 +35,7 @@ namespace perf
 namespace tracepoint
 {
 
-event_format::event_format(const std::string& name) : name_(name)
+EventFormat::EventFormat(const std::string& name) : name_(name)
 {
     boost::filesystem::path path_event = base_path_ / name;
     boost::filesystem::ifstream ifs_id, ifs_format;
@@ -58,12 +58,12 @@ event_format::event_format(const std::string& name) : name_(name)
     }
     catch (...)
     {
-        log::error() << "Couldn't read information from " << path_event;
+        Log::error() << "Couldn't read information from " << path_event;
         throw;
     }
 }
 
-void event_format::parse_format_line(const std::string& line)
+void EventFormat::parse_format_line(const std::string& line)
 {
     static std::regex field_regex(
         "^\\s+field:([^;]+);\\s+offset:(\\d+);\\s+size:(\\d+);\\s+signed:(\\d+);$");
@@ -72,7 +72,7 @@ void event_format::parse_format_line(const std::string& line)
     std::smatch field_match;
     if (!std::regex_match(line, field_match, field_regex))
     {
-        log::trace() << "Discarding line from parsing " << name_ << "/format: " << line;
+        Log::trace() << "Discarding line from parsing " << name_ << "/format: " << line;
         return;
     }
 
@@ -83,13 +83,13 @@ void event_format::parse_format_line(const std::string& line)
     std::smatch type_name_match;
     if (!std::regex_match(param, type_name_match, type_name_regex))
     {
-        log::warn() << "Could not parse type/name of tracepoint event field line for " << name_
+        Log::warn() << "Could not parse type/name of tracepoint event field line for " << name_
                     << ", " << line;
         return;
     }
 
     std::string name = type_name_match[2];
-    event_field field(name, offset, size);
+    EventField field(name, offset, size);
 
     if (boost::starts_with(name, "common_"))
     {
@@ -101,7 +101,7 @@ void event_format::parse_format_line(const std::string& line)
     }
 }
 
-const boost::filesystem::path event_format::base_path_ = "/sys/kernel/debug/tracing/events";
+const boost::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
 }
 }
 }

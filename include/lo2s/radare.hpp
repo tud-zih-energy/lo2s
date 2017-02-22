@@ -36,26 +36,26 @@ extern "C" {
 namespace lo2s
 {
 
-class radare
+class Radare
 {
 public:
-    class error : public std::runtime_error
+    class Error : public std::runtime_error
     {
     public:
-        error(const std::string& what) : std::runtime_error(what)
+        Error(const std::string& what) : std::runtime_error(what)
         {
         }
     };
 
-    radare();
+    Radare();
 
     static std::string single_instruction(char* buf);
 
-    std::string operator()(address ip, std::istream& obj);
+    std::string operator()(Address ip, std::istream& obj);
 
-    static radare& instance()
+    static Radare& instance()
     {
-        static radare r;
+        static Radare r;
         return r;
     }
 
@@ -63,12 +63,12 @@ private:
     RAsm* r_asm_;
 };
 
-class radare_resolver
+class RadareResolver
 {
 public:
-    radare_resolver(const std::string& filename);
+    RadareResolver(const std::string& filename);
 
-    std::string instruction(address ip);
+    std::string instruction(Address ip);
 
 private:
     std::ifstream obj_;

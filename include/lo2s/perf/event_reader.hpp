@@ -45,7 +45,7 @@ namespace lo2s
 namespace perf
 {
 template <class T>
-class event_reader
+class EventReader
 {
 protected:
     using CRTP = T;
@@ -53,12 +53,12 @@ protected:
 public:
     // We allow the subclass to override the actual types because the sample type depends on the
     // attr settings
-    using record_sample_type = perf_event_header;
+    using RecordSampleType = perf_event_header;
 
     // We don't need the type of the subclass here, because these types are static
-    using record_unknown_type = perf_event_header;
+    using RecordUnknownType = perf_event_header;
 
-    struct record_mmap_type
+    struct RecordMmapType
     {
         struct perf_event_header header;
         uint32_t pid, tid;
@@ -69,7 +69,7 @@ public:
         char filename[1];
         // struct sample_id sample_id;
     };
-    struct record_mmap2_type
+    struct RecordMmap2Type
     {
         struct perf_event_header header;
         uint32_t pid;
@@ -87,14 +87,14 @@ public:
         char filename[1];
         // struct sample_id sample_id;
     };
-    struct record_lost_type
+    struct RecordLostType
     {
         struct perf_event_header header;
         uint64_t id;
         uint64_t lost;
         // struct sample_id		sample_id;
     };
-    struct record_fork_type
+    struct RecordForkType
     {
         struct perf_event_header header;
         uint32_t pid;
@@ -105,11 +105,11 @@ public:
         // struct sample_id sample_id;
     };
 
-    ~event_reader()
+    ~EventReader()
     {
         if (lost_samples > 0)
         {
-            log::warn() << "Lost a total of " << lost_samples << " samples in event_reader<"
+            Log::warn() << "Lost a total of " << lost_samples << " samples in event_reader<"
                         << typeid(CRTP).name() << ">.";
         }
     }
@@ -125,7 +125,7 @@ protected:
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
-            log::error() << "mmap failed. You can decrease the buffer size or try to increase "
+            Log::error() << "mmap failed. You can decrease the buffer size or try to increase "
                             "/proc/sys/kernel/perf_event_mlock_kb";
             throw_errno();
         }
@@ -137,14 +137,14 @@ public:
         auto cur_head = data_head();
         auto cur_tail = data_tail();
 
-        log::trace() << "head: " << cur_head << ", tail: " << cur_tail;
+        Log::trace() << "head: " << cur_head << ", tail: " << cur_tail;
 
         /* if the ring buffer has been filled to fast, we skip the current entries*/
         auto diff = cur_head - cur_tail;
         assert(cur_tail <= cur_head);
         if (diff > data_size())
         {
-            log::error() << "perf ring buffer overflow. "
+            Log::error() << "perf ring buffer overflow. "
                             "The trace is missing events. "
                             "Increase the buffer size or the sampling period";
         }
@@ -159,7 +159,7 @@ public:
                 auto len = event_header_p->size;
                 if (cur_tail + len > cur_head)
                 {
-                    log::warn() << "perf_event goes beyond tail. skipping.";
+                    Log::warn() << "perf_event goes beyond tail. skipping.";
                     break;
                 }
                 read_samples++;
@@ -184,13 +184,13 @@ public:
                 switch (event_header_p->type)
                 {
                 case PERF_RECORD_MMAP:
-                    stop = crtp_this->handle((const record_mmap_type*)event_header_p);
+                    stop = crtp_this->handle((const RecordMmapType*)event_header_p);
                     break;
                 case PERF_RECORD_MMAP2:
-                    stop = crtp_this->handle((const record_mmap2_type*)event_header_p);
+                    stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                     break;
                 case PERF_RECORD_EXIT:
-                    log::debug() << "encountered exit event.";
+                    Log::debug() << "encountered exit event.";
                     break;
                 case PERF_RECORD_THROTTLE: /* fall-through */
                 case PERF_RECORD_UNTHROTTLE:
@@ -198,23 +198,23 @@ public:
                     break;
                 case PERF_RECORD_LOST:
                 {
-                    auto lost = (const record_lost_type*)event_header_p;
+                    auto lost = (const RecordLostType*)event_header_p;
                     lost_samples += lost->lost;
-                    log::info() << "Lost " << lost->lost << " samples during this chunk.";
+                    Log::info() << "Lost " << lost->lost << " samples during this chunk.";
                     break;
                 }
                 case PERF_RECORD_FORK:
-                    stop = crtp_this->handle((const record_fork_type*)event_header_p);
+                    stop = crtp_this->handle((const RecordForkType*)event_header_p);
                     break;
                 case PERF_RECORD_SAMPLE:
                 {
                     // Use CRTP here because the struct type depends on the perf attr
-                    using actual_sample_type = typename CRTP::record_sample_type;
-                    stop = crtp_this->handle((const actual_sample_type*)event_header_p);
+                    using ActualSampleType = typename CRTP::RecordSampleType;
+                    stop = crtp_this->handle((const ActualSampleType*)event_header_p);
                     break;
                 }
                 default:
-                    stop = crtp_this->handle((const record_unknown_type*)event_header_p);
+                    stop = crtp_this->handle((const RecordUnknownType*)event_header_p);
                 }
                 cur_tail += event_header_p->size;
                 if (stop)
@@ -225,11 +225,11 @@ public:
             diff = data_head() - cur_tail;
             if (diff > data_size())
             {
-                log::error() << "perf ring buffer overflow occurred while reading. "
+                Log::error() << "perf ring buffer overflow occurred while reading. "
                                 "The trace may be garbage. "
                                 "Increase the buffer size or the sampling period";
             }
-            log::trace() << "read " << read_samples << " samples.";
+            Log::trace() << "read " << read_samples << " samples.";
         }
         data_tail(cur_tail);
     }
@@ -284,7 +284,7 @@ public:
     bool handle(const UNKNOWN_RECORD_TYPE* record)
     {
         auto header = (perf_event_header*)record;
-        log::warn() << "unknown perf record type: " << header->type;
+        Log::warn() << "unknown perf record type: " << header->type;
         return false;
     }
 

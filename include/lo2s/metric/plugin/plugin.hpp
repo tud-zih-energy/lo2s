@@ -37,17 +37,17 @@ namespace metric
 {
 namespace plugin
 {
-class plugin
+class Plugin
 {
 public:
-    plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
-           trace::trace& trace);
+    Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
+           trace::Trace& trace);
 
-    ~plugin();
+    ~Plugin();
 
-    plugin(const plugin&) = delete;
+    Plugin(const Plugin&) = delete;
 
-    plugin& operator=(const plugin&) = delete;
+    Plugin& operator=(const Plugin&) = delete;
 
     void start_recording();
 
@@ -63,10 +63,10 @@ public:
 private:
     std::string plugin_name_;
     std::vector<std::string> plugin_events_;
-    trace::trace& trace_;
+    trace::Trace& trace_;
     nitro::dl::dl lib_;
-    wrapper::plugin_info plugin_;
-    std::vector<channel> channels_;
+    wrapper::PluginInfo plugin_;
+    std::vector<Channel> channels_;
 };
 }
 }

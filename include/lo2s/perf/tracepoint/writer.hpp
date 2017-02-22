@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/event_format.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/reader.hpp>
 
 #include <lo2s/perf/time/converter.hpp>
@@ -41,28 +41,28 @@ namespace perf
 {
 namespace tracepoint
 {
-class writer : public reader<writer>
+class Writer : public Reader<Writer>
 {
 public:
-    writer(int cpu, const event_format& event, const monitor_config& config, trace::trace& trace,
+    Writer(int cpu, const EventFormat& event, const MonitorConfig& config, trace::Trace& trace,
            const otf2::definition::metric_class& metric_class,
-           const time::converter& time_converter);
+           const time::Converter& time_converter);
 
-    writer(const writer& other) = delete;
+    Writer(const Writer& other) = delete;
 
-    writer(writer&& other) = default;
+    Writer(Writer&& other) = default;
 
 public:
-    using reader<writer>::handle;
+    using Reader<Writer>::handle;
 
-    bool handle(const reader::record_sample_type* sample);
+    bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    event_format event_;
+    EventFormat event_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
 
-    const time::converter& time_converter_;
+    const time::Converter& time_converter_;
 
     std::vector<otf2::event::metric::value_container> counter_values_;
 };

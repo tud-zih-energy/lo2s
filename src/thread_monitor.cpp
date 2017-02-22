@@ -31,17 +31,17 @@
 namespace lo2s
 {
 
-thread_monitor::~thread_monitor()
+ThreadMonitor::~ThreadMonitor()
 {
     assert(!enabled_);
     if (!finished_)
     {
-        log::warn() << "Trying to join non-finished_ thread monitor. That should not happen.";
+        Log::warn() << "Trying to join non-finished_ thread monitor. That should not happen.";
     }
     thread.join();
 }
 
-thread_monitor::thread_monitor(pid_t pid, pid_t tid, monitor& parent_monitor, process_info& info,
+ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
                                bool enable_on_exec)
 : pid_(pid), tid_(tid), parent_monitor_(parent_monitor), info_(info),
   sample_reader_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
@@ -55,22 +55,22 @@ thread_monitor::thread_monitor(pid_t pid, pid_t tid, monitor& parent_monitor, pr
     setup_thread();
 }
 
-void thread_monitor::disable()
+void ThreadMonitor::disable()
 {
     if (!enabled_)
     {
-        log::warn() << "Trying to disable non-enabled_ thread_monitor. This should not happen.";
+        Log::warn() << "Trying to disable non-enabled_ ThreadMonitor. This should not happen.";
     }
     enabled_ = false;
 }
 
-void thread_monitor::setup_thread()
+void ThreadMonitor::setup_thread()
 {
     enabled_ = true;
     thread = std::thread([this]() { this->run(); });
 }
 
-void thread_monitor::check_affinity(bool force)
+void ThreadMonitor::check_affinity(bool force)
 {
     // Pin the monitoring thread on the same cores as the monitored thread
     cpu_set_t new_mask;
@@ -83,20 +83,20 @@ void thread_monitor::check_affinity(bool force)
     }
 }
 
-void thread_monitor::run()
+void ThreadMonitor::run()
 {
-    log::info() << "New monitoring thread for: " << pid_ << "/" << tid_ << " with read interval of "
+    Log::info() << "New monitoring thread for: " << pid_ << "/" << tid_ << " with read interval of "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(read_interval_).count()
                 << " ms";
 
     check_affinity(true);
 
-    auto deadline = clock::now();
+    auto deadline = Clock::now();
     // Move deadline to be the same for all thread, reducing noise imbalances
     deadline -= (deadline.time_since_epoch() % read_interval_) + read_interval_;
     while (true)
     {
-        log::trace() << "Monitoring thread active";
+        Log::trace() << "Monitoring thread active";
 
         check_affinity();
 
@@ -114,7 +114,7 @@ void thread_monitor::run()
         std::this_thread::sleep_until(deadline);
     }
     sample_reader_.end();
-    log::debug() << "Monitoring thread finished_";
+    Log::debug() << "Monitoring thread finished_";
     finished_ = true;
 }
 }

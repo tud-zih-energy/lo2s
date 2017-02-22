@@ -54,7 +54,7 @@ namespace po = boost::program_options;
 
 namespace lo2s
 {
-static void run_command(const std::vector<std::string>& command_and_args, pipe& go_pipe)
+static void run_command(const std::vector<std::string>& command_and_args, Pipe& go_pipe)
 {
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
@@ -71,14 +71,14 @@ static void run_command(const std::vector<std::string>& command_and_args, pipe& 
                    });
     tmp.push_back(nullptr);
 
-    log::debug() << "execve(" << command_and_args[0] << ")";
+    Log::debug() << "execve(" << command_and_args[0] << ")";
 
     // Wait until we are allowed to execve
     auto ret = go_pipe.read();
 
     if (ret != 1)
     {
-        log::info() << "Measurement aborted prematurely, will not run the command";
+        Log::info() << "Measurement aborted prematurely, will not run the command";
         exit(0);
     }
 
@@ -93,21 +93,21 @@ static void run_command(const std::vector<std::string>& command_and_args, pipe& 
     {
         delete[] cp;
     }
-    log::error() << "Could not execute command: " << command_and_args[0];
+    Log::error() << "Could not execute command: " << command_and_args[0];
     throw_errno();
 }
 
 void setup_measurement(const std::vector<std::string>& command_and_args, pid_t pid,
-                       const monitor_config& config, const std::string& trace_path)
+                       const MonitorConfig& config, const std::string& trace_path)
 {
-    std::unique_ptr<pipe> child_ready_pipe;
-    std::unique_ptr<pipe> go_pipe;
+    std::unique_ptr<Pipe> child_ready_pipe;
+    std::unique_ptr<Pipe> go_pipe;
     assert(pid != 0);
     bool spawn = (pid == -1);
     if (spawn)
     {
-        child_ready_pipe = std::make_unique<pipe>();
-        go_pipe = std::make_unique<pipe>();
+        child_ready_pipe = std::make_unique<Pipe>();
+        go_pipe = std::make_unique<Pipe>();
         pid = fork();
     }
     else
@@ -115,14 +115,14 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
         // TODO Attach to all threads in a process
         if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1)
         {
-            log::error() << "Could not attach to pid " << pid
+            Log::error() << "Could not attach to pid " << pid
                          << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
             throw_errno();
         }
     }
     if (pid == -1)
     {
-        log::error() << "Fork failed.";
+        Log::error() << "Fork failed.";
         throw_errno();
     }
     else if (pid == 0)
@@ -144,7 +144,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             child_ready_pipe->close_write_fd();
             go_pipe->close_read_fd();
         }
-        trace::trace trace_(config.sampling_period, trace_path);
+        trace::Trace trace_(config.sampling_period, trace_path);
 
         std::string proc_name;
         if (spawn)
@@ -162,7 +162,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             proc_name = get_process_exe(pid);
         }
 
-        monitor m(pid, proc_name, trace_, spawn, config);
+        Monitor m(pid, proc_name, trace_, spawn, config);
 
         if (spawn)
         {
@@ -181,7 +181,7 @@ int main(int argc, const char** argv)
     std::string output_trace("");
     po::options_description desc("Allowed options");
     std::vector<std::string> command;
-    lo2s::monitor_config config;
+    lo2s::MonitorConfig config;
     bool quiet;
     bool debug;
     bool trace;
@@ -237,12 +237,12 @@ int main(int argc, const char** argv)
     if (trace)
     {
         lo2s::logging::set_min_severity_level(nitro::log::severity_level::trace);
-        lo2s::log::trace() << "Enabling log-level 'trace'";
+        lo2s::Log::trace() << "Enabling log-level 'trace'";
     }
     else if (debug)
     {
         lo2s::logging::set_min_severity_level(nitro::log::severity_level::debug);
-        lo2s::log::debug() << "Enabling log-level 'debug'";
+        lo2s::Log::debug() << "Enabling log-level 'debug'";
     }
     else if (quiet)
     {
@@ -262,7 +262,7 @@ int main(int argc, const char** argv)
         // Check for success
         if (e.code())
         {
-            lo2s::log::error() << "Aborting: " << e.what();
+            lo2s::Log::error() << "Aborting: " << e.what();
         }
         return e.code().value();
     }

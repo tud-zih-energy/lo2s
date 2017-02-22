@@ -38,7 +38,7 @@ namespace perf
 {
 namespace time
 {
-reader::reader()
+Reader::Reader()
 {
     static_assert(sizeof(local_time) == 8, "The local time object must not be a big fat "
                                            "object, or the hardware breakpoint won't work.");
@@ -71,9 +71,9 @@ reader::reader()
     local_time = lo2s::time::now();
 }
 
-bool reader::handle(const record_sync_type* sync_event)
+bool Reader::handle(const RecordSyncType* sync_event)
 {
-    log::trace() << "time_reader::handle called";
+    Log::trace() << "time_reader::handle called";
     perf_time = convert_time_point(sync_event->time);
     return true;
 }

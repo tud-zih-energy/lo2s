@@ -35,25 +35,25 @@ namespace lo2s
 {
 namespace metric
 {
-class perf_counter
+class PerfCounter
 {
 public:
-    perf_counter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1 = 0);
+    PerfCounter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1 = 0);
 
-    perf_counter(const perf_counter&) = delete;
+    PerfCounter(const PerfCounter&) = delete;
 
-    perf_counter(perf_counter&& other)
+    PerfCounter(PerfCounter&& other)
     : fd_(-1), previous_(other.previous_), accumulated_(other.accumulated_)
     {
         using std::swap;
         swap(fd_, other.fd_);
     }
 
-    perf_counter& operator=(const perf_counter&) = delete;
+    PerfCounter& operator=(const PerfCounter&) = delete;
 
-    perf_counter& operator=(perf_counter&&) = delete;
+    PerfCounter& operator=(PerfCounter&&) = delete;
 
-    ~perf_counter()
+    ~PerfCounter()
     {
         if (fd_ != -1)
         {
@@ -74,13 +74,13 @@ public:
     }
 
 private:
-    struct ver
+    struct Ver
     {
         uint64_t value = 0;
         uint64_t enabled = 0;
         uint64_t running = 0;
 
-        ver operator-(const ver& rhs) const
+        Ver operator-(const Ver& rhs) const
         {
             return { value - rhs.value, enabled - rhs.enabled, running - rhs.running };
         }
@@ -100,10 +100,10 @@ private:
         }
     };
 
-    static_assert(sizeof(ver) == sizeof(uint64_t) * 3, "Your memory layout sucks.");
+    static_assert(sizeof(Ver) == sizeof(uint64_t) * 3, "Your memory layout sucks.");
 
     int fd_;
-    ver previous_;
+    Ver previous_;
     double accumulated_ = 0.0;
 };
 }

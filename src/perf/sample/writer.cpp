@@ -48,9 +48,9 @@ namespace perf
 namespace sample
 {
 
-writer::writer(pid_t pid, pid_t tid, const monitor_config& config, thread_monitor& monitor,
-               trace::trace& trace, const time::converter& time_converter, bool enable_on_exec)
-: reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(monitor),
+Writer::Writer(pid_t pid, pid_t tid, const MonitorConfig& config, ThreadMonitor& Monitor,
+               trace::Trace& trace, const time::Converter& time_converter, bool enable_on_exec)
+: Reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(Monitor),
   trace_(trace), otf2_writer_(trace.sample_writer(pid, tid)), time_converter_(time_converter)
 {
 
@@ -72,7 +72,7 @@ writer::writer(pid_t pid, pid_t tid, const monitor_config& config, thread_monito
     init(attr, tid, enable_on_exec, config.mmap_pages);
 }
 
-writer::~writer()
+Writer::~Writer()
 {
     // TODO FIXME
     // Actually we have to merge the maps_ within one process before this step :-(
@@ -84,12 +84,12 @@ writer::~writer()
     }
 }
 
-trace::ip_ref_map::iterator writer::find_ip_child(address addr, trace::ip_ref_map& children)
+trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
 {
     // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
     if (addr == -1)
     {
-        log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
+        Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
         addr = -2;
     }
     auto it = children.find(addr);
@@ -104,7 +104,7 @@ trace::ip_ref_map::iterator writer::find_ip_child(address addr, trace::ip_ref_ma
 }
 
 otf2::definition::calling_context::reference_type
-writer::cctx_ref(const reader::record_sample_type* sample)
+Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
     if (!has_cct_)
     {
@@ -127,7 +127,7 @@ writer::cctx_ref(const reader::record_sample_type* sample)
     }
 }
 
-bool writer::handle(const reader::record_sample_type* sample)
+bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     //    log::trace() << "sample event. ip: " << sample->ip << ", time: " << sample->time
     //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
@@ -157,23 +157,23 @@ bool writer::handle(const reader::record_sample_type* sample)
     return false;
 }
 
-bool writer::handle(const reader::record_mmap_type* mmap_event)
+bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 {
     if ((pid_t(mmap_event->pid) != pid_) || (pid_t(mmap_event->tid) != tid_))
     {
-        log::warn() << "Inconsistent mmap pid/tid expected " << pid_ << "/" << tid_ << ", actual "
+        Log::warn() << "Inconsistent mmap pid/tid expected " << pid_ << "/" << tid_ << ", actual "
                     << mmap_event->pid << "/" << mmap_event->tid;
     }
-    log::debug() << "encountered mmap event for " << pid_ << "," << tid_ << " "
-                 << address(mmap_event->addr) << " len: " << address(mmap_event->len)
-                 << " pgoff: " << address(mmap_event->pgoff) << ", " << mmap_event->filename;
+    Log::debug() << "encountered mmap event for " << pid_ << "," << tid_ << " "
+                 << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
+                 << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
     // Firefox does that... no idea what it is
     monitor_.info().mmap(mmap_event->addr, mmap_event->addr + mmap_event->len, mmap_event->pgoff,
                          mmap_event->filename);
     return false;
 }
 
-void writer::end()
+void Writer::end()
 {
     // get_time() sometims can be in the past :-(
     otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.self_comm(), -1);

@@ -12,10 +12,10 @@ namespace perf
 namespace tracepoint
 {
 
-writer::writer(int cpu, const event_format& event, const monitor_config& config,
-               trace::trace& trace_, const otf2::definition::metric_class& metric_class,
-               const time::converter& time_converter)
-: reader(cpu, event.id(), config.mmap_pages), event_(event),
+Writer::Writer(int cpu, const EventFormat& event, const MonitorConfig& config,
+               trace::Trace& trace_, const otf2::definition::metric_class& metric_class,
+               const time::Converter& time_converter)
+: Reader(cpu, event.id(), config.mmap_pages), event_(event),
   writer_(trace_.metric_writer((boost::format("raw metrics for CPU %d") % cpu).str())),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
@@ -28,7 +28,7 @@ writer::writer(int cpu, const event_format& event, const monitor_config& config,
     }
 }
 
-bool writer::handle(const reader::record_sample_type* sample)
+bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
 

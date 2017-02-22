@@ -38,18 +38,18 @@ namespace metric
 {
 namespace plugin
 {
-class channel
+class Channel
 {
 public:
-    channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-            wrapper::ValueType value_type, trace::trace& trace);
+    Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
+            wrapper::ValueType value_type, trace::Trace& trace);
 
 public:
     const std::string& name() const;
 
     int& id();
 
-    void write_value(wrapper::time_value_pair tv);
+    void write_value(wrapper::TimeValuePair tv);
 
 private:
     int id_;

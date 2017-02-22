@@ -33,10 +33,10 @@ namespace perf
 {
 namespace tracepoint
 {
-class event_field
+class EventField
 {
 public:
-    event_field(const std::string &name, std::ptrdiff_t offset, std::size_t size)
+    EventField(const std::string &name, std::ptrdiff_t offset, std::size_t size)
             : name_(name), offset_(offset), size_(size)
     {
     }
@@ -62,10 +62,10 @@ private:
     std::size_t size_;
 };
 
-class event_format
+class EventFormat
 {
 public:
-    event_format(const std::string &name);
+    EventFormat(const std::string &name);
 
     int id() const
     {
@@ -87,8 +87,8 @@ private:
 
     std::string name_;
     int id_;
-    std::vector<event_field> common_fields_;
-    std::vector<event_field> fields_;
+    std::vector<EventField> common_fields_;
+    std::vector<EventField> fields_;
 
     const static boost::filesystem::path base_path_;
 };

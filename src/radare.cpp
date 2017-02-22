@@ -23,7 +23,7 @@
 
 namespace lo2s
 {
-radare::radare() : r_asm_(r_asm_new())
+Radare::Radare() : r_asm_(r_asm_new())
 {
     r_asm_use(r_asm_, "x86");
     r_asm_set_bits(r_asm_, 64);
@@ -31,12 +31,12 @@ radare::radare() : r_asm_(r_asm_new())
     r_asm_set_pc(r_asm_, 0x0);
 }
 
-std::string radare::single_instruction(char* buf)
+std::string Radare::single_instruction(char* buf)
 {
     auto len = strlen(buf);
     if (len == 0)
     {
-        throw error("empty instruction");
+        throw Error("empty instruction");
     }
     for (size_t i = 0; i < len; i++)
     {
@@ -49,12 +49,12 @@ std::string radare::single_instruction(char* buf)
     return std::string(buf);
 }
 
-std::string radare::operator()(address ip, std::istream& obj)
+std::string Radare::operator()(Address ip, std::istream& obj)
 {
     std::streampos offset = ip.value();
     if (offset < 0)
     {
-        throw error("cannot read memory above 63bit");
+        throw Error("cannot read memory above 63bit");
     }
 
     constexpr size_t max_instr_size = 16;
@@ -64,13 +64,13 @@ std::string radare::operator()(address ip, std::istream& obj)
     auto read_bytes = obj.gcount();
     if (read_bytes == 0)
     {
-        throw error("instruction pointer at end of file");
+        throw Error("instruction pointer at end of file");
     }
     auto code = r_asm_mdisassemble(r_asm_, (unsigned char*)buffer, read_bytes);
     return single_instruction(code->buf_asm);
 }
 
-radare_resolver::radare_resolver(const std::string& filename) : obj_(filename)
+RadareResolver::RadareResolver(const std::string& filename) : obj_(filename)
 {
     if (obj_.fail())
     {
@@ -79,8 +79,8 @@ radare_resolver::radare_resolver(const std::string& filename) : obj_(filename)
     obj_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 }
 
-std::string radare_resolver::instruction(address ip)
+std::string RadareResolver::instruction(Address ip)
 {
-    return radare::instance()(ip, obj_);
+    return Radare::instance()(ip, obj_);
 }
 }

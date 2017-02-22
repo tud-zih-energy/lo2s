@@ -30,10 +30,10 @@
 
 namespace lo2s
 {
-class process_info
+class ProcessInfo
 {
 public:
-    process_info(pid_t pid, bool enable_on_exec) : pid_(pid), maps_(pid, !enable_on_exec)
+    ProcessInfo(pid_t pid, bool enable_on_exec) : pid_(pid), maps_(pid, !enable_on_exec)
     {
     }
 
@@ -42,19 +42,19 @@ public:
         return pid_;
     }
 
-    void mmap(address begin, address end, address pgoff, const std::string& dso_name)
+    void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         if (finalized_)
         {
             // FIXME happens with vampir
-            log::warn() << "Cannot insert new mappings into finalized process info";
+            Log::warn() << "Cannot insert new mappings into finalized process info";
             //throw std::runtime_error("Cannot insert new mappings into finalized process info");
         }
         maps_.mmap(begin, end, pgoff, dso_name);
     }
 
-    const memory_map& maps()
+    const MemoryMap& maps()
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -67,6 +67,6 @@ private:
     const pid_t pid_;
     std::mutex mutex_;
     bool finalized_ = false;
-    memory_map maps_;
+    MemoryMap maps_;
 };
 }

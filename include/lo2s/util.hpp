@@ -47,12 +47,12 @@ inline std::size_t get_page_size()
 }
 
 template <typename T>
-class string_cache
+class StringCache
 {
 public:
-    static string_cache& instance()
+    static StringCache& instance()
     {
-        static string_cache l;
+        static StringCache l;
         return l;
     }
 

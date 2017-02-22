@@ -89,7 +89,7 @@ namespace platform
 #error See the kernel source directory: tools/perf/perf.h file
 #endif
 
-    enum class vendor
+    enum class Vendor
     {
         UNKNOWN = -1,
         INTEL = 1,
@@ -98,7 +98,7 @@ namespace platform
         ARM = 4,
     };
 
-    enum class processor
+    enum class Processor
     {
         UNKNOWN = -1,
         PENTIUM_PRO = 1,
@@ -142,9 +142,9 @@ namespace platform
         ARM1176 = 204,
     };
 
-    struct counter_description
+    struct CounterDescription
     {
-        counter_description(const std::string& name, perf_type_id type, std::uint64_t config,
+        CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
                             std::uint64_t config1 = 0)
         : name(name), type(type), config(config), config1(config1)
         {
@@ -156,6 +156,6 @@ namespace platform
         std::uint64_t config1;
     };
 
-    std::vector<counter_description> get_mem_events();
+    std::vector<CounterDescription> get_mem_events();
 }
 }

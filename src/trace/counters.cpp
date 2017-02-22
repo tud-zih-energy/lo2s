@@ -28,7 +28,7 @@ namespace lo2s
 namespace trace
 {
 
-counters::counters(pid_t pid, pid_t tid, trace& trace_, otf2::definition::metric_class metric_class,
+Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric_class metric_class,
                    otf2::definition::location scope)
 : writer_(trace_.metric_writer(pid, tid)),
   metric_instance_(trace_.metric_instance(metric_class, writer_.location(), scope)),
@@ -54,7 +54,7 @@ counters::counters(pid_t pid, pid_t tid, trace& trace_, otf2::definition::metric
     }
 }
 
-otf2::definition::metric_class counters::get_metric_class(trace& trace_)
+otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
 {
     auto c = trace_.metric_class();
 
@@ -84,7 +84,7 @@ otf2::definition::metric_class counters::get_metric_class(trace& trace_)
     return c;
 }
 
-void counters::write()
+void Counters::write()
 {
     auto read_time = time::now();
 

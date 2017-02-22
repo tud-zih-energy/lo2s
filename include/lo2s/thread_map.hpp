@@ -33,18 +33,18 @@ extern "C" {
 
 namespace lo2s
 {
-class monitor;
+class Monitor;
 
-class thread_map
+class ThreadMap
 {
 public:
-    thread_map(monitor& parent_monitor) : parent_monitor_(parent_monitor)
+    ThreadMap(Monitor& parent_monitor) : parent_monitor_(parent_monitor)
     {
     }
 
-    ~thread_map();
+    ~ThreadMap();
 
-    process_info& insert_process(pid_t pid, bool enable_on_exec);
+    ProcessInfo& insert_process(pid_t pid, bool enable_on_exec);
 
     // Insert a thread and if needed it's process
     void insert(pid_t pid, pid_t tid, bool enable_on_exec);
@@ -52,14 +52,14 @@ public:
     void disable(pid_t tid);
     void disable();
 
-    thread_monitor& get_thread(pid_t tid);
+    ThreadMonitor& get_thread(pid_t tid);
 
     void try_join();
 
 private:
     std::recursive_mutex mutex_;
-    std::unordered_map<pid_t, process_info> processes_;
-    std::unordered_map<pid_t, thread_monitor> threads_;
-    monitor& parent_monitor_;
+    std::unordered_map<pid_t, ProcessInfo> processes_;
+    std::unordered_map<pid_t, ThreadMonitor> threads_;
+    Monitor& parent_monitor_;
 };
 }

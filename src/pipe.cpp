@@ -39,7 +39,7 @@ namespace lo2s
 constexpr int READ_FD = 0;
 constexpr int WRITE_FD = 1;
 
-pipe::pipe()
+Pipe::Pipe()
 {
     int res = ::pipe(fds_);
 
@@ -52,7 +52,7 @@ pipe::pipe()
     fd_open_[WRITE_FD] = true;
 }
 
-pipe::~pipe()
+Pipe::~Pipe()
 {
     try
     {
@@ -60,11 +60,11 @@ pipe::~pipe()
     }
     catch (std::exception& e)
     {
-        log::error() << "Caught exception in pipe destruction: " << e.what();
+        Log::error() << "Caught exception in pipe destruction: " << e.what();
     }
 }
 
-pipe::pipe(pipe&& other) noexcept
+Pipe::Pipe(Pipe&& other) noexcept
 {
     using std::swap;
 
@@ -75,7 +75,7 @@ pipe::pipe(pipe&& other) noexcept
     swap(fd_open_[WRITE_FD], other.fd_open_[WRITE_FD]);
 }
 
-pipe& pipe::operator=(pipe&& other) noexcept
+Pipe& Pipe::operator=(Pipe&& other) noexcept
 {
     using std::swap;
 
@@ -88,7 +88,7 @@ pipe& pipe::operator=(pipe&& other) noexcept
     return *this;
 }
 
-std::size_t pipe::write(const void* buf, size_t count)
+std::size_t Pipe::write(const void* buf, size_t count)
 {
     if (!fd_open_[WRITE_FD])
     {
@@ -105,13 +105,13 @@ std::size_t pipe::write(const void* buf, size_t count)
     return static_cast<std::size_t>(res);
 }
 
-std::size_t pipe::write()
+std::size_t Pipe::write()
 {
     char buf = 0;
     return write(&buf, 1);
 }
 
-std::size_t pipe::read(void* buf, size_t count)
+std::size_t Pipe::read(void* buf, size_t count)
 {
     if (!fd_open_[READ_FD])
     {
@@ -128,13 +128,13 @@ std::size_t pipe::read(void* buf, size_t count)
     return static_cast<std::size_t>(res);
 }
 
-std::size_t pipe::read()
+std::size_t Pipe::read()
 {
     char buf;
     return read(&buf, 1);
 }
 
-int pipe::read_fd() const
+int Pipe::read_fd() const
 {
     if (!fd_open_[READ_FD])
     {
@@ -143,7 +143,7 @@ int pipe::read_fd() const
 
     return fds_[READ_FD];
 }
-int pipe::write_fd() const
+int Pipe::write_fd() const
 {
     if (!fd_open_[WRITE_FD])
     {
@@ -153,7 +153,7 @@ int pipe::write_fd() const
     return fds_[WRITE_FD];
 }
 
-void pipe::fd_flags(std::size_t fd, int flags)
+void Pipe::fd_flags(std::size_t fd, int flags)
 {
     if (!fd_open_[fd])
     {
@@ -168,23 +168,23 @@ void pipe::fd_flags(std::size_t fd, int flags)
     }
 }
 
-void pipe::read_fd_flags(int flags)
+void Pipe::read_fd_flags(int flags)
 {
     fd_flags(READ_FD, flags);
 }
 
-void pipe::write_fd_flags(int flags)
+void Pipe::write_fd_flags(int flags)
 {
     fd_flags(WRITE_FD, flags);
 }
 
-void pipe::close()
+void Pipe::close()
 {
     close_read_fd();
     close_write_fd();
 }
 
-void pipe::close_fd(std::size_t fd)
+void Pipe::close_fd(std::size_t fd)
 {
     if (fd_open_[fd])
     {
@@ -199,11 +199,11 @@ void pipe::close_fd(std::size_t fd)
     }
 }
 
-void pipe::close_read_fd()
+void Pipe::close_read_fd()
 {
     close_fd(READ_FD);
 }
-void pipe::close_write_fd()
+void Pipe::close_write_fd()
 {
     close_fd(WRITE_FD);
 }

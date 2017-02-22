@@ -31,7 +31,7 @@ using namespace std::chrono_literals;
 
 namespace lo2s
 {
-struct monitor_config
+struct MonitorConfig
 {
     std::uint64_t sampling_period;
     std::size_t mmap_pages;

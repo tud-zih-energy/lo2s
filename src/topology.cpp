@@ -2,5 +2,5 @@
 
 namespace lo2s
 {
-const fs::path topology::base_path = "/sys/devices/system/cpu";
+const fs::path Topology::base_path = "/sys/devices/system/cpu";
 }

@@ -36,24 +36,24 @@ namespace perf
 namespace time
 {
 
-class converter
+class Converter
 {
 public:
-    converter();
+    Converter();
 
     otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
     {
         return operator()(convert_time_point(perf_raw));
     }
 
-    otf2::chrono::time_point operator()(perf::clock::time_point perf_tp) const
+    otf2::chrono::time_point operator()(perf::Clock::time_point perf_tp) const
     {
         return otf2::chrono::time_point(perf_tp.time_since_epoch() + offset);
     }
 
-    perf::clock::time_point operator()(otf2::chrono::time_point local_tp) const
+    perf::Clock::time_point operator()(otf2::chrono::time_point local_tp) const
     {
-        return perf::clock::time_point(local_tp.time_since_epoch() - offset);
+        return perf::Clock::time_point(local_tp.time_since_epoch() - offset);
     }
 
 private:
