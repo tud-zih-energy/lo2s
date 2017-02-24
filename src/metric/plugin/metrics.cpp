@@ -22,10 +22,17 @@
 #include <lo2s/metric/plugin/metrics.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
 
+#include <lo2s/trace/trace.hpp>
+
 #include <nitro/env/get.hpp>
 
 #include <algorithm>
+#include <sstream>
+#include <string>
+#include <utility>
 #include <vector>
+
+#include <cctype>
 
 namespace lo2s
 {

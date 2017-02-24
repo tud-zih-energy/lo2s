@@ -22,11 +22,13 @@
 #pragma once
 
 #include <lo2s/metric/plugin/channel.hpp>
+#include <lo2s/metric/plugin/wrapper.hpp>
 
-#include <lo2s/time/time.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
 
 #include <nitro/dl/dl.hpp>
+
+#include <otf2xx/chrono/time_point.hpp>
 
 #include <string>
 #include <vector>
@@ -63,7 +65,6 @@ public:
 private:
     std::string plugin_name_;
     std::vector<std::string> plugin_events_;
-    trace::Trace& trace_;
     nitro::dl::dl lib_;
     wrapper::PluginInfo plugin_;
     std::vector<Channel> channels_;

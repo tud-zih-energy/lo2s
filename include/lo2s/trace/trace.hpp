@@ -18,7 +18,6 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #pragma once
 
 #include <lo2s/address.hpp>

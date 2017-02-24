@@ -24,10 +24,11 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 
-#include <cinttypes>
+#include <cstdint>
 #include <cstring>
 
 extern "C" {
+#include <sys/types.h>
 #include <syscall.h>
 #include <unistd.h>
 
@@ -38,7 +39,7 @@ namespace lo2s
 {
 namespace metric
 {
-PerfCounter::PerfCounter(pid_t tid, perf_type_id type, uint64_t config, uint64_t config1)
+PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));

@@ -20,6 +20,13 @@
  */
 #include <lo2s/metric/plugin/channel.hpp>
 
+#include <lo2s/trace/trace.hpp>
+
+#include <otf2xx/definition/definitions.hpp>
+
+#include <memory>
+#include <stdexcept>
+
 namespace lo2s
 {
 namespace metric

@@ -21,31 +21,12 @@
 
 #pragma once
 
-#include <lo2s/trace/fwd.hpp>
-
-#include <memory>
-#include <vector>
-
 namespace lo2s
 {
-namespace metric
+namespace trace
 {
-namespace plugin
-{
+class Trace;
 
-class Plugin;
-
-class Metrics
-{
-public:
-    Metrics(trace::Trace& trace);
-
-    ~Metrics();
-
-private:
-    trace::Trace& trace_;
-    std::vector<std::unique_ptr<Plugin>> metric_plugins_;
-};
-}
+class Counters;
 }
 }

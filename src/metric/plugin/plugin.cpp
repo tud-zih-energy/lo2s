@@ -19,17 +19,25 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/metric/plugin/channel.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
 #include <lo2s/metric/plugin/wrapper.hpp>
 
 #include <lo2s/log.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/trace/fwd.hpp>
+
+#include <otf2xx/chrono/duration.hpp>
 
 #include <memory>
 #include <stdexcept>
 
+#include <cstddef>
+#include <cstdint>
+
 namespace lo2s
 {
+
 namespace metric
 {
 namespace plugin
@@ -73,8 +81,7 @@ static void parse_properties(std::vector<Channel>& channels, wrapper::Properties
 
 Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
                trace::Trace& trace)
-: plugin_name_(plugin_name), plugin_events_(plugin_events), trace_(trace),
-  lib_(lib_name(plugin_name)), plugin_()
+: plugin_name_(plugin_name), plugin_events_(plugin_events), lib_(lib_name(plugin_name)), plugin_()
 {
     Log::info() << "Loading plugin: " << plugin_name_;
 
@@ -172,6 +179,7 @@ void Plugin::start_recording()
         plugin_.synchronize(true, wrapper::SynchronizationMode::BEGIN);
     }
 }
+
 void Plugin::stop_recording()
 {
     Log::info() << "Stop recording for plugin: " << plugin_name_;

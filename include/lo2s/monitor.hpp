@@ -25,6 +25,7 @@
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/thread_map.hpp>
+#include <lo2s/trace/fwd.hpp>
 
 #include <otf2xx/definition/metric_class.hpp>
 
@@ -37,10 +38,6 @@ extern "C" {
 
 namespace lo2s
 {
-namespace trace
-{
-class Trace;
-}
 namespace perf
 {
 namespace tracepoint
