@@ -21,13 +21,17 @@
 
 #pragma once
 
+#include <algorithm>
+#include <exception>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
-#include <exception>
 
 #include <cstdint>
 
@@ -44,35 +48,35 @@ namespace lo2s
 namespace detail
 {
 
-    inline auto parse_list(std::string list) -> std::set<uint32_t>
+inline auto parse_list(std::string list) -> std::set<uint32_t>
+{
+    std::stringstream s;
+    s << list;
+
+    std::set<uint32_t> res;
+
+    std::string part;
+    while (std::getline(s, part, ','))
     {
-        std::stringstream s;
-        s << list;
-
-        std::set<uint32_t> res;
-
-        std::string part;
-        while (std::getline(s, part, ','))
+        auto pos = part.find('-');
+        if (pos != std::string::npos)
         {
-            auto pos = part.find('-');
-            if (pos != std::string::npos)
-            {
-                // is a range
-                uint32_t from = std::stoi(part.substr(0, pos));
-                uint32_t to = std::stoi(part.substr(pos + 1));
+            // is a range
+            uint32_t from = std::stoi(part.substr(0, pos));
+            uint32_t to = std::stoi(part.substr(pos + 1));
 
-                for (auto i = from; i <= to; ++i)
-                    res.insert(i);
-            }
-            else
-            {
-                // single value
-                res.insert(std::stoi(part));
-            }
+            for (auto i = from; i <= to; ++i)
+                res.insert(i);
         }
-
-        return res;
+        else
+        {
+            // single value
+            res.insert(std::stoi(part));
+        }
     }
+
+    return res;
+}
 }
 
 class Topology
@@ -108,7 +112,8 @@ class Topology
 
             auto insert_package = packages_.insert(std::make_pair(package_id, Package(package_id)));
             auto& package = insert_package.first->second;
-            if (package.id != package_id) {
+            if (package.id != package_id)
+            {
                 throw std::runtime_error("Inconsistent package ids in topology.");
             }
             package.core_ids.insert(core_id);
@@ -117,7 +122,8 @@ class Topology
             auto insert_core = cores_.insert(
                 std::make_pair(std::make_tuple(package_id, core_id), Core(core_id, package_id)));
             auto& core = insert_core.first->second;
-            if (core.id != core_id || core.package_id != package_id) {
+            if (core.id != core_id || core.package_id != package_id)
+            {
                 throw std::runtime_error("Inconsistent package/core ids in topology.");
             }
             core.cpu_ids.insert(cpu_id);
@@ -126,7 +132,8 @@ class Topology
                 cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
             auto& cpu = insert_cpu.first->second;
             (void)cpu;
-            if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id) {
+            if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id)
+            {
                 throw std::runtime_error("Inconsistent cpu/package/core ids in topology.");
             }
             if (!insert_cpu.second)
@@ -226,5 +233,4 @@ private:
 
     const static fs::path base_path;
 };
-
 }
