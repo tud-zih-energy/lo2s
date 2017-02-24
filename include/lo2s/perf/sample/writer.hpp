@@ -47,7 +47,7 @@ namespace perf
 namespace sample
 {
 
-// XXX change to private
+// Note, this cannot be protected for CRTP reasons...
 class Writer : public Reader<Writer>
 {
 public:

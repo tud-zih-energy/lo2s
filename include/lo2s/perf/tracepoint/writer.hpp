@@ -41,6 +41,7 @@ namespace perf
 {
 namespace tracepoint
 {
+// Note, this cannot be protected for CRTP reasons...
 class Writer : public Reader<Writer>
 {
 public:
