@@ -27,9 +27,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <exception>
 
-// TODO replace asserts with execptions
-#include <cassert>
 #include <cstdint>
 
 #include <boost/filesystem.hpp>
@@ -109,21 +108,27 @@ class Topology
 
             auto insert_package = packages_.insert(std::make_pair(package_id, Package(package_id)));
             auto& package = insert_package.first->second;
-            assert(package.id == package_id);
+            if (package.id != package_id) {
+                throw std::runtime_error("Inconsistent package ids in topology.");
+            }
             package.core_ids.insert(core_id);
             package.cpu_ids.insert(cpu_id);
 
             auto insert_core = cores_.insert(
                 std::make_pair(std::make_tuple(package_id, core_id), Core(core_id, package_id)));
             auto& core = insert_core.first->second;
-            assert(core.id == core_id && core.package_id == package_id);
+            if (core.id != core_id || core.package_id != package_id) {
+                throw std::runtime_error("Inconsistent package/core ids in topology.");
+            }
             core.cpu_ids.insert(cpu_id);
 
             auto insert_cpu =
                 cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
             auto& cpu = insert_cpu.first->second;
             (void)cpu;
-            assert(cpu.id == cpu_id && cpu.core_id == core_id && cpu.package_id == package_id);
+            if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id) {
+                throw std::runtime_error("Inconsistent cpu/package/core ids in topology.");
+            }
             if (!insert_cpu.second)
             {
                 throw std::runtime_error("Duplicate cpu_id when reading the topology.");
