@@ -22,12 +22,12 @@
 #pragma once
 
 #include <algorithm>
-#include <exception>
 #include <fstream>
 #include <iterator>
 #include <map>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>

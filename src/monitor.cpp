@@ -113,8 +113,8 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
     {
         try
         {
-            raw_counters_ = std::make_unique<perf::tracepoint::Recorder>(trace_, config_,
-                                                                  time_converter_);
+            raw_counters_ =
+                std::make_unique<perf::tracepoint::Recorder>(trace_, config_, time_converter_);
         }
         catch (std::exception& e)
         {
@@ -261,8 +261,8 @@ void Monitor::handle_signal(pid_t child, int status)
             break;
         default:
             Log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
-            // TODO prevent warning -Wint-to-void-pointer-cast
-            check_ptrace(PTRACE_CONT, child, nullptr, (void*)WSTOPSIG(status));
+            // Stupid double cast to prevent warning -Wint-to-void-pointer-cast
+            check_ptrace(PTRACE_CONT, child, nullptr, (void*)((long)WSTOPSIG(status)));
             return;
         }
     }

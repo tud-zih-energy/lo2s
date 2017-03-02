@@ -101,16 +101,11 @@ private:
 
     bool enabled_ = false;
     bool finished_ = false;
-    std::size_t sample_rate = 1000000;
-    cpu_set_t affinity_mask;
-    int instructions_fd = -1;
-    int cycles_fd = -1;
-    std::array<int, 3> memory_fd{ { -1, -1, -1 } };
+    cpu_set_t affinity_mask_;
 
-    std::thread thread;
+    std::thread thread_;
 
-    // XXX rename
-    perf::sample::Writer sample_reader_;
+    perf::sample::Writer sample_writer_;
     trace::Counters counters_;
     std::chrono::nanoseconds read_interval_;
 };

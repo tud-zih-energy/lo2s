@@ -28,7 +28,7 @@
 #include <lo2s/thread_monitor.hpp>
 
 extern "C" {
-#include <sys/stat.h>
+#include <sys/types.h>
 }
 
 namespace lo2s

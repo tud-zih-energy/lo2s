@@ -31,6 +31,8 @@
 
 #include <map>
 #include <mutex>
+#include <stdexcept>
+#include <tuple>
 
 using namespace std::literals::string_literals;
 

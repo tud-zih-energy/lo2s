@@ -38,16 +38,16 @@ ThreadMonitor::~ThreadMonitor()
     {
         Log::warn() << "Trying to join non-finished_ thread monitor. That should not happen.";
     }
-    thread.join();
+    thread_.join();
 }
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
                                bool enable_on_exec)
 : pid_(pid), tid_(tid), parent_monitor_(parent_monitor), info_(info),
-  sample_reader_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
+  sample_writer_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
                  parent_monitor_.time_converter(), enable_on_exec),
   counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
-            sample_reader_.location()),
+            sample_writer_.location()),
   read_interval_(parent_monitor_.config().read_interval)
 {
     (void)pid; // Unused
@@ -67,7 +67,7 @@ void ThreadMonitor::disable()
 void ThreadMonitor::setup_thread()
 {
     enabled_ = true;
-    thread = std::thread([this]() { this->run(); });
+    thread_ = std::thread([this]() { this->run(); });
 }
 
 void ThreadMonitor::check_affinity(bool force)
@@ -76,10 +76,10 @@ void ThreadMonitor::check_affinity(bool force)
     cpu_set_t new_mask;
     CPU_ZERO(&new_mask); // make valgrind happy
     sched_getaffinity(tid(), sizeof(new_mask), &new_mask);
-    if (force || !CPU_EQUAL(&new_mask, &affinity_mask))
+    if (force || !CPU_EQUAL(&new_mask, &affinity_mask_))
     {
         sched_setaffinity(0, sizeof(new_mask), &new_mask);
-        affinity_mask = new_mask;
+        affinity_mask_ = new_mask;
     }
 }
 
@@ -100,7 +100,7 @@ void ThreadMonitor::run()
 
         check_affinity();
 
-        sample_reader_.read();
+        sample_writer_.read();
         counters_.write();
 
         if (!enabled_)
@@ -113,7 +113,7 @@ void ThreadMonitor::run()
         // TODO wait here for overflows in the sampling buffers in addition to the deadline!
         std::this_thread::sleep_until(deadline);
     }
-    sample_reader_.end();
+    sample_writer_.end();
     Log::debug() << "Monitoring thread finished_";
     finished_ = true;
 }
