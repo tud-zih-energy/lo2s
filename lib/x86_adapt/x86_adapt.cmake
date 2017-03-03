@@ -12,4 +12,6 @@ if (X86Adapt_FOUND)
 
     include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
     include_directories(SYSTEM ${X86_ADAPT_INCLUDE_DIRS})
+else()
+    set(X86_ADAPT_LIBRARIES "")
 endif()

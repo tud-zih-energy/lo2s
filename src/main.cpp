@@ -214,6 +214,10 @@ int main(int argc, const char** argv)
                  "time interval between metric and sampling buffer readouts in milliseconds")
             ("raw-tracepoint-event,e", po::value(&config.tracepoint_events),
                  "enable global recording of a raw tracepoint event (usually requires root)")
+#ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
+            ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
+                 "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
+#endif
             ("command", po::value(&command));
     // clang-format on
 

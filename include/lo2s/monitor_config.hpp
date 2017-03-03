@@ -39,5 +39,8 @@ struct MonitorConfig
     bool suppress_ip;
     std::chrono::nanoseconds read_interval;
     std::vector<std::string> tracepoint_events;
+#ifdef HAVE_X86_ADAPT
+    std::vector<std::string> x86_adapt_cpu_knobs;
+#endif
 };
 }

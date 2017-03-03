@@ -28,6 +28,7 @@ namespace lo2s
 namespace trace
 {
 
+// TODO This is an interdependant ball of ... please clean this up
 Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric_class metric_class,
                    otf2::definition::location scope)
 : writer_(trace_.metric_writer(pid, tid)),

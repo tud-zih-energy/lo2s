@@ -22,6 +22,9 @@
 #pragma once
 
 #include <lo2s/metric/plugin/metrics.hpp>
+#ifdef HAVE_X86_ADAPT
+#include <lo2s/metric/x86_adapt/metrics.hpp>
+#endif
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/thread_map.hpp>
@@ -89,5 +92,6 @@ private:
     MonitorConfig config_;
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::Recorder> raw_counters_;
+    std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 };
 }

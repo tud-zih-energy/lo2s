@@ -54,8 +54,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthr
 
 include_directories(include)
 
+if (X86Adapt_FOUND)
+    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/recorder.cpp)
+else()
+    set(X86_ADAPT_SOURCE_FILES "")
+endif()
+
 set(SOURCE_FILES
         src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
+        ${X86_ADAPT_SOURCE_FILES}
         src/metric/perf_counter.cpp
 
         src/perf/sample/writer.cpp
@@ -71,12 +78,10 @@ set(SOURCE_FILES
         src/mmap.cpp
     )
 
+
 add_executable(lo2s ${SOURCE_FILES})
 target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES} ${Radare_LIBRARIES}
-        ${BFD_LIBRARIES})
-if (X86Adapt_FOUND)
-    target_link_libraries(lo2s ${X86_ADAPT_LIBRARIES})
-endif()
+        ${BFD_LIBRARIES} ${X86_ADAPT_LIBRARIES})
 
 option(IWYU "Developer option for include what you use." OFF)
 

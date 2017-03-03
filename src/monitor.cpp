@@ -122,6 +122,21 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
         }
     }
 
+#ifdef HAVE_X86_ADAPT
+    if (!config_.x86_adapt_cpu_knobs.empty())
+    {
+        try
+        {
+            x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
+                trace_, std::chrono::milliseconds(1000), config_.x86_adapt_cpu_knobs);
+        }
+        catch (std::exception& e)
+        {
+            Log::warn() << "Failed to initialize x86_adapt metrics: " << e.what();
+        }
+    }
+#endif
+
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
     trace_.begin_record();
@@ -140,6 +155,12 @@ Monitor::~Monitor()
     {
         raw_counters_->stop();
     }
+#ifdef HAVE_X86_ADAPT
+    if (x86_adapt_metrics_)
+    {
+        x86_adapt_metrics_->stop();
+    }
+#endif
 }
 
 void Monitor::run()
