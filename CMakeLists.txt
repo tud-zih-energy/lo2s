@@ -20,6 +20,8 @@ include(lib/otf2xx/OTF2XX.cmake)
 
 include(lib/nitro/Nitro.cmake)
 
+include(lib/x86_adapt/x86_adapt.cmake)
+
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
@@ -31,11 +33,6 @@ include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
 #include_directories(SYSTEM ${BFD_INCLUDE_DIRS})
 set(BFD_LIBRARIES "-lbfd -lz -ldl -liberty")
 
-find_package(X86Adapt)
-if (X86Adapt_FOUND)
-    message(STATUS "X86Adapt found.")
-    add_definitions(-DHAVE_X86ADAPT)
-endif()
 
 INCLUDE(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -77,6 +74,9 @@ set(SOURCE_FILES
 add_executable(lo2s ${SOURCE_FILES})
 target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES} ${Radare_LIBRARIES}
         ${BFD_LIBRARIES})
+if (X86Adapt_FOUND)
+    target_link_libraries(lo2s ${X86_ADAPT_LIBRARIES})
+endif()
 
 option(IWYU "Developer option for include what you use." OFF)
 
