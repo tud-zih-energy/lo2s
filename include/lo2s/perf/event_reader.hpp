@@ -200,6 +200,9 @@ public:
                     Log::info() << "Lost " << lost->lost << " samples during this chunk.";
                     break;
                 }
+                case PERF_RECORD_EXIT:
+                    // Ignore, it should only come when attr.task = 1
+                    break;
                 case PERF_RECORD_FORK:
                     stop = crtp_this->handle((const RecordForkType*)event_header_p);
                     break;
@@ -277,6 +280,13 @@ private:
     }
 
 public:
+    bool handle(const RecordForkType*)
+    {
+        // It seems you get fork events even if not enabled via attr.task = true;
+        // silently ignore it if our reader type is not specifically interested in forks
+        return false;
+    }
+
     template <class UNKNOWN_RECORD_TYPE>
     bool handle(const UNKNOWN_RECORD_TYPE* record)
     {
