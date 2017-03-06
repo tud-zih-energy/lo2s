@@ -33,16 +33,18 @@ namespace lo2s
 
 ThreadMonitor::~ThreadMonitor()
 {
-    assert(!enabled_);
-    if (!finished_)
+    assert(!enabled());
+    // Outside powers (i.e. ThreadMap) should make sure to not
+    // destroy thread monitors that aren't finished.
+    if (!finished())
     {
-        Log::warn() << "Trying to join non-finished_ thread monitor. That should not happen.";
+        Log::error() << "Trying to join non-finished_ thread monitor. That might take a while.";
     }
     thread_.join();
 }
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
-                               bool enable_on_exec)
+                             bool enable_on_exec)
 : pid_(pid), tid_(tid), parent_monitor_(parent_monitor), info_(info),
   sample_writer_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
                  parent_monitor_.time_converter(), enable_on_exec),
@@ -52,21 +54,24 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, Proc
 {
     (void)pid; // Unused
     /* setup the sampling counter(s) and start a monitoring thread */
-    setup_thread();
+    start();
 }
 
-void ThreadMonitor::disable()
+void ThreadMonitor::stop()
 {
-    if (!enabled_)
+    bool was_enabled = enabled_.exchange(false);
+    if (!was_enabled)
     {
-        Log::warn() << "Trying to disable non-enabled_ ThreadMonitor. This should not happen.";
+        Log::error() << "Trying to stop non-enabled_ ThreadMonitor.";
     }
-    enabled_ = false;
+    // Do not join here, it may take a while for the loop to finish
+    // Instead join in the destructor
 }
 
-void ThreadMonitor::setup_thread()
+void ThreadMonitor::start()
 {
-    enabled_ = true;
+    assert(!thread_.joinable());
+    enabled_.store(true);
     thread_ = std::thread([this]() { this->run(); });
 }
 
@@ -103,7 +108,7 @@ void ThreadMonitor::run()
         sample_writer_.read();
         counters_.write();
 
-        if (!enabled_)
+        if (!enabled())
         {
             break;
         }
@@ -115,6 +120,6 @@ void ThreadMonitor::run()
     }
     sample_writer_.end();
     Log::debug() << "Monitoring thread finished_";
-    finished_ = true;
+    finished_.store(true);
 }
 }

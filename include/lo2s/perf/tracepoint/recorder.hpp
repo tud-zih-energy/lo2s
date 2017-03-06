@@ -57,11 +57,11 @@ private:
 
     void poll();
 
-    void stop_all();
+    void stop_perf();
 
 private:
     Pipe stop_pipe_;
-    std::vector<Writer> perf_recorders_;
+    std::vector<Writer> perf_writers_;
     std::thread thread_;
 };
 }

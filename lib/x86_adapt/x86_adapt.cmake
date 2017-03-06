@@ -1,7 +1,8 @@
 # This is optional, if found, it will give you
 # X86Adapt_FOUND
-# -DHAVEX86ADAPT
-# Me the UnderScore be with you, or not - only MA_Rio knows for sure
+# -DHAVE_X86_ADAPT
+# X86_ADAPT_LIBRARIES (or empty if not found)
+# May the UnderScore be with you, or not - only MA_Rio knows for sure
 
 SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake;${CMAKE_MODULE_PATH}")
 

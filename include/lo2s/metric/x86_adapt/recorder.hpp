@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef HAVE_X86_ADAPT
+#error "Trying to build x86 adapt stuff without x86 adapt support"
+#endif
+
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/trace/fwd.hpp>
@@ -31,18 +35,20 @@ public:
     Recorder(::x86_adapt::device device, std::chrono::nanoseconds sampling_interval,
              const std::vector<::x86_adapt::configuration_item>& configuration_items,
              trace::Trace& trace, const otf2::definition::metric_class& metric_class);
+    ~Recorder();
 
-    void loop();
+    void run();
 
     void start();
 
     void stop();
 
 private:
-    bool running_ = false;
+    bool enabled() const;
+
     ::x86_adapt::device device_;
-    std::unique_ptr<std::thread> thread_;
-    std::atomic<bool> looping_;
+    std::thread thread_;
+    std::atomic<bool> enabled_{ false };
 
     std::chrono::nanoseconds sampling_interval_;
 

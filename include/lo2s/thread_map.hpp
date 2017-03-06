@@ -49,12 +49,12 @@ public:
     // Insert a thread and if needed it's process
     void insert(pid_t pid, pid_t tid, bool enable_on_exec);
 
-    void disable(pid_t tid);
-    void disable();
+    void stop(pid_t tid);
+    void stop_all();
 
     ThreadMonitor& get_thread(pid_t tid);
 
-    void try_join();
+    bool join_finished();
 
 private:
     std::recursive_mutex mutex_;

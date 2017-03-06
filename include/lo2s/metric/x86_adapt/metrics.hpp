@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef HAVE_X86_ADAPT
+#error "Trying to build x86 adapt stuff without x86 adapt support"
+#endif
+
 #include <lo2s/metric/x86_adapt/recorder.hpp>
 
 #include <lo2s/metric/guess_mode.hpp>

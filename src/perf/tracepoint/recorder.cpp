@@ -46,7 +46,7 @@ namespace tracepoint
 Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config,
                    const time::Converter& time_converter)
 {
-    perf_recorders_.reserve(Topology::instance().cpus().size() * config.tracepoint_events.size());
+    perf_writers_.reserve(Topology::instance().cpus().size() * config.tracepoint_events.size());
     // Note any of those setups might fail.
     // TODO: Currently is's all or nothing here, allow partial failure
     for (const auto& event_name : config.tracepoint_events)
@@ -64,7 +64,7 @@ Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config,
         for (const auto& cpu : Topology::instance().cpus())
         {
             Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-            perf_recorders_.emplace_back(cpu.id, event, config, trace_, mc, time_converter);
+            perf_writers_.emplace_back(cpu.id, event, config, trace_, mc, time_converter);
         }
     }
     start();
@@ -85,8 +85,8 @@ void Recorder::start()
 void Recorder::poll()
 {
     std::vector<struct pollfd> pfds;
-    pfds.reserve(perf_recorders_.size());
-    for (const auto& rec : perf_recorders_)
+    pfds.reserve(perf_writers_.size());
+    for (const auto& rec : perf_writers_)
     {
         struct pollfd pfd;
         pfd.fd = rec.fd();
@@ -137,7 +137,7 @@ void Recorder::poll()
         }
 
         Log::trace() << "waking up for " << ret << " raw events.";
-        for (const auto& index_recorder : nitro::lang::enumerate(perf_recorders_))
+        for (const auto& index_recorder : nitro::lang::enumerate(perf_writers_))
         {
             if (pfds[index_recorder.index()].revents & POLLIN)
             {
@@ -145,18 +145,22 @@ void Recorder::poll()
             }
         }
     }
-    stop_all();
-    perf_recorders_.clear();
+    stop_perf();
+    perf_writers_.clear();
 }
 
-void Recorder::stop_all()
+void Recorder::stop_perf()
 {
-    for (auto& recorder : perf_recorders_)
+    for (auto& recorder : perf_writers_)
     {
         recorder.stop();
     }
 }
 
+/**
+ * It is fine to call this multiple times, we use a pipe heare,
+ * not an atomic flag.
+ */
 void Recorder::stop()
 {
     stop_pipe_.write();

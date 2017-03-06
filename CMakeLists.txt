@@ -22,6 +22,12 @@ include(lib/nitro/Nitro.cmake)
 
 include(lib/x86_adapt/x86_adapt.cmake)
 
+if (X86Adapt_FOUND)
+    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/recorder.cpp)
+else()
+    set(X86_ADAPT_SOURCE_FILES "")
+endif()
+
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
@@ -53,12 +59,6 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthread")
 
 include_directories(include)
-
-if (X86Adapt_FOUND)
-    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/recorder.cpp)
-else()
-    set(X86_ADAPT_SOURCE_FILES "")
-endif()
 
 set(SOURCE_FILES
         src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp

@@ -1,5 +1,6 @@
 #include <lo2s/metric/x86_adapt/recorder.hpp>
 
+#include <lo2s/log.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -22,7 +23,17 @@ Recorder::Recorder(::x86_adapt::device device, std::chrono::nanoseconds sampling
     assert(device_.type() == X86_ADAPT_CPU);
 }
 
-void Recorder::loop()
+Recorder::~Recorder()
+{
+    if (enabled())
+    {
+        Log::error() << "Destructing x86_adapt::Recorder that was not properly stopped.";
+        stop();
+    }
+    thread_.join();
+}
+
+void Recorder::run()
 {
     cpu_set_t cpumask;
     CPU_ZERO(&cpumask);
@@ -36,7 +47,7 @@ void Recorder::loop()
         values[i].metric = metric_instance_.metric_class()[i];
     }
 
-    while (looping_.load())
+    while (enabled_.load())
     {
         auto read_time = time::now();
         for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))
@@ -51,29 +62,31 @@ void Recorder::loop()
     }
 }
 
+bool Recorder::enabled() const
+{
+    return enabled_.load();
+}
+
 void Recorder::start()
 {
-    looping_.store(true);
-
-    cpu_set_t cpumask;
-    sched_getaffinity(0, sizeof(cpu_set_t), &cpumask);
-
-    thread_ = std::make_unique<std::thread>([this]() { this->loop(); });
-    running_ = true;
+    bool was_enabled = enabled_.exchange(true);
+    if (was_enabled)
+    {
+        Log::error() << "Trying to start already enabled x86_adapt recorder.";
+        return;
+    }
+    thread_ = std::thread([this]() { this->run(); });
 }
 
 void Recorder::stop()
 {
-    if (!running_)
-        return;
-
-    looping_.store(false);
-
-    thread_->join();
-
-    thread_.reset(nullptr);
-
-    running_ = false;
+    bool was_enabled = enabled_.exchange(false);
+    if (!was_enabled)
+    {
+        Log::error() << "Trying to stop non-enabled_ x86_adapt recorder.";
+    }
+    // Do not join here, it may take a while for the loop to finish
+    // Instead join in the destructor
 }
 }
 }

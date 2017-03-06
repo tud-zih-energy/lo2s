@@ -45,7 +45,7 @@ class ThreadMonitor
 public:
     using Clock = std::chrono::high_resolution_clock;
     ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
-                   bool enable_on_exec);
+                  bool enable_on_exec);
     ~ThreadMonitor();
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
@@ -55,20 +55,20 @@ public:
     ThreadMonitor(ThreadMonitor&&) = delete;
     ThreadMonitor& operator=(ThreadMonitor&&) = delete;
 
-    void disable();
+    void stop();
 
     bool enabled() const
     {
-        return enabled_;
+        return enabled_.load();
     }
 
     bool finished() const
     {
-        return finished_;
+        return finished_.load();
     }
 
 private:
-    void setup_thread();
+    void start();
     void run();
     void check_affinity(bool force = false);
 
@@ -99,8 +99,8 @@ private:
     Monitor& parent_monitor_;
     ProcessInfo& info_;
 
-    bool enabled_ = false;
-    bool finished_ = false;
+    std::atomic<bool> enabled_{ false };
+    std::atomic<bool> finished_{ false };
     cpu_set_t affinity_mask_;
 
     std::thread thread_;

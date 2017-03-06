@@ -127,6 +127,7 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
     {
         try
         {
+            // TODO make time configurable
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
                 trace_, std::chrono::milliseconds(1000), config_.x86_adapt_cpu_knobs);
         }
@@ -211,8 +212,8 @@ void Monitor::handle_ptrace_event_stop(pid_t child, int event)
         auto& thread = threads_.get_thread(child);
         Log::info() << "Thread/process " << thread.tid() << " is about to exit";
 
-        thread.disable();
-        threads_.try_join();
+        thread.stop();
+        threads_.join_finished();
     }
 }
 

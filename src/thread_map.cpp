@@ -22,6 +22,7 @@
 #include <lo2s/thread_map.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/thread_monitor.hpp>
 
@@ -38,30 +39,23 @@ namespace lo2s
 ThreadMap::~ThreadMap()
 {
     Log::debug() << "Cleaning up global thread map.";
-    // I really hope noone accesses the thread_map while it's being deconstructed.
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
 
-    disable();
-    try_join();
-
-    if (threads_.empty())
+    stop_all();
+    if (join_finished())
     {
         return;
     }
 
     Log::debug() << "Going for a short nap while threads are finishing. This is totally fine.";
-    // TODO Sleep for sampling_period instead.
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    try_join();
-    if (threads_.empty())
+    std::this_thread::sleep_for(parent_monitor_.config().read_interval * 1.2);
+    if (join_finished())
     {
         return;
     }
 
     Log::info() << "Waiting 1 second for all threads to finish.";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    try_join();
-    if (threads_.empty())
+    if (join_finished())
     {
         return;
     }
@@ -112,20 +106,20 @@ void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
     }
 }
 
-void ThreadMap::disable(pid_t tid)
+void ThreadMap::stop(pid_t tid)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    get_thread(tid).disable();
+    get_thread(tid).stop();
 }
 
-void ThreadMap::disable()
+void ThreadMap::stop_all()
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto& elem : threads_)
     {
         if (elem.second.enabled())
         {
-            elem.second.disable();
+            elem.second.stop();
         }
     }
 }
@@ -135,7 +129,11 @@ ThreadMonitor& ThreadMap::get_thread(pid_t tid)
     return threads_.at(tid);
 }
 
-void ThreadMap::try_join()
+/*
+ * Join all threads that are immediately joinable (i.e. finished)
+ * Returns true if no more threads remain.
+ */
+bool ThreadMap::join_finished()
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     const auto end = threads_.end();
@@ -150,5 +148,6 @@ void ThreadMap::try_join()
             ++iter;
         }
     }
+    return threads_.empty();
 }
 }
