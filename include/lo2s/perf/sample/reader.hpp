@@ -78,7 +78,6 @@ protected:
         {
             perf_attr.enable_on_exec = 1;
         }
-        perf_attr.task = 1;
 
         // TODO see if we can remove remove tid
         perf_attr.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME;

@@ -189,9 +189,6 @@ public:
                 case PERF_RECORD_MMAP2:
                     stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                     break;
-                case PERF_RECORD_EXIT:
-                    Log::debug() << "encountered exit event.";
-                    break;
                 case PERF_RECORD_THROTTLE: /* fall-through */
                 case PERF_RECORD_UNTHROTTLE:
                     throttle_samples++;
