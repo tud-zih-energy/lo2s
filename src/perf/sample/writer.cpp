@@ -61,13 +61,8 @@ Writer::Writer(pid_t pid, pid_t tid, const MonitorConfig& config, ThreadMonitor&
     attr.config = PERF_COUNT_HW_INSTRUCTIONS;
     attr.sample_period = config_.sampling_period;
 
-    // map events to buffer
+    // map events to buffer (don't need the fancy mmap2)
     attr.mmap = 1;
-    // Note: we do not need the fancy format!
-    // attr.mmap2 = 1;
-
-    // not used yet
-    // attr.task = 1;
 
     init(attr, tid, enable_on_exec, config.mmap_pages);
 }
