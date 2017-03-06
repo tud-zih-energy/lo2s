@@ -57,6 +57,7 @@ Reader::Reader()
     attr.type = PERF_TYPE_HARDWARE;
     attr.config = PERF_COUNT_HW_INSTRUCTIONS;
     attr.sample_period = 100000000;
+    attr.task = 1;
 #endif
 
     init(attr, 0, false, 1);
