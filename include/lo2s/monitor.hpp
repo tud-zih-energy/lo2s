@@ -92,6 +92,8 @@ private:
     MonitorConfig config_;
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::Recorder> raw_counters_;
+#ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
+#endif
 };
 }
