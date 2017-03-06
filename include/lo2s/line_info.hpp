@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
