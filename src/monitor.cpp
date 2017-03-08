@@ -127,9 +127,8 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
     {
         try
         {
-            // TODO make time configurable
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, std::chrono::milliseconds(1000), config_.x86_adapt_cpu_knobs);
+                trace_, config.read_interval, config_.x86_adapt_cpu_knobs);
         }
         catch (std::exception& e)
         {
