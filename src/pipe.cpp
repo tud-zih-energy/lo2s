@@ -88,7 +88,7 @@ Pipe& Pipe::operator=(Pipe&& other) noexcept
     return *this;
 }
 
-std::size_t Pipe::write(const void* buf, size_t count)
+std::size_t Pipe::write(const void* buf, std::size_t count)
 {
     if (!fd_open_[WRITE_FD])
     {
@@ -111,7 +111,7 @@ std::size_t Pipe::write()
     return write(&buf, 1);
 }
 
-std::size_t Pipe::read(void* buf, size_t count)
+std::size_t Pipe::read(void* buf, std::size_t count)
 {
     if (!fd_open_[READ_FD])
     {
