@@ -50,7 +50,7 @@ public:
 #ifndef HW_BREAKPOINT_COMPAT
     using RecordSyncType = sample::Reader<Reader>::RecordSampleType;
 #else
-    using RecordSyncType = sample::reader<reader>::record_fork_type;
+    using RecordSyncType = sample::Reader<Reader>::RecordForkType;
 #endif
 
     bool handle(const RecordSyncType* sync_event);
