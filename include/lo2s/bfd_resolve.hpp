@@ -57,92 +57,101 @@ extern "C" {
 
 namespace lo2s
 {
-
 namespace bfdr
 {
-    struct Initializer
+
+struct Initializer
+{
+    Initializer()
     {
-        Initializer()
-        {
-            bfd_init();
-        }
-    };
+        bfd_init();
+    }
+};
 
-    class InitError : public std::runtime_error
+class InitError : public std::runtime_error
+{
+public:
+    InitError(const std::string& what, const std::string& lib)
+    : std::runtime_error(what + ": " + lib)
     {
-    public:
-        InitError(const std::string& what, const std::string& lib)
-        : std::runtime_error(what + ": " + lib)
-        {
-        }
+    }
 
-        InitError(const std::string& what) : std::runtime_error(what)
-        {
-        }
-    };
-
-    class LookupError : public std::runtime_error
+    InitError(const std::string& what) : std::runtime_error(what)
     {
-    public:
-        LookupError(const std::string& what, Address addr) : std::runtime_error(msg(what, addr))
-        {
-        }
+    }
+};
 
-    private:
-        static std::string msg(const std::string& what, Address addr)
-        {
-            std::stringstream ss;
-            ss << what << ": 0x" << hex << addr;
-            return ss.str();
-        }
-    };
-
-    class Lib
+class InvalidFileError : public std::runtime_error
+{
+public:
+    InvalidFileError(const std::string& what, const std::string& dso)
+    : std::runtime_error(what + ": " + dso)
     {
-    public:
-        Lib(const std::string& name);
-        Lib(const Lib&) = delete;
-        Lib(Lib&&) = delete;
-        Lib& operator=(const Lib&) = delete;
-        Lib& operator=(Lib&&) = delete;
+    }
+};
 
-        ~Lib();
+class LookupError : public std::runtime_error
+{
+public:
+    LookupError(const std::string& what, Address addr) : std::runtime_error(msg(what, addr))
+    {
+    }
 
-        LineInfo lookup(Address addr) const;
+private:
+    static std::string msg(const std::string& what, Address addr)
+    {
+        std::stringstream ss;
+        ss << what << ": 0x" << hex << addr;
+        return ss.str();
+    }
+};
 
-        const std::string& name() const
+class Lib
+{
+public:
+    Lib(const std::string& name);
+    Lib(const Lib&) = delete;
+    Lib(Lib&&) = delete;
+    Lib& operator=(const Lib&) = delete;
+    Lib& operator=(Lib&&) = delete;
+
+    ~Lib();
+
+    LineInfo lookup(Address addr) const;
+
+    const std::string& name() const
+    {
+        return name_;
+    }
+
+private:
+    void filter_symbols()
+    {
+        symbols_.erase(std::remove_if(symbols_.begin(), symbols_.end(), [](const asymbol* sym) {
+            return (sym != nullptr) && !(sym->flags & BSF_FUNCTION);
+        }));
+    }
+
+    void read_symbols();
+
+    void read_sections();
+
+    template <typename T>
+    static T check_symtab(T sz)
+    {
+        if (sz < 0)
         {
-            return name_;
+            throw std::runtime_error("Error getting symtab size");
         }
+        return sz;
+    }
 
-    private:
-        void filter_symbols()
-        {
-            symbols_.erase(std::remove_if(symbols_.begin(), symbols_.end(), [](const asymbol* sym) {
-                return (sym != nullptr) && !(sym->flags & BSF_FUNCTION);
-            }));
-        }
+    std::string name_;
+    bfd* handle_;
+    std::vector<asymbol*> symbols_;
+    std::map<Range, asection*> sections_;
 
-        void read_symbols();
-
-        void read_sections();
-
-        template <typename T>
-        static T check_symtab(T sz)
-        {
-            if (sz < 0)
-            {
-                throw std::runtime_error("Error getting symtab size");
-            }
-            return sz;
-        }
-
-        std::string name_;
-        bfd* handle_;
-        std::vector<asymbol*> symbols_;
-        std::map<Range, asection*> sections_;
-
-        static Initializer dummy_;
-    };
+    static Initializer dummy_;
+};
 }
 }

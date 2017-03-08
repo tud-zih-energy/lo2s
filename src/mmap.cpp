@@ -9,21 +9,23 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/mmap.hpp>
 #include <lo2s/line_info.hpp>
+#include <lo2s/mmap.hpp>
 #include <lo2s/util.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/system/error_code.hpp>
 
 #include <mutex>
 #include <regex>
@@ -76,14 +78,39 @@ MemoryMap::MemoryMap(pid_t pid, bool read_initial)
 
 void MemoryMap::mmap(Address begin, Address end, Address pgoff, const std::string& dso_name)
 {
+    Log::debug() << "mmap: " << begin << "-" << end << " " << pgoff << ": " << dso_name;
+
     if (dso_name.empty() || std::string("//anon") == dso_name ||
         std::string("/dev/zero") == dso_name || std::string("/anon_hugepage") == dso_name ||
         boost::starts_with(dso_name, "/SYSV"))
     {
-        Log::debug() << "mmap: skipping " << dso_name;
+        Log::debug() << "mmap: skipping dso: " << dso_name << " (known non-library)";
         return;
     }
-    Log::debug() << "mmap: " << begin << "-" << end << " " << pgoff << ": " << dso_name;
+
+    bool is_non_file_dso = (dso_name[0] == '[');
+
+    Binary* lb;
+    if (is_non_file_dso)
+    {
+        lb = &NamedBinary::cache(dso_name);
+    }
+    else
+    {
+        try
+        {
+
+            lb = &BfdRadareBinary::cache(dso_name);
+        }
+        catch (bfdr::InitError& e)
+        {
+            Log::warn() << "could not initialize bfd: " << e.what();
+        }
+        catch (bfdr::InvalidFileError& e)
+        {
+            Log::debug() << "dso is not a valid file: " << e.what();
+        }
+    }
 
     auto ex_it = map_.find(begin);
     if (ex_it != map_.end())
@@ -106,15 +133,6 @@ void MemoryMap::mmap(Address begin, Address end, Address pgoff, const std::strin
 
     try
     {
-        Binary* lb;
-        if (dso_name[0] == '[')
-        {
-            lb = &NamedBinary::cache(dso_name);
-        }
-        else
-        {
-            lb = &BfdRadareBinary::cache(dso_name);
-        }
         auto r = map_.emplace(std::piecewise_construct, std::forward_as_tuple(begin, end),
                               std::forward_as_tuple(begin, end, pgoff, *lb));
         if (!r.second)
@@ -126,10 +144,6 @@ void MemoryMap::mmap(Address begin, Address end, Address pgoff, const std::strin
                          << "OLD: " << r.first->second.start << "-" << r.first->second.end << "%"
                          << r.first->second.pgoff << " " << r.first->second.dso.name();
         }
-    }
-    catch (bfdr::InitError& e)
-    {
-        Log::info() << "could not initialize bfd: " << e.what();
     }
     catch (Range::Error& e)
     {
