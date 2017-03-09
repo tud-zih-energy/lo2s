@@ -25,6 +25,7 @@
 #include <lo2s/monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/time/time.hpp>
 
 #include <cassert>
 
@@ -96,7 +97,7 @@ void ThreadMonitor::run()
 
     check_affinity(true);
 
-    auto deadline = Clock::now();
+    auto deadline = time::Clock::now();
     // Move deadline to be the same for all thread, reducing noise imbalances
     deadline -= (deadline.time_since_epoch() % read_interval_) + read_interval_;
     while (true)

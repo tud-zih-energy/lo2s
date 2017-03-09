@@ -43,7 +43,6 @@ class ProcessInfo;
 class ThreadMonitor
 {
 public:
-    using Clock = std::chrono::high_resolution_clock;
     ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
                   bool enable_on_exec);
     ~ThreadMonitor();

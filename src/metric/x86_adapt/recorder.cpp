@@ -1,6 +1,7 @@
 #include <lo2s/metric/x86_adapt/recorder.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -47,6 +48,10 @@ void Recorder::run()
         values[i].metric = metric_instance_.metric_class()[i];
     }
 
+    auto deadline = time::Clock::now();
+    // Move deadline to be the same for all thread, reducing noise imbalances
+    deadline -= (deadline.time_since_epoch() % sampling_interval_) + sampling_interval_;
+
     while (enabled_.load())
     {
         auto read_time = time::now();
@@ -58,7 +63,9 @@ void Recorder::run()
         // TODO optimize! (avoid copy, avoid shared pointers...)
         writer_.write(otf2::event::metric(read_time, metric_instance_, values));
 
-        std::this_thread::sleep_for(sampling_interval_);
+        // TODO skip samples if we cannot keep up with the deadlines
+        deadline += sampling_interval_;
+        std::this_thread::sleep_until(deadline);
     }
 }
 
