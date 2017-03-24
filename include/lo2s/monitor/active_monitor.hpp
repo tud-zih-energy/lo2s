@@ -21,91 +21,76 @@
 
 #pragma once
 
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/trace/counters.hpp>
-
-#include <array>
+#include <atomic>
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
+#include <string>
 #include <thread>
-
-#include <cstddef>
-
-extern "C" {
-#include <sched.h>
-#include <unistd.h>
-}
 
 namespace lo2s
 {
 class Monitor;
-class ProcessInfo;
 
-class ThreadMonitor
+namespace monitor
+{
+
+class ActiveMonitor
 {
 public:
-    ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
-                  bool enable_on_exec);
-    ~ThreadMonitor();
+    ActiveMonitor(Monitor& parent_monitor, std::chrono::nanoseconds interval);
+    virtual ~ActiveMonitor();
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
-    ThreadMonitor(const ThreadMonitor&) = delete;
-    ThreadMonitor& operator=(const ThreadMonitor&) = delete;
+    ActiveMonitor(const ActiveMonitor&) = delete;
+    ActiveMonitor& operator=(const ActiveMonitor&) = delete;
     // Moving is still a bit tricky (keep moved-from in a useful state), avoid it for now.
-    ThreadMonitor(ThreadMonitor&&) = delete;
-    ThreadMonitor& operator=(ThreadMonitor&&) = delete;
+    ActiveMonitor(ActiveMonitor&&) = delete;
+    ActiveMonitor& operator=(ActiveMonitor&&) = delete;
 
+    void start();
     void stop();
-
-    bool enabled() const
-    {
-        return enabled_.load();
-    }
 
     bool finished() const
     {
         return finished_.load();
     }
 
+    const std::string& name()
+    {
+        return name_;
+    };
+
 private:
-    void start();
     void run();
-    void check_affinity(bool force = false);
+
+    virtual void initialize_thread()
+    {
+    }
+    virtual void finalize_thread()
+    {
+    }
+
+    virtual void monitor() = 0;
 
 public:
-    pid_t pid() const
-    {
-        return pid_;
-    }
-
-    pid_t tid() const
-    {
-        return tid_;
-    }
-
     Monitor& parent_monitor()
     {
         return parent_monitor_;
     }
 
-    ProcessInfo& info()
-    {
-        return info_;
-    }
-
 private:
-    pid_t pid_;
-    pid_t tid_;
     Monitor& parent_monitor_;
-    ProcessInfo& info_;
-
-    std::atomic<bool> enabled_{ false };
+    bool stop_requested_ = false;
     std::atomic<bool> finished_{ false };
-    cpu_set_t affinity_mask_;
+
+    std::mutex control_mutex_;
+    std::condition_variable control_condition_;
 
     std::thread thread_;
+    std::chrono::nanoseconds interval_;
 
-    perf::sample::Writer sample_writer_;
-    trace::Counters counters_;
-    std::chrono::nanoseconds read_interval_;
+    std::string name_;
 };
+}
 }

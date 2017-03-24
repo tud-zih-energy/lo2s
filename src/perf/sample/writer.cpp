@@ -27,9 +27,9 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/process_info.hpp>
-#include <lo2s/thread_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/otf2.hpp>
@@ -48,7 +48,7 @@ namespace perf
 namespace sample
 {
 
-Writer::Writer(pid_t pid, pid_t tid, const MonitorConfig& config, ThreadMonitor& Monitor,
+Writer::Writer(pid_t pid, pid_t tid, const MonitorConfig& config, monitor::ThreadMonitor& Monitor,
                trace::Trace& trace, const time::Converter& time_converter, bool enable_on_exec)
 : Reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(Monitor),
   trace_(trace), otf2_writer_(trace.sample_writer(pid, tid)), time_converter_(time_converter)

@@ -65,6 +65,8 @@ set(SOURCE_FILES
         ${X86_ADAPT_SOURCE_FILES}
         src/metric/perf_counter.cpp
 
+        src/monitor/thread_monitor.cpp src/monitor/active_monitor.cpp
+
         src/perf/sample/writer.cpp
         src/perf/time/converter.cpp src/perf/time/reader.cpp
         src/perf/tracepoint/format.cpp src/perf/tracepoint/recorder.cpp
@@ -72,7 +74,7 @@ set(SOURCE_FILES
 
         src/trace/counters.cpp src/trace/trace.cpp
 
-        src/main.cpp src/monitor.cpp src/thread_map.cpp src/thread_monitor.cpp
+        src/main.cpp src/monitor.cpp src/thread_map.cpp
         src/platform.cpp
         src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp
         src/mmap.cpp

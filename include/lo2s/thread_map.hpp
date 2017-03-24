@@ -24,8 +24,8 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
-#include <lo2s/thread_monitor.hpp>
 
 extern "C" {
 #include <sys/types.h>
@@ -52,14 +52,14 @@ public:
     void stop(pid_t tid);
     void stop_all();
 
-    ThreadMonitor& get_thread(pid_t tid);
+    monitor::ThreadMonitor& get_thread(pid_t tid);
 
     bool join_finished();
 
 private:
     std::recursive_mutex mutex_;
     std::unordered_map<pid_t, ProcessInfo> processes_;
-    std::unordered_map<pid_t, ThreadMonitor> threads_;
+    std::unordered_map<pid_t, monitor::ThreadMonitor> threads_;
     Monitor& parent_monitor_;
 };
 }

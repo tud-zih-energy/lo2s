@@ -40,7 +40,10 @@ extern "C" {
 
 namespace lo2s
 {
+namespace monitor
+{
 class ThreadMonitor;
+}
 
 namespace perf
 {
@@ -51,7 +54,7 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, const MonitorConfig& config, ThreadMonitor& monitor,
+    Writer(pid_t pid, pid_t tid, const MonitorConfig& config, monitor::ThreadMonitor& monitor,
            trace::Trace& trace, const time::Converter& time_converter, bool enable_on_exec);
     ~Writer();
 
@@ -79,7 +82,7 @@ private:
     pid_t pid_;
     pid_t tid_;
     MonitorConfig config_;
-    ThreadMonitor& monitor_;
+    monitor::ThreadMonitor& monitor_;
 
     trace::Trace& trace_;
     otf2::writer::local& otf2_writer_;

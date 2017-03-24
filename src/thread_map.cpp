@@ -23,8 +23,8 @@
 
 #include <lo2s/log.hpp>
 #include <lo2s/monitor.hpp>
+#include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
-#include <lo2s/thread_monitor.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -117,14 +117,14 @@ void ThreadMap::stop_all()
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto& elem : threads_)
     {
-        if (elem.second.enabled())
+        if (!elem.second.finished())
         {
             elem.second.stop();
         }
     }
 }
 
-ThreadMonitor& ThreadMap::get_thread(pid_t tid)
+monitor::ThreadMonitor& ThreadMap::get_thread(pid_t tid)
 {
     return threads_.at(tid);
 }
