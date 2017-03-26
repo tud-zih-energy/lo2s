@@ -25,9 +25,10 @@ ActiveMonitor::~ActiveMonitor()
     assert(stop_requested_);
     if (!finished())
     {
-        Log::error() << "Trying to join non-finished monitor " << name() << ". "
-                     << "That might take a while.";
+        Log::warn() << "Trying to join non-finished monitor " << name() << ". "
+                     << "That shouldn't happen and might take a while.";
     }
+    thread_.join();
 }
 
 void ActiveMonitor::stop()
