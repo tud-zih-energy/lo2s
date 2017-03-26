@@ -39,28 +39,7 @@ namespace lo2s
 ThreadMap::~ThreadMap()
 {
     Log::debug() << "Cleaning up global thread map.";
-
     stop_all();
-    if (join_finished())
-    {
-        return;
-    }
-
-    Log::debug() << "Going for a short nap while threads are finishing. This is totally fine.";
-    std::this_thread::sleep_for(parent_monitor_.config().read_interval * 1.2);
-    if (join_finished())
-    {
-        return;
-    }
-
-    Log::info() << "Waiting 1 second for all threads to finish.";
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    if (join_finished())
-    {
-        return;
-    }
-
-    Log::warn() << "Not all monitoring threads finished, giving up.";
 }
 
 ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
@@ -110,6 +89,7 @@ void ThreadMap::stop(pid_t tid)
 {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     get_thread(tid).stop();
+    threads_.erase(tid);
 }
 
 void ThreadMap::stop_all()
@@ -117,37 +97,13 @@ void ThreadMap::stop_all()
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (auto& elem : threads_)
     {
-        if (!elem.second.finished())
-        {
-            elem.second.stop();
-        }
+        elem.second.stop();
     }
+    threads_.clear();
 }
 
 monitor::ThreadMonitor& ThreadMap::get_thread(pid_t tid)
 {
     return threads_.at(tid);
-}
-
-/*
- * Join all threads that are immediately joinable (i.e. finished)
- * Returns true if no more threads remain.
- */
-bool ThreadMap::join_finished()
-{
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    const auto end = threads_.end();
-    for (auto iter = threads_.begin(); iter != end;)
-    {
-        if (iter->second.finished())
-        {
-            threads_.erase(iter++);
-        }
-        else
-        {
-            ++iter;
-        }
-    }
-    return threads_.empty();
 }
 }

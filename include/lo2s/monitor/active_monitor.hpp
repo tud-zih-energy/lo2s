@@ -46,21 +46,13 @@ namespace monitor
  *
  * stop()
  *
- * [stop_requested]
- *
  * If the thread was just waiting, the condition variable will instantly stop it.
  * If the thread is just doing its monitoring, it will break out of the the loop afterwards
- * After the thread leaves the monitoring loop, it will set finished
+ * The thread will then be joined and the ActiveMonitor will be finished()
  *
- * [finished]
+ * ~ActiveMonitor()
  *
- * Currently the stop itself and the monitoring action is protected by a lock, so you stop will actually block until
- * monitoring is dun and thus it will be finished very quickly after the stop call. If it ever comes to a situation
- * where this lock becomes a bottleneck, the lock can easily be moved to just around the wait_until, but then finished()
- * may be delayed a bit after the stop()
- *
- * The thread is currently joined in the destructor.
- * You should only destruct the ActiveMonitor once it is finished() to avoid waiting for the join.
+ * The destructor won't do anything. Calling it before stop(), will stop it but is considered an error.
  */
 class ActiveMonitor
 {

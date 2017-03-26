@@ -22,20 +22,33 @@ ActiveMonitor::ActiveMonitor(Monitor& parent_monitor, std::chrono::nanoseconds i
 
 ActiveMonitor::~ActiveMonitor()
 {
-    assert(stop_requested_);
-    if (!finished())
+    std::unique_lock<std::mutex> lock(control_mutex_);
+    if (!stop_requested_)
     {
-        Log::warn() << "Trying to join non-finished monitor " << name() << ". "
-                     << "That shouldn't happen and might take a while.";
+        Log::error() << "Destructing ActiveMonitor before being stopped. This should not happen, "
+                        "but it's fine anyway.";
+        stop();
     }
-    thread_.join();
 }
 
 void ActiveMonitor::stop()
 {
-    std::unique_lock<std::mutex> lock(control_mutex_);
-    stop_requested_ = true;
-    control_condition_.notify_all();
+    {
+        std::unique_lock<std::mutex> lock(control_mutex_);
+        assert(!stop_requested_);
+        stop_requested_ = true;
+        control_condition_.notify_all();
+    }
+    try
+    {
+        assert(thread_.joinable());
+        thread_.join();
+    }
+    catch (std::system_error& err)
+    {
+        Log::error() << "Failed to join ActiveMonitor thread: " << err.what()
+                     << " This is probably bad, we can't do anything about it.";
+    }
 }
 
 void ActiveMonitor::start()

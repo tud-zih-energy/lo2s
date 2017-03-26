@@ -54,8 +54,6 @@ public:
 
     monitor::ThreadMonitor& get_thread(pid_t tid);
 
-    bool join_finished();
-
 private:
     std::recursive_mutex mutex_;
     std::unordered_map<pid_t, ProcessInfo> processes_;
