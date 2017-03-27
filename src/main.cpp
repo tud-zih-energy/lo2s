@@ -86,7 +86,7 @@ static void run_command(const std::vector<std::string>& command_and_args, Pipe& 
     raise(SIGSTOP);
 
     // run the application which should be sampled
-    execve(tmp[0], &tmp[0], environ);
+    execvp(tmp[0], &tmp[0]);
 
     // should not be executed -> exec failed, let's clean up anyway.
     for (auto cp : tmp)
