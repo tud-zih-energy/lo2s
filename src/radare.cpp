@@ -67,7 +67,9 @@ std::string Radare::operator()(Address ip, std::istream& obj)
         throw Error("instruction pointer at end of file");
     }
     auto code = r_asm_mdisassemble(r_asm_, (unsigned char*)buffer, read_bytes);
-    return single_instruction(code->buf_asm);
+    auto ret = single_instruction(code->buf_asm);
+    r_asm_code_free(code);
+    return ret;
 }
 
 RadareResolver::RadareResolver(const std::string& filename) : obj_(filename)
