@@ -147,9 +147,7 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
 
 Monitor::~Monitor()
 {
-    // Notify trace, that we will end recording now. That means, get_time() of this call will be
-    // the last possible timestamp in the trace
-    trace_.end_record();
+    threads_.stop();
 
     if (raw_counters_)
     {
@@ -161,6 +159,10 @@ Monitor::~Monitor()
         x86_adapt_metrics_->stop();
     }
 #endif
+
+    // Notify trace, that we will end recording now. That means, get_time() of this call will be
+    // the last possible timestamp in the trace
+    trace_.end_record();
 }
 
 void Monitor::run()
@@ -198,7 +200,7 @@ void Monitor::handle_ptrace_event_stop(pid_t child, int event)
         check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
 
         // Parent may be a thread, get the process
-        auto pid = threads_.get_thread(child).pid();
+        auto pid = threads_.pid(child);
 
         Log::info() << "New thread is cloned " << newpid << " parent: " << child << " pid: " << pid;
 

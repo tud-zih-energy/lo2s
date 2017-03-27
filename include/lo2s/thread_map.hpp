@@ -35,27 +35,29 @@ namespace lo2s
 {
 class Monitor;
 
+/**
+ * This class manages the ThreadMonitors for each thread
+ * It is interfaced only by the main Monitor, hence no locks are needed
+ */
 class ThreadMap
 {
 public:
-    ThreadMap(Monitor& parent_monitor) : parent_monitor_(parent_monitor)
-    {
-    }
+    ThreadMap(Monitor& parent_monitor);
 
     ~ThreadMap();
 
+private:
     ProcessInfo& insert_process(pid_t pid, bool enable_on_exec);
 
+public:
     // Insert a thread and if needed it's process
     void insert(pid_t pid, pid_t tid, bool enable_on_exec);
 
     void stop(pid_t tid);
-    void stop_all();
-
-    monitor::ThreadMonitor& get_thread(pid_t tid);
+    void stop();
+    pid_t pid(pid_t tid) const;
 
 private:
-    std::recursive_mutex mutex_;
     std::unordered_map<pid_t, ProcessInfo> processes_;
     std::unordered_map<pid_t, monitor::ThreadMonitor> threads_;
     Monitor& parent_monitor_;

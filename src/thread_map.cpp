@@ -36,15 +36,18 @@
 
 namespace lo2s
 {
+ThreadMap::ThreadMap(Monitor& parent_monitor) : parent_monitor_(parent_monitor)
+{
+}
+
 ThreadMap::~ThreadMap()
 {
     Log::debug() << "Cleaning up global thread map.";
-    stop_all();
+    stop();
 }
 
 ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     // TODO wait for C++17 and replace with try_emplace
     if (processes_.count(pid) == 0)
     {
@@ -58,7 +61,6 @@ ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
 
 void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto& info = insert_process(pid, enable_on_exec);
     if (threads_.count(tid) == 0)
     {
@@ -85,25 +87,24 @@ void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
     }
 }
 
-void ThreadMap::stop(pid_t tid)
+pid_t ThreadMap::pid(pid_t tid) const
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    get_thread(tid).stop();
-    threads_.erase(tid);
+    return threads_.at(tid).pid();
 }
 
-void ThreadMap::stop_all()
+void ThreadMap::stop(pid_t tid)
 {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    threads_.at(tid).stop();
+    threads_.erase(tid);
+    // Note: the processes remain.
+}
+
+void ThreadMap::stop()
+{
     for (auto& elem : threads_)
     {
         elem.second.stop();
     }
     threads_.clear();
-}
-
-monitor::ThreadMonitor& ThreadMap::get_thread(pid_t tid)
-{
-    return threads_.at(tid);
 }
 }
