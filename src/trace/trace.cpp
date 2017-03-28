@@ -198,11 +198,15 @@ std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
 
 void Trace::process(pid_t pid, const std::string& name)
 {
-    location_groups_.emplace(
+    auto r = location_groups_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
         std::forward_as_tuple(location_groups_.size(), intern(name),
                               otf2::definition::location_group::location_group_type::process,
                               system_tree_root_node_));
+    if (r.second == false)
+    {
+        r.first->second.name(intern(name));
+    }
 }
 
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)

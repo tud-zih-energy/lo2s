@@ -157,7 +157,19 @@ void ProcessMonitor::handle_ptrace_event_stop(pid_t child, int event)
     // process or thread exited?
     if (event == PTRACE_EVENT_EXIT)
     {
-        Log::info() << "Thread/process " << child << " is about to exit";
+        if (threads_.is_process(child))
+        {
+            auto name = get_process_exe(child);
+            Log::info() << "Process " << child << " / " << name << " about to exit";
+            trace_.process(child, name);
+        }
+        else
+        {
+            auto pid = threads_.pid(child);
+            Log::info() << "Thread " << child << " in process " << pid << " / "
+                        << get_process_exe(pid) << " is about to exit";
+        }
+
         threads_.stop(child);
     }
 }

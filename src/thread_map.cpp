@@ -92,6 +92,11 @@ pid_t ThreadMap::pid(pid_t tid) const
     return threads_.at(tid).pid();
 }
 
+bool ThreadMap::is_process(pid_t tid) const
+{
+    return pid(tid) == tid;
+}
+
 void ThreadMap::stop(pid_t tid)
 {
     threads_.at(tid).stop();

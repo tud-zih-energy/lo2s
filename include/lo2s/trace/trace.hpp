@@ -85,7 +85,7 @@ public:
         return archive_;
     }
 
-    void process(pid_t pid, const std::string& name);
+    void process(pid_t pid, const std::string& name = "");
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
 
