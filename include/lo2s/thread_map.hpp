@@ -56,6 +56,7 @@ public:
     void stop(pid_t tid);
     void stop();
     pid_t pid(pid_t tid) const;
+    bool is_process(pid_t tid) const;
 
 private:
     std::unordered_map<pid_t, ProcessInfo> processes_;
