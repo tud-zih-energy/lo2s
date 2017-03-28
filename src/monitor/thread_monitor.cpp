@@ -22,7 +22,7 @@
 #include <lo2s/monitor/thread_monitor.hpp>
 
 #include <lo2s/log.hpp>
-#include <lo2s/monitor.hpp>
+#include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
@@ -34,7 +34,7 @@ namespace lo2s
 namespace monitor
 {
 
-ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor_, ProcessInfo& info,
+ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_, ProcessInfo& info,
                              bool enable_on_exec)
 : ActiveMonitor(parent_monitor_, parent_monitor_.config().read_interval), pid_(pid), tid_(tid),
   info_(info),

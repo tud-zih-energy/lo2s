@@ -1,12 +1,12 @@
 #pragma once
 
+#include <lo2s/monitor/fwd.hpp>
+
 namespace lo2s
 {
-class Monitor;
-
 class CpuMonitor
 {
-    CpuMonitor(int cpu, Monitor& parent_monitor);
+    CpuMonitor(int cpu, ProcessMonitor& parent_monitor);
     ~CpuMonitor();
 
 void

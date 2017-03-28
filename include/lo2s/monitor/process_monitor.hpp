@@ -48,14 +48,15 @@ namespace tracepoint
 class Recorder;
 }
 }
-
-class Monitor
+namespace monitor
+{
+class ProcessMonitor
 {
 public:
-    Monitor(pid_t child, const std::string& name, trace::Trace& trace, bool spawn,
-            const MonitorConfig& config);
+    ProcessMonitor(pid_t child, const std::string& name, trace::Trace& trace, bool spawn,
+                   const MonitorConfig& config);
 
-    ~Monitor();
+    ~ProcessMonitor();
 
     void run();
 
@@ -81,6 +82,7 @@ public:
 
 private:
     void handle_ptrace_event_stop(pid_t child, int event);
+
     void handle_signal(pid_t child, int status);
 
     const pid_t first_child_;
@@ -96,4 +98,5 @@ private:
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif
 };
+}
 }

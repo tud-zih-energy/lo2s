@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/monitor/active_monitor.hpp>
+#include <lo2s/monitor/fwd.hpp>
 
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/trace/counters.hpp>
@@ -39,7 +40,6 @@ extern "C" {
 
 namespace lo2s
 {
-class Monitor;
 class ProcessInfo;
 
 namespace monitor
@@ -48,7 +48,7 @@ namespace monitor
 class ThreadMonitor : public ActiveMonitor
 {
 public:
-    ThreadMonitor(pid_t pid, pid_t tid, Monitor& parent_monitor, ProcessInfo& info,
+    ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, ProcessInfo& info,
                   bool enable_on_exec);
 
 private:

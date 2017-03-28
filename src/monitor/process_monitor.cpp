@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor.hpp>
+#include <lo2s/monitor/process_monitor.hpp>
 
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
@@ -49,7 +49,8 @@ static volatile pid_t attached_pid;
 
 namespace lo2s
 {
-
+namespace monitor
+{
 /* this signal handler is called once to print out stats on abort */
 void sig_handler(int signum)
 {
@@ -91,8 +92,8 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, bool spawn,
-                 const MonitorConfig& config)
+ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, trace::Trace& trace_,
+                               bool spawn, const MonitorConfig& config)
 : first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
   time_converter_(), trace_(trace_),
   counters_metric_class_(trace::Counters::get_metric_class(trace_)), config_(config),
@@ -145,7 +146,7 @@ Monitor::Monitor(pid_t child, const std::string& name, trace::Trace& trace_, boo
     threads_.insert(child, child, spawn);
 }
 
-Monitor::~Monitor()
+ProcessMonitor::~ProcessMonitor()
 {
     threads_.stop();
 
@@ -165,7 +166,7 @@ Monitor::~Monitor()
     trace_.end_record();
 }
 
-void Monitor::run()
+void ProcessMonitor::run()
 {
     // monitor fork/exit/... via ptrace
     while (1)
@@ -177,7 +178,7 @@ void Monitor::run()
     }
 }
 
-void Monitor::handle_ptrace_event_stop(pid_t child, int event)
+void ProcessMonitor::handle_ptrace_event_stop(pid_t child, int event)
 {
     Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
     if ((event == PTRACE_EVENT_FORK) || (event == PTRACE_EVENT_VFORK))
@@ -215,7 +216,7 @@ void Monitor::handle_ptrace_event_stop(pid_t child, int event)
     }
 }
 
-void Monitor::handle_signal(pid_t child, int status)
+void ProcessMonitor::handle_signal(pid_t child, int status)
 {
     Log::debug() << "Handling signal " << status << " from child: " << child;
     if (WIFSTOPPED(status)) // signal-delivery-stop
@@ -303,5 +304,6 @@ void Monitor::handle_signal(pid_t child, int status)
     }
     // wait for next fork/exit/...
     check_ptrace(PTRACE_CONT, child);
+}
 }
 }

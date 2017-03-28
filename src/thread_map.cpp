@@ -22,7 +22,7 @@
 #include <lo2s/thread_map.hpp>
 
 #include <lo2s/log.hpp>
-#include <lo2s/monitor.hpp>
+#include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
@@ -36,7 +36,7 @@
 
 namespace lo2s
 {
-ThreadMap::ThreadMap(Monitor& parent_monitor) : parent_monitor_(parent_monitor)
+ThreadMap::ThreadMap(monitor::ProcessMonitor& parent_monitor) : parent_monitor_(parent_monitor)
 {
 }
 

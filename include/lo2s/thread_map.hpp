@@ -24,6 +24,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
@@ -33,7 +34,6 @@ extern "C" {
 
 namespace lo2s
 {
-class Monitor;
 
 /**
  * This class manages the ThreadMonitors for each thread
@@ -42,7 +42,7 @@ class Monitor;
 class ThreadMap
 {
 public:
-    ThreadMap(Monitor& parent_monitor);
+    ThreadMap(monitor::ProcessMonitor& parent_monitor);
 
     ~ThreadMap();
 
@@ -61,6 +61,6 @@ public:
 private:
     std::unordered_map<pid_t, ProcessInfo> processes_;
     std::unordered_map<pid_t, monitor::ThreadMonitor> threads_;
-    Monitor& parent_monitor_;
+    monitor::ProcessMonitor& parent_monitor_;
 };
 }

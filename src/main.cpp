@@ -20,7 +20,7 @@
  */
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor.hpp>
+#include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/pipe.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -162,7 +162,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             proc_name = get_process_exe(pid);
         }
 
-        Monitor m(pid, proc_name, trace_, spawn, config);
+        monitor::ProcessMonitor m(pid, proc_name, trace_, spawn, config);
 
         if (spawn)
         {

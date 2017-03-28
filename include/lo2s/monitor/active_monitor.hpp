@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lo2s/monitor/fwd.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -30,7 +32,6 @@
 
 namespace lo2s
 {
-class Monitor;
 
 namespace monitor
 {
@@ -52,12 +53,13 @@ namespace monitor
  *
  * ~ActiveMonitor()
  *
- * The destructor won't do anything. Calling it before stop(), will stop it but is considered an error.
+ * The destructor won't do anything. Calling it before stop(), will stop it but is considered an
+ * error.
  */
 class ActiveMonitor
 {
 public:
-    ActiveMonitor(Monitor& parent_monitor, std::chrono::nanoseconds interval);
+    ActiveMonitor(ProcessMonitor& parent_monitor, std::chrono::nanoseconds interval);
     virtual ~ActiveMonitor();
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
@@ -93,13 +95,13 @@ private:
     virtual void monitor() = 0;
 
 public:
-    Monitor& parent_monitor()
+    ProcessMonitor& parent_monitor()
     {
         return parent_monitor_;
     }
 
 private:
-    Monitor& parent_monitor_;
+    ProcessMonitor& parent_monitor_;
     bool stop_requested_ = false;
     std::atomic<bool> finished_{ false };
 
