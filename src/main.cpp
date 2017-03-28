@@ -98,7 +98,7 @@ static void run_command(const std::vector<std::string>& command_and_args, Pipe& 
 }
 
 void setup_measurement(const std::vector<std::string>& command_and_args, pid_t pid,
-                       const MonitorConfig& config, const std::string& trace_path)
+                       const MonitorConfig& config)
 {
     std::unique_ptr<Pipe> child_ready_pipe;
     std::unique_ptr<Pipe> go_pipe;
@@ -144,8 +144,6 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             child_ready_pipe->close_write_fd();
             go_pipe->close_read_fd();
         }
-        trace::Trace trace_(config.sampling_period, trace_path);
-
         std::string proc_name;
         if (spawn)
         {
@@ -162,7 +160,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             proc_name = get_process_exe(pid);
         }
 
-        monitor::ProcessMonitor m(pid, proc_name, trace_, spawn, config);
+        monitor::ProcessMonitor m(config, pid, proc_name, spawn);
 
         if (spawn)
         {
@@ -178,7 +176,6 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
 int main(int argc, const char** argv)
 {
     pid_t pid = -1;
-    std::string output_trace("");
     po::options_description desc("Allowed options");
     std::vector<std::string> command;
     lo2s::MonitorConfig config;
@@ -192,7 +189,7 @@ int main(int argc, const char** argv)
     desc.add_options()
             ("help",
                  "produce help message")
-            ("output-trace,o", po::value(&output_trace),
+            ("output-trace,o", po::value(&config.trace_path),
                  "output trace directory")
             ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
                  "sampling period (# instructions)")
@@ -259,7 +256,7 @@ int main(int argc, const char** argv)
 
     try
     {
-        lo2s::setup_measurement(command, pid, config, output_trace);
+        lo2s::setup_measurement(command, pid, config);
     }
     catch (const std::system_error& e)
     {

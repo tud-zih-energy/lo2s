@@ -23,10 +23,6 @@
 
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor_config.hpp>
-#include <lo2s/perf/tracepoint/recorder.hpp>
-#include <lo2s/trace/counters.hpp>
-#include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
 #include <exception>
@@ -92,12 +88,10 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, trace::Trace& trace_,
-                               bool spawn, const MonitorConfig& config)
-: first_child_(child), threads_(*this), default_signal_handler(signal(SIGINT, sig_handler)),
-  time_converter_(), trace_(trace_),
-  counters_metric_class_(trace::Counters::get_metric_class(trace_)), config_(config),
-  metrics_(trace_)
+ProcessMonitor::ProcessMonitor(const MonitorConfig& config_, pid_t child, const std::string& name,
+                               bool spawn)
+: MainMonitor(config_), first_child_(child), threads_(*this),
+  default_signal_handler(signal(SIGINT, sig_handler))
 {
     if (spawn)
     {
@@ -109,61 +103,13 @@ ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, trace::Trac
     }
     running = true;
 
-    // try to initialize raw counter metrics
-    if (!config_.tracepoint_events.empty())
-    {
-        try
-        {
-            raw_counters_ =
-                std::make_unique<perf::tracepoint::Recorder>(trace_, config_, time_converter_);
-        }
-        catch (std::exception& e)
-        {
-            Log::warn() << "Failed to initialize tracepoint events: " << e.what();
-        }
-    }
-
-#ifdef HAVE_X86_ADAPT
-    if (!config_.x86_adapt_cpu_knobs.empty())
-    {
-        try
-        {
-            x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config.read_interval, config_.x86_adapt_cpu_knobs);
-        }
-        catch (std::exception& e)
-        {
-            Log::warn() << "Failed to initialize x86_adapt metrics: " << e.what();
-        }
-    }
-#endif
-
-    // notify the trace, that we are ready to start. That means, get_time() of this call will be
-    // the first possible timestamp in the trace
-    trace_.begin_record();
-
-    trace_.process(child, name);
+    trace().process(child, name);
     threads_.insert(child, child, spawn);
 }
 
 ProcessMonitor::~ProcessMonitor()
 {
     threads_.stop();
-
-    if (raw_counters_)
-    {
-        raw_counters_->stop();
-    }
-#ifdef HAVE_X86_ADAPT
-    if (x86_adapt_metrics_)
-    {
-        x86_adapt_metrics_->stop();
-    }
-#endif
-
-    // Notify trace, that we will end recording now. That means, get_time() of this call will be
-    // the last possible timestamp in the trace
-    trace_.end_record();
 }
 
 void ProcessMonitor::run()

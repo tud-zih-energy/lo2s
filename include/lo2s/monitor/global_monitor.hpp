@@ -21,39 +21,13 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
-
-#include <lo2s/monitor_config.hpp>
-#include <lo2s/thread_map.hpp>
-
-#include <memory>
-#include <string>
-
-extern "C" {
-#include <signal.h>
-}
-
 namespace lo2s
 {
 namespace monitor
 {
-class ProcessMonitor : public MainMonitor
+
+class GlobalMonitor
 {
-public:
-    ProcessMonitor(const MonitorConfig& config, pid_t child, const std::string& name, bool spawn);
-
-    ~ProcessMonitor();
-
-    void run();
-
-private:
-    void handle_ptrace_event_stop(pid_t child, int event);
-
-    void handle_signal(pid_t child, int status);
-
-    const pid_t first_child_;
-    ThreadMap threads_;
-    sighandler_t default_signal_handler;
 };
 }
 }

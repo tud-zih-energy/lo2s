@@ -33,6 +33,7 @@ namespace lo2s
 {
 struct MonitorConfig
 {
+    std::string trace_path;
     std::uint64_t sampling_period;
     std::size_t mmap_pages;
     bool enable_cct;
