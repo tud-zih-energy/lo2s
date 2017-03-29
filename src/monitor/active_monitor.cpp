@@ -22,7 +22,6 @@ ActiveMonitor::ActiveMonitor(ProcessMonitor& parent_monitor, std::chrono::nanose
 
 ActiveMonitor::~ActiveMonitor()
 {
-    std::unique_lock<std::mutex> lock(control_mutex_);
     if (!stop_requested_)
     {
         Log::error() << "Destructing ActiveMonitor before being stopped. This should not happen, "
