@@ -26,7 +26,6 @@
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/thread_map.hpp>
 
-#include <memory>
 #include <string>
 
 extern "C" {

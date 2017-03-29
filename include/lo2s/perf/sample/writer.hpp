@@ -54,8 +54,8 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, const MonitorConfig& config, monitor::ThreadMonitor& monitor,
-           trace::Trace& trace, const time::Converter& time_converter, bool enable_on_exec);
+    Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config, monitor::ThreadMonitor& monitor,
+           trace::Trace& trace, otf2::writer::local& otf2_writer, const time::Converter& time_converter, bool enable_on_exec);
     ~Writer();
 
 public:

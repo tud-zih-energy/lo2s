@@ -60,7 +60,7 @@ Reader::Reader()
     attr.task = 1;
 #endif
 
-    init(attr, 0, false, 1);
+    init(attr, 0, -1, false, 1);
 
 #ifdef HW_BREAKPOINT_COMPAT
     auto pid = fork();

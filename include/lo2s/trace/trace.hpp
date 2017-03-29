@@ -89,6 +89,8 @@ public:
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
 
+    otf2::writer::local& cpu_writer(int cpuid);
+
     otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
 
     otf2::writer::local& metric_writer(const std::string& name);

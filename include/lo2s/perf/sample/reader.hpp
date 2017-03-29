@@ -68,7 +68,7 @@ protected:
     }
 
     using EventReader<T>::init_mmap;
-    void init(struct perf_event_attr& perf_attr, pid_t tid, bool enable_on_exec, size_t mmap_pages)
+    void init(struct perf_event_attr& perf_attr, pid_t tid, int cpu, bool enable_on_exec, size_t mmap_pages)
     {
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;

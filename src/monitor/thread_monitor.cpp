@@ -34,12 +34,12 @@ namespace lo2s
 namespace monitor
 {
 
-ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_, ProcessInfo& info,
-                             bool enable_on_exec)
-: ActiveMonitor(parent_monitor_, parent_monitor_.config().read_interval), pid_(pid), tid_(tid),
-  info_(info),
-  sample_writer_(pid_, tid_, parent_monitor_.config(), *this, parent_monitor_.trace(),
-                 parent_monitor_.time_converter(), enable_on_exec),
+ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_,
+                             ProcessInfo& info, bool enable_on_exec)
+: ActiveMonitor(parent_monitor_.config().read_interval), pid_(pid), tid_(tid), info_(info),
+  sample_writer_(pid_, tid_, -1, parent_monitor_.config(), *this, parent_monitor_.trace(),
+                 parent_monitor_.trace().sample_writer(pid, tid), parent_monitor_.time_converter(),
+                 enable_on_exec),
   counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
             sample_writer_.location())
 {

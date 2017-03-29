@@ -15,8 +15,7 @@ namespace lo2s
 namespace monitor
 {
 
-ActiveMonitor::ActiveMonitor(ProcessMonitor& parent_monitor, std::chrono::nanoseconds interval)
-: parent_monitor_(parent_monitor), interval_(interval)
+ActiveMonitor::ActiveMonitor(std::chrono::nanoseconds interval) : interval_(interval)
 {
 }
 

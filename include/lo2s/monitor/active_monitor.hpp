@@ -59,7 +59,7 @@ namespace monitor
 class ActiveMonitor
 {
 public:
-    ActiveMonitor(ProcessMonitor& parent_monitor, std::chrono::nanoseconds interval);
+    ActiveMonitor(std::chrono::nanoseconds interval);
     virtual ~ActiveMonitor();
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
@@ -94,14 +94,7 @@ private:
 
     virtual void monitor() = 0;
 
-public:
-    ProcessMonitor& parent_monitor()
-    {
-        return parent_monitor_;
-    }
-
 private:
-    ProcessMonitor& parent_monitor_;
     bool stop_requested_ = false;
     std::atomic<bool> finished_{ false };
 

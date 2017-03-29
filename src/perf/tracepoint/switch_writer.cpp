@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,31 +19,19 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/perf/tracepoint/switch_writer.hpp>
 
-#include <lo2s/monitor/main_monitor.hpp>
-
-#include <lo2s/monitor/core_monitor.hpp>
-
-#include <lo2s/monitor_config.hpp>
-
-#include <map>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
-namespace monitor
+namespace perf
 {
-
-class GlobalMonitor : public MainMonitor
+namespace tracepoint
 {
-public:
-    GlobalMonitor(const MonitorConfig& config);
-    ~GlobalMonitor();
-
-    void run();
-
-private:
-    std::map<int, CoreMonitor> monitors_;
-};
+    SwitchWriter::SwitchWriter(int cpu, const MonitorConfig &config, trace::Trace &trace) :
+    writer_(trace_.)
+    {}
+}
 }
 }

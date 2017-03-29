@@ -21,49 +21,30 @@
 
 #pragma once
 
-#include <lo2s/perf/time/reader.hpp>
+#include <lo2s/perf/tracepoint/reader.hpp>
 
-#include <lo2s/perf/clock.hpp>
-
-#include <otf2xx/chrono/chrono.hpp>
-
-#include <cstdint>
+#include <lo2s/monitor_config.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/fwd.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-namespace time
+namespace tracepoint
 {
-
-class Converter
+class SwitchWriter : public Reader<SwitchWriter>
 {
 public:
-    Converter();
+    SwitchWriter(int cpu, const MonitorConfig& config, trace::Trace& trace);
 
-    static Converter& instance()
-    {
-        static Converter c;
-        return c;
-    }
+public:
+    using Reader<SwitchWriter>::handle;
 
-    otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
-    {
-        return operator()(convert_time_point(perf_raw));
-    }
-
-    otf2::chrono::time_point operator()(perf::Clock::time_point perf_tp) const
-    {
-        return otf2::chrono::time_point(perf_tp.time_since_epoch() + offset);
-    }
-
-    perf::Clock::time_point operator()(otf2::chrono::time_point local_tp) const
-    {
-        return perf::Clock::time_point(local_tp.time_since_epoch() - offset);
-    }
+    bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    otf2::chrono::duration offset;
+    otf2::writer::local& writer_;
 };
 }
 }

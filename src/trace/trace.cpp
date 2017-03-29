@@ -217,6 +217,14 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
     return archive()(location);
 }
 
+otf2::writer::local& Trace::cpu_writer(int cpuid)
+{
+    auto name = (boost::format("cpu %d") % cpuid).str();
+    auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
+                                       otf2::definition::location::location_type::cpu_thread);
+    return archive()(location);
+}
+
 otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
