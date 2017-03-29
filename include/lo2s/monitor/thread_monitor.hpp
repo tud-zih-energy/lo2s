@@ -83,8 +83,6 @@ private:
     std::atomic<bool> finished_{ false };
     cpu_set_t affinity_mask_;
 
-    std::thread thread_;
-
     perf::sample::Writer sample_writer_;
     trace::Counters counters_;
 };
