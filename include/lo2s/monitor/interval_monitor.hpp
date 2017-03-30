@@ -23,6 +23,8 @@
 
 #include <lo2s/monitor/fwd.hpp>
 
+#include <lo2s/monitor/threaded_monitor.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -32,12 +34,11 @@
 
 namespace lo2s
 {
-
 namespace monitor
 {
 
 /**
- * Lifetime of an ActiveMonitor
+ * Lifetime of an IntervalMonitor
  *
  * [created]
  *
@@ -49,45 +50,23 @@ namespace monitor
  *
  * If the thread was just waiting, the condition variable will instantly stop it.
  * If the thread is just doing its monitoring, it will break out of the the loop afterwards
- * The thread will then be joined and the ActiveMonitor will be finished()
+ * The thread will then be joined and the IntervalMonitor will be finished()
  *
- * ~ActiveMonitor()
+ * ~IntervalMonitor()
  *
  * The destructor won't do anything. Calling it before stop(), will stop it but is considered an
  * error.
  */
-class ActiveMonitor
+class IntervalMonitor : public ThreadedMonitor
 {
 public:
-    ActiveMonitor(std::chrono::nanoseconds interval);
-    virtual ~ActiveMonitor();
+    IntervalMonitor(std::chrono::nanoseconds interval);
+    virtual ~IntervalMonitor();
 
-    // We don't want copies. Should be implicitly deleted due to unique_ptr
-    ActiveMonitor(const ActiveMonitor&) = delete;
-    ActiveMonitor& operator=(const ActiveMonitor&) = delete;
-    // Moving is still a bit tricky (keep moved-from in a useful state), avoid it for now.
-    ActiveMonitor(ActiveMonitor&&) = delete;
-    ActiveMonitor& operator=(ActiveMonitor&&) = delete;
+    void stop() override;
 
-    void start();
-    void stop();
-
-    const std::string& name()
-    {
-        return name_;
-    };
-
-private:
-    void run();
-
-    virtual void initialize_thread()
-    {
-    }
-    virtual void finalize_thread()
-    {
-    }
-
-    virtual void monitor() = 0;
+protected:
+    void run() override;
 
 private:
     bool stop_requested_ = false;
@@ -95,10 +74,8 @@ private:
     std::mutex control_mutex_;
     std::condition_variable control_condition_;
 
-    std::thread thread_;
     std::chrono::nanoseconds interval_;
 
-    std::string name_;
 };
 }
 }

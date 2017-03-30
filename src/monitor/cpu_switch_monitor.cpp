@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,19 +19,4 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-namespace lo2s
-{
-namespace monitor
-{
-class ThreadedMonitor;
-class IntervalMonitor;
-class SingleFdMonitor;
-
-class ThreadMonitor;
-class CoreMonitor;
-
-class ProcessMonitor;
-}
-}
+#include "lo2s/monitor/cpu_switch_monitor.hpp"

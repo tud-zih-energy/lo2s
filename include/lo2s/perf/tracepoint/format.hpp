@@ -36,12 +36,16 @@ namespace tracepoint
 class EventField
 {
 public:
-    EventField(const std::string &name, std::ptrdiff_t offset, std::size_t size)
-            : name_(name), offset_(offset), size_(size)
+    EventField()
     {
     }
 
-    const std::string &name() const
+    EventField(const std::string& name, std::ptrdiff_t offset, std::size_t size)
+    : name_(name), offset_(offset), size_(size)
+    {
+    }
+
+    const std::string& name() const
     {
         return name_;
     }
@@ -56,34 +60,39 @@ public:
         return size_;
     }
 
+    bool valid() const
+    {
+        return size_ > 0;
+    }
+
 private:
     std::string name_;
     std::ptrdiff_t offset_;
-    std::size_t size_;
+    std::size_t size_ = 0;
 };
 
 class EventFormat
 {
 public:
-    EventFormat(const std::string &name);
+    EventFormat(const std::string& name);
 
     int id() const
     {
         return id_;
     }
 
-    const auto &common_fields() const
+    const auto& common_fields() const
     {
         return common_fields_;
     }
 
-    const auto &fields() const
+    const auto& fields() const
     {
         return fields_;
     }
 
 private:
-    void parse_format_line(const std::string &line);
+    void parse_format_line(const std::string& line);
 
     std::string name_;
     int id_;
@@ -95,4 +104,3 @@ private:
 }
 }
 }
-

@@ -1,4 +1,5 @@
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/recorder.hpp>
 
 #include <lo2s/trace/trace.hpp>
@@ -12,8 +13,8 @@ namespace perf
 namespace tracepoint
 {
 
-Writer::Writer(int cpu, const EventFormat& event, const MonitorConfig& config,
-               trace::Trace& trace_, const otf2::definition::metric_class& metric_class,
+Writer::Writer(int cpu, const EventFormat& event, const MonitorConfig& config, trace::Trace& trace_,
+               const otf2::definition::metric_class& metric_class,
                const time::Converter& time_converter)
 : Reader(cpu, event.id(), config.mmap_pages), event_(event),
   writer_(trace_.metric_writer((boost::format("tracepoint metrics for CPU %d") % cpu).str())),

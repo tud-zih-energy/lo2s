@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/monitor/active_monitor.hpp>
+#include <lo2s/monitor/interval_monitor.hpp>
 #include <lo2s/monitor/fwd.hpp>
 
 #include <lo2s/perf/sample/writer.hpp>
@@ -45,7 +45,7 @@ class ProcessInfo;
 namespace monitor
 {
 
-class ThreadMonitor : public ActiveMonitor
+class ThreadMonitor : public IntervalMonitor
 {
 public:
     ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, ProcessInfo& info,
@@ -79,8 +79,6 @@ private:
     pid_t tid_;
     ProcessInfo& info_;
 
-    std::atomic<bool> enabled_{ false };
-    std::atomic<bool> finished_{ false };
     cpu_set_t affinity_mask_;
 
     perf::sample::Writer sample_writer_;

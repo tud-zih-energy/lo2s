@@ -65,13 +65,15 @@ set(SOURCE_FILES
         ${X86_ADAPT_SOURCE_FILES}
         src/metric/perf_counter.cpp
 
-        src/monitor/active_monitor.cpp src/monitor/thread_monitor.cpp src/monitor/core_monitor.cpp
-        src/monitor/main_monitor.cpp src/monitor/global_monitor.cpp src/monitor/process_monitor.cpp
+        src/monitor/cpu_switch_monitor.cpp src/monitor/fd_monitor.cpp
+        src/monitor/global_monitor.cpp src/monitor/interval_monitor.cpp
+        src/monitor/main_monitor.cpp src/monitor/process_monitor.cpp
+        src/monitor/thread_monitor.cpp
 
         src/perf/sample/writer.cpp
         src/perf/time/converter.cpp src/perf/time/reader.cpp
         src/perf/tracepoint/format.cpp src/perf/tracepoint/recorder.cpp
-        src/perf/tracepoint/writer.cpp
+        src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
 
         src/trace/counters.cpp src/trace/trace.cpp
 

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,4 +19,50 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "lo2s/monitor/core_monitor.hpp"
+#pragma once
+
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/monitor/threaded_monitor.hpp>
+#include <lo2s/pipe.hpp>
+
+#include <vector>
+
+extern "C" {
+#include <poll.h>
+}
+
+namespace lo2s
+{
+namespace monitor
+{
+class FdMonitor : public ThreadedMonitor
+{
+public:
+    FdMonitor();
+
+    void stop() override;
+
+protected:
+    void run() override;
+    void monitor() override;
+
+    void add_fd(int fd);
+
+    virtual void monitor(int index)
+    {
+        (void)index;
+    };
+
+private:
+    struct pollfd& stop_pfd()
+    {
+        return pfds_.front();
+    }
+
+private:
+    Pipe stop_pipe_;
+    std::vector<pollfd> pfds_;
+};
+}
+}

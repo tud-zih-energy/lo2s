@@ -23,7 +23,7 @@
 
 #include <lo2s/monitor/main_monitor.hpp>
 
-#include <lo2s/monitor/core_monitor.hpp>
+#include <lo2s/monitor/cpu_switch_monitor.hpp>
 
 #include <lo2s/monitor_config.hpp>
 
@@ -43,7 +43,7 @@ public:
     void run();
 
 private:
-    std::map<int, CoreMonitor> monitors_;
+    std::map<int, CpuSwitchMonitor> monitors_;
 };
 }
 }

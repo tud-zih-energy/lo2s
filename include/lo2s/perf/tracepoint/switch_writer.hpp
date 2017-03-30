@@ -23,9 +23,20 @@
 
 #include <lo2s/perf/tracepoint/reader.hpp>
 
-#include <lo2s/monitor_config.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
+
 #include <lo2s/perf/time/converter.hpp>
+
+#include <lo2s/monitor_config.hpp>
 #include <lo2s/trace/fwd.hpp>
+
+#include <otf2xx/definition/region.hpp>
+
+#include <unordered_map>
+
+extern "C" {
+#include <sys/types.h>
+}
 
 namespace lo2s
 {
@@ -36,7 +47,8 @@ namespace tracepoint
 class SwitchWriter : public Reader<SwitchWriter>
 {
 public:
-    SwitchWriter(int cpu, const MonitorConfig& config, trace::Trace& trace);
+    SwitchWriter(int cpu, const MonitorConfig& config,
+                 trace::Trace& trace);
 
 public:
     using Reader<SwitchWriter>::handle;
@@ -44,7 +56,20 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
+    otf2::definition::region::reference_type thread_region_ref(pid_t tid);
+
+private:
     otf2::writer::local& writer_;
+    const time::Converter& time_converter_;
+
+    using region_ref = otf2::definition::region::reference_type;
+    std::unordered_map<pid_t, region_ref> thread_region_refs_;
+    pid_t current_pid_ = -1;
+    region_ref current_region_ = region_ref::undefined();
+
+    EventField prev_pid_field_;
+    EventField next_pid_field_;
+    EventField prev_state_field_;
 };
 }
 }

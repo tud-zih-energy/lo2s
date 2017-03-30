@@ -142,6 +142,11 @@ private:
 
     otf2::definition::string intern(const std::string&);
 
+    otf2::definition::location_group::reference_type location_group_ref() const
+    {
+        return location_groups_process_.size() + location_groups_cpu_.size();
+    }
+
 private:
     std::mutex mutex_;
 
@@ -159,7 +164,9 @@ private:
 
     otf2::definition::interrupt_generator interrupt_generator_;
 
-    std::map<pid_t, otf2::definition::location_group> location_groups_;
+    std::map<pid_t, otf2::definition::location_group> location_groups_process_;
+    std::map<int, otf2::definition::location_group> location_groups_cpu_;
+
     // TODO add location groups (processes), read path from /proc/self/exe symlink
     otf2::definition::container<otf2::definition::location> locations_;
 

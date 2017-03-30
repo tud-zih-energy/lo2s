@@ -34,7 +34,7 @@ MainMonitor::MainMonitor(const MonitorConfig& config_)
         try
         {
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config.read_interval, config_.x86_adapt_cpu_knobs);
+                trace_, config_.read_interval, config_.x86_adapt_cpu_knobs);
         }
         catch (std::exception& e)
         {

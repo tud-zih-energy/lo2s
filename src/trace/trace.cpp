@@ -157,7 +157,8 @@ Trace::~Trace()
     archive_ << system_tree_package_nodes_;
     archive_ << system_tree_core_nodes_;
     archive_ << system_tree_cpu_nodes_;
-    archive_ << location_groups_;
+    archive_ << location_groups_process_;
+    archive_ << location_groups_cpu_;
     archive_ << locations_;
     archive_ << source_code_locations_;
     archive_ << regions_;
@@ -198,9 +199,9 @@ std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
 
 void Trace::process(pid_t pid, const std::string& name)
 {
-    auto r = location_groups_.emplace(
+    auto r = location_groups_process_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
-        std::forward_as_tuple(location_groups_.size(), intern(name),
+        std::forward_as_tuple(location_group_ref(), intern(name),
                               otf2::definition::location_group::location_group_type::process,
                               system_tree_root_node_));
     if (r.second == false)
@@ -212,15 +213,23 @@ void Trace::process(pid_t pid, const std::string& name)
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("thread %d") % tid).str();
-    auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
-                                       otf2::definition::location::location_type::cpu_thread);
+    auto location =
+        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(pid),
+                           otf2::definition::location::location_type::cpu_thread);
     return archive()(location);
 }
 
 otf2::writer::local& Trace::cpu_writer(int cpuid)
 {
-    auto name = (boost::format("cpu %d") % cpuid).str();
-    auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
+    auto name = intern((boost::format("cpu %d") % cpuid).str());
+    auto r_group = location_groups_cpu_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(cpuid),
+        std::forward_as_tuple(location_group_ref(), name,
+                              otf2::definition::location_group::location_group_type::unknown,
+                              system_tree_cpu_nodes_.at(cpuid)));
+    const auto& group = r_group.first->second;
+
+    auto location = locations_.emplace(locations_.size(), name, group,
                                        otf2::definition::location::location_type::cpu_thread);
     return archive()(location);
 }
@@ -228,15 +237,16 @@ otf2::writer::local& Trace::cpu_writer(int cpuid)
 otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
-    auto location = locations_.emplace(locations_.size(), intern(name), location_groups_.at(pid),
-                                       otf2::definition::location::location_type::metric);
+    auto location =
+        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(pid),
+                           otf2::definition::location::location_type::metric);
     return archive()(location);
 }
 
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     auto location =
-        locations_.emplace(locations_.size(), intern(name), location_groups_.at(METRIC_PID),
+        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(METRIC_PID),
                            otf2::definition::location::location_type::metric);
     return archive()(location);
 }

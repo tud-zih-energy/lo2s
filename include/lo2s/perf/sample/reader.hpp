@@ -94,7 +94,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, -1, -1, 0);
+            fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, cpu, -1, 0);
 
             /* reduce exactness of IP can help if the kernel does not support really exact events */
             if (perf_attr.precise_ip == 0)

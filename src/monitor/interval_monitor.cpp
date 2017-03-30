@@ -1,4 +1,4 @@
-#include <lo2s/monitor/active_monitor.hpp>
+#include <lo2s/monitor/interval_monitor.hpp>
 
 #include <lo2s/log.hpp>
 #include <lo2s/time/time.hpp>
@@ -15,11 +15,11 @@ namespace lo2s
 namespace monitor
 {
 
-ActiveMonitor::ActiveMonitor(std::chrono::nanoseconds interval) : interval_(interval)
+IntervalMonitor::IntervalMonitor(std::chrono::nanoseconds interval) : interval_(interval)
 {
 }
 
-ActiveMonitor::~ActiveMonitor()
+IntervalMonitor::~IntervalMonitor()
 {
     if (!stop_requested_)
     {
@@ -29,7 +29,7 @@ ActiveMonitor::~ActiveMonitor()
     }
 }
 
-void ActiveMonitor::stop()
+void IntervalMonitor::stop()
 {
     {
         std::unique_lock<std::mutex> lock(control_mutex_);
@@ -49,15 +49,9 @@ void ActiveMonitor::stop()
     }
 }
 
-void ActiveMonitor::start()
+void IntervalMonitor::run()
 {
-    assert(!thread_.joinable());
-    thread_ = std::thread([this]() { this->run(); });
-}
-
-void ActiveMonitor::run()
-{
-    Log::info() << "New monitoring thread " << name() << " with interval of "
+    Log::info() << "New monitoring thread with interval of "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(interval_).count()
                 << " ms and pid " << getpid() << ".";
 
@@ -70,7 +64,7 @@ void ActiveMonitor::run()
     std::unique_lock<std::mutex> lock(control_mutex_);
     do
     {
-        Log::trace() << "Monitoring thread " << name() << " active.";
+        Log::trace() << "Monitoring thread active.";
         monitor();
 
         // TODO skip samples if we cannot keep up with the deadlines
@@ -81,7 +75,7 @@ void ActiveMonitor::run()
     monitor();
     finalize_thread();
 
-    Log::debug() << "Monitoring thread " << name() << " finished";
+    Log::debug() << "Monitoring thread finished";
 }
 }
 }
