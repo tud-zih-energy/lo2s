@@ -72,11 +72,6 @@ public:
     void start();
     void stop();
 
-    bool finished() const
-    {
-        return finished_.load();
-    }
-
     const std::string& name()
     {
         return name_;
@@ -96,7 +91,6 @@ private:
 
 private:
     bool stop_requested_ = false;
-    std::atomic<bool> finished_{ false };
 
     std::mutex control_mutex_;
     std::condition_variable control_condition_;

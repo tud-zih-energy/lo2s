@@ -82,7 +82,6 @@ void ActiveMonitor::run()
     finalize_thread();
 
     Log::debug() << "Monitoring thread " << name() << " finished";
-    finished_.store(true);
 }
 }
 }
