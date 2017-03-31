@@ -163,7 +163,7 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
     catch (std::out_of_range&)
     {
         // This will just happen a lot in practice
-        Log::debug() << "no mapping found for address " << ip;
+        Log::trace() << "no mapping found for address " << ip;
         // Graceful fallback
         return LineInfo(ip.truncate_bits(48));
     }

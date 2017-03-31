@@ -65,8 +65,11 @@ void sig_handler(int signum)
     }
 
     Log::debug() << "sig_handler called, what should I do with signal " << signum;
-    // TODO: check signum
-    /* restore default signal hander */
+
+    // For some miraculous reason, the signal ends up at the monitored process anyhow, even if we
+    // do not explicitly forward it here.
+
+    /* restore default signal handler */
     // signal(SIGINT, default_signal_handler);
 }
 
@@ -77,7 +80,7 @@ void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr
     if (retval == -1)
     {
         auto ex = make_system_error();
-        Log::warn() << "Failed ptrace call: " << request << ", " << pid << ", " << addr << ", "
+        Log::info() << "Failed ptrace call: " << request << ", " << pid << ", " << addr << ", "
                     << data << ": " << ex.what();
         throw ex;
     }
@@ -124,7 +127,7 @@ void ProcessMonitor::run()
     }
 }
 
-void ProcessMonitor::handle_ptrace_event_stop(pid_t child, int event)
+void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
 {
     Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
     if ((event == PTRACE_EVENT_FORK) || (event == PTRACE_EVENT_VFORK))
@@ -155,7 +158,7 @@ void ProcessMonitor::handle_ptrace_event_stop(pid_t child, int event)
         threads_.insert(pid, newpid, false);
     }
     // process or thread exited?
-    if (event == PTRACE_EVENT_EXIT)
+    else if (event == PTRACE_EVENT_EXIT)
     {
         if (threads_.is_process(child))
         {
@@ -169,7 +172,6 @@ void ProcessMonitor::handle_ptrace_event_stop(pid_t child, int event)
             Log::info() << "Thread " << child << " in process " << pid << " / "
                         << get_process_exe(pid) << " is about to exit";
         }
-
         threads_.stop(child);
     }
 }
@@ -215,29 +217,11 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
             auto event = status >> 16;
             if (event != 0)
             {
-                handle_ptrace_event_stop(child, status >> 16);
+                handle_ptrace_event(child, status >> 16);
             }
             break;
         }
-        // only catch lethal signals
-        case SIGHUP:  /* fall-through */
-        case SIGINT:  /* fall-through */
-        case SIGQUIT: /* fall-through */
-        case SIGILL:  /* fall-through */
-        case SIGABRT: /* fall-through */
-        case SIGFPE:  /* fall-through */
-        case SIGKILL: /* fall-through */
-        case SIGSEGV: /* fall-through */
-        case SIGPIPE: /* fall-through */
-        case SIGTERM:
-            // exit if first child (the original sampled process) got killed by a signal
-            if (child == first_child_)
-            {
-                Log::error() << "Process stopped with signal" << strsignal(WSTOPSIG(status));
-                throw std::system_error(std::make_error_code(std::errc::interrupted),
-                                        strsignal(WSTOPSIG(status)));
-            }
-            break;
+
         default:
             Log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
             // Stupid double cast to prevent warning -Wint-to-void-pointer-cast
@@ -247,12 +231,22 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
     }
     else if (WIFEXITED(status))
     {
+        Log::info() << "Process " << child << " exiting with status " << WEXITSTATUS(status);
+
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
-            // NOTE: Yes we even throw the error success here!
-            Log::info() << "Exiting monitor with status " << WEXITSTATUS(status);
-            throw std::system_error(WEXITSTATUS(status), std::system_category());
+            throw std::system_error(0, std::system_category());
+        }
+        return;
+    }
+    else if (WIFSIGNALED(status))
+    {
+        Log::info() << "Process " << child << " exited due to signal " << WTERMSIG(status);
+        // exit if first child (the original sampled process) is dead
+        if (child == first_child_)
+        {
+            throw std::system_error(0, std::system_category());
         }
         return;
     }
@@ -261,7 +255,21 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
         Log::warn() << "Unknown signal for child " << child << ": " << status;
     }
     // wait for next fork/exit/...
-    check_ptrace(PTRACE_CONT, child);
+    try
+    {
+        check_ptrace(PTRACE_CONT, child);
+    }
+    catch (const std::system_error& e)
+    {
+        if (e.code().value() == ESRCH)
+        {
+            Log::info() << "Received ESRCH for PTRACE_CONT on " << child;
+        }
+        else
+        {
+            throw e;
+        }
+    }
 }
 }
 }

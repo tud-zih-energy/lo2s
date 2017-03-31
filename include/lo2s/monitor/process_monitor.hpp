@@ -46,7 +46,7 @@ public:
     void run();
 
 private:
-    void handle_ptrace_event_stop(pid_t child, int event);
+    void handle_ptrace_event(pid_t child, int event);
 
     void handle_signal(pid_t child, int status);
 

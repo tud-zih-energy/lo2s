@@ -305,7 +305,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
         auto line_info = maps.lookup_line_info(ip);
-        Log::debug() << "resolved " << ip << ": " << line_info;
+        Log::trace() << "resolved " << ip << ": " << line_info;
         auto cctx_it = children.find(ip);
         if (cctx_it == children.end())
         {
@@ -322,14 +322,14 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                 // TODO do not write properties for useless unknown stuff
                 OTF2_AttributeValue_union value;
                 auto instruction = maps.lookup_instruction(ip);
-                Log::debug() << "mapped " << ip << " to " << instruction;
+                Log::trace() << "mapped " << ip << " to " << instruction;
                 value.stringRef = intern(instruction).ref();
                 calling_context_properties_.emplace(new_cctx, intern("instruction"),
                                                     otf2::common::type::string, value);
             }
             catch (std::exception& ex)
             {
-                Log::debug() << "could not read instruction from " << ip << ": " << ex.what();
+                Log::trace() << "could not read instruction from " << ip << ": " << ex.what();
             }
         }
         const auto& cctx = cctx_it->second.cctx;
