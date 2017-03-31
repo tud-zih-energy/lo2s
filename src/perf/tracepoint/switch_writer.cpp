@@ -69,19 +69,22 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
     pid_t prev_pid = sample->raw_data.get(prev_pid_field_);
-    pid_t next_pid = sample->raw_data.get(prev_pid_field_);
+    pid_t next_pid = sample->raw_data.get(next_pid_field_);
+    Log::trace() << "sched_switch prev_pid: " << prev_pid << ", next_pid: " << next_pid;
     if (!current_region_.is_undefined())
     {
         if (prev_pid != current_pid_)
         {
             Log::warn() << "Conflicting pids: prev_pid: " << prev_pid
-                        << " != current_pid: " << current_pid_;
+                        << " != current_pid: " << current_pid_
+                        << " current_region: " << current_region_;
         }
         writer_.write_leave(tp, current_region_);
     }
-    if (next_pid != -1)
+    current_pid_ = next_pid;
+    if (current_pid_ != 0)
     {
-        current_region_ = thread_region_ref(next_pid);
+        current_region_ = thread_region_ref(current_pid_);
         writer_.write_enter(tp, current_region_);
     }
     else

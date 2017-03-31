@@ -20,6 +20,7 @@
  */
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/monitor/cpu_set_monitor.hpp>
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/pipe.hpp>
@@ -160,7 +161,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             proc_name = get_process_exe(pid);
         }
 
-        monitor::ProcessMonitor m(config, pid, proc_name, spawn);
+        monitor::ProcessMonitor monitor(config, pid, proc_name, spawn);
 
         if (spawn)
         {
@@ -168,7 +169,7 @@ void setup_measurement(const std::vector<std::string>& command_and_args, pid_t p
             go_pipe->write();
         }
 
-        m.run();
+        monitor.run();
     }
 }
 }
@@ -182,10 +183,11 @@ int main(int argc, const char** argv)
     bool quiet;
     bool debug;
     bool trace;
-    // clang-format off
+    bool all_cpus;
     std::uint64_t read_interval_ms;
 
     // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
+    // clang-format off
     desc.add_options()
             ("help",
                  "produce help message")
@@ -193,6 +195,8 @@ int main(int argc, const char** argv)
                  "output trace directory")
             ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
                  "sampling period (# instructions)")
+            ("all-cpus,a", po::bool_switch(&all_cpus)->default_value(false),
+                 "System-wide monitoring of all CPUs.")
             ("call-graph,g", po::bool_switch(&config.enable_cct)->default_value(false),
                  "call-graph recording")
             ("no-ip,n", po::bool_switch(&config.suppress_ip)->default_value(false),
@@ -218,6 +222,15 @@ int main(int argc, const char** argv)
             ("command", po::value(&command));
     // clang-format on
 
+    if (all_cpus)
+    {
+        config.monitor_type = lo2s::MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
     po::positional_options_description p;
     p.add("command", -1);
 
@@ -229,7 +242,8 @@ int main(int argc, const char** argv)
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
 
-    if (vm.count("help") || (pid == -1 && command.empty()))
+    if (vm.count("help") ||
+        (config.monitor_type == lo2s::MonitorType::PROCESS && pid == -1 && command.empty()))
     {
         std::cout << desc << "\n";
         return 0;
@@ -254,18 +268,30 @@ int main(int argc, const char** argv)
         lo2s::logging::set_min_severity_level(nitro::log::severity_level::info);
     }
 
-    try
+    switch (config.monitor_type)
     {
-        lo2s::setup_measurement(command, pid, config);
+    case lo2s::MonitorType::CPU_SET:
+    {
+        lo2s::monitor::CpuSetMonitor monitor(config);
+        monitor.run();
     }
-    catch (const std::system_error& e)
-    {
-        // Check for success
-        if (e.code())
+    break;
+
+    case lo2s::MonitorType::PROCESS:
+        try
         {
-            lo2s::Log::error() << "Aborting: " << e.what();
+            lo2s::setup_measurement(command, pid, config);
         }
-        return e.code().value();
+        catch (const std::system_error& e)
+        {
+            // Check for success
+            if (e.code())
+            {
+                lo2s::Log::error() << "Aborting: " << e.what();
+            }
+            return e.code().value();
+        }
+        break;
     }
 
     return 0;

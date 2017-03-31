@@ -50,12 +50,14 @@ class MainMonitor
 public:
     MainMonitor(const MonitorConfig& config_);
 
-    ~MainMonitor();
+    virtual ~MainMonitor();
 
     trace::Trace& trace()
     {
         return trace_;
     }
+
+    virtual void run() = 0;
 
     const perf::time::Converter& time_converter() const
     {
@@ -71,6 +73,7 @@ public:
     {
         return config_;
     }
+
 
 protected:
     MonitorConfig config_;

@@ -27,20 +27,23 @@
 
 #include <lo2s/monitor_config.hpp>
 
-#include <map>
+#include <vector>
 
 namespace lo2s
 {
 namespace monitor
 {
 
-class GlobalMonitor : public MainMonitor
+/**
+ * Current implementation is just for all CPUs
+ * TODO extend to list of CPUs
+ */
+class CpuSetMonitor : public MainMonitor
 {
 public:
-    GlobalMonitor(const MonitorConfig& config);
-    ~GlobalMonitor();
+    CpuSetMonitor(const MonitorConfig& config);
 
-    void run();
+    void run() override;
 
 private:
     std::map<int, CpuSwitchMonitor> monitors_;

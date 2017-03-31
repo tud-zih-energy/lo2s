@@ -43,7 +43,7 @@ public:
 
     ~ProcessMonitor();
 
-    void run();
+    void run() override;
 
 private:
     void handle_ptrace_event(pid_t child, int event);

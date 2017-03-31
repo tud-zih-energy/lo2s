@@ -26,13 +26,14 @@
 #include <lo2s/util.hpp>
 
 #include <exception>
+#include <limits>
 #include <system_error>
 
+#include <csignal>
 #include <cstdlib>
 #include <cstring>
 
 extern "C" {
-#include <signal.h>
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -40,21 +41,16 @@ extern "C" {
 
 // used for attaching to a running process.
 // Its a special case, so ... OH, look behind you, a three headed monkey playing cards.
-static volatile bool running;
-static volatile pid_t attached_pid;
+static volatile std::sig_atomic_t running;
+static volatile std::sig_atomic_t attached_pid;
+static_assert(std::numeric_limits<pid_t>::max() <= std::numeric_limits<std::sig_atomic_t>::max(),
+              ":[");
 
-namespace lo2s
-{
-namespace monitor
-{
-/* this signal handler is called once to print out stats on abort */
-void sig_handler(int signum)
+extern "C" void sig_handler(int signum)
 {
     // If we attached to a running process, we initiate the detaching now. Sick.
     if (signum == SIGINT && attached_pid != -1)
     {
-        Log::info() << "Received SIGINT. Trying to detach";
-
         // set global running to false
         running = false;
 
@@ -64,7 +60,8 @@ void sig_handler(int signum)
         return;
     }
 
-    Log::debug() << "sig_handler called, what should I do with signal " << signum;
+    // Log is certainly not signal safe
+    // lo2s::Log::debug() << "sig_handler called, what should I do with signal " << signum;
 
     // For some miraculous reason, the signal ends up at the monitored process anyhow, even if we
     // do not explicitly forward it here.
@@ -72,6 +69,11 @@ void sig_handler(int signum)
     /* restore default signal handler */
     // signal(SIGINT, default_signal_handler);
 }
+
+namespace lo2s
+{
+namespace monitor
+{
 
 void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr,
                   void* data = nullptr)
