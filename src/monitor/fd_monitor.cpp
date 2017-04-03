@@ -47,6 +47,7 @@ void FdMonitor::add_fd(int fd)
 void FdMonitor::stop()
 {
     stop_pipe_.write();
+    thread_.join();
 }
 
 void FdMonitor::monitor()

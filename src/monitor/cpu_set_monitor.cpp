@@ -48,7 +48,7 @@ void CpuSetMonitor::run()
 
     for (auto& monitor_elem : monitors_)
     {
-        monitor_elem.second.start();
+        monitor_elem.second.stop();
     }
 }
 }

@@ -40,6 +40,7 @@ public:
     // Moving is still a bit tricky (keep moved-from in a useful state), avoid it for now.
     ThreadedMonitor(ThreadedMonitor&&) = delete;
     ThreadedMonitor& operator=(ThreadedMonitor&&) = delete;
+
     virtual ~ThreadedMonitor()
     {
         assert(!thread_.joinable());
