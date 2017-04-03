@@ -20,3 +20,29 @@
  */
 
 #include "lo2s/monitor/cpu_switch_monitor.hpp"
+
+namespace lo2s
+{
+namespace monitor
+{
+
+CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace)
+: switch_writer_(cpu, config, trace)
+{
+    add_fd(switch_writer_.fd());
+}
+
+void CpuSwitchMonitor::initialize_thread()
+{
+    cpu_set_t cpumask;
+    CPU_ZERO(&cpumask);
+    CPU_SET(cpu_, &cpumask);
+    sched_setaffinity(0, sizeof(cpumask), &cpumask);
+}
+
+void CpuSwitchMonitor::monitor()
+{
+    switch_writer_.read();
+}
+}
+}
