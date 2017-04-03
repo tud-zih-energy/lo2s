@@ -19,37 +19,46 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <lo2s/monitor/fd_monitor.hpp>
-
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/tracepoint/exit_reader.hpp>
-#include <lo2s/perf/tracepoint/switch_writer.hpp>
-#include <lo2s/trace/fwd.hpp>
 
-extern "C" {
-#include <sched.h>
-}
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
-namespace monitor
+namespace perf
 {
-class CpuSwitchMonitor : public FdMonitor
+namespace tracepoint
 {
-public:
-    CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace);
 
-    void initialize_thread() override;
-    void monitor(int index) override;
-    void merge_trace();
+static const EventFormat& get_sched_process_exit_event()
+{
+    static EventFormat evt("sched/sched_process_exit");
+    return evt;
+}
 
-private:
-    int cpu_;
+ExitReader::ExitReader(int cpu, const MonitorConfig& config, trace::Trace& trace)
+: Reader(cpu, get_sched_process_exit_event().id(), config.mmap_pages), trace_(trace),
+  pid_field_(get_sched_process_exit_event().field("pid")),
+  comm_field_(get_sched_process_exit_event().field("comm"))
+{
+}
 
-    perf::tracepoint::SwitchWriter switch_writer_;
-    perf::tracepoint::ExitReader exit_reader_;
-};
+ExitReader::~ExitReader()
+{
+}
+
+bool ExitReader::handle(const Reader::RecordSampleType* sample)
+{
+    pid_t pid = sample->raw_data.get(pid_field_);
+    std::string comm = sample->raw_data.get_str(comm_field_);
+    comms_[pid] = comm;
+    return false;
+}
+
+void ExitReader::merge_trace()
+{
+    trace_.register_pids(comms_);
+}
+}
 }
 }

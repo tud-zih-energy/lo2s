@@ -54,9 +54,13 @@ void FdMonitor::monitor()
 {
     for (const auto& index_pfd : nitro::lang::enumerate(pfds_))
     {
-        if (index_pfd.value().revents & POLLIN)
+        if (index_pfd.index() == 0)
         {
-            monitor(index_pfd.index());
+            continue;
+        }
+        if (index_pfd.value().revents & POLLIN || stop_pfd().revents & POLLIN)
+        {
+            monitor(index_pfd.index() - 1);
         }
     }
 }
@@ -76,6 +80,7 @@ void FdMonitor::run()
             Log::error() << "poll failed";
             throw_errno();
         }
+        Log::debug() << "FdMonitor poll returned " << ret;
 
         bool panic = false;
         for (const auto& pfd : pfds_)

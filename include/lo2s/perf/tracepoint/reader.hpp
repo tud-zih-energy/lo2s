@@ -73,6 +73,19 @@ public:
             }
         }
 
+        std::string get_str(const EventField& field) const
+        {
+            std::string ret;
+            ret.resize(field.size());
+            auto input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
+            size_t i;
+            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++) {
+                ret[i] = input_cstr[i];
+            }
+            ret.resize(i);
+            return ret;
+        }
+
         template <typename TT>
         const TT _get(ptrdiff_t offset) const
         {

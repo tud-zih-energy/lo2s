@@ -74,6 +74,7 @@ set(SOURCE_FILES
         src/perf/time/converter.cpp src/perf/time/reader.cpp
         src/perf/tracepoint/format.cpp src/perf/tracepoint/recorder.cpp
         src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
+        src/perf/tracepoint/exit_reader.cpp
 
         src/trace/counters.cpp src/trace/trace.cpp
 

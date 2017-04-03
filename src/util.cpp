@@ -1,8 +1,12 @@
+#include <lo2s/log.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 #include <boost/range/iterator_range.hpp>
 
+#include <fstream>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
@@ -27,15 +31,28 @@ std::size_t get_page_size()
 
 std::string get_process_exe(pid_t pid)
 {
-    auto proc_filename = (boost::format("/proc/%d/exe") % pid).str();
+    auto proc_exe_filename = (boost::format("/proc/%d/exe") % pid).str();
     char exe_cstr[PATH_MAX + 1];
-    auto ret = readlink(proc_filename.c_str(), exe_cstr, PATH_MAX);
-    if (ret == -1)
+    auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
+    if (ret != -1)
     {
-        return "<unknown>";
+        exe_cstr[ret] = '\0';
+        return exe_cstr;
     }
-    exe_cstr[ret] = '\0';
-    return exe_cstr;
+    auto proc_comm_filename = (boost::format("/proc/%d/comm") % pid).str();
+    std::ifstream proc_comm_stream;
+    proc_comm_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try
+    {
+        proc_comm_stream.open(proc_comm_filename);
+        std::string comm;
+        proc_comm_stream >> comm;
+        return (boost::format("[%s]") % comm).str();
+    }
+    catch (const std::ios::failure&)
+    {
+    }
+    return "<unknown>";
 }
 
 std::string get_datetime()
@@ -77,14 +94,18 @@ std::unordered_map<pid_t, std::string> read_all_pid_exe()
     boost::filesystem::path proc("/proc");
     for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(proc), {}))
     {
+        pid_t pid;
         try
         {
-            pid_t pid = std::stoi(entry.path().filename().string());
-            ret.emplace(pid, get_process_exe(pid));
+            pid = std::stoi(entry.path().filename().string());
         }
-        catch (...)
+        catch (const std::logic_error&)
         {
+            continue;
         }
+        std::string name = get_process_exe(pid);
+        Log::trace() << "mapping from /proc/" << pid << ": " << name;
+        ret.emplace(pid, name);
     }
     return ret;
 }

@@ -43,26 +43,11 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(int cpu, const MonitorConfig& config, trace::Trace& trace)
 : Reader(cpu, get_sched_switch_event().id(), config.mmap_pages),
-  otf2_writer_(trace.cpu_writer(cpu)), trace_(trace), time_converter_(time::Converter::instance())
+  otf2_writer_(trace.cpu_writer(cpu)), trace_(trace), time_converter_(time::Converter::instance()),
+  prev_pid_field_(get_sched_switch_event().field("prev_pid")),
+  next_pid_field_(get_sched_switch_event().field("next_pid")),
+  prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
-    for (const auto& field : get_sched_switch_event().fields())
-    {
-        if (field.name() == "prev_pid")
-        {
-            prev_pid_field_ = field;
-        }
-        else if (field.name() == "next_pid")
-        {
-            next_pid_field_ = field;
-        }
-        else if (field.name() == "prev_state")
-        {
-            prev_state_field_ = field;
-        }
-    }
-    assert(prev_pid_field_.valid());
-    assert(next_pid_field_.valid());
-    assert(prev_state_field_.valid());
 }
 
 SwitchWriter::~SwitchWriter()
@@ -76,7 +61,6 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     pid_t prev_pid = sample->raw_data.get(prev_pid_field_);
     pid_t next_pid = sample->raw_data.get(next_pid_field_);
-    Log::trace() << "sched_switch prev_pid: " << prev_pid << ", next_pid: " << next_pid;
     if (!current_region_.is_undefined())
     {
         if (prev_pid != current_pid_)

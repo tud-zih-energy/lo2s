@@ -49,9 +49,16 @@ void CpuSetMonitor::run()
         throw make_system_error();
     }
 
+    trace_.register_pids(read_all_pid_exe());
+
     for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.stop();
+    }
+
+    for (auto& monitor_elem : monitors_)
+    {
+        monitor_elem.second.merge_trace();
     }
 }
 }

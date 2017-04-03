@@ -387,6 +387,7 @@ void Trace::register_pid(pid_t pid, const std::string& exe)
 
 void Trace::register_pids(std::unordered_map<pid_t, std::string> pid_map)
 {
+    Log::trace() << "register_pid size " << pid_map.size();
     for (const auto& elem : pid_map)
     {
         register_pid(elem.first, elem.second);

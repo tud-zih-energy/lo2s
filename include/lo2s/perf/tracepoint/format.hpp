@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <stdexcept>
 #include <vector>
 
 #include <cstddef>
@@ -89,6 +90,18 @@ public:
     const auto& fields() const
     {
         return fields_;
+    }
+
+    const auto& field(const std::string& name) const
+    {
+        for (const auto& field : fields())
+        {
+            if (field.name() == name)
+            {
+                return field;
+            }
+        }
+        throw std::out_of_range("field not found");
     }
 
 private:

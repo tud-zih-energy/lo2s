@@ -27,9 +27,10 @@ namespace monitor
 {
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: switch_writer_(cpu, config, trace)
+: switch_writer_(cpu, config, trace), exit_reader_(cpu, config, trace)
 {
     add_fd(switch_writer_.fd());
+    add_fd(exit_reader_.fd());
 }
 
 void CpuSwitchMonitor::initialize_thread()
@@ -40,9 +41,25 @@ void CpuSwitchMonitor::initialize_thread()
     sched_setaffinity(0, sizeof(cpumask), &cpumask);
 }
 
-void CpuSwitchMonitor::monitor()
+void CpuSwitchMonitor::merge_trace()
 {
-    switch_writer_.read();
+    exit_reader_.merge_trace();
+}
+
+void CpuSwitchMonitor::monitor(int index)
+{
+    if (index == 0)
+    {
+        Log::debug() << "reading SwitchWriter";
+        switch_writer_.read();
+    }
+    else if (index == 1)
+    {
+        Log::debug() << "reading ExitReader";
+        exit_reader_.read();
+    } else {
+        assert(false);
+    }
 }
 }
 }

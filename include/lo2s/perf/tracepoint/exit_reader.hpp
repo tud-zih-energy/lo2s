@@ -21,35 +21,44 @@
 
 #pragma once
 
-#include <lo2s/monitor/fd_monitor.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/tracepoint/reader.hpp>
 
 #include <lo2s/monitor_config.hpp>
-#include <lo2s/perf/tracepoint/exit_reader.hpp>
-#include <lo2s/perf/tracepoint/switch_writer.hpp>
 #include <lo2s/trace/fwd.hpp>
 
+#include <unordered_map>
+
 extern "C" {
-#include <sched.h>
+#include <sys/types.h>
 }
 
 namespace lo2s
 {
-namespace monitor
+namespace perf
 {
-class CpuSwitchMonitor : public FdMonitor
+namespace tracepoint
+{
+class ExitReader : public Reader<ExitReader>
 {
 public:
-    CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace);
+    ExitReader(int cpu, const MonitorConfig& config, trace::Trace& trace);
+    ~ExitReader();
 
-    void initialize_thread() override;
-    void monitor(int index) override;
+public:
+    using Reader<ExitReader>::handle;
+
+    bool handle(const Reader::RecordSampleType* sample);
     void merge_trace();
 
 private:
-    int cpu_;
+    trace::Trace& trace_;
 
-    perf::tracepoint::SwitchWriter switch_writer_;
-    perf::tracepoint::ExitReader exit_reader_;
+    std::unordered_map<pid_t, std::string> comms_;
+
+    EventField pid_field_;
+    EventField comm_field_;
 };
+}
 }
 }
