@@ -49,6 +49,7 @@ class SwitchWriter : public Reader<SwitchWriter>
 public:
     SwitchWriter(int cpu, const MonitorConfig& config,
                  trace::Trace& trace);
+    ~SwitchWriter();
 
 public:
     using Reader<SwitchWriter>::handle;
@@ -59,7 +60,8 @@ private:
     otf2::definition::region::reference_type thread_region_ref(pid_t tid);
 
 private:
-    otf2::writer::local& writer_;
+    otf2::writer::local& otf2_writer_;
+    trace::Trace& trace_;
     const time::Converter& time_converter_;
 
     using region_ref = otf2::definition::region::reference_type;

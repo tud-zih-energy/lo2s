@@ -3,6 +3,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/topology.hpp>
+#include <lo2s/util.hpp>
 
 #include <csignal>
 
@@ -38,6 +39,8 @@ void CpuSetMonitor::run()
     {
         monitor_elem.second.start();
     }
+
+    trace_.register_pids(read_all_pid_exe());
 
     int sig;
     ret = sigwait(&ss, &sig);

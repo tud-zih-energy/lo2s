@@ -80,7 +80,7 @@ set(SOURCE_FILES
         src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
         src/platform.cpp
         src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp
-        src/mmap.cpp
+        src/mmap.cpp src/util.cpp
 )
 
 

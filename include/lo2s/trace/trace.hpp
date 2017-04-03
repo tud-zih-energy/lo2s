@@ -31,6 +31,7 @@
 
 #include <map>
 #include <mutex>
+#include <unordered_map>
 
 namespace lo2s
 {
@@ -118,6 +119,12 @@ public:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    const MemoryMap& maps);
 
+    void register_pid(pid_t pid, const std::string& exe);
+    void register_pids(std::unordered_map<pid_t, std::string> pid_map);
+
+    otf2::definition::mapping_table
+    merge_pids(const std::unordered_map<pid_t, otf2::definition::region::reference_type>& map);
+
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
         return interrupt_generator_;
@@ -147,6 +154,11 @@ private:
         return location_groups_process_.size() + location_groups_cpu_.size();
     }
 
+    otf2::definition::region::reference_type region_ref() const
+    {
+        return location_groups_process_.size() + regions_process_.size();
+    }
+
 private:
     std::mutex mutex_;
 
@@ -171,7 +183,9 @@ private:
     otf2::definition::container<otf2::definition::location> locations_;
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
-    std::map<LineInfo, otf2::definition::region> regions_;
+    std::map<LineInfo, otf2::definition::region> regions_line_info_;
+    std::map<pid_t, otf2::definition::region> regions_process_;
+
     IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
     otf2::definition::container<otf2::definition::calling_context_property>

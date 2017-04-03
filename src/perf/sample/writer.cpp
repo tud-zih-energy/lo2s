@@ -134,7 +134,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
                                            otf2::definition::source_code_location::undefined(),
                                            otf2::definition::calling_context::undefined());
     otf2::event::calling_context_sample ccs(tp, cctx, 2, trace_.interrupt_generator());
-    writer_ << ccs;
+    otf2_writer_ << ccs;
     */
     if (first_event_)
     {
@@ -142,7 +142,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         otf2_writer_ << otf2::event::thread_begin(tp - otf2::chrono::time_point::duration(1),
                                                   trace_.self_comm(), -1);
         // TODO: figure out what we actually need to write here to be a correct OTF2 trace...
-        // writer_ << otf2::event::thread_team_begin(tp - otf2::chrono::time_point::duration(1),
+        // otf2_writer_ << otf2::event::thread_team_begin(tp - otf2::chrono::time_point::duration(1),
         //                                          trace_.self_comm());
     }
 

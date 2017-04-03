@@ -29,6 +29,8 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
+#include <boost/format.hpp>
+
 #include <map>
 #include <mutex>
 #include <stdexcept>
@@ -161,7 +163,8 @@ Trace::~Trace()
     archive_ << location_groups_cpu_;
     archive_ << locations_;
     archive_ << source_code_locations_;
-    archive_ << regions_;
+    archive_ << regions_line_info_;
+    archive_ << regions_process_;
 
     archive_ << comm_locations_group;
     archive_ << self_group_;
@@ -179,7 +182,7 @@ Trace::~Trace()
 std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
 {
     std::map<std::string, otf2::definition::regions_group> groups;
-    for (const auto& elem : regions_)
+    for (const auto& elem : regions_line_info_)
     {
         const auto& info = elem.first;
         const auto& name = info.dso;
@@ -369,6 +372,58 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
+void Trace::register_pid(pid_t pid, const std::string& exe)
+{
+    auto ref = region_ref();
+    auto name = intern((boost::format("%s (%d)") % exe % pid).str());
+    auto ret = regions_process_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(pid),
+        std::forward_as_tuple(ref, name, name, name, otf2::common::role_type::function,
+                              otf2::common::paradigm_type::user, otf2::common::flags_type::none,
+                              name, 0, 0));
+    // TODO update if not newly inserted
+    (void)ret;
+}
+
+void Trace::register_pids(std::unordered_map<pid_t, std::string> pid_map)
+{
+    for (const auto& elem : pid_map)
+    {
+        register_pid(elem.first, elem.second);
+    }
+}
+
+otf2::definition::mapping_table
+Trace::merge_pids(const std::unordered_map<pid_t, otf2::definition::region::reference_type>& map)
+{
+#ifndef NDEBUG
+    std::vector<uint32_t> mappings(map.size(), -1u);
+#else
+    std::vector<uint32_t> mappings(map.size());
+#endif
+    for (const auto& elem : map)
+    {
+        auto pid = elem.first;
+        auto local_ref = elem.second;
+        if (regions_process_.count(pid) == 0)
+        {
+            register_pid(pid, "<unknown>");
+        }
+        auto global_ref = regions_process_.at(pid).ref();
+        mappings.at(local_ref) = global_ref;
+    }
+
+#ifndef NDEBUG
+    for (auto id : mappings)
+    {
+        assert(id != -1u);
+    }
+#endif
+
+    return otf2::definition::mapping_table(
+        otf2::definition::mapping_table::mapping_type_type::region, mappings);
+}
+
 otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)
 {
     auto ref = source_code_locations_.size();
@@ -380,9 +435,9 @@ otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)
 
 otf2::definition::region Trace::intern_region(const LineInfo& info)
 {
-    auto ref = regions_.size();
+    auto ref = region_ref();
     auto name_str = intern(info.function);
-    auto ret = regions_.emplace(
+    auto ret = regions_line_info_.emplace(
         std::piecewise_construct, std::forward_as_tuple(info),
         std::forward_as_tuple(ref, name_str, name_str, name_str, otf2::common::role_type::function,
                               otf2::common::paradigm_type::sampling, otf2::common::flags_type::none,
