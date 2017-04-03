@@ -195,19 +195,19 @@ int main(int argc, const char** argv)
                  "output trace directory")
             ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
                  "sampling period (# instructions)")
-            ("all-cpus,a", po::bool_switch(&all_cpus)->default_value(false),
+            ("all-cpus,a", po::bool_switch(&all_cpus),
                  "System-wide monitoring of all CPUs.")
-            ("call-graph,g", po::bool_switch(&config.enable_cct)->default_value(false),
+            ("call-graph,g", po::bool_switch(&config.enable_cct),
                  "call-graph recording")
-            ("no-ip,n", po::bool_switch(&config.suppress_ip)->default_value(false),
+            ("no-ip,n", po::bool_switch(&config.suppress_ip),
                  "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
             ("pid,p", po::value(&pid),
                  "attach to specific pid")
-            ("quiet,q", po::bool_switch(&quiet)->default_value(false),
+            ("quiet,q", po::bool_switch(&quiet),
                  "suppress output")
-            ("verbose,v", po::bool_switch(&debug)->default_value(false),
+            ("verbose,v", po::bool_switch(&debug),
                  "verbose output")
-            ("extra-verbose,t", po::bool_switch(&trace)->default_value(false),
+            ("extra-verbose,t", po::bool_switch(&trace),
                  "extra verbose output")
             ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
                  "number of pages to be used by each internal buffer")
@@ -222,15 +222,6 @@ int main(int argc, const char** argv)
             ("command", po::value(&command));
     // clang-format on
 
-    if (all_cpus)
-    {
-        config.monitor_type = lo2s::MonitorType::CPU_SET;
-    }
-    else
-    {
-        config.monitor_type = lo2s::MonitorType::PROCESS;
-    }
-
     po::positional_options_description p;
     p.add("command", -1);
 
@@ -239,6 +230,15 @@ int main(int argc, const char** argv)
         po::command_line_parser(argc, argv).options(desc).positional(p).run();
     po::store(parsed, vm);
     po::notify(vm);
+
+    if (all_cpus)
+    {
+        config.monitor_type = lo2s::MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
 
