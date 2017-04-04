@@ -56,7 +56,7 @@ else()
     endif()
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wall -pedantic -Wextra -pthread -D_GNU_SOURCE")
 
 include_directories(include)
 
@@ -65,10 +65,14 @@ set(SOURCE_FILES
         ${X86_ADAPT_SOURCE_FILES}
         src/metric/perf_counter.cpp
 
-        src/monitor/cpu_switch_monitor.cpp src/monitor/fd_monitor.cpp
-        src/monitor/cpu_set_monitor.cpp src/monitor/interval_monitor.cpp
-        src/monitor/main_monitor.cpp src/monitor/process_monitor.cpp
+        src/monitor/cpu_set_monitor.cpp
+        src/monitor/cpu_switch_monitor.cpp
+        src/monitor/fd_monitor.cpp
+        src/monitor/interval_monitor.cpp
+        src/monitor/main_monitor.cpp
+        src/monitor/process_monitor.cpp
         src/monitor/thread_monitor.cpp
+        src/monitor/threaded_monitor.cpp
 
         src/perf/sample/writer.cpp
         src/perf/time/converter.cpp src/perf/time/reader.cpp

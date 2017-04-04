@@ -19,7 +19,13 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "lo2s/monitor/cpu_switch_monitor.hpp"
+#include <lo2s/monitor/cpu_switch_monitor.hpp>
+
+#include <boost/format.hpp>
+
+extern "C" {
+#include <sched.h>
+}
 
 namespace lo2s
 {
@@ -27,7 +33,8 @@ namespace monitor
 {
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: switch_writer_(cpu, config, trace), exit_reader_(cpu, config, trace)
+: FdMonitor(trace, (boost::format("CpuSwitchMonitor (%d)") % cpu).str()),
+  switch_writer_(cpu, config, trace), exit_reader_(cpu, config, trace)
 {
     add_fd(switch_writer_.fd());
     add_fd(exit_reader_.fd());
@@ -57,7 +64,9 @@ void CpuSwitchMonitor::monitor(int index)
     {
         Log::debug() << "reading ExitReader";
         exit_reader_.read();
-    } else {
+    }
+    else
+    {
         assert(false);
     }
 }

@@ -28,10 +28,6 @@
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #include <lo2s/trace/fwd.hpp>
 
-extern "C" {
-#include <sched.h>
-}
-
 namespace lo2s
 {
 namespace monitor
@@ -43,6 +39,13 @@ public:
 
     void initialize_thread() override;
     void monitor(int index) override;
+
+    const std::string& group() const override
+    {
+        static std::string g = "lo2s::CpuSwitchMonitor";
+        return g;
+    }
+
     void merge_trace();
 
 private:

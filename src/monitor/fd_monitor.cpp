@@ -27,7 +27,7 @@ namespace lo2s
 {
 namespace monitor
 {
-FdMonitor::FdMonitor()
+FdMonitor::FdMonitor(trace::Trace& trace, const std::string& name) : ThreadedMonitor(trace, name)
 {
     pfds_.resize(1);
     stop_pfd().fd = stop_pipe_.read_fd();

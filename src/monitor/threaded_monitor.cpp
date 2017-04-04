@@ -19,51 +19,45 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
-#include <lo2s/trace/fwd.hpp>
 
-#include <vector>
+#include <lo2s/trace/trace.hpp>
 
 extern "C" {
-#include <poll.h>
+#include <sys/syscall.h>
 }
 
 namespace lo2s
 {
 namespace monitor
 {
-class FdMonitor : public ThreadedMonitor
+ThreadedMonitor::ThreadedMonitor(trace::Trace& trace, const std::string& name)
+: trace_(trace), name_(name)
 {
-public:
-    FdMonitor(trace::Trace& trace, const std::string& name);
+}
 
-    void stop() override;
+ThreadedMonitor::~ThreadedMonitor()
+{
+    assert(!thread_.joinable());
+}
 
-protected:
-    void run() override;
-    void monitor() override;
+void ThreadedMonitor::start()
+{
+    assert(!thread_.joinable());
+    thread_ = std::thread([this]() { this->thread_main(); });
+}
 
-    void add_fd(int fd);
+void ThreadedMonitor::thread_main()
+{
+    register_thread();
+    initialize_thread();
+    run();
+    finalize_thread();
+}
 
-    virtual void monitor(int index)
-    {
-        (void)index;
-    };
-
-private:
-    struct pollfd& stop_pfd()
-    {
-        return pfds_.front();
-    }
-
-private:
-    Pipe stop_pipe_;
-    std::vector<pollfd> pfds_;
-};
+void ThreadedMonitor::register_thread()
+{
+    trace_.register_monitoring_tid(syscall(SYS_gettid), name(), group());
+}
 }
 }

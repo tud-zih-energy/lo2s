@@ -15,7 +15,9 @@ namespace lo2s
 namespace monitor
 {
 
-IntervalMonitor::IntervalMonitor(std::chrono::nanoseconds interval) : interval_(interval)
+IntervalMonitor::IntervalMonitor(trace::Trace& trace, const std::string& name,
+                                 std::chrono::nanoseconds interval)
+: ThreadedMonitor(trace, name), interval_(interval)
 {
 }
 

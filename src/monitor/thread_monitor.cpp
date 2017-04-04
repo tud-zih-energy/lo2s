@@ -27,7 +27,13 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
+#include <boost/format.hpp>
+
 #include <cassert>
+
+extern "C" {
+#include <sched.h>
+}
 
 namespace lo2s
 {
@@ -36,13 +42,14 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_,
                              ProcessInfo& info, bool enable_on_exec)
-: IntervalMonitor(parent_monitor_.config().read_interval), pid_(pid), tid_(tid), info_(info),
+: IntervalMonitor(parent_monitor_.trace(), (boost::format("ThreadMonitor (%d)") % tid).str(),
+                  parent_monitor_.config().read_interval),
+  pid_(pid), tid_(tid), info_(info),
   sample_writer_(pid_, tid_, -1, parent_monitor_.config(), *this, parent_monitor_.trace(),
                  parent_monitor_.trace().sample_writer(pid, tid), enable_on_exec),
   counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
             sample_writer_.location())
 {
-    (void)pid; // Unused
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
 }

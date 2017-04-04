@@ -25,6 +25,8 @@
 
 #include <lo2s/monitor/threaded_monitor.hpp>
 
+#include <lo2s/trace/fwd.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -60,7 +62,8 @@ namespace monitor
 class IntervalMonitor : public ThreadedMonitor
 {
 public:
-    IntervalMonitor(std::chrono::nanoseconds interval);
+    IntervalMonitor(trace::Trace& trace, const std::string& name,
+                    std::chrono::nanoseconds interval);
     virtual ~IntervalMonitor();
 
     void stop() override;
@@ -75,7 +78,6 @@ private:
     std::condition_variable control_condition_;
 
     std::chrono::nanoseconds interval_;
-
 };
 }
 }

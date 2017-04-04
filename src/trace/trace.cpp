@@ -67,9 +67,10 @@ Trace::Trace(uint64_t sample_period, const std::string& trace_path)
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, sample_period),
   // Yep, the locations group must have id below the self group.
-  self_group_(1, intern("self thread"), otf2::definition::comm_self_group::paradigm_type::pthread,
-              otf2::definition::comm_self_group::group_flag_type::none),
-  self_comm_(0u, intern("self thread"), self_group_)
+  comm_self_group_(1, intern("self thread"),
+                   otf2::definition::comm_self_group::paradigm_type::pthread,
+                   otf2::definition::comm_self_group::group_flag_type::none),
+  self_comm_(0u, intern("self thread"), comm_self_group_)
 {
     process(METRIC_PID, "Metric Location Group");
 
@@ -141,7 +142,7 @@ otf2::chrono::time_point Trace::record_to() const
 
 Trace::~Trace()
 {
-    auto function_groups_ = function_groups();
+    auto sampling_function_groups_ = regions_groups_sampling_dso();
     otf2::definition::comm_locations_group comm_locations_group(
         0, intern("All pthread locations"), otf2::common::paradigm_type::pthread,
         otf2::common::group_flag_type::none);
@@ -167,8 +168,10 @@ Trace::~Trace()
     archive_ << regions_thread_;
 
     archive_ << comm_locations_group;
-    archive_ << self_group_;
-    archive_ << function_groups_;
+    archive_ << comm_self_group_;
+    archive_ << sampling_function_groups_;
+    archive_ << regions_groups_executable_;
+    archive_ << regions_groups_monitoring_;
 
     archive_ << self_comm_;
     archive_ << interrupt_generator();
@@ -179,7 +182,7 @@ Trace::~Trace()
     archive_ << metric_instances_;
 }
 
-std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
+std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sampling_dso()
 {
     std::map<std::string, otf2::definition::regions_group> groups;
     for (const auto& elem : regions_line_info_)
@@ -189,9 +192,8 @@ std::map<std::string, otf2::definition::regions_group> Trace::function_groups()
         const auto& region = elem.second;
         if (groups.count(name) == 0)
         {
-            // + 2 for locations_group_ and self_group_
             groups.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                           std::forward_as_tuple(groups.size() + 2, intern(name),
+                           std::forward_as_tuple(groups.size() + group_ref(), intern(name),
                                                  otf2::common::paradigm_type::compiler,
                                                  otf2::common::group_flag_type::none));
         }
@@ -375,17 +377,36 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
 void Trace::register_tid(pid_t tid, const std::string& exe)
 {
     auto ref = region_ref();
-    auto name = intern((boost::format("%s (%d)") % exe % tid).str());
+    auto iname = intern((boost::format("%s (%d)") % exe % tid).str());
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(ref, name, name, name, otf2::common::role_type::function,
+        std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
                               otf2::common::paradigm_type::user, otf2::common::flags_type::none,
-                              name, 0, 0));
-    // TODO update if not newly inserted
-    (void)ret;
+                              iname, 0, 0));
+    if (ret.second)
+    {
+        regions_group_executable(exe).add_member(ret.first->second);
+    }
+    // TODO update iname if not newly inserted
 }
 
-void Trace::register_tids(std::unordered_map<pid_t, std::string> tid_map)
+void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const std::string& group)
+{
+    Log::debug() << "register_monitoring_tid(" << tid << "," << name << "," << group << ");";
+    auto ref = region_ref();
+    auto iname = intern((boost::format("lo2s::%s") % name).str());
+    auto ret = regions_thread_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(tid),
+        std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
+                              otf2::common::paradigm_type::measurement_system,
+                              otf2::common::flags_type::none, iname, 0, 0));
+    if (ret.second)
+    {
+        regions_group_monitoring(group).add_member(ret.first->second);
+    }
+}
+
+void Trace::register_tids(const std::unordered_map<pid_t, std::string>& tid_map)
 {
     Log::debug() << "register_tid size " << tid_map.size();
     for (const auto& elem : tid_map)
@@ -423,6 +444,25 @@ otf2::definition::mapping_table Trace::merge_tids(
 
     return otf2::definition::mapping_table(
         otf2::definition::mapping_table::mapping_type_type::region, mappings);
+}
+
+otf2::definition::regions_group Trace::regions_group_executable(const std::string& name)
+{
+    auto ret = regions_groups_executable_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(name),
+        std::forward_as_tuple(group_ref(), intern(name), otf2::common::paradigm_type::user,
+                              otf2::common::group_flag_type::none));
+    return ret.first->second;
+}
+
+otf2::definition::regions_group Trace::regions_group_monitoring(const std::string& name)
+{
+    auto ret = regions_groups_monitoring_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(name),
+        std::forward_as_tuple(group_ref(), intern(name),
+                              otf2::common::paradigm_type::measurement_system,
+                              otf2::common::group_flag_type::none));
+    return ret.first->second;
 }
 
 otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)

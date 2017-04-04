@@ -26,12 +26,16 @@ namespace lo2s
 namespace monitor
 {
 class ThreadedMonitor;
+
 class IntervalMonitor;
-class SingleFdMonitor;
+class FdMonitor;
 
 class ThreadMonitor;
 class CoreMonitor;
+class CpuSwitchMonitor;
 
+class MainMonitor;
 class ProcessMonitor;
+class CpuSetMonitor;
 }
 }

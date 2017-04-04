@@ -64,6 +64,7 @@ struct IpCctxEntry
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 
+// TODO Group and sort the mess in this class definition and trace.cpp
 class Trace
 {
 public:
@@ -119,11 +120,13 @@ public:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    const MemoryMap& maps);
 
-    void register_tid(pid_t tid, const std::string &exe);
-    void register_tids(std::unordered_map<pid_t, std::string> tid_map);
+    void register_tid(pid_t tid, const std::string& exe);
+    void register_tids(const std::unordered_map<pid_t, std::string>& tid_map);
 
-    otf2::definition::mapping_table
-    merge_tids(const std::unordered_map<pid_t, otf2::definition::region::reference_type> &local_refs);
+    otf2::definition::mapping_table merge_tids(
+        const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs);
+
+    void register_monitoring_tid(pid_t tid, const std::string& name, const std::string& grou);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -140,8 +143,11 @@ public:
         return system_tree_cpu_nodes_.at(cpuid);
     }
 
+    otf2::definition::regions_group regions_group_executable(const std::string& name);
+    otf2::definition::regions_group regions_group_monitoring(const std::string& name);
+
 private:
-    std::map<std::string, otf2::definition::regions_group> function_groups();
+    std::map<std::string, otf2::definition::regions_group> regions_groups_sampling_dso();
 
     otf2::definition::source_code_location intern_scl(const LineInfo&);
 
@@ -157,6 +163,12 @@ private:
     otf2::definition::region::reference_type region_ref() const
     {
         return location_groups_process_.size() + regions_thread_.size();
+    }
+
+    otf2::definition::regions_group::reference_type group_ref() const
+    {
+        // + 2 for locations_group_ and self_group_
+        return 2 + regions_groups_executable_.size() + regions_groups_monitoring_.size();
     }
 
 private:
@@ -186,6 +198,9 @@ private:
     std::map<LineInfo, otf2::definition::region> regions_line_info_;
     std::map<pid_t, otf2::definition::region> regions_thread_;
 
+    std::map<std::string, otf2::definition::regions_group> regions_groups_executable_;
+    std::map<std::string, otf2::definition::regions_group> regions_groups_monitoring_;
+
     IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
     otf2::definition::container<otf2::definition::calling_context_property>
@@ -194,7 +209,7 @@ private:
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::container<otf2::definition::metric_instance> metric_instances_;
 
-    otf2::definition::comm_self_group self_group_;
+    otf2::definition::comm_self_group comm_self_group_;
     otf2::definition::comm self_comm_;
 };
 }

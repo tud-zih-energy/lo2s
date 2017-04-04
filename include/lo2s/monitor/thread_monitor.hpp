@@ -74,6 +74,11 @@ public:
     void finalize_thread() override;
     void monitor() override;
 
+    const std::string& group() const override {
+        static std::string g = "lo2s::CpuSwitchMonitor";
+        return g;
+    }
+
 private:
     pid_t pid_;
     pid_t tid_;

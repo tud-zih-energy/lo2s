@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
 
 #include <thread>
 #include <string>
@@ -35,27 +35,18 @@ namespace monitor
 class ThreadedMonitor
 {
 public:
-    ThreadedMonitor(trace::Trace& trace, const std::string& name) : trace_(trace), name_(name)
-    {
-    }
+    ThreadedMonitor(trace::Trace& trace, const std::string& name);
 
-    // We don't want copies. Should be implicitly deleted due to unique_ptr
+    // We don't want copies!
     ThreadedMonitor(const ThreadedMonitor&) = delete;
     ThreadedMonitor& operator=(const ThreadedMonitor&) = delete;
     // Moving is still a bit tricky (keep moved-from in a useful state), avoid it for now.
     ThreadedMonitor(ThreadedMonitor&&) = delete;
     ThreadedMonitor& operator=(ThreadedMonitor&&) = delete;
 
-    virtual ~ThreadedMonitor()
-    {
-        assert(!thread_.joinable());
-    }
+    virtual ~ThreadedMonitor();
 
-    virtual void start()
-    {
-        assert(!thread_.joinable());
-        thread_ = std::thread([this]() { this->thread_main(); });
-    }
+    virtual void start();
     virtual void stop() = 0;
 
     const std::string& name() const
@@ -63,21 +54,15 @@ public:
         return name_;
     }
 
+    virtual const std::string& group() const = 0;
+
 protected:
     virtual void run() = 0;
 
-    void thread_main() {
-        register_thread();
-        initialize_thread();
-        run();
-        finalize_thread();
-    }
+    void thread_main();
     virtual void monitor() = 0;
 
-    void register_thread()
-    {
-        trace_.register_monitoring_tid(getpid(), name());
-    }
+    void register_thread();
 
     virtual void initialize_thread()
     {
