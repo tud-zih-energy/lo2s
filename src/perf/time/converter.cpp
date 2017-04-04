@@ -42,9 +42,9 @@ Converter::Converter()
         return;
     }
     offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    Log::info() << "perf time offset: " << offset.count() << " ns ("
-                << reader.local_time.time_since_epoch().count() << " - "
-                << reader.perf_time.time_since_epoch().count() << ").";
+    Log::debug() << "perf time offset: " << offset.count() << " ns ("
+                 << reader.local_time.time_since_epoch().count() << " - "
+                 << reader.perf_time.time_since_epoch().count() << ").";
 }
 }
 }

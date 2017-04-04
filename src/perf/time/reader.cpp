@@ -68,6 +68,7 @@ Reader::Reader()
     {
         exit(0);
     }
+    waitpid(pid, NULL, 0);
 #endif
     local_time = lo2s::time::now();
 }
