@@ -33,15 +33,14 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
 
-    for (const auto& index_field : nitro::lang::enumerate(event_.fields()))
+    size_t index = 0;
+    for (const auto& field : event_.fields())
     {
-        const auto& field = index_field.value();
-        if (!field.is_number())
+        if (!field.is_integer())
         {
             continue;
         }
-        const auto& index = index_field.index();
-        counter_values_[index].set(sample->raw_data.get(field));
+        counter_values_.at(index++).set(sample->raw_data.get(field));
     }
     writer_.write(otf2::event::metric(tp, metric_instance_, counter_values_));
     return false;
