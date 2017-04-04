@@ -26,6 +26,7 @@
 #include <lo2s/perf/event_reader.hpp>
 
 #include <lo2s/util.hpp>
+#include <lo2s/log.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -68,7 +69,7 @@ public:
                 return _get<int64_t>(field.offset());
             default:
                 // We do check this before setting up the event
-                assert(!"Trying to get field of invalid size.");
+                Log::warn() << "Trying to get field " << field.name() << " of invalid size: " << field.size();
                 return 0;
             }
         }
