@@ -21,7 +21,10 @@
 
 #pragma once
 
+#include <lo2s/trace/trace.hpp>
+
 #include <thread>
+#include <string>
 
 #include <cassert>
 
@@ -32,7 +35,9 @@ namespace monitor
 class ThreadedMonitor
 {
 public:
-    ThreadedMonitor() = default;
+    ThreadedMonitor(trace::Trace& trace, const std::string& name) : trace_(trace), name_(name)
+    {
+    }
 
     // We don't want copies. Should be implicitly deleted due to unique_ptr
     ThreadedMonitor(const ThreadedMonitor&) = delete;
@@ -49,23 +54,43 @@ public:
     virtual void start()
     {
         assert(!thread_.joinable());
-        thread_ = std::thread([this]() { this->run(); });
+        thread_ = std::thread([this]() { this->thread_main(); });
     }
     virtual void stop() = 0;
 
+    const std::string& name() const
+    {
+        return name_;
+    }
+
 protected:
     virtual void run() = 0;
+
+    void thread_main() {
+        register_thread();
+        initialize_thread();
+        run();
+        finalize_thread();
+    }
     virtual void monitor() = 0;
+
+    void register_thread()
+    {
+        trace_.register_monitoring_tid(getpid(), name());
+    }
 
     virtual void initialize_thread()
     {
     }
+
     virtual void finalize_thread()
     {
     }
 
 protected:
     std::thread thread_;
+    trace::Trace& trace_;
+    std::string name_;
 };
 }
 }
