@@ -56,9 +56,12 @@ Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config,
 
         for (const auto& field : event.fields())
         {
-            mc.add_member(trace_.metric_member(event_name + "::" + field.name(), "?",
-                                               otf2::common::metric_mode::absolute_next,
-                                               otf2::common::type::int64, "#"));
+            if (field.is_integer())
+            {
+                mc.add_member(trace_.metric_member(event_name + "::" + field.name(), "?",
+                                                   otf2::common::metric_mode::absolute_next,
+                                                   otf2::common::type::int64, "#"));
+            }
         }
 
         for (const auto& cpu : Topology::instance().cpus())

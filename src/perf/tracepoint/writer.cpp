@@ -35,8 +35,12 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
     for (const auto& index_field : nitro::lang::enumerate(event_.fields()))
     {
-        const auto& index = index_field.index();
         const auto& field = index_field.value();
+        if (!field.is_number())
+        {
+            continue;
+        }
+        const auto& index = index_field.index();
         counter_values_[index].set(sample->raw_data.get(field));
     }
     writer_.write(otf2::event::metric(tp, metric_instance_, counter_values_));

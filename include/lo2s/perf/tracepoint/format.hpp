@@ -61,6 +61,21 @@ public:
         return size_;
     }
 
+    bool is_integer() const
+    {
+        // Parsing the type name is hard... really you don't want to do that
+        switch (size())
+        {
+        case 1:
+        case 2:
+        case 4:
+        case 8:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     bool valid() const
     {
         return size_ > 0;
