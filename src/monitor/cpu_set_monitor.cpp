@@ -19,6 +19,7 @@ CpuSetMonitor::CpuSetMonitor(const MonitorConfig& config) : MainMonitor(config)
         auto ret = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                      std::forward_as_tuple(cpu.id, config, trace_));
         assert(ret.second);
+        (void)ret;
     }
 }
 
