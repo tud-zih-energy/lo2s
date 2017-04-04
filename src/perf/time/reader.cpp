@@ -29,6 +29,8 @@
 #ifndef HW_BREAKPOINT_COMPAT
 extern "C" {
 #include <linux/hw_breakpoint.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 }
 #endif
 
