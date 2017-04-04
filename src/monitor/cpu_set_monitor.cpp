@@ -40,7 +40,7 @@ void CpuSetMonitor::run()
         monitor_elem.second.start();
     }
 
-    trace_.register_pids(read_all_pid_exe());
+    trace_.register_tids(read_all_tid_exe());
 
     int sig;
     ret = sigwait(&ss, &sig);
@@ -49,7 +49,7 @@ void CpuSetMonitor::run()
         throw make_system_error();
     }
 
-    trace_.register_pids(read_all_pid_exe());
+    trace_.register_tids(read_all_tid_exe());
 
     for (auto& monitor_elem : monitors_)
     {

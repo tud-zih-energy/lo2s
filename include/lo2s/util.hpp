@@ -72,5 +72,5 @@ std::string get_hostname();
 
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 
-std::unordered_map<pid_t, std::string> read_all_pid_exe();
+std::unordered_map<pid_t, std::string> read_all_tid_exe();
 }

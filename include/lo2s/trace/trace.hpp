@@ -119,11 +119,11 @@ public:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    const MemoryMap& maps);
 
-    void register_pid(pid_t pid, const std::string& exe);
-    void register_pids(std::unordered_map<pid_t, std::string> pid_map);
+    void register_tid(pid_t tid, const std::string &exe);
+    void register_tids(std::unordered_map<pid_t, std::string> tid_map);
 
     otf2::definition::mapping_table
-    merge_pids(const std::unordered_map<pid_t, otf2::definition::region::reference_type>& map);
+    merge_tids(const std::unordered_map<pid_t, otf2::definition::region::reference_type> &local_refs);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -156,7 +156,7 @@ private:
 
     otf2::definition::region::reference_type region_ref() const
     {
-        return location_groups_process_.size() + regions_process_.size();
+        return location_groups_process_.size() + regions_thread_.size();
     }
 
 private:
@@ -184,7 +184,7 @@ private:
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
     std::map<LineInfo, otf2::definition::region> regions_line_info_;
-    std::map<pid_t, otf2::definition::region> regions_process_;
+    std::map<pid_t, otf2::definition::region> regions_thread_;
 
     IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;

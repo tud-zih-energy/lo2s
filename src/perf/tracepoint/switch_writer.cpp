@@ -52,7 +52,7 @@ SwitchWriter::SwitchWriter(int cpu, const MonitorConfig& config, trace::Trace& t
 
 SwitchWriter::~SwitchWriter()
 {
-    const auto& mapping = trace_.merge_pids(thread_region_refs_);
+    const auto& mapping = trace_.merge_tids(thread_region_refs_);
     otf2_writer_ << mapping;
 }
 

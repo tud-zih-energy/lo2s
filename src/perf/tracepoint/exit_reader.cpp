@@ -57,7 +57,7 @@ bool ExitReader::handle(const Reader::RecordSampleType* sample)
 
 void ExitReader::merge_trace()
 {
-    trace_.register_pids(comms_);
+    trace_.register_tids(comms_);
 }
 }
 }

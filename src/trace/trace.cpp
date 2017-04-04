@@ -164,7 +164,7 @@ Trace::~Trace()
     archive_ << locations_;
     archive_ << source_code_locations_;
     archive_ << regions_line_info_;
-    archive_ << regions_process_;
+    archive_ << regions_thread_;
 
     archive_ << comm_locations_group;
     archive_ << self_group_;
@@ -372,12 +372,12 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
-void Trace::register_pid(pid_t pid, const std::string& exe)
+void Trace::register_tid(pid_t tid, const std::string& exe)
 {
     auto ref = region_ref();
-    auto name = intern((boost::format("%s (%d)") % exe % pid).str());
-    auto ret = regions_process_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(pid),
+    auto name = intern((boost::format("%s (%d)") % exe % tid).str());
+    auto ret = regions_thread_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(ref, name, name, name, otf2::common::role_type::function,
                               otf2::common::paradigm_type::user, otf2::common::flags_type::none,
                               name, 0, 0));
@@ -385,32 +385,32 @@ void Trace::register_pid(pid_t pid, const std::string& exe)
     (void)ret;
 }
 
-void Trace::register_pids(std::unordered_map<pid_t, std::string> pid_map)
+void Trace::register_tids(std::unordered_map<pid_t, std::string> tid_map)
 {
-    Log::trace() << "register_pid size " << pid_map.size();
-    for (const auto& elem : pid_map)
+    Log::debug() << "register_tid size " << tid_map.size();
+    for (const auto& elem : tid_map)
     {
-        register_pid(elem.first, elem.second);
+        register_tid(elem.first, elem.second);
     }
 }
 
-otf2::definition::mapping_table
-Trace::merge_pids(const std::unordered_map<pid_t, otf2::definition::region::reference_type>& map)
+otf2::definition::mapping_table Trace::merge_tids(
+    const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs)
 {
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(map.size(), -1u);
+    std::vector<uint32_t> mappings(local_refs.size(), -1u);
 #else
     std::vector<uint32_t> mappings(map.size());
 #endif
-    for (const auto& elem : map)
+    for (const auto& elem : local_refs)
     {
         auto pid = elem.first;
         auto local_ref = elem.second;
-        if (regions_process_.count(pid) == 0)
+        if (regions_thread_.count(pid) == 0)
         {
-            register_pid(pid, "<unknown>");
+            register_tid(pid, "<unknown>");
         }
-        auto global_ref = regions_process_.at(pid).ref();
+        auto global_ref = regions_thread_.at(pid).ref();
         mappings.at(local_ref) = global_ref;
     }
 
