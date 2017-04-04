@@ -400,7 +400,7 @@ otf2::definition::mapping_table Trace::merge_tids(
 #ifndef NDEBUG
     std::vector<uint32_t> mappings(local_refs.size(), -1u);
 #else
-    std::vector<uint32_t> mappings(map.size());
+    std::vector<uint32_t> mappings(local_refs.size());
 #endif
     for (const auto& elem : local_refs)
     {
