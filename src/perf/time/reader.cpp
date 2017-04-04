@@ -29,6 +29,9 @@
 #ifndef HW_BREAKPOINT_COMPAT
 extern "C" {
 #include <linux/hw_breakpoint.h>
+}
+#else
+extern "C" {
 #include <sys/types.h>
 #include <sys/wait.h>
 }
@@ -68,7 +71,7 @@ Reader::Reader()
     auto pid = fork();
     if (pid == 0)
     {
-        exit(0);
+        abort();
     }
     waitpid(pid, NULL, 0);
 #endif
