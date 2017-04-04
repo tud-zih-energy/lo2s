@@ -55,7 +55,7 @@ class Writer : public Reader<Writer>
 {
 public:
     Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config, monitor::ThreadMonitor& monitor,
-           trace::Trace& trace, otf2::writer::local& otf2_writer, const time::Converter& time_converter, bool enable_on_exec);
+           trace::Trace& trace, otf2::writer::local& otf2_writer, bool enable_on_exec);
     ~Writer();
 
 public:
@@ -89,7 +89,7 @@ private:
 
     trace::IpRefMap local_ip_refs_;
     std::uint64_t ip_ref_counter_ = 0;
-    time::Converter time_converter_;
+    const time::Converter time_converter_;
 
     bool first_event_ = true;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();

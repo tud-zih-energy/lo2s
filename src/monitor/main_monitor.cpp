@@ -14,13 +14,14 @@ MainMonitor::MainMonitor(const MonitorConfig& config_)
 : config_(config_), trace_(config_.sampling_period, config_.trace_path),
   counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
 {
+    perf::time::Converter::instance();
     // try to initialize raw counter metrics
     if (!config_.tracepoint_events.empty())
     {
         try
         {
             raw_counters_ =
-                std::make_unique<perf::tracepoint::Recorder>(trace_, config_, time_converter_);
+                std::make_unique<perf::tracepoint::Recorder>(trace_, config_);
         }
         catch (std::exception& e)
         {

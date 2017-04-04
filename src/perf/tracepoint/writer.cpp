@@ -14,13 +14,12 @@ namespace tracepoint
 {
 
 Writer::Writer(int cpu, const EventFormat& event, const MonitorConfig& config, trace::Trace& trace_,
-               const otf2::definition::metric_class& metric_class,
-               const time::Converter& time_converter)
+               const otf2::definition::metric_class& metric_class)
 : Reader(cpu, event.id(), config.mmap_pages), event_(event),
   writer_(trace_.metric_writer((boost::format("tracepoint metrics for CPU %d") % cpu).str())),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
-  time_converter_(time_converter)
+  time_converter_(perf::time::Converter::instance())
 {
     counter_values_.resize(metric_class.size());
     for (std::size_t i = 0; i < metric_class.size(); i++)

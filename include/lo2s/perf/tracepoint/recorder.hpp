@@ -44,8 +44,7 @@ namespace tracepoint
 class Recorder
 {
 public:
-    Recorder(trace::Trace& trace, const MonitorConfig& config,
-             const time::Converter& time_converter);
+    Recorder(trace::Trace& trace, const MonitorConfig& config);
 
     ~Recorder();
 

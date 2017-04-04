@@ -62,7 +62,7 @@ private:
 private:
     otf2::writer::local& otf2_writer_;
     trace::Trace& trace_;
-    const time::Converter& time_converter_;
+    const time::Converter time_converter_;
 
     using region_ref = otf2::definition::region::reference_type;
     std::unordered_map<pid_t, region_ref> thread_region_refs_;

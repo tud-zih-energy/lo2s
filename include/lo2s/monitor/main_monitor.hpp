@@ -59,11 +59,6 @@ public:
 
     virtual void run() = 0;
 
-    const perf::time::Converter& time_converter() const
-    {
-        return time_converter_;
-    }
-
     otf2::definition::metric_class counters_metric_class() const
     {
         return counters_metric_class_;
@@ -74,13 +69,11 @@ public:
         return config_;
     }
 
-
 protected:
     MonitorConfig config_;
 
     trace::Trace trace_;
 
-    perf::time::Converter time_converter_;
     otf2::definition::metric_class counters_metric_class_;
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::Recorder> raw_counters_;

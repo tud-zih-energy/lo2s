@@ -46,8 +46,7 @@ class Writer : public Reader<Writer>
 {
 public:
     Writer(int cpu, const EventFormat& event, const MonitorConfig& config, trace::Trace& trace,
-           const otf2::definition::metric_class& metric_class,
-           const time::Converter& time_converter);
+           const otf2::definition::metric_class& metric_class);
 
     Writer(const Writer& other) = delete;
 
@@ -63,7 +62,7 @@ private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
 
-    const time::Converter& time_converter_;
+    const time::Converter time_converter_;
 
     std::vector<otf2::event::metric::value_container> counter_values_;
 };

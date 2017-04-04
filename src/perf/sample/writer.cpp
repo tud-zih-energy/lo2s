@@ -48,10 +48,11 @@ namespace perf
 namespace sample
 {
 
-Writer::Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config, monitor::ThreadMonitor& Monitor,
-               trace::Trace& trace, otf2::writer::local& otf2_writer, const time::Converter& time_converter, bool enable_on_exec)
+Writer::Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config,
+               monitor::ThreadMonitor& Monitor, trace::Trace& trace,
+               otf2::writer::local& otf2_writer, bool enable_on_exec)
 : Reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(Monitor),
-  trace_(trace), otf2_writer_(otf2_writer), time_converter_(time_converter)
+  trace_(trace), otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance())
 {
 
     struct perf_event_attr attr;
@@ -142,7 +143,8 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         otf2_writer_ << otf2::event::thread_begin(tp - otf2::chrono::time_point::duration(1),
                                                   trace_.self_comm(), -1);
         // TODO: figure out what we actually need to write here to be a correct OTF2 trace...
-        // otf2_writer_ << otf2::event::thread_team_begin(tp - otf2::chrono::time_point::duration(1),
+        // otf2_writer_ << otf2::event::thread_team_begin(tp -
+        // otf2::chrono::time_point::duration(1),
         //                                          trace_.self_comm());
     }
 

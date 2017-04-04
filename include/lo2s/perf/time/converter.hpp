@@ -38,14 +38,20 @@ namespace time
 
 class Converter
 {
-public:
+private:
     Converter();
 
+public:
     static Converter& instance()
     {
         static Converter c;
         return c;
     }
+
+    Converter(const Converter&) = default;
+    Converter(Converter&&) = default;
+    Converter& operator=(const Converter&) = default;
+    Converter& operator=(Converter&&) = default;
 
     otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
     {

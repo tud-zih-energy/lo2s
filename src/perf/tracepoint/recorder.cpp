@@ -43,8 +43,7 @@ namespace perf
 namespace tracepoint
 {
 
-Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config,
-                   const time::Converter& time_converter)
+Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config)
 {
     perf_writers_.reserve(Topology::instance().cpus().size() * config.tracepoint_events.size());
     // Note any of those setups might fail.
@@ -67,7 +66,7 @@ Recorder::Recorder(trace::Trace& trace_, const MonitorConfig& config,
         for (const auto& cpu : Topology::instance().cpus())
         {
             Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-            perf_writers_.emplace_back(cpu.id, event, config, trace_, mc, time_converter);
+            perf_writers_.emplace_back(cpu.id, event, config, trace_, mc);
         }
     }
     start();
