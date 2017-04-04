@@ -106,6 +106,32 @@ std::unordered_map<pid_t, std::string> read_all_pid_exe()
         std::string name = get_process_exe(pid);
         Log::trace() << "mapping from /proc/" << pid << ": " << name;
         ret.emplace(pid, name);
+        try
+        {
+            boost::filesystem::path task((boost::format("/proc/%d/task") % pid).str());
+            for (auto& entry_task :
+                 boost::make_iterator_range(boost::filesystem::directory_iterator(task), {}))
+            {
+                pid_t tid;
+                try
+                {
+                    tid = std::stoi(entry_task.path().filename().string());
+                }
+                catch (const std::logic_error&)
+                {
+                    continue;
+                }
+                if (tid == pid)
+                {
+                    continue;
+                }
+                Log::trace() << "mapping from /proc/" << pid << "/" << tid << ": " << name;
+                ret.emplace(tid, name);
+            }
+        }
+        catch (...)
+        {
+        }
     }
     return ret;
 }
