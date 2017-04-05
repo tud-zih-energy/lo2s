@@ -17,6 +17,7 @@
 
 extern "C" {
 #include <limits.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
 }
@@ -137,5 +138,10 @@ void try_pin_to_cpu(int cpu, pid_t pid = 0)
     {
         Log::error() << "sched_setaffinity failed with: " << make_system_error().what();
     }
+}
+
+pid_t gettid()
+{
+    return syscall(SYS_gettid);
 }
 }

@@ -22,10 +22,7 @@
 #include <lo2s/monitor/threaded_monitor.hpp>
 
 #include <lo2s/trace/trace.hpp>
-
-extern "C" {
-#include <sys/syscall.h>
-}
+#include <lo2s/util.hpp>
 
 namespace lo2s
 {
@@ -68,7 +65,7 @@ void ThreadedMonitor::thread_main()
 
 void ThreadedMonitor::register_thread()
 {
-    trace_.register_monitoring_tid(syscall(SYS_gettid), name(), group());
+    trace_.register_monitoring_tid(gettid(), name(), group());
 }
 }
 }

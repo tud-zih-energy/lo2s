@@ -98,6 +98,8 @@ ProcessMonitor::ProcessMonitor(const MonitorConfig& config_, pid_t child, const 
 : MainMonitor(config_), first_child_(child), threads_(*this),
   default_signal_handler(signal(SIGINT, sig_handler))
 {
+    trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
+
     if (spawn)
     {
         attached_pid = -1;

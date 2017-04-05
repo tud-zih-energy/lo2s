@@ -13,6 +13,8 @@ namespace monitor
 {
 CpuSetMonitor::CpuSetMonitor(const MonitorConfig& config) : MainMonitor(config)
 {
+    trace_.register_monitoring_tid(gettid(), "CpuSetMonitor", "CpuSetMonitor");
+
     for (const auto& cpu : Topology::instance().cpus())
     {
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;

@@ -41,6 +41,8 @@ namespace tracepoint
 {
 /*
  * NOTE: Encapsulates counters for ALL cpus, totally different than counters!
+ *
+ * TODO Split up in one Monitor per core and pin it!
  */
 class MetricMonitor : public monitor::FdMonitor
 {

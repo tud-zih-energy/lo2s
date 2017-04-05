@@ -398,7 +398,7 @@ void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const st
     auto ref = region_ref();
     auto iname = intern((boost::format("lo2s::%s") % name).str());
 
-    // TODO, should be praradigm_type::measurement_system, but that's a bug in Vampir
+    // TODO, should be paradigm_type::measurement_system, but that's a bug in Vampir
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
