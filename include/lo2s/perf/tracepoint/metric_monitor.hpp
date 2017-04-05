@@ -24,6 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
 
+#include <lo2s/monitor/fd_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/pipe.hpp>
 #include <lo2s/time/time.hpp>
@@ -41,27 +42,22 @@ namespace tracepoint
 /*
  * NOTE: Encapsulates counters for ALL cpus, totally different than counters!
  */
-class Recorder
+class MetricMonitor : public monitor::FdMonitor
 {
 public:
-    Recorder(trace::Trace& trace, const MonitorConfig& config);
-
-    ~Recorder();
-
-public:
-    void stop();
+    MetricMonitor(trace::Trace& trace, const MonitorConfig& config);
 
 private:
-    void start();
+    void monitor(size_t index) override;
+    void finalize_thread() override;
 
-    void poll();
-
-    void stop_perf();
+    std::string group() const override
+    {
+        return "tracepoint::MetricMonitor";
+    }
 
 private:
-    Pipe stop_pipe_;
     std::vector<Writer> perf_writers_;
-    std::thread thread_;
 };
 }
 }

@@ -47,11 +47,22 @@ void ThreadedMonitor::start()
     thread_ = std::thread([this]() { this->thread_main(); });
 }
 
+std::string ThreadedMonitor::name() const
+{
+    if (name_.empty())
+    {
+        return group();
+    }
+    return (boost::format("%s (%s)") % group() % name_).str();
+}
+
 void ThreadedMonitor::thread_main()
 {
     register_thread();
     initialize_thread();
+    Log::debug() << name() << " starting.";
     run();
+    Log::debug() << name() << " ending.";
     finalize_thread();
 }
 

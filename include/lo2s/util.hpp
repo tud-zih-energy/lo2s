@@ -68,9 +68,9 @@ std::string get_process_exe(pid_t pid);
 
 std::string get_datetime();
 
-std::string get_hostname();
-
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 
 std::unordered_map<pid_t, std::string> read_all_tid_exe();
+
+void try_pin_to_cpu(int cpu, pid_t pid = 0);
 }

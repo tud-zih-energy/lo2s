@@ -35,18 +35,23 @@ FdMonitor::FdMonitor(trace::Trace& trace, const std::string& name) : ThreadedMon
     stop_pfd().revents = 0;
 }
 
-void FdMonitor::add_fd(int fd)
+size_t FdMonitor::add_fd(int fd)
 {
     struct pollfd pfd;
     pfd.fd = fd;
     pfd.events = POLLIN;
     pfd.revents = 0;
     pfds_.push_back(pfd);
+    return pfds_.size() - 2;
 }
 
 void FdMonitor::stop()
 {
     stop_pipe_.write();
+    if (!thread_.joinable())
+    {
+        Log::error() << "Cannot stop/join FdMonitor thread not running.";
+    }
     thread_.join();
 }
 

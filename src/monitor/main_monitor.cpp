@@ -25,7 +25,7 @@
 #include <lo2s/trace/counters.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <lo2s/perf/tracepoint/recorder.hpp>
+#include <lo2s/perf/tracepoint/metric_monitor.hpp>
 
 namespace lo2s
 {
@@ -41,8 +41,9 @@ MainMonitor::MainMonitor(const MonitorConfig& config_)
     {
         try
         {
-            raw_counters_ =
-                std::make_unique<perf::tracepoint::Recorder>(trace_, config_);
+            tracepoint_metrics_ =
+                std::make_unique<perf::tracepoint::MetricMonitor>(trace_, config_);
+            tracepoint_metrics_->start();
         }
         catch (std::exception& e)
         {
@@ -57,6 +58,7 @@ MainMonitor::MainMonitor(const MonitorConfig& config_)
         {
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
                 trace_, config_.read_interval, config_.x86_adapt_cpu_knobs);
+            x86_adapt_metrics_->start();
         }
         catch (std::exception& e)
         {
@@ -72,9 +74,9 @@ MainMonitor::MainMonitor(const MonitorConfig& config_)
 
 MainMonitor::~MainMonitor()
 {
-    if (raw_counters_)
+    if (tracepoint_metrics_)
     {
-        raw_counters_->stop();
+        tracepoint_metrics_->stop();
     }
 #ifdef HAVE_X86_ADAPT
     if (x86_adapt_metrics_)

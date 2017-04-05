@@ -4,7 +4,7 @@
 #error "Trying to build x86 adapt stuff without x86 adapt support"
 #endif
 
-#include <lo2s/metric/x86_adapt/recorder.hpp>
+#include <lo2s/metric/x86_adapt/monitor.hpp>
 
 #include <lo2s/metric/guess_mode.hpp>
 
@@ -29,15 +29,13 @@ public:
     Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval,
             const std::vector<std::string>& cpu_items);
 
-private:
-    void start();
-
 public:
+    void start();
     void stop();
 
 private:
     ::x86_adapt::x86_adapt x86_adapt_;
-    std::vector<std::unique_ptr<Recorder>> recorders_;
+    std::vector<std::unique_ptr<Monitor>> recorders_;
 };
 }
 }

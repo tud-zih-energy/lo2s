@@ -23,7 +23,7 @@ include(lib/nitro/Nitro.cmake)
 include(lib/x86_adapt/x86_adapt.cmake)
 
 if (X86Adapt_FOUND)
-    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/recorder.cpp)
+    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
 else()
     set(X86_ADAPT_SOURCE_FILES "")
 endif()
@@ -76,7 +76,7 @@ set(SOURCE_FILES
 
         src/perf/sample/writer.cpp
         src/perf/time/converter.cpp src/perf/time/reader.cpp
-        src/perf/tracepoint/format.cpp src/perf/tracepoint/recorder.cpp
+        src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
         src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
         src/perf/tracepoint/exit_reader.cpp
 

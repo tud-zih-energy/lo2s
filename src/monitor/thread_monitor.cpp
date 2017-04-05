@@ -27,7 +27,7 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
-#include <boost/format.hpp>
+#include <string>
 
 #include <cassert>
 
@@ -42,7 +42,7 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_,
                              ProcessInfo& info, bool enable_on_exec)
-: IntervalMonitor(parent_monitor_.trace(), (boost::format("ThreadMonitor (%d)") % tid).str(),
+: IntervalMonitor(parent_monitor_.trace(), std::to_string(tid),
                   parent_monitor_.config().read_interval),
   pid_(pid), tid_(tid), info_(info),
   sample_writer_(pid_, tid_, -1, parent_monitor_.config(), *this, parent_monitor_.trace(),

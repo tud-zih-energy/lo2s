@@ -74,9 +74,8 @@ public:
     void finalize_thread() override;
     void monitor() override;
 
-    const std::string& group() const override {
-        static std::string g = "lo2s::CpuSwitchMonitor";
-        return g;
+    std::string group() const override {
+        return "lo2s::CpuSwitchMonitor";
     }
 
 private:

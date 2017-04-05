@@ -53,10 +53,6 @@ void IntervalMonitor::stop()
 
 void IntervalMonitor::run()
 {
-    Log::info() << "New monitoring thread with interval of "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(interval_).count()
-                << " ms and pid " << getpid() << ".";
-
     initialize_thread();
 
     auto deadline = time::Clock::now();

@@ -23,8 +23,10 @@
 
 #include <lo2s/trace/fwd.hpp>
 
-#include <thread>
+#include <boost/format.hpp>
+
 #include <string>
+#include <thread>
 
 #include <cassert>
 
@@ -49,12 +51,9 @@ public:
     virtual void start();
     virtual void stop() = 0;
 
-    const std::string& name() const
-    {
-        return name_;
-    }
+    std::string name() const;
 
-    virtual const std::string& group() const = 0;
+    virtual std::string group() const = 0;
 
 protected:
     virtual void run() = 0;

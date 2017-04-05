@@ -1,3 +1,4 @@
+#include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 
 #include <boost/filesystem.hpp>
@@ -65,16 +66,6 @@ std::string get_datetime()
     return oss.str();
 }
 
-std::string get_hostname()
-{
-    char c_hostname[HOST_NAME_MAX + 1];
-    if (gethostname(c_hostname, HOST_NAME_MAX + 1))
-    {
-        return "<unknown hostname>";
-    }
-    return c_hostname;
-}
-
 int32_t get_task_last_cpu_id(std::istream& proc_stat)
 {
     proc_stat.seekg(0);
@@ -134,5 +125,17 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
         }
     }
     return ret;
+}
+
+void try_pin_to_cpu(int cpu, pid_t pid = 0)
+{
+    cpu_set_t cpumask;
+    CPU_ZERO(&cpumask);
+    CPU_SET(cpu, &cpumask);
+    auto ret = sched_setaffinity(pid, sizeof(cpumask), &cpumask);
+    if (ret != 0)
+    {
+        Log::error() << "sched_setaffinity failed with: " << make_system_error().what();
+    }
 }
 }

@@ -29,6 +29,8 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
+#include <nitro/env/hostname.hpp>
+
 #include <boost/format.hpp>
 
 #include <map>
@@ -62,7 +64,7 @@ std::string get_trace_name(std::string prefix = "", bool append_time = false)
 
 Trace::Trace(uint64_t sample_period, const std::string& trace_path)
 : archive_(get_trace_name(trace_path), "traces"),
-  system_tree_root_node_(0, intern(get_hostname()), intern("machine")),
+  system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, sample_period),
@@ -395,14 +397,18 @@ void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const st
     Log::debug() << "register_monitoring_tid(" << tid << "," << name << "," << group << ");";
     auto ref = region_ref();
     auto iname = intern((boost::format("lo2s::%s") % name).str());
+
+    // TODO, should be praradigm_type::measurement_system, but that's a bug in Vampir
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
-                              otf2::common::paradigm_type::measurement_system,
+                              otf2::common::paradigm_type::user,
                               otf2::common::flags_type::none, iname, 0, 0));
     if (ret.second)
     {
-        regions_group_monitoring(group).add_member(ret.first->second);
+        (void)group;
+        // Put all lo2s stuff in one single group, ignore the group within lo2s
+        regions_group_monitoring("lo2s").add_member(ret.first->second);
     }
 }
 
@@ -457,10 +463,11 @@ otf2::definition::regions_group Trace::regions_group_executable(const std::strin
 
 otf2::definition::regions_group Trace::regions_group_monitoring(const std::string& name)
 {
+    // TODO, should be praradigm_type::measurement_system, but that's a bug in Vampir
     auto ret = regions_groups_monitoring_.emplace(
         std::piecewise_construct, std::forward_as_tuple(name),
         std::forward_as_tuple(group_ref(), intern(name),
-                              otf2::common::paradigm_type::measurement_system,
+                              otf2::common::paradigm_type::user,
                               otf2::common::group_flag_type::none));
     return ret.first->second;
 }

@@ -26,11 +26,9 @@ Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval
     }
     for (const auto& cpu : Topology::instance().cpus())
     {
-        recorders_.emplace_back(std::make_unique<Recorder>(
+        recorders_.emplace_back(std::make_unique<Monitor>(
             x86_adapt_.cpu(cpu.id), sampling_interval, configuration_items, trace, mc));
     }
-
-    start();
 }
 
 void Metrics::start()

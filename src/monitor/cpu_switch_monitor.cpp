@@ -21,7 +21,9 @@
 
 #include <lo2s/monitor/cpu_switch_monitor.hpp>
 
-#include <boost/format.hpp>
+#include <lo2s/util.hpp>
+
+#include <string>
 
 extern "C" {
 #include <sched.h>
@@ -33,8 +35,8 @@ namespace monitor
 {
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: FdMonitor(trace, (boost::format("CpuSwitchMonitor (%d)") % cpu).str()),
-  switch_writer_(cpu, config, trace), exit_reader_(cpu, config, trace)
+: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), switch_writer_(cpu, config, trace),
+  exit_reader_(cpu, config, trace)
 {
     add_fd(switch_writer_.fd());
     add_fd(exit_reader_.fd());
@@ -42,10 +44,7 @@ CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::
 
 void CpuSwitchMonitor::initialize_thread()
 {
-    cpu_set_t cpumask;
-    CPU_ZERO(&cpumask);
-    CPU_SET(cpu_, &cpumask);
-    sched_setaffinity(0, sizeof(cpumask), &cpumask);
+    try_pin_to_cpu(cpu_);
 }
 
 void CpuSwitchMonitor::merge_trace()
@@ -53,7 +52,7 @@ void CpuSwitchMonitor::merge_trace()
     exit_reader_.merge_trace();
 }
 
-void CpuSwitchMonitor::monitor(int index)
+void CpuSwitchMonitor::monitor(size_t index)
 {
     if (index == 0)
     {

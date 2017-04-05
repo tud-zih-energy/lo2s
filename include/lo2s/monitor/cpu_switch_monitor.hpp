@@ -38,12 +38,11 @@ public:
     CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace);
 
     void initialize_thread() override;
-    void monitor(int index) override;
+    void monitor(size_t index) override;
 
-    const std::string& group() const override
+    std::string group() const override
     {
-        static std::string g = "lo2s::CpuSwitchMonitor";
-        return g;
+        return "lo2s::CpuSwitchMonitor";
     }
 
     void merge_trace();

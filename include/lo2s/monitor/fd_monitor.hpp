@@ -48,9 +48,12 @@ protected:
     void run() override;
     void monitor() override;
 
-    void add_fd(int fd);
+    /**
+     * @return Index of the added file descriptor, later used as parameter to monitor(size_t)
+     */
+    size_t add_fd(int fd);
 
-    virtual void monitor(int index)
+    virtual void monitor(size_t index)
     {
         (void)index;
     };
