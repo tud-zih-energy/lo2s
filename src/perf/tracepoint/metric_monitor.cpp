@@ -70,6 +70,7 @@ MetricMonitor::MetricMonitor(trace::Trace& trace, const MonitorConfig& config)
             perf_writers_.emplace_back(cpu.id, event, config, trace, mc);
             auto index = add_fd(perf_writers_.back().fd());
             assert(index == perf_writers_.size() - 1);
+            (void)index;
         }
     }
 }
