@@ -83,7 +83,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
                trace::Trace& trace)
 : plugin_name_(plugin_name), plugin_events_(plugin_events), lib_(lib_name(plugin_name)), plugin_()
 {
-    Log::info() << "Loading plugin: " << plugin_name_;
+    Log::debug() << "Loading plugin: " << plugin_name_;
 
     // open lib file and call entry point
     auto plugin_entry = lib_.load<wrapper::PluginInfo()>(entry_name(plugin_name_));
@@ -106,7 +106,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
 
     for (auto token : plugin_events_)
     {
-        Log::info() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
+        Log::debug() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
 
         auto info =
             std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
@@ -115,7 +115,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
         parse_properties(channels_, info.get(), trace);
     }
 
-    Log::info() << "Plugin '" << plugin_name_ << "' reported " << channels_.size() << " channels.";
+    auto log_info = Log::info() << "Plugin '" << plugin_name_ << "' recording channels: ";
 
     for (auto& channel : channels_)
     {
@@ -128,6 +128,8 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
 
             continue;
         }
+
+        log_info << channel.name() << ", ";
 
         channel.id() = id;
     }
@@ -172,7 +174,7 @@ void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
 
 void Plugin::start_recording()
 {
-    Log::info() << "Start recording for plugin: " << plugin_name_;
+    Log::debug() << "Start recording for plugin: " << plugin_name_;
 
     if (plugin_.synchronize != nullptr)
     {
@@ -182,7 +184,7 @@ void Plugin::start_recording()
 
 void Plugin::stop_recording()
 {
-    Log::info() << "Stop recording for plugin: " << plugin_name_;
+    Log::debug() << "Stop recording for plugin: " << plugin_name_;
 
     if (plugin_.synchronize != nullptr)
     {
