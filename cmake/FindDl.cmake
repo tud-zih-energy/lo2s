@@ -25,6 +25,7 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/UnsetIfUpdated.cmake)
 
+# Linking libdl isn't a great default because it produces warnings
 option(Dl_USE_STATIC_LIBS "Link libdl statically." OFF)
 
 UnsetIfUpdated(Dl_LIBRARIES Dl_USE_STATIC_LIBS)
