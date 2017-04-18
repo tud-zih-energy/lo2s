@@ -34,10 +34,12 @@ include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 find_package(Radare REQUIRED)
 include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
 
-# TODO this seems broken enough
-#find_package(BFD REQUIRED)
-#include_directories(SYSTEM ${BFD_INCLUDE_DIRS})
-set(BFD_LIBRARIES "-lbfd -lz -ldl -liberty")
+find_package(Binutils REQUIRED)
+include_directories(SYSTEM ${Binutils_INCLUDE_DIRS})
+
+# TODO Shouldn't this be part of libc and handlded more elegantly?
+find_package(Dl REQUIRED)
+include_directories(SYSTEM ${Dl_INCLUDE_DIRS})
 
 
 INCLUDE(CheckIncludeFiles)
@@ -92,7 +94,7 @@ set(SOURCE_FILES
 
 add_executable(lo2s ${SOURCE_FILES})
 target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES} ${Radare_LIBRARIES}
-        ${BFD_LIBRARIES} ${X86_ADAPT_LIBRARIES})
+        ${Binutils_LIBRARIES} ${Dl_LIBRARIES} ${X86_ADAPT_LIBRARIES})
 
 option(IWYU "Developer option for include what you use." OFF)
 
