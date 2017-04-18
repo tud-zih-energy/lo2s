@@ -13,12 +13,15 @@ The trace contains the following information:
 
 # Requirements for installation
 
- * Linux (>= 4.1)
+ * Linux<sup>1</sup>
  * libradare (somewhat recent)
  * OTF2 (>= 2.0)
  * libbfd
  * libiberty
  * boost (1.62, older versions might also work)
+ * CMake (>= 3.5)
+ 
+<sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
 
 # Requirements for running
 
