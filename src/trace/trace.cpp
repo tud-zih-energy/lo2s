@@ -378,6 +378,9 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
 
 void Trace::register_tid(pid_t tid, const std::string& exe)
 {
+    // Lock this to avoid conflict on regions_thread_ with register_monitoring_tid
+    std::lock_guard<std::mutex> guard(mutex_);
+
     auto ref = region_ref();
     auto iname = intern((boost::format("%s (%d)") % exe % tid).str());
     auto ret = regions_thread_.emplace(
@@ -394,6 +397,10 @@ void Trace::register_tid(pid_t tid, const std::string& exe)
 
 void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const std::string& group)
 {
+    // We must guard this here because this is called by monitoring threads itself rather than
+    // the usual call from the single monitoring process
+    std::lock_guard<std::mutex> guard(mutex_);
+
     Log::debug() << "register_monitoring_tid(" << tid << "," << name << "," << group << ");";
     auto ref = region_ref();
     auto iname = intern((boost::format("lo2s::%s") % name).str());
