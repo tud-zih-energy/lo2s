@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,7 +23,9 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
+#ifdef HAVE_RADARE
 #include <lo2s/radare.hpp>
+#endif
 #include <lo2s/util.hpp>
 
 #include <mutex>
@@ -46,7 +48,10 @@ public:
     {
     }
 
-    virtual std::string lookup_instruction(Address ip) = 0;
+    virtual std::string lookup_instruction(Address)
+    {
+        throw std::runtime_error("lookup_instruction not implemented.");
+    };
     virtual LineInfo lookup_line_info(Address ip) = 0;
     const std::string& name() const
     {
@@ -80,10 +85,18 @@ public:
     }
 };
 
+/**
+ * TODO Split this... it's ugly
+ */
 class BfdRadareBinary : public Binary
 {
 public:
-    BfdRadareBinary(const std::string& name) : Binary(name), bfd_(name), radare_(name)
+    BfdRadareBinary(const std::string& name)
+    : Binary(name), bfd_(name)
+#ifdef HAVE_RADARE
+      ,
+      radare_(name)
+#endif
     {
     }
 
@@ -92,10 +105,12 @@ public:
         return StringCache<BfdRadareBinary>::instance()[name];
     }
 
+#ifdef HAVE_RADARE
     virtual std::string lookup_instruction(Address ip) override
     {
         return radare_.instruction(ip);
     }
+#endif
 
     virtual LineInfo lookup_line_info(Address ip) override
     {
@@ -111,7 +126,9 @@ public:
 
 private:
     bfdr::Lib bfd_;
+#ifdef HAVE_RADARE
     RadareResolver radare_;
+#endif // HAVE_RADARE
 };
 
 class MemoryMap
@@ -123,6 +140,7 @@ public:
     void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name);
 
     LineInfo lookup_line_info(Address ip) const;
+
     // Will throw alot - catch it if you can
     std::string lookup_instruction(Address ip) const;
 

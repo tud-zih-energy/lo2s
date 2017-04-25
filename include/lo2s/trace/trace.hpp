@@ -24,6 +24,7 @@
 #include <lo2s/bfd_resolve.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/monitor_config.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -70,7 +71,7 @@ class Trace
 public:
     static constexpr pid_t METRIC_PID = 0;
 
-    Trace(uint64_t sample_period, const std::string& trace_path);
+    Trace(const MonitorConfig& config);
 
     ~Trace();
 
@@ -173,6 +174,7 @@ private:
 
 private:
     std::mutex mutex_;
+    MonitorConfig config_;
 
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;

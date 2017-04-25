@@ -50,5 +50,6 @@ struct MonitorConfig
 #ifdef HAVE_X86_ADAPT
     std::vector<std::string> x86_adapt_cpu_knobs;
 #endif
+    bool disassemble;
 };
 }

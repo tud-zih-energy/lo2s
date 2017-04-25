@@ -31,8 +31,8 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor(const MonitorConfig& config_)
-: config_(config_), trace_(config_.sampling_period, config_.trace_path),
+MainMonitor::MainMonitor(const MonitorConfig& config)
+: config_(config), trace_(config),
   counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
 {
     perf::time::Converter::instance();

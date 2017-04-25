@@ -62,12 +62,12 @@ std::string get_trace_name(std::string prefix = "", bool append_time = false)
     return prefix;
 }
 
-Trace::Trace(uint64_t sample_period, const std::string& trace_path)
-: archive_(get_trace_name(trace_path), "traces"),
+Trace::Trace(const MonitorConfig& config)
+: config_(config), archive_(get_trace_name(config.trace_path), "traces"),
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
-                       otf2::common::base_type::decimal, 0, sample_period),
+                       otf2::common::base_type::decimal, 0, config.sampling_period),
   // Yep, the locations group must have id below the self group.
   comm_self_group_(1, intern("self thread"),
                    otf2::definition::comm_self_group::paradigm_type::pthread,
@@ -324,19 +324,22 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            try
+            if (config_.disassemble)
             {
-                // TODO do not write properties for useless unknown stuff
-                OTF2_AttributeValue_union value;
-                auto instruction = maps.lookup_instruction(ip);
-                Log::trace() << "mapped " << ip << " to " << instruction;
-                value.stringRef = intern(instruction).ref();
-                calling_context_properties_.emplace(new_cctx, intern("instruction"),
-                                                    otf2::common::type::string, value);
-            }
-            catch (std::exception& ex)
-            {
-                Log::trace() << "could not read instruction from " << ip << ": " << ex.what();
+                try
+                {
+                    // TODO do not write properties for useless unknown stuff
+                    OTF2_AttributeValue_union value;
+                    auto instruction = maps.lookup_instruction(ip);
+                    Log::trace() << "mapped " << ip << " to " << instruction;
+                    value.stringRef = intern(instruction).ref();
+                    calling_context_properties_.emplace(new_cctx, intern("instruction"),
+                                                        otf2::common::type::string, value);
+                }
+                catch (std::exception& ex)
+                {
+                    Log::trace() << "could not read instruction from " << ip << ": " << ex.what();
+                }
             }
         }
         const auto& cctx = cctx_it->second.cctx;
@@ -409,8 +412,8 @@ void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const st
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
-                              otf2::common::paradigm_type::user,
-                              otf2::common::flags_type::none, iname, 0, 0));
+                              otf2::common::paradigm_type::user, otf2::common::flags_type::none,
+                              iname, 0, 0));
     if (ret.second)
     {
         (void)group;
@@ -473,8 +476,7 @@ otf2::definition::regions_group Trace::regions_group_monitoring(const std::strin
     // TODO, should be praradigm_type::measurement_system, but that's a bug in Vampir
     auto ret = regions_groups_monitoring_.emplace(
         std::piecewise_construct, std::forward_as_tuple(name),
-        std::forward_as_tuple(group_ref(), intern(name),
-                              otf2::common::paradigm_type::user,
+        std::forward_as_tuple(group_ref(), intern(name), otf2::common::paradigm_type::user,
                               otf2::common::group_flag_type::none));
     return ret.first->second;
 }

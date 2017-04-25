@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(lo2s)
 
+include(CMakeDependentOption)
+
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
@@ -31,9 +33,6 @@ endif()
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
-find_package(Radare REQUIRED)
-include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
-
 find_package(Binutils REQUIRED)
 include_directories(SYSTEM ${Binutils_INCLUDE_DIRS})
 
@@ -41,6 +40,22 @@ include_directories(SYSTEM ${Binutils_INCLUDE_DIRS})
 find_package(Dl REQUIRED)
 include_directories(SYSTEM ${Dl_INCLUDE_DIRS})
 
+find_package(Radare)
+
+CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
+
+if (USE_RADARE)
+    if (Radare_FOUND)
+        include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
+        set(RADARE_SOURCE_FILES src/radare.cpp)
+        add_definitions(-DHAVE_RADARE)
+    else()
+        message(SEND_ERROR "Radare not found but requested.")
+        set(RADARE_SOURCE_FILES "")
+    endif()
+else()
+    set(RADARE_SOURCE_FILES "")
+endif()
 
 INCLUDE(CheckIncludeFiles)
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -71,7 +86,6 @@ include_directories(include)
 
 set(SOURCE_FILES
         src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
-        ${X86_ADAPT_SOURCE_FILES}
         src/metric/perf_counter.cpp
 
         src/monitor/cpu_set_monitor.cpp
@@ -93,9 +107,12 @@ set(SOURCE_FILES
 
         src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
         src/platform.cpp
-        src/topology.cpp src/radare.cpp src/bfd_resolve.cpp src/pipe.cpp
+        src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
         src/mmap.cpp
         src/util.cpp
+
+        ${X86_ADAPT_SOURCE_FILES}
+        ${RADARE_SOURCE_FILES}
 )
 
 

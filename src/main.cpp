@@ -184,6 +184,8 @@ int main(int argc, const char** argv)
     bool debug;
     bool trace;
     bool all_cpus;
+    bool no_disassemble;
+    bool disassemble;
     std::uint64_t read_interval_ms;
 
     // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
@@ -219,6 +221,10 @@ int main(int argc, const char** argv)
             ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
                  "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
 #endif
+            ("disassemble", po::bool_switch(&disassemble),
+                 "enable augmentation of samples with instructions (default if supported)")
+            ("no-disassemble", po::bool_switch(&no_disassemble),
+                 "disable augmentation of samples with instructions")
             ("command", po::value(&command));
     // clang-format on
 
@@ -241,6 +247,28 @@ int main(int argc, const char** argv)
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
+
+    if (no_disassemble && disassemble)
+    {
+        lo2s::Log::warn() << "Cannot enable and disable disassemble option at the same time.";
+        config.disassemble = false;
+    }
+    else if (no_disassemble)
+    {
+        config.disassemble = false;
+    }
+    else // disassemble is default
+    {
+#ifdef HAVE_RADARE
+        config.disassemble = true;
+#else
+        if (disassemble)
+        {
+            lo2s::Log::warn() << "Disassemble requested, but not supported by this installation.";
+        }
+        config.disassemble = false;
+#endif
+    }
 
     if (vm.count("help") ||
         (config.monitor_type == lo2s::MonitorType::PROCESS && pid == -1 && command.empty()))
