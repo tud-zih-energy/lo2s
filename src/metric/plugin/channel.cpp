@@ -67,11 +67,10 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
     }
 
     auto mc = otf2::definition::make_weak_ref(metric_.metric_class());
-
     mc->add_member(trace.metric_member(name_, description_,
                                        static_cast<otf2::common::metric_mode>(mode_),
                                        convert_type(value_type_), unit_));
-
+    event_.metric_class(mc);
     event_.values().resize(1);
     event_.values()[0].metric = (*mc)[0];
 }
