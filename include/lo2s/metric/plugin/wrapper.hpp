@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -23,6 +23,8 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <otf2xx/common.hpp>
+#include <stdexcept>
 
 namespace lo2s
 {
@@ -33,10 +35,10 @@ namespace plugin
 namespace wrapper
 {
 
-template<class T>
+template <class T>
 struct MallocDelete
 {
-    void operator()(T *ptr) const
+    void operator()(T* ptr) const
     {
         free(ptr);
     }
@@ -56,12 +58,58 @@ enum class Mode
     RELATIVE_NEXT = 9,
 };
 
+inline otf2::common::metric_mode convert_mode(Mode scorep_mode)
+{
+    using mm = otf2::common::metric_mode;
+    switch (scorep_mode)
+    {
+    case Mode::ACCUMULATED_START:
+        return mm::accumulated_start;
+    case Mode::ACCUMULATED_POINT:
+        return mm::accumulated_point;
+    case Mode::ACCUMULATED_LAST:
+        return mm::accumulated_last;
+    case Mode::ACCUMULATED_NEXT:
+        return mm::accumulated_next;
+    case Mode::ABSOLUTE_POINT:
+        return mm::absolute_point;
+    case Mode::ABSOLUTE_LAST:
+        return mm::absolute_last;
+    case Mode::ABSOLUTE_NEXT:
+        return mm::absolute_next;
+    case Mode::RELATIVE_POINT:
+        return mm::relative_point;
+    case Mode::RELATIVE_LAST:
+        return mm::relative_last;
+    case Mode::RELATIVE_NEXT:
+        return mm::relative_next;
+    default:
+        // I don't want to live on this planet anymore
+        throw std::runtime_error("Unexpected Mode.");
+    }
+}
+
 enum class ValueType
 {
     INT64,
     UINT64,
     DOUBLE
 };
+
+inline otf2::common::type convert_type(wrapper::ValueType value_type)
+{
+    switch (value_type)
+    {
+    case wrapper::ValueType::INT64:
+        return otf2::common::type::int64;
+    case wrapper::ValueType::UINT64:
+        return otf2::common::type::uint64;
+    case wrapper::ValueType::DOUBLE:
+        return otf2::common::type::Double;
+    default:
+        throw std::runtime_error("Unexpected value type given");
+    }
+}
 
 enum class ValueBase
 {
@@ -95,9 +143,9 @@ enum SynchronizationMode
 struct Properties
 {
     /** Plugin name */
-    char *name;
+    char* name;
     /** Additional information about the metric */
-    char *description;
+    char* description;
     /** Metric mode: valid combination of ACCUMULATED|ABSOLUTE|RELATIVE + POINT|START|LAST|NEXT
      *  @see SCOREP_MetricMode
      * */
@@ -109,7 +157,7 @@ struct Properties
     /** Exponent to scale metric: e.g., 3 for kilo */
     std::int64_t exponent;
     /** Unit string of recorded metric */
-    char *unit;
+    char* unit;
 };
 
 struct TimeValuePair
@@ -135,17 +183,17 @@ struct PluginInfo
 
     void (*finalize)(void);
 
-    Properties *(*get_event_info)(const char *token);
+    Properties* (*get_event_info)(const char* token);
 
-    int32_t (*add_counter)(const char *metric_name);
+    int32_t (*add_counter)(const char* metric_name);
 
     uint64_t (*get_current_value)(std::int32_t id);
 
-    bool (*get_optional_value)(std::int32_t id, std::uint64_t *value);
+    bool (*get_optional_value)(std::int32_t id, std::uint64_t* value);
 
     void (*set_clock_function)(uint64_t (*clock_time)(void));
 
-    uint64_t (*get_all_values)(int32_t id, TimeValuePair **time_value_list);
+    uint64_t (*get_all_values)(int32_t id, TimeValuePair** time_value_list);
 
     void (*synchronize)(bool is_responsible, SynchronizationMode sync_mode);
 

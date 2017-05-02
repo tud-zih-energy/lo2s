@@ -34,21 +34,6 @@ namespace metric
 namespace plugin
 {
 
-static otf2::common::type convert_type(wrapper::ValueType value_type)
-{
-    switch (value_type)
-    {
-    case wrapper::ValueType::INT64:
-        return otf2::common::type::int64;
-    case wrapper::ValueType::UINT64:
-        return otf2::common::type::uint64;
-    case wrapper::ValueType::DOUBLE:
-        return otf2::common::type::Double;
-    default:
-        throw std::runtime_error("Unexpected value type given");
-    }
-}
-
 Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
                  wrapper::ValueType value_type, trace::Trace& trace)
 : id_(-1), name_(name), description_(), unit_(), mode_(mode), value_type_(value_type),
@@ -67,9 +52,8 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
     }
 
     auto mc = otf2::definition::make_weak_ref(metric_.metric_class());
-    mc->add_member(trace.metric_member(name_, description_,
-                                       static_cast<otf2::common::metric_mode>(mode_),
-                                       convert_type(value_type_), unit_));
+    mc->add_member(trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
+                                       wrapper::convert_type(value_type_), unit_));
     event_.metric_instance(metric_);
     event_.values().resize(1);
     event_.values()[0].metric = (*mc)[0];
