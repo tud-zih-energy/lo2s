@@ -89,8 +89,15 @@ Metrics::Metrics(trace::Trace& trace) : trace_(trace)
     // initialize each plugin, which is set using the SCOREP_METRIC_PLUGINS variables
     for (const auto& plugin_name_options : read_env_variables())
     {
-        metric_plugins_.emplace_back(std::make_unique<Plugin>(plugin_name_options.first,
-                                                              plugin_name_options.second, trace_));
+        try
+        {
+            metric_plugins_.emplace_back(std::make_unique<Plugin>(
+                plugin_name_options.first, plugin_name_options.second, trace_));
+        }
+        catch (std::exception& e)
+        {
+            Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what();
+        }
     }
 
     // Start recording for each plugin
