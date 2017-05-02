@@ -102,7 +102,12 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
     }
 
     plugin_.set_clock_function(&get_time_wrapper);
-    plugin_.initialize();
+    auto ret = plugin_.initialize();
+    if (ret)
+    {
+        Log::error() << "Plugin '" << plugin_name_ << "' failed to initialize: " << ret;
+        throw std::runtime_error("Plugin initialization failed.");
+    }
 
     for (auto token : plugin_events_)
     {
