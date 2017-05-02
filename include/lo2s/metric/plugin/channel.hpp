@@ -61,6 +61,7 @@ private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_;
     std::vector<otf2::event::metric::value_container> values_;
+    otf2::event::metric event_;
 };
 }
 }

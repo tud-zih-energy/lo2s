@@ -74,6 +74,7 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
                                        convert_type(value_type_), unit_));
 
     values_[0].metric = (*mc)[0];
+    event_.values() = values_;
 }
 
 const std::string& Channel::name() const
@@ -88,10 +89,9 @@ int& Channel::id()
 
 void Channel::write_value(wrapper::TimeValuePair tv)
 {
-    values_[0].value.unsigned_int = tv.value;
-
-    writer_.write(otf2::event::metric(
-        otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)), metric_, values_));
+    event_.values()[0].value.unsigned_int = tv.value;
+    event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
+    writer_.write(event_);
 }
 }
 }
