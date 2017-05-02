@@ -43,23 +43,15 @@ EventFormat::EventFormat(const std::string& name) : name_(name)
     ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
     ifs_format.exceptions(std::ios::failbit | std::ios::badbit);
 
-    try
-    {
-        ifs_id.open(path_event / "id");
-        ifs_id >> id_;
+    ifs_id.open(path_event / "id");
+    ifs_id >> id_;
 
-        ifs_format.open(path_event / "format");
-        std::string line;
-        ifs_format.exceptions(std::ios::badbit);
-        while (getline(ifs_format, line))
-        {
-            parse_format_line(line);
-        }
-    }
-    catch (...)
+    ifs_format.open(path_event / "format");
+    std::string line;
+    ifs_format.exceptions(std::ios::badbit);
+    while (getline(ifs_format, line))
     {
-        Log::error() << "Couldn't read information from " << path_event;
-        throw;
+        parse_format_line(line);
     }
 }
 

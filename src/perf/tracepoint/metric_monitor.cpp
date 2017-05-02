@@ -48,29 +48,35 @@ MetricMonitor::MetricMonitor(trace::Trace& trace, const MonitorConfig& config)
 {
     perf_writers_.reserve(Topology::instance().cpus().size() * config.tracepoint_events.size());
     // Note any of those setups might fail.
-    // TODO: Currently is's all or nothing here, allow partial failure
     for (const auto& event_name : config.tracepoint_events)
     {
-        EventFormat event(event_name);
-        auto mc = trace.metric_class();
-
-        for (const auto& field : event.fields())
+        try
         {
-            if (field.is_integer())
+            EventFormat event(event_name);
+            auto mc = trace.metric_class();
+
+            for (const auto& field : event.fields())
             {
-                mc.add_member(trace.metric_member(event_name + "::" + field.name(), "?",
-                                                   otf2::common::metric_mode::absolute_next,
-                                                   otf2::common::type::int64, "#"));
+                if (field.is_integer())
+                {
+                    mc.add_member(trace.metric_member(event_name + "::" + field.name(), "?",
+                                                      otf2::common::metric_mode::absolute_next,
+                                                      otf2::common::type::int64, "#"));
+                }
+            }
+
+            for (const auto& cpu : Topology::instance().cpus())
+            {
+                Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
+                perf_writers_.emplace_back(cpu.id, event, config, trace, mc);
+                auto index = add_fd(perf_writers_.back().fd());
+                assert(index == perf_writers_.size() - 1);
+                (void)index;
             }
         }
-
-        for (const auto& cpu : Topology::instance().cpus())
+        catch (...)
         {
-            Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-            perf_writers_.emplace_back(cpu.id, event, config, trace, mc);
-            auto index = add_fd(perf_writers_.back().fd());
-            assert(index == perf_writers_.size() - 1);
-            (void)index;
+            Log::error() << "Couldn't read information for tracepoint event " << event_name;
         }
     }
 }
