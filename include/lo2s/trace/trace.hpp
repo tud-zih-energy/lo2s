@@ -163,7 +163,7 @@ private:
 
     otf2::definition::region::reference_type region_ref() const
     {
-        return location_groups_process_.size() + regions_thread_.size();
+        return regions_line_info_.size() + regions_thread_.size();
     }
 
     otf2::definition::regions_group::reference_type group_ref() const
