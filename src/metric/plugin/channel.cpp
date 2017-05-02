@@ -54,8 +54,7 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
 : id_(-1), name_(name), description_(), unit_(), mode_(mode), value_type_(value_type),
   writer_(trace.metric_writer(name_)),
   metric_(trace.metric_instance(trace.metric_class(), writer_.location(),
-                                writer_.location().location_group().parent())),
-  values_(1)
+                                writer_.location().location_group().parent()))
 {
     if (description != nullptr)
     {
@@ -73,8 +72,8 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
                                        static_cast<otf2::common::metric_mode>(mode_),
                                        convert_type(value_type_), unit_));
 
-    values_[0].metric = (*mc)[0];
-    event_.values() = values_;
+    event_.values().resize(1);
+    event_.values()[0].metric = (*mc)[0];
 }
 
 const std::string& Channel::name() const
