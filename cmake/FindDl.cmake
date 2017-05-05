@@ -36,10 +36,10 @@ find_path(Dl_INCLUDE_DIRS dlfcn.h
 
 if(Dl_USE_STATIC_LIBS)
     find_library(Dl_LIBRARIES NAMES libdl.a
-            PATHS ENV LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH)
 else()
     find_library(Dl_LIBRARIES NAMES libdl.so
-            PATHS ENV LIBRARY_PATH LD_LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH LD_LIBRARY_PATH)
 endif()
 
 include (FindPackageHandleStandardArgs)
