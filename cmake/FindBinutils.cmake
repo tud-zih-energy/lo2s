@@ -36,19 +36,20 @@ find_path(Binutils_INCLUDE_DIRS bfd.h
 set(Binutils_LIBRARIES "")
 if(Binutils_USE_STATIC_LIBS)
     find_library(Bfd_LIBRARIES NAMES libbfd.a
-            PATHS ENV LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH)
+    message("${Bfd_LIBRARIES}")
     find_library(Z_LIBRARIES NAMES libz.a
-            PATHS ENV LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH)
 else()
     find_library(Bfd_LIBRARIES NAMES libbfd.so
-            PATHS ENV LIBRARY_PATH LD_LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
     find_library(Z_LIBRARIES NAMES libz.so
-            PATHS ENV LIBRARY_PATH LD_LIBRARY_PATH)
+            HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
 endif()
 
 # libiberty is always linked statically
 find_library(Libiberty_LIBRARIES NAMES libiberty.a
-        PATHS ENV LIBRARY_PATH)
+        HINTS ENV LIBRARY_PATH)
 
 list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 # BFD requires libz...
