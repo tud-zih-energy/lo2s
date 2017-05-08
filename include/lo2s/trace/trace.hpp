@@ -134,11 +134,6 @@ public:
         return interrupt_generator_;
     }
 
-    const otf2::definition::comm self_comm() const
-    {
-        return self_comm_;
-    }
-
     const otf2::definition::system_tree_node& system_tree_cpu_node(int cpuid) const
     {
         return system_tree_cpu_nodes_.at(cpuid);
@@ -146,6 +141,7 @@ public:
 
     otf2::definition::regions_group regions_group_executable(const std::string& name);
     otf2::definition::regions_group regions_group_monitoring(const std::string& name);
+    otf2::definition::comm process_comm(pid_t pid);
 
 private:
     std::map<std::string, otf2::definition::regions_group> regions_groups_sampling_dso();
@@ -168,8 +164,14 @@ private:
 
     otf2::definition::regions_group::reference_type group_ref() const
     {
-        // + 2 for locations_group_ and self_group_
-        return 2 + regions_groups_executable_.size() + regions_groups_monitoring_.size();
+        // + 1 for locations_group_
+        return 1 + regions_groups_executable_.size() + regions_groups_monitoring_.size() +
+               process_comm_groups_.size();
+    }
+
+    otf2::definition::comm::reference_type comm_ref() const
+    {
+        return process_comms_.size();
     }
 
 private:
@@ -202,6 +204,9 @@ private:
 
     std::map<std::string, otf2::definition::regions_group> regions_groups_executable_;
     std::map<std::string, otf2::definition::regions_group> regions_groups_monitoring_;
+    std::map<pid_t, otf2::definition::comm_group> process_comm_groups_;
+
+    std::map<pid_t, otf2::definition::comm> process_comms_;
 
     IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
@@ -210,9 +215,6 @@ private:
     otf2::definition::container<otf2::definition::metric_member> metric_members_;
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::container<otf2::definition::metric_instance> metric_instances_;
-
-    otf2::definition::comm_self_group comm_self_group_;
-    otf2::definition::comm self_comm_;
 };
 }
 }

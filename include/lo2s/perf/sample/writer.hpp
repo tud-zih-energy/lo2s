@@ -92,6 +92,7 @@ private:
     const time::Converter time_converter_;
 
     bool first_event_ = true;
+    otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 };
 }

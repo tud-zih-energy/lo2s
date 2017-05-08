@@ -67,13 +67,9 @@ Trace::Trace(const MonitorConfig& config)
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
-                       otf2::common::base_type::decimal, 0, config.sampling_period),
-  // Yep, the locations group must have id below the self group.
-  comm_self_group_(1, intern("self thread"),
-                   otf2::definition::comm_self_group::paradigm_type::pthread,
-                   otf2::definition::comm_self_group::group_flag_type::none),
-  self_comm_(0u, intern("self thread"), comm_self_group_)
+                       otf2::common::base_type::decimal, 0, config.sampling_period)
 {
+    // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 
     int otf2_id = 1;
@@ -170,12 +166,13 @@ Trace::~Trace()
     archive_ << regions_thread_;
 
     archive_ << comm_locations_group;
-    archive_ << comm_self_group_;
+    archive_ << process_comm_groups_;
     archive_ << sampling_function_groups_;
     archive_ << regions_groups_executable_;
     archive_ << regions_groups_monitoring_;
 
-    archive_ << self_comm_;
+    archive_ << process_comms_;
+
     archive_ << interrupt_generator();
     archive_ << calling_contexts_;
     archive_ << calling_context_properties_;
@@ -206,14 +203,30 @@ std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sam
 
 void Trace::process(pid_t pid, const std::string& name)
 {
-    auto r = location_groups_process_.emplace(
+    auto iname = intern(name);
+    auto r_lg = location_groups_process_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
-        std::forward_as_tuple(location_group_ref(), intern(name),
+        std::forward_as_tuple(location_group_ref(), iname,
                               otf2::definition::location_group::location_group_type::process,
                               system_tree_root_node_));
-    if (r.second == false)
+    if (r_lg.second)
     {
-        r.first->second.name(intern(name));
+        auto r_cg = process_comm_groups_.emplace(
+            std::piecewise_construct, std::forward_as_tuple(pid),
+            std::forward_as_tuple(group_ref(), iname, otf2::common::paradigm_type::pthread,
+                                  otf2::common::group_flag_type::none));
+        assert(r_cg.second);
+        const auto& group = r_cg.first->second;
+        auto r_c = process_comms_.emplace(
+            std::piecewise_construct, std::forward_as_tuple(pid),
+            std::forward_as_tuple(comm_ref(), iname, group, otf2::definition::comm::undefined()));
+        assert(r_c.second);
+        (void)(r_c.second);
+    }
+    else
+    {
+        // TODO also fix name of comm groups and comms`
+        r_lg.first->second.name(intern(name));
     }
 }
 
@@ -223,6 +236,7 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
     auto location =
         locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(pid),
                            otf2::definition::location::location_type::cpu_thread);
+    process_comm_groups_.at(pid).add_member(location);
     return archive()(location);
 }
 
@@ -305,7 +319,6 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
                       otf2::definition::calling_context parent, const MemoryMap& maps)
 {
-
     for (auto& elem : new_children)
     {
         auto& ip = elem.first;
@@ -479,6 +492,11 @@ otf2::definition::regions_group Trace::regions_group_monitoring(const std::strin
         std::forward_as_tuple(group_ref(), intern(name), otf2::common::paradigm_type::user,
                               otf2::common::group_flag_type::none));
     return ret.first->second;
+}
+
+otf2::definition::comm Trace::process_comm(pid_t pid)
+{
+    return process_comms_.at(pid);
 }
 
 otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)

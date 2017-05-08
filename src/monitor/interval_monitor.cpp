@@ -71,7 +71,6 @@ void IntervalMonitor::run()
     } while (!control_condition_.wait_until(lock, deadline, [this]() { return stop_requested_; }));
 
     monitor();
-    finalize_thread();
 
     Log::debug() << "Monitoring thread finished";
 }

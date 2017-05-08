@@ -30,6 +30,7 @@
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/monitor_config.hpp>
 #include <lo2s/process_info.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/otf2.hpp>
@@ -52,7 +53,8 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config,
                monitor::ThreadMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
 : Reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(Monitor),
-  trace_(trace), otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance())
+  trace_(trace), otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
+  first_time_point_(lo2s::time::now())
 {
 
     struct perf_event_attr attr;
@@ -137,15 +139,12 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     otf2::event::calling_context_sample ccs(tp, cctx, 2, trace_.interrupt_generator());
     otf2_writer_ << ccs;
     */
+
     if (first_event_)
     {
+        first_time_point_ = std::min(first_time_point_, tp);
+        otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_), -1);
         first_event_ = false;
-        otf2_writer_ << otf2::event::thread_begin(tp - otf2::chrono::time_point::duration(1),
-                                                  trace_.self_comm(), -1);
-        // TODO: figure out what we actually need to write here to be a correct OTF2 trace...
-        // otf2_writer_ << otf2::event::thread_team_begin(tp -
-        // otf2::chrono::time_point::duration(1),
-        //                                          trace_.self_comm());
     }
 
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
@@ -172,9 +171,9 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 
 void Writer::end()
 {
-    // get_time() can sometimes can be in the past :-(
-    otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.self_comm(), -1);
-    // TODO, or thread_team_end?
+    // time::now() can sometimes can be in the past :-(
+    last_time_point_ = std::max(last_time_point_, lo2s::time::now());
+    otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
 }
 }
 }
