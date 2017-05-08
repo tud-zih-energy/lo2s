@@ -36,6 +36,13 @@ MainMonitor::MainMonitor(const MonitorConfig& config)
   counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
 {
     perf::time::Converter::instance();
+
+    // notify the trace, that we are ready to start. That means, get_time() of this call will be
+    // the first possible timestamp in the trace
+    trace_.begin_record();
+
+    // TODO we can still have events earlier due to different timers.
+
     // try to initialize raw counter metrics
     if (!config_.tracepoint_events.empty())
     {
@@ -67,9 +74,6 @@ MainMonitor::MainMonitor(const MonitorConfig& config)
     }
 #endif
 
-    // notify the trace, that we are ready to start. That means, get_time() of this call will be
-    // the first possible timestamp in the trace
-    trace_.begin_record();
 }
 
 MainMonitor::~MainMonitor()
