@@ -94,6 +94,7 @@ set(SOURCE_FILES
         src/monitor/interval_monitor.cpp
         src/monitor/main_monitor.cpp
         src/monitor/process_monitor.cpp
+        src/monitor/process_monitor_main.cpp
         src/monitor/thread_monitor.cpp
         src/monitor/threaded_monitor.cpp
 
@@ -105,7 +106,7 @@ set(SOURCE_FILES
 
         src/trace/counters.cpp src/trace/trace.cpp
 
-        src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
+        src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
         src/platform.cpp
         src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
         src/mmap.cpp

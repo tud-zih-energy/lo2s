@@ -21,9 +21,9 @@
 
 #include <lo2s/monitor/thread_monitor.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/process_monitor.hpp>
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
@@ -42,10 +42,9 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_,
                              ProcessInfo& info, bool enable_on_exec)
-: IntervalMonitor(parent_monitor_.trace(), std::to_string(tid),
-                  parent_monitor_.config().read_interval),
-  pid_(pid), tid_(tid), info_(info),
-  sample_writer_(pid_, tid_, -1, parent_monitor_.config(), *this, parent_monitor_.trace(),
+: IntervalMonitor(parent_monitor_.trace(), std::to_string(tid), config().read_interval), pid_(pid),
+  tid_(tid), info_(info),
+  sample_writer_(pid_, tid_, -1, *this, parent_monitor_.trace(),
                  parent_monitor_.trace().sample_writer(pid, tid), enable_on_exec),
   counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
             sample_writer_.location())

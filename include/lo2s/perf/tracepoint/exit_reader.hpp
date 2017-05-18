@@ -24,7 +24,6 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/reader.hpp>
 
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <unordered_map>
@@ -42,7 +41,7 @@ namespace tracepoint
 class ExitReader : public Reader<ExitReader>
 {
 public:
-    ExitReader(int cpu, const MonitorConfig& config, trace::Trace& trace);
+    ExitReader(int cpu, trace::Trace& trace);
     ~ExitReader();
 
 public:

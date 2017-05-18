@@ -22,9 +22,9 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
-#include <lo2s/monitor_config.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -71,16 +71,13 @@ class Trace
 public:
     static constexpr pid_t METRIC_PID = 0;
 
-    Trace(const MonitorConfig& config);
-
+    Trace();
     ~Trace();
 
     void begin_record();
-
     void end_record();
 
     otf2::chrono::time_point record_from() const;
-
     otf2::chrono::time_point record_to() const;
 
     otf2::writer::archive& archive()
@@ -91,11 +88,8 @@ public:
     void process(pid_t pid, const std::string& name = "");
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
-
     otf2::writer::local& cpu_writer(int cpuid);
-
     otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
-
     otf2::writer::local& metric_writer(const std::string& name);
 
     otf2::definition::metric_member metric_member(const std::string& name,
@@ -176,7 +170,6 @@ private:
 
 private:
     std::mutex mutex_;
-    MonitorConfig config_;
 
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;

@@ -25,7 +25,6 @@
 #include <lo2s/perf/tracepoint/writer.hpp>
 
 #include <lo2s/monitor/fd_monitor.hpp>
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/pipe.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -47,7 +46,7 @@ namespace tracepoint
 class MetricMonitor : public monitor::FdMonitor
 {
 public:
-    MetricMonitor(trace::Trace& trace, const MonitorConfig& config);
+    MetricMonitor(trace::Trace& trace);
 
 private:
     void monitor(size_t index) override;

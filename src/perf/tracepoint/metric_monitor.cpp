@@ -24,6 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/topology.hpp>
@@ -43,12 +44,11 @@ namespace perf
 namespace tracepoint
 {
 
-MetricMonitor::MetricMonitor(trace::Trace& trace, const MonitorConfig& config)
-: monitor::FdMonitor(trace, "")
+MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::FdMonitor(trace, "")
 {
-    perf_writers_.reserve(Topology::instance().cpus().size() * config.tracepoint_events.size());
+    perf_writers_.reserve(Topology::instance().cpus().size() * config().tracepoint_events.size());
     // Note any of those setups might fail.
-    for (const auto& event_name : config.tracepoint_events)
+    for (const auto& event_name : config().tracepoint_events)
     {
         try
         {
@@ -68,7 +68,7 @@ MetricMonitor::MetricMonitor(trace::Trace& trace, const MonitorConfig& config)
             for (const auto& cpu : Topology::instance().cpus())
             {
                 Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-                perf_writers_.emplace_back(cpu.id, event, config, trace, mc);
+                perf_writers_.emplace_back(cpu.id, event, trace, mc);
                 auto index = add_fd(perf_writers_.back().fd());
                 assert(index == perf_writers_.size() - 1);
                 (void)index;

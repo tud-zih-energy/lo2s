@@ -25,7 +25,6 @@
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/address.hpp>
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
@@ -54,7 +53,7 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config, monitor::ThreadMonitor& monitor,
+    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor,
            trace::Trace& trace, otf2::writer::local& otf2_writer, bool enable_on_exec);
     ~Writer();
 
@@ -81,7 +80,6 @@ private:
 
     pid_t pid_;
     pid_t tid_;
-    MonitorConfig config_;
     monitor::ThreadMonitor& monitor_;
 
     trace::Trace& trace_;

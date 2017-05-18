@@ -23,7 +23,6 @@
 
 #include <lo2s/monitor/fd_monitor.hpp>
 
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/perf/tracepoint/exit_reader.hpp>
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #include <lo2s/trace/fwd.hpp>
@@ -35,7 +34,7 @@ namespace monitor
 class CpuSwitchMonitor : public FdMonitor
 {
 public:
-    CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace);
+    CpuSwitchMonitor(int cpu, trace::Trace& trace);
 
     void initialize_thread() override;
     void monitor(size_t index) override;

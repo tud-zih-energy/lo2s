@@ -25,6 +25,7 @@
 
 #include <lo2s/perf/time/converter.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/trace/trace.hpp>
 
@@ -41,8 +42,8 @@ static const EventFormat& get_sched_switch_event()
     return evt;
 }
 
-SwitchWriter::SwitchWriter(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: Reader(cpu, get_sched_switch_event().id(), config.mmap_pages),
+SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
+: Reader(cpu, get_sched_switch_event().id(), config().mmap_pages),
   otf2_writer_(trace.cpu_writer(cpu)), trace_(trace), time_converter_(time::Converter::instance()),
   prev_pid_field_(get_sched_switch_event().field("prev_pid")),
   next_pid_field_(get_sched_switch_event().field("next_pid")),

@@ -93,9 +93,8 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-ProcessMonitor::ProcessMonitor(const MonitorConfig& config_, pid_t child, const std::string& name,
-                               bool spawn)
-: MainMonitor(config_), first_child_(child), threads_(*this),
+ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
+: MainMonitor(), first_child_(child), threads_(*this),
   default_signal_handler(signal(SIGINT, sig_handler))
 {
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
@@ -210,8 +209,9 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
             Log::debug() << "Set ptrace options for process: " << child;
 
             // we are only interested in fork/join events
-            check_ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                                               PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT);
+            check_ptrace_setoptions(child,
+                                    PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE |
+                                        PTRACE_O_TRACEEXIT);
             // FIXME TODO continue this new thread/process ONLY if already registered in the
             // thread map.
             break;

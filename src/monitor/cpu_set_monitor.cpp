@@ -1,7 +1,6 @@
 #include <lo2s/monitor/cpu_set_monitor.hpp>
 
 #include <lo2s/error.hpp>
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
@@ -11,7 +10,7 @@ namespace lo2s
 {
 namespace monitor
 {
-CpuSetMonitor::CpuSetMonitor(const MonitorConfig& config) : MainMonitor(config)
+CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 {
     trace_.register_monitoring_tid(gettid(), "CpuSetMonitor", "CpuSetMonitor");
 
@@ -19,7 +18,7 @@ CpuSetMonitor::CpuSetMonitor(const MonitorConfig& config) : MainMonitor(config)
     {
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
         auto ret = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                     std::forward_as_tuple(cpu.id, config, trace_));
+                                     std::forward_as_tuple(cpu.id, trace_));
         assert(ret.second);
         (void)ret;
     }

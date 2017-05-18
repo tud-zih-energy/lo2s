@@ -21,6 +21,7 @@
 
 #include <lo2s/monitor/main_monitor.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/trace/counters.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -31,9 +32,8 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor(const MonitorConfig& config)
-: config_(config), trace_(config),
-  counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
+MainMonitor::MainMonitor()
+: trace_(), counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
 {
     perf::time::Converter::instance();
 
@@ -44,12 +44,11 @@ MainMonitor::MainMonitor(const MonitorConfig& config)
     // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
-    if (!config_.tracepoint_events.empty())
+    if (!config().tracepoint_events.empty())
     {
         try
         {
-            tracepoint_metrics_ =
-                std::make_unique<perf::tracepoint::MetricMonitor>(trace_, config_);
+            tracepoint_metrics_ = std::make_unique<perf::tracepoint::MetricMonitor>(trace_);
             tracepoint_metrics_->start();
         }
         catch (std::exception& e)
@@ -59,12 +58,12 @@ MainMonitor::MainMonitor(const MonitorConfig& config)
     }
 
 #ifdef HAVE_X86_ADAPT
-    if (!config_.x86_adapt_cpu_knobs.empty())
+    if (!config().x86_adapt_cpu_knobs.empty())
     {
         try
         {
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config_.read_interval, config_.x86_adapt_cpu_knobs);
+                trace_, config().read_interval, config().x86_adapt_cpu_knobs);
             x86_adapt_metrics_->start();
         }
         catch (std::exception& e)

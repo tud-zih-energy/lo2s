@@ -21,37 +21,51 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
-
-#include <lo2s/thread_map.hpp>
-
+#include <chrono>
 #include <string>
+#include <vector>
+
+#include <cstdint>
 
 extern "C" {
-#include <signal.h>
+#include <unistd.h>
 }
+
+using namespace std::chrono_literals;
 
 namespace lo2s
 {
-namespace monitor
+enum class MonitorType
 {
-class ProcessMonitor : public MainMonitor
-{
-public:
-    ProcessMonitor(pid_t child, const std::string& name, bool spawn);
-
-    ~ProcessMonitor();
-
-    void run() override;
-
-private:
-    void handle_ptrace_event(pid_t child, int event);
-
-    void handle_signal(pid_t child, int status);
-
-    const pid_t first_child_;
-    ThreadMap threads_;
-    sighandler_t default_signal_handler;
+    PROCESS,
+    CPU_SET
 };
-}
+
+struct Config
+{
+    // General
+    MonitorType monitor_type;
+    pid_t pid;
+    std::vector<std::string> command;
+    // Optional features
+    std::vector<std::string> tracepoint_events;
+#ifdef HAVE_X86_ADAPT
+    std::vector<std::string> x86_adapt_cpu_knobs;
+#endif
+    // OTF2
+    std::string trace_path;
+    // perf
+    std::size_t mmap_pages;
+    bool exclude_kernel;
+    // Instruction sampling
+    std::uint64_t sampling_period;
+    bool enable_cct;
+    bool suppress_ip;
+    bool disassemble;
+    // Interval monitors
+    std::chrono::nanoseconds read_interval;
+};
+
+const Config& config();
+void parse_program_options(int argc, const char** argv);
 }

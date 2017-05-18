@@ -21,9 +21,11 @@
 
 #pragma once
 
+#include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/util.hpp>
+
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_reader.hpp>
 #include <lo2s/util.hpp>
 
 #include <stdexcept>
@@ -46,19 +48,6 @@ namespace lo2s
 {
 namespace perf
 {
-
-static inline int perf_event_paranoid()
-{
-    try
-    {
-        return get_sysctl<int>("kernel", "perf_event_paranoid");
-    }
-    catch (...)
-    {
-        Log::warn() << "Failed to access kernel.perf_event_paranoid. Assuming 2.";
-        return 2;
-    }
-}
 
 namespace sample
 {
@@ -115,8 +104,11 @@ protected:
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {
                 perf_attr.exclude_kernel = 1;
-                Log::warn()
-                    << "kernel.perf_event_paranoid>1, retrying with excluding kernel samples.";
+                Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
+                Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
+                Log::warn() << " * run lo2s as root";
+                Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
+                               "the first place,";
                 continue;
             }
 

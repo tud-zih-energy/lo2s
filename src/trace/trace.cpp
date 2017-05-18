@@ -23,6 +23,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/time/time.hpp>
@@ -62,12 +63,12 @@ std::string get_trace_name(std::string prefix = "", bool append_time = false)
     return prefix;
 }
 
-Trace::Trace(const MonitorConfig& config)
-: config_(config), archive_(get_trace_name(config.trace_path), "traces"),
+Trace::Trace()
+: archive_(get_trace_name(config().trace_path), "traces"),
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
-                       otf2::common::base_type::decimal, 0, config.sampling_period)
+                       otf2::common::base_type::decimal, 0, config().sampling_period)
 {
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
@@ -337,7 +338,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            if (config_.disassemble)
+            if (config().disassemble)
             {
                 try
                 {

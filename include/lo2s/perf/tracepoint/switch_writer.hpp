@@ -27,7 +27,6 @@
 
 #include <lo2s/perf/time/converter.hpp>
 
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <otf2xx/definition/region.hpp>
@@ -47,8 +46,7 @@ namespace tracepoint
 class SwitchWriter : public Reader<SwitchWriter>
 {
 public:
-    SwitchWriter(int cpu, const MonitorConfig& config,
-                 trace::Trace& trace);
+    SwitchWriter(int cpu, trace::Trace& trace);
     ~SwitchWriter();
 
 public:

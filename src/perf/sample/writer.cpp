@@ -26,9 +26,9 @@
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/address.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/thread_monitor.hpp>
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -49,11 +49,10 @@ namespace perf
 namespace sample
 {
 
-Writer::Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config,
-               monitor::ThreadMonitor& Monitor, trace::Trace& trace,
+Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
-: Reader(config.enable_cct), pid_(pid), tid_(tid), config_(config), monitor_(Monitor),
-  trace_(trace), otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
+: Reader(config().enable_cct), pid_(pid), tid_(tid), monitor_(Monitor), trace_(trace),
+  otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
   first_time_point_(lo2s::time::now())
 {
 
@@ -62,12 +61,13 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, const MonitorConfig& config,
     attr.size = sizeof(struct perf_event_attr);
     attr.type = PERF_TYPE_HARDWARE;
     attr.config = PERF_COUNT_HW_INSTRUCTIONS;
-    attr.sample_period = config_.sampling_period;
+    attr.sample_period = config().sampling_period;
+    attr.exclude_kernel = config().exclude_kernel;
 
     // map events to buffer (don't need the fancy mmap2)
     attr.mmap = 1;
 
-    init(attr, tid, cpu, enable_on_exec, config.mmap_pages);
+    init(attr, tid, cpu, enable_on_exec, config().mmap_pages);
 }
 
 Writer::~Writer()

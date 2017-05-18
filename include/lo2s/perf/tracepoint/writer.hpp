@@ -26,7 +26,6 @@
 
 #include <lo2s/perf/time/converter.hpp>
 
-#include <lo2s/monitor_config.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/definition/metric_instance.hpp>
@@ -45,7 +44,7 @@ namespace tracepoint
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(int cpu, const EventFormat& event, const MonitorConfig& config, trace::Trace& trace,
+    Writer(int cpu, const EventFormat& event, trace::Trace& trace,
            const otf2::definition::metric_class& metric_class);
 
     Writer(const Writer& other) = delete;

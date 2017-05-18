@@ -34,9 +34,9 @@ namespace lo2s
 namespace monitor
 {
 
-CpuSwitchMonitor::CpuSwitchMonitor(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), switch_writer_(cpu, config, trace),
-  exit_reader_(cpu, config, trace)
+CpuSwitchMonitor::CpuSwitchMonitor(int cpu, trace::Trace& trace)
+: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), switch_writer_(cpu, trace),
+  exit_reader_(cpu, trace)
 {
     add_fd(switch_writer_.fd());
     add_fd(exit_reader_.fd());

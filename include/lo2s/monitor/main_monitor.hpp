@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <lo2s/monitor_config.hpp>
-
 #include <lo2s/metric/plugin/metrics.hpp>
 #ifdef HAVE_X86_ADAPT
 #include <lo2s/metric/x86_adapt/metrics.hpp>
@@ -48,7 +46,7 @@ namespace monitor
 class MainMonitor
 {
 public:
-    MainMonitor(const MonitorConfig& config_);
+    MainMonitor();
 
     virtual ~MainMonitor();
 
@@ -64,14 +62,7 @@ public:
         return counters_metric_class_;
     }
 
-    const MonitorConfig& config() const
-    {
-        return config_;
-    }
-
 protected:
-    MonitorConfig config_;
-
     trace::Trace trace_;
 
     otf2::definition::metric_class counters_metric_class_;

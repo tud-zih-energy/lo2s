@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,35 +21,10 @@
 
 #pragma once
 
-#include <chrono>
-#include <string>
-#include <vector>
-
-#include <cstdint>
-
-using namespace std::chrono_literals;
-
 namespace lo2s
 {
-enum class MonitorType
+namespace monitor
 {
-    PROCESS,
-    CPU_SET
-};
-
-struct MonitorConfig
-{
-    MonitorType monitor_type;
-    std::string trace_path;
-    std::uint64_t sampling_period;
-    std::size_t mmap_pages;
-    bool enable_cct;
-    bool suppress_ip;
-    std::chrono::nanoseconds read_interval;
-    std::vector<std::string> tracepoint_events;
-#ifdef HAVE_X86_ADAPT
-    std::vector<std::string> x86_adapt_cpu_knobs;
-#endif
-    bool disassemble;
-};
+void process_monitor_main();
+}
 }

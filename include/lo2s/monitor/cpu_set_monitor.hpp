@@ -25,8 +25,6 @@
 
 #include <lo2s/monitor/cpu_switch_monitor.hpp>
 
-#include <lo2s/monitor_config.hpp>
-
 #include <vector>
 
 namespace lo2s
@@ -41,7 +39,7 @@ namespace monitor
 class CpuSetMonitor : public MainMonitor
 {
 public:
-    CpuSetMonitor(const MonitorConfig& config);
+    CpuSetMonitor();
 
     void run() override;
 

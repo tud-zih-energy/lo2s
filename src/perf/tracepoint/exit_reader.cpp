@@ -21,6 +21,7 @@
 
 #include <lo2s/perf/tracepoint/exit_reader.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -36,8 +37,8 @@ static const EventFormat& get_sched_process_exit_event()
     return evt;
 }
 
-ExitReader::ExitReader(int cpu, const MonitorConfig& config, trace::Trace& trace)
-: Reader(cpu, get_sched_process_exit_event().id(), config.mmap_pages), trace_(trace),
+ExitReader::ExitReader(int cpu, trace::Trace& trace)
+: Reader(cpu, get_sched_process_exit_event().id(), config().mmap_pages), trace_(trace),
   pid_field_(get_sched_process_exit_event().field("pid")),
   comm_field_(get_sched_process_exit_event().field("comm"))
 {
