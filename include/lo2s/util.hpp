@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <boost/filesystem.hpp>
+
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -67,6 +69,19 @@ std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
 
 std::string get_datetime();
+
+template <typename T>
+T get_sysctl(const std::string& group, const std::string& name)
+{
+    auto sysctl_path = boost::filesystem::path("/proc/sys") / group / name;
+    boost::filesystem::ifstream sysctl_stream;
+    sysctl_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    sysctl_stream.open(sysctl_path);
+
+    T result;
+    sysctl_stream >> result;
+    return result;
+}
 
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 

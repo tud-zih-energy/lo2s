@@ -24,6 +24,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/util.hpp>
 
 #include <stdexcept>
 
@@ -45,6 +46,20 @@ namespace lo2s
 {
 namespace perf
 {
+
+static inline int perf_event_paranoid()
+{
+    try
+    {
+        return get_sysctl<int>("kernel", "perf_event_paranoid");
+    }
+    catch (...)
+    {
+        Log::warn() << "Failed to access kernel.perf_event_paranoid. Assuming 2.";
+        return 2;
+    }
+}
+
 namespace sample
 {
 template <class T>
@@ -68,7 +83,8 @@ protected:
     }
 
     using EventReader<T>::init_mmap;
-    void init(struct perf_event_attr& perf_attr, pid_t tid, int cpu, bool enable_on_exec, size_t mmap_pages)
+    void init(struct perf_event_attr& perf_attr, pid_t tid, int cpu, bool enable_on_exec,
+              size_t mmap_pages)
     {
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
@@ -95,6 +111,14 @@ protected:
         do
         {
             fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, cpu, -1, 0);
+
+            if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
+            {
+                perf_attr.exclude_kernel = 1;
+                Log::warn()
+                    << "kernel.perf_event_paranoid>1, retrying with excluding kernel samples.";
+                continue;
+            }
 
             /* reduce exactness of IP can help if the kernel does not support really exact events */
             if (perf_attr.precise_ip == 0)
