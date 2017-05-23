@@ -164,7 +164,7 @@ void parse_program_options(int argc, const char** argv)
     }
     else if (debug)
     {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::debug);src/options.cpp
+        lo2s::logging::set_min_severity_level(nitro::log::severity_level::debug);
         lo2s::Log::debug() << "Enabling log-level 'debug'";
     }
     else if (quiet)

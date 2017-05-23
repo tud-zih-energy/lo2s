@@ -31,7 +31,6 @@
 #include <ctime>
 
 extern "C" {
-#include <sys/capability.h>
 #include <sys/types.h>
 #include <unistd.h>
 }

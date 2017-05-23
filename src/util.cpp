@@ -17,7 +17,6 @@
 
 extern "C" {
 #include <limits.h>
-#include <sys/capability.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
