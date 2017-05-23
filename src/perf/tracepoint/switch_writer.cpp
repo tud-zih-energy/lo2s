@@ -53,8 +53,11 @@ SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
 
 SwitchWriter::~SwitchWriter()
 {
-    const auto& mapping = trace_.merge_tids(thread_region_refs_);
-    otf2_writer_ << mapping;
+    if (!thread_region_refs_.empty())
+    {
+        const auto& mapping = trace_.merge_tids(thread_region_refs_);
+        otf2_writer_ << mapping;
+    }
 }
 
 bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
