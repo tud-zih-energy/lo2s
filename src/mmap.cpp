@@ -105,10 +105,12 @@ void MemoryMap::mmap(Address begin, Address end, Address pgoff, const std::strin
         catch (bfdr::InitError& e)
         {
             Log::warn() << "could not initialize bfd: " << e.what();
+            lb = &NamedBinary::cache(dso_name);
         }
         catch (bfdr::InvalidFileError& e)
         {
             Log::debug() << "dso is not a valid file: " << e.what();
+            lb = &NamedBinary::cache(dso_name);
         }
     }
 
