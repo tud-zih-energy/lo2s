@@ -49,6 +49,7 @@ struct Config
     std::vector<std::string> command;
     // Optional features
     std::vector<std::string> tracepoint_events;
+    std::vector<std::string> perf_events;
 #ifdef HAVE_X86_ADAPT
     std::vector<std::string> x86_adapt_cpu_knobs;
 #endif

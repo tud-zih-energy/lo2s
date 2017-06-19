@@ -83,6 +83,8 @@ void parse_program_options(int argc, const char** argv)
              "time interval between metric and sampling buffer readouts in milliseconds")
         ("raw-tracepoint-event,e", po::value(&config.tracepoint_events),
              "enable global recording of a raw tracepoint event (usually requires root)")
+        ("perf-event", po::value(&config.perf_events),
+             "the name of a perf event to measure") // TODO: optionally list available events
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
