@@ -34,6 +34,31 @@ namespace po = boost::program_options;
 
 namespace lo2s
 {
+
+/** A helper type to count how many times a switch has been specified
+ *
+ **/
+struct SwitchCounter
+{
+
+    SwitchCounter() : count(0){};
+    SwitchCounter(int c) : count(c){};
+
+    unsigned count;
+};
+
+void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, long)
+{
+    if (v.empty())
+    {
+        v = SwitchCounter{ 1 };
+    }
+    else
+    {
+        boost::any_cast<SwitchCounter&>(v).count++;
+    }
+}
+
 static nitro::lang::optional<Config> instance;
 
 const Config& config()
@@ -46,9 +71,8 @@ void parse_program_options(int argc, const char** argv)
     po::options_description desc("Allowed options");
 
     lo2s::Config config;
+    SwitchCounter verbosity;
     bool quiet;
-    bool debug;
-    bool trace;
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
@@ -73,17 +97,15 @@ void parse_program_options(int argc, const char** argv)
              "attach to specific pid")
         ("quiet,q", po::bool_switch(&quiet),
              "suppress output")
-        ("verbose,v", po::bool_switch(&debug),
-             "verbose output")
-        ("extra-verbose,t", po::bool_switch(&trace),
-             "extra verbose output")
+        ("verbose,v", po::value(&verbosity)->zero_tokens(),
+             "verbose output (specify multiple times to get increasingly more verbose output)")
         ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
-        ("raw-tracepoint-event,e", po::value(&config.tracepoint_events),
+        ("tracepoint,t", po::value(&config.tracepoint_events),
              "enable global recording of a raw tracepoint event (usually requires root)")
-        ("perf-event", po::value(&config.perf_events),
+        ("event,e", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
@@ -159,23 +181,34 @@ void parse_program_options(int argc, const char** argv)
         std::exit(0);
     }
 
-    if (trace)
+    if (quiet && verbosity.count != 0)
     {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::trace);
-        lo2s::Log::trace() << "Enabling log-level 'trace'";
+        lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
+        quiet = false;
     }
-    else if (debug)
-    {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::debug);
-        lo2s::Log::debug() << "Enabling log-level 'debug'";
-    }
-    else if (quiet)
+
+    if (quiet)
     {
         lo2s::logging::set_min_severity_level(nitro::log::severity_level::warn);
     }
     else
     {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::info);
+        using sl = nitro::log::severity_level;
+        switch (verbosity.count)
+        {
+        case 0:
+            lo2s::logging::set_min_severity_level(sl::warn);
+            break;
+        case 1:
+            lo2s::Log::info() << "Enabling log-level 'debug'";
+            lo2s::logging::set_min_severity_level(sl::debug);
+            break;
+        case 2:
+        default:
+            lo2s::Log::info() << "Enabling log-level 'trace'";
+            lo2s::logging::set_min_severity_level(sl::trace);
+            break;
+        }
     }
 
     instance = std::move(config);
