@@ -20,8 +20,6 @@
  */
 /* In parts from https://github.com/deater/perf_event_tests/blob/master/ */
 
-#include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/platform.hpp>
 
 #include <cstdio>
