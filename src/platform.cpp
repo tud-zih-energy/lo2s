@@ -219,7 +219,7 @@ namespace platform
 
     std::vector<CounterDescription> get_mem_events()
     {
-        auto proc = detect_processor();
+        static auto proc = detect_processor();
         switch (proc)
         {
         case Processor::HASWELL_EP:
