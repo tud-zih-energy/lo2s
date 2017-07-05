@@ -19,9 +19,17 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
 
 #include <sstream>
+
+extern "C" {
+#include <linux/perf_event.h>
+#include <linux/version.h>
+#include <syscall.h>
+#include <unistd.h>
+}
 
 namespace
 {
@@ -40,9 +48,13 @@ static const lo2s::platform::CounterDescription HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("branch-instructions", BRANCH_INSTRUCTIONS),
     PERF_EVENT_HW("branch-misses", BRANCH_MISSES),
     PERF_EVENT_HW("bus-cycles", BUS_CYCLES),
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
     PERF_EVENT_HW("stalled-cycles-frontend", STALLED_CYCLES_FRONTEND),
     PERF_EVENT_HW("stalled-cycles-backend", STALLED_CYCLES_BACKEND),
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0)
     PERF_EVENT_HW("ref-cycles", REF_CPU_CYCLES),
+#endif
 };
 
 static const lo2s::platform::CounterDescription SW_EVENT_TABLE[] = {
@@ -53,8 +65,10 @@ static const lo2s::platform::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
     PERF_EVENT_SW("page-faults-minor", PAGE_FAULTS_MIN),
     PERF_EVENT_SW("page-faults-major", PAGE_FAULTS_MAJ),
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
     PERF_EVENT_SW("aligment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
+#endif
     /* PERF_EVENT_SW("dummy", DUMMY), */
 };
 
@@ -105,6 +119,34 @@ namespace lo2s
 {
 namespace perf
 {
+
+static bool supported_by_kernel(const platform::CounterDescription& ev)
+{
+    struct perf_event_attr attr;
+    memset(&attr, 0, sizeof(attr));
+    attr.type = ev.type;
+    attr.config = ev.config;
+    attr.config1 = ev.config1;
+
+    int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
+    if (fd == -1)
+    {
+        switch (errno)
+        {
+        case ENOTSUP:
+            Log::warn() << "perf event '" << ev.name << "' is not supported by the running kernel.";
+            break;
+        default:
+            Log::warn() << "failed to open perf event '" << ev.name << "'!";
+            break;
+        }
+        return false;
+    }
+
+    close(fd);
+    return true;
+}
+
 static void populate_event_map(EventProvider::EventMap& map)
 {
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
@@ -112,12 +154,18 @@ static void populate_event_map(EventProvider::EventMap& map)
                     array_size(CACHE_OP_RESULT_TABLE));
     for (const auto& ev : HW_EVENT_TABLE)
     {
-        map.emplace(ev.name, ev);
+        if (supported_by_kernel(ev))
+        {
+            map.emplace(ev.name, ev);
+        }
     }
 
     for (const auto& ev : SW_EVENT_TABLE)
     {
-        map.emplace(ev.name, ev);
+        if (supported_by_kernel(ev))
+        {
+            map.emplace(ev.name, ev);
+        }
     }
 
     std::stringstream name_fmt;
@@ -130,10 +178,14 @@ static void populate_event_map(EventProvider::EventMap& map)
                 name_fmt.str(std::string());
                 name_fmt << cache.name << '-' << operation.name << op_result.name;
 
-                map.emplace(
-                    std::piecewise_construct, std::forward_as_tuple(name_fmt.str()),
-                    std::forward_as_tuple(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                                          make_cache_config(cache.id, operation.id, op_result.id)));
+                platform::CounterDescription ev(
+                    name_fmt.str(), PERF_TYPE_HW_CACHE,
+                    make_cache_config(cache.id, operation.id, op_result.id));
+
+                if (supported_by_kernel(ev))
+                {
+                    map.emplace(name_fmt.str(), ev);
+                }
             }
         }
     }
