@@ -37,7 +37,6 @@ set(Binutils_LIBRARIES "")
 if(Binutils_USE_STATIC_LIBS)
     find_library(Bfd_LIBRARIES NAMES libbfd.a
             HINTS ENV LIBRARY_PATH)
-    message("${Bfd_LIBRARIES}")
     find_library(Z_LIBRARIES NAMES libz.a
             HINTS ENV LIBRARY_PATH)
 else()
