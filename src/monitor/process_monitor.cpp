@@ -135,37 +135,50 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
     Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
     if ((event == PTRACE_EVENT_FORK) || (event == PTRACE_EVENT_VFORK))
     {
-        // we need the pid of the new process
-        pid_t newpid;
-        check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
-        auto name = get_process_exe(newpid);
-        Log::debug() << "New process is forked " << newpid << ": " << name << " parent: " << child
-                     << ": " << get_process_exe(child);
+        pid_t newpid = -1;
 
-        trace_.process(newpid, name);
-        threads_.insert(newpid, newpid, false);
+        try {
+            // we need the pid of the new process
+            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
+            auto name = get_process_exe(newpid);
+            Log::debug() << "New process is forked " << newpid << ": " << name << " parent: " << child
+                         << ": " << get_process_exe(child);
+
+            trace_.process(newpid, name);
+            threads_.insert(newpid, newpid, false);
+        }
+        catch(std::system_error& e)
+        {
+            Log::error() << "Failure while adding new process " << newpid << ": " << e.what();
+        }
     }
     // new Thread?
     else if (event == PTRACE_EVENT_CLONE)
     {
-        // we need the tid of the new process
-        long newpid;
-        check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
+        long newpid = -1;
 
-        // Parent may be a thread, get the process
-        auto pid = threads_.pid(child);
+        try {
+            // we need the tid of the new process
+            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
 
-        Log::info() << "New thread is cloned " << newpid << " parent: " << child << " pid: " << pid;
+            // Parent may be a thread, get the process
+            auto pid = threads_.pid(child);
 
-        // register monitoring
-        threads_.insert(pid, newpid, false);
+            Log::info() << "New thread is cloned " << newpid << " parent: " << child << " pid: " << pid;
+
+            // register monitoring
+            threads_.insert(pid, newpid, false);
+        }
+            // TODO change type of exception we catch here accordingly
+        catch(std::exception& e)
+        {
+            Log::error() << "Failure while adding new thread " << newpid << ": " << e.what();
+        }
     }
     // process or thread exited?
     else if (event == PTRACE_EVENT_EXIT)
     {
         try {
-
-
             if (threads_.is_process(child)) {
                 auto name = get_process_exe(child);
                 Log::info() << "Process " << child << " / " << name << " about to exit";
@@ -179,7 +192,7 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
         }
         catch(std::out_of_range&)
         {
-            Log::warn() << "Thread" << child << " is about to exit, but has never seen before.";
+            Log::warn() << "Thread " << child << " is about to exit, but has never seen before.";
         }
     }
 }
