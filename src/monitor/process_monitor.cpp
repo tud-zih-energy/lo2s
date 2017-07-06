@@ -163,19 +163,24 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
     // process or thread exited?
     else if (event == PTRACE_EVENT_EXIT)
     {
-        if (threads_.is_process(child))
-        {
-            auto name = get_process_exe(child);
-            Log::info() << "Process " << child << " / " << name << " about to exit";
-            trace_.process(child, name);
+        try {
+
+
+            if (threads_.is_process(child)) {
+                auto name = get_process_exe(child);
+                Log::info() << "Process " << child << " / " << name << " about to exit";
+                trace_.process(child, name);
+            } else {
+                auto pid = threads_.pid(child);
+                Log::info() << "Thread " << child << " in process " << pid << " / "
+                            << get_process_exe(pid) << " is about to exit";
+            }
+            threads_.stop(child);
         }
-        else
+        catch(std::out_of_range&)
         {
-            auto pid = threads_.pid(child);
-            Log::info() << "Thread " << child << " in process " << pid << " / "
-                        << get_process_exe(pid) << " is about to exit";
+            Log::warn() << "Thread" << child << " is about to exit, but has never seen before.";
         }
-        threads_.stop(child);
     }
 }
 
