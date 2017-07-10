@@ -97,7 +97,8 @@ static constexpr string_to_id<perf_hw_cache_op_id> CACHE_OPERATION_TABLE[] = {
 
 static constexpr string_to_id<perf_hw_cache_op_result_id> CACHE_OP_RESULT_TABLE[] = {
     /* use plural suffix on access; perf userland tools use
-       "(load|store|prefetche)s" to mean (load|store|prefetch)-accesses */
+       "(load|store|prefetche)s" to mean (load|store|prefetch)-accesses
+       TODO: fix pluralization prefetch -> prefetch(e)s */
     { "s", PERF_COUNT_HW_CACHE_RESULT_ACCESS },
     { "-misses", PERF_COUNT_HW_CACHE_RESULT_MISS },
 };
@@ -135,21 +136,23 @@ static bool supported_by_kernel(const platform::CounterDescription& ev)
         switch (errno)
         {
         case ENOTSUP:
-            Log::warn() << "perf event '" << ev.name << "' is not supported by the running kernel.";
+            Log::warn() << "perf event not supported by the running kernel: " << ev.name;
             break;
         default:
-            Log::warn() << "failed to open perf event '" << ev.name << "'!";
+            Log::warn() << "perf event not available: " << ev.name;
             break;
         }
         return false;
     }
 
+    Log::debug() << "perf event available: " << ev.name;
     close(fd);
     return true;
 }
 
 static void populate_event_map(EventProvider::EventMap& map)
 {
+    Log::info() << "checking available events...";
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
                 array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE) *
                     array_size(CACHE_OP_RESULT_TABLE));
