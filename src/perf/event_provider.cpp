@@ -20,6 +20,7 @@
  */
 
 #include <lo2s/log.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/perf/event_provider.hpp>
 
 #include <sstream>
@@ -125,10 +126,11 @@ static bool supported_by_kernel(const platform::CounterDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
+    attr.size = sizeof(attr);
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = 1;
+    attr.exclude_kernel = lo2s::config().exclude_kernel;
 
     int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
     if (fd == -1)
