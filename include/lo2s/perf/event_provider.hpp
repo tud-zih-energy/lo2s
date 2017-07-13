@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -40,20 +41,31 @@ public:
     EventProvider(const EventProvider&) = delete;
     void operator=(const EventProvider&) = delete;
 
-    static const EventProvider& instance()
+    static const inline EventProvider& instance()
     {
-        static EventProvider e;
-        return e;
+        return instance_mutable();
     }
 
-    static inline const EventMap::mapped_type& get_event_by_name(const std::string& name)
-    {
-        return instance().event_map_.at(name);
-    }
+    static const platform::CounterDescription& get_event_by_name(const std::string& name);
 
     static inline bool has_event(const std::string& name)
     {
-        return instance().event_map_.count(name);
+        if (instance().event_map_.count(name))
+        {
+            return true;
+        }
+        else
+        {
+            try
+            {
+                instance_mutable().cache_event(name);
+                return true;
+            }
+            catch (const InvalidEvent&)
+            {
+                return false;
+            }
+        }
     }
 
     static inline const EventMap& event_map()
@@ -61,7 +73,23 @@ public:
         return instance().event_map_;
     }
 
+    class InvalidEvent : public std::runtime_error
+    {
+    public:
+        InvalidEvent(const std::string& event_description) : std::runtime_error(event_description)
+        {
+        }
+    };
+
 private:
+    static EventProvider& instance_mutable()
+    {
+        static EventProvider e;
+        return e;
+    }
+
+    const platform::CounterDescription& cache_event(const std::string& name);
+
     EventMap event_map_;
 };
 }

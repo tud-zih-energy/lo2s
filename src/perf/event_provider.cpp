@@ -19,10 +19,12 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/log.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
 
+#include <boost/filesystem.hpp>
+#include <regex>
 #include <sstream>
 
 extern "C" {
@@ -147,7 +149,6 @@ static bool supported_by_kernel(const platform::CounterDescription& ev)
         return false;
     }
 
-    Log::debug() << "perf event available: " << ev.name;
     close(fd);
     return true;
 }
@@ -197,9 +198,187 @@ static void populate_event_map(EventProvider::EventMap& map)
     }
 }
 
+static std::uint64_t parse_bitmask(const std::string& format)
+{
+    enum format_regex_groups
+    {
+        WHOLE_MATCH,
+        BIT_BEGIN,
+        BIT_END,
+    };
+
+    std::uint64_t mask = 0x0;
+
+    static const std::regex bit_mask_regex(R"((\d+)?(?:-(\d+)))");
+    static const std::sregex_iterator end;
+    std::smatch bit_mask_match;
+    for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; i++)
+    {
+        const auto& match = *i;
+        int start = std::stoi(match[BIT_BEGIN]);
+        int end = (match[BIT_END].length() == 0) ? start : std::stoi(match[BIT_END]);
+
+        const auto len = (end + 1) - start;
+        if (start < 0 || end > 63 || len > 64)
+        {
+            throw EventProvider::InvalidEvent("invalid config mask");
+        }
+
+        /* set `len` bits and shift them to where they should start.
+         * 4-bit example: format "1-3" produces mask 0x1110.
+         *    start := 1, end := 3
+         *    len  := 3 + 1 - 1 = 3
+         *    bits := (1 << 3) - 1 = 0b1000 - 1 = 0b0111
+         *    mask := 0b0111 << 1 = 0b1110
+         * */
+        const auto bits = (len == 64) ? ~0x0UL : (1 << len) - 1;
+        mask |= bits << start;
+    }
+    Log::debug() << std::showbase << std::hex << "config mask: " << format << " = " << mask
+                 << std::dec << std::noshowbase;
+    return mask;
+}
+
+static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mask)
+{
+    std::uint64_t res = 0;
+    for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
+    {
+        if (mask & (1 << mask_bit))
+        {
+            res |= ((value >> value_bit) & 0x1) << mask_bit;
+            value_bit++;
+        }
+    }
+    return res;
+}
+
+static void event_description_update(platform::CounterDescription& event, std::uint64_t value,
+                                     const std::string& format)
+{
+    static constexpr auto npos = std::string::npos;
+    const auto colon = format.find_first_of(':');
+    if (colon == npos)
+    {
+        throw EventProvider::InvalidEvent("invalid format description: missing colon");
+    }
+
+    const std::string target_config = format.substr(0, colon);
+    const auto mask = parse_bitmask(format.substr(colon + 1));
+
+    if (target_config == "config")
+    {
+        event.config |= apply_mask(value, mask);
+    }
+
+    if (target_config == "config1")
+    {
+        event.config1 |= apply_mask(value, mask);
+    }
+}
+
+const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
+{
+    namespace fs = boost::filesystem;
+    static constexpr auto npos = std::string::npos;
+    const auto slash_pos = ev_desc.find_first_of('/');
+    if (slash_pos == npos)
+    {
+        throw EventProvider::InvalidEvent("missing '/' in event description");
+    }
+
+    const std::string pmu_name = ev_desc.substr(0, slash_pos);
+    const std::string event_name = ev_desc.substr(slash_pos + 1);
+
+    // PMU -- performance measurement unit
+    const fs::path pmu = fs::path("/sys/bus/event_source/devices") / pmu_name;
+
+    // read PMU type id
+    std::underlying_type<perf_type_id>::type type;
+    if ((fs::ifstream(pmu / "type") >> type).fail())
+    {
+        throw EventProvider::InvalidEvent("cannot read PMU device type");
+    }
+    platform::CounterDescription event(event_name, static_cast<perf_type_id>(type), 0, 0);
+
+    std::string ev_cfg;
+    if ((fs::ifstream(pmu / "events" / event_name) >> ev_cfg).fail())
+    {
+        throw EventProvider::InvalidEvent("cannot read event configuration");
+    }
+
+    // parse event description:
+    //   <term>[=<value>][,<term>[=<value>]]...
+    //
+    // (taken from linux/Documentation/ABI/testing/sysfs-bus-event_source-devices-events)
+    static const std::regex kv_regex(R"(([^=,]+)(?:=([^,]+))?)");
+
+    Log::debug() << "parsing event configuration: " << ev_cfg;
+    std::smatch kv_match;
+    while (std::regex_search(ev_cfg, kv_match, kv_regex))
+    {
+        const std::string& term = kv_match[1];
+        const std::string& value = (kv_match[2].length() != 0) ? kv_match[2] : std::string("0x1");
+
+        std::string format;
+        if (!(fs::ifstream(pmu / "format" / term) >> format))
+        {
+            throw EventProvider::InvalidEvent("cannot read event format");
+        }
+
+        static_assert(sizeof(std::uint64_t) >= sizeof(unsigned long),
+                      "May not convert from unsigned long to uint64_t!");
+
+        std::uint64_t val = std::stol(value, nullptr, 0);
+        Log::debug() << "parsing config assignment: " << term << " = " << val;
+        event_description_update(event, val, format);
+
+        ev_cfg = kv_match.suffix();
+    }
+
+    Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
+                 << event.name << "/type=" << event.type << ",config=" << event.config
+                 << ",config1=" << event.config1 << std::dec << std::noshowbase;
+
+    if (!supported_by_kernel(event))
+    {
+        throw EventProvider::InvalidEvent("cannot open requested event");
+    }
+    return event;
+}
+
 EventProvider::EventProvider()
 {
     populate_event_map(event_map_);
 }
+
+const platform::CounterDescription& EventProvider::cache_event(const std::string& name)
+{
+    Log::info() << "caching event '" << name << "'.";
+    try
+    {
+        // save event in event map; return a reference to the inserted event
+        return event_map_.emplace(name, sysfs_read_event(name)).first->second;
+    }
+    catch (const InvalidEvent& e)
+    {
+        Log::debug() << "invalid event: " << e.what();
+        throw e;
+    }
+}
+
+const platform::CounterDescription& EventProvider::get_event_by_name(const std::string& name)
+{
+    auto& ev_map = instance().event_map_;
+    if (ev_map.count(name))
+    {
+        return ev_map.at(name);
+    }
+    else
+    {
+        return instance_mutable().cache_event(name);
+    }
 }
 }
+}
+// to the caller.

@@ -52,9 +52,9 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric
             const auto event_desc = perf::EventProvider::get_event_by_name(ev);
             counters_.emplace_back(tid, event_desc.type, event_desc.config, event_desc.config1);
         }
-        catch (const std::out_of_range& e)
+        catch (const perf::EventProvider::InvalidEvent& e)
         {
-            lo2s::Log::warn() << "unkown event '" << ev << "', ignoring!";
+            lo2s::Log::warn() << "'" << ev << "' does not name a known event, ignoring!";
         }
     }
 
