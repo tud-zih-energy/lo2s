@@ -299,7 +299,7 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
     {
         throw EventProvider::InvalidEvent("cannot read PMU device type");
     }
-    platform::CounterDescription event(event_name, static_cast<perf_type_id>(type), 0, 0);
+    platform::CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
 
     std::string ev_cfg;
     if ((fs::ifstream(pmu / "events" / event_name) >> ev_cfg).fail())
@@ -337,7 +337,7 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
     }
 
     Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
-                 << event.name << "/type=" << event.type << ",config=" << event.config
+                 << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase;
 
     if (!supported_by_kernel(event))
