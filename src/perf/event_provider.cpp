@@ -124,7 +124,7 @@ namespace lo2s
 namespace perf
 {
 
-static bool supported_by_kernel(const platform::CounterDescription& ev)
+static bool event_is_openable(const platform::CounterDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -161,7 +161,7 @@ static void populate_event_map(EventProvider::EventMap& map)
                     array_size(CACHE_OP_RESULT_TABLE));
     for (const auto& ev : HW_EVENT_TABLE)
     {
-        if (supported_by_kernel(ev))
+        if (event_is_openable(ev))
         {
             map.emplace(ev.name, ev);
         }
@@ -169,7 +169,7 @@ static void populate_event_map(EventProvider::EventMap& map)
 
     for (const auto& ev : SW_EVENT_TABLE)
     {
-        if (supported_by_kernel(ev))
+        if (event_is_openable(ev))
         {
             map.emplace(ev.name, ev);
         }
@@ -189,7 +189,7 @@ static void populate_event_map(EventProvider::EventMap& map)
                     name_fmt.str(), PERF_TYPE_HW_CACHE,
                     make_cache_config(cache.id, operation.id, op_result.id));
 
-                if (supported_by_kernel(ev))
+                if (event_is_openable(ev))
                 {
                     map.emplace(name_fmt.str(), ev);
                 }
@@ -340,7 +340,7 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase;
 
-    if (!supported_by_kernel(event))
+    if (!event_is_openable(event))
     {
         throw EventProvider::InvalidEvent("cannot open requested event");
     }
