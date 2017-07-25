@@ -41,14 +41,14 @@ public:
     EventProvider(const EventProvider&) = delete;
     void operator=(const EventProvider&) = delete;
 
-    static const inline EventProvider& instance()
+    static const EventProvider& instance()
     {
         return instance_mutable();
     }
 
     static const platform::CounterDescription& get_event_by_name(const std::string& name);
 
-    static inline bool has_event(const std::string& name)
+    static bool has_event(const std::string& name)
     {
         if (instance().event_map_.count(name))
         {
@@ -68,7 +68,7 @@ public:
         }
     }
 
-    static inline const EventMap& event_map()
+    static const EventMap& event_map()
     {
         return instance().event_map_;
     }

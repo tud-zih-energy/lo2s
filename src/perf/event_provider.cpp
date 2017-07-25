@@ -72,7 +72,6 @@ static const lo2s::platform::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("aligment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
-    /* PERF_EVENT_SW("dummy", DUMMY), */
 };
 
 #define PERF_MAKE_CACHE_ID(id) (id)
@@ -132,7 +131,7 @@ static bool event_is_openable(const platform::CounterDescription& ev)
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = lo2s::config().exclude_kernel;
+    attr.exclude_kernel = 1;
 
     int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
     if (fd == -1)
@@ -140,10 +139,10 @@ static bool event_is_openable(const platform::CounterDescription& ev)
         switch (errno)
         {
         case ENOTSUP:
-            Log::warn() << "perf event not supported by the running kernel: " << ev.name;
+            Log::debug() << "perf event not supported by the running kernel: " << ev.name;
             break;
         default:
-            Log::warn() << "perf event not available: " << ev.name;
+            Log::debug() << "perf event not available: " << ev.name;
             break;
         }
         return false;
@@ -279,6 +278,9 @@ static void event_description_update(platform::CounterDescription& event, std::u
 
 const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
+    /* event description format (with optional trailing '/'):
+     *   <pmu>/<event_name>[/]
+     * */
     namespace fs = boost::filesystem;
     static constexpr auto npos = std::string::npos;
     const auto slash_pos = ev_desc.find_first_of('/');
@@ -286,23 +288,25 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
     {
         throw EventProvider::InvalidEvent("missing '/' in event description");
     }
+    const auto trailing_slash_pos = ev_desc.find('/', slash_pos + 1);
 
-    const std::string pmu_name = ev_desc.substr(0, slash_pos);
-    const std::string event_name = ev_desc.substr(slash_pos + 1);
+    const std::string pmu = ev_desc.substr(0, slash_pos);
+    const std::string event_name = ev_desc.substr(
+        slash_pos + 1, trailing_slash_pos == npos ? 0 : trailing_slash_pos - (slash_pos + 1));
 
-    // PMU -- performance measurement unit
-    const fs::path pmu = fs::path("/sys/bus/event_source/devices") / pmu_name;
+    // PMU -- performance monitoring unit
+    const fs::path pmu_path = fs::path("/sys/bus/event_source/devices") / pmu;
 
     // read PMU type id
     std::underlying_type<perf_type_id>::type type;
-    if ((fs::ifstream(pmu / "type") >> type).fail())
+    if ((fs::ifstream(pmu_path / "type") >> type).fail())
     {
         throw EventProvider::InvalidEvent("cannot read PMU device type");
     }
     platform::CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
 
     std::string ev_cfg;
-    if ((fs::ifstream(pmu / "events" / event_name) >> ev_cfg).fail())
+    if ((fs::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
     {
         throw EventProvider::InvalidEvent("cannot read event configuration");
     }
@@ -321,7 +325,7 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
         const std::string& value = (kv_match[2].length() != 0) ? kv_match[2] : std::string("0x1");
 
         std::string format;
-        if (!(fs::ifstream(pmu / "format" / term) >> format))
+        if (!(fs::ifstream(pmu_path / "format" / term) >> format))
         {
             throw EventProvider::InvalidEvent("cannot read event format");
         }
@@ -330,15 +334,16 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
                       "May not convert from unsigned long to uint64_t!");
 
         std::uint64_t val = std::stol(value, nullptr, 0);
-        Log::debug() << "parsing config assignment: " << term << " = " << val;
+        Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
+                     << val << std::dec << std::noshowbase;
         event_description_update(event, val, format);
 
         ev_cfg = kv_match.suffix();
     }
 
-    Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
+    Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu << "/"
                  << event_name << "/type=" << event.type << ",config=" << event.config
-                 << ",config1=" << event.config1 << std::dec << std::noshowbase;
+                 << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
 
     if (!event_is_openable(event))
     {

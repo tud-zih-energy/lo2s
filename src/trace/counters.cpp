@@ -54,7 +54,9 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
-            lo2s::Log::warn() << "'" << ev << "' does not name a known event, ignoring!";
+            lo2s::Log::warn() << "'" << ev
+                              << "' does not name a known event, ignoring! (reason: " << e.what()
+                              << ")";
         }
     }
 
