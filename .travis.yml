@@ -32,7 +32,7 @@ before_script:
   - make
   - sudo make install
   - cd ..
-  - apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
+  - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
   - cmake --version
   - cmake . -DUSE_RADARE=OFF
 script:
