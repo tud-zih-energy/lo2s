@@ -15,7 +15,7 @@ matrix:
             - g++-7
             - cmake
             - cmake-data
-            - binutils
+            - binutils-dev
             - libc6-dev
             - libboost-system-dev
             - libboost-program-options-dev
