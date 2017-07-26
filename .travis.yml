@@ -16,6 +16,7 @@ matrix:
             - cmake
             - cmake-data
             - binutils-dev
+            - libz3-dev
             - libc6-dev
             - libboost-system-dev
             - libboost-program-options-dev
