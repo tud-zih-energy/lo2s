@@ -17,6 +17,10 @@ matrix:
             - cmake-data
             - binutils
             - libc6-dev
+            - libboost-system-dev
+            - libboost-program-options-dev
+            - libboost-filesystem-dev
+            - linux-libc-dev
           sources: &sources
             - ubuntu-toolchain-r-test
             - george-edison55-precise-backports
