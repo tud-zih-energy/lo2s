@@ -33,7 +33,6 @@ find_path(Binutils_INCLUDE_DIRS bfd.h
         PATHS ENV C_INCLUDE_PATH
         PATH_SUFFIXES include)
 
-set(Binutils_LIBRARIES "")
 if(Binutils_USE_STATIC_LIBS)
     find_library(Bfd_LIBRARIES NAMES libbfd.a
             HINTS ENV LIBRARY_PATH)
@@ -55,9 +54,9 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
         Bfd_LIBRARIES
         Z_LIBRARIES
         Libiberty_LIBRARIES
-        Binutils_LIBRARIES
         Binutils_INCLUDE_DIRS)
 
+set(Binutils_LIBRARIES "")
 list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 # BFD requires libz...
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
