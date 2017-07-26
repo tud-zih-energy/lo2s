@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.2)
 project(lo2s)
 
 include(CMakeDependentOption)
@@ -118,8 +118,12 @@ set(SOURCE_FILES
 
 
 add_executable(lo2s ${SOURCE_FILES})
-target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES} ${Radare_LIBRARIES}
+target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES}
         ${Binutils_LIBRARIES} ${Dl_LIBRARIES} ${X86_ADAPT_LIBRARIES})
+
+if(USE_RADARE)
+    target_link_libraries(lo2s ${Radare_LIBRARIES})
+endif()
 
 option(IWYU "Developer option for include what you use." OFF)
 

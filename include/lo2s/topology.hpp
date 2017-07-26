@@ -36,6 +36,7 @@
 #include <cstdint>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/format.hpp>
 
 using fmt = boost::format;
