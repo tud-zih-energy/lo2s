@@ -24,7 +24,6 @@ matrix:
             - linux-libc-dev
           sources: &sources
             - ubuntu-toolchain-r-test
-            - george-edison55-precise-backports
 before_script:
   - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
   - tar -xf otf2-2.0.tar.gz
