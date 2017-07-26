@@ -50,14 +50,17 @@ endif()
 find_library(Libiberty_LIBRARIES NAMES libiberty.a
         HINTS ENV LIBRARY_PATH)
 
+include (FindPackageHandleStandardArgs)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
+        Bfd_LIBRARIES
+        Z_LIBRARIES
+        Libiberty_LIBRARIES
+        Binutils_LIBRARIES
+        Binutils_INCLUDE_DIRS)
+
 list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 # BFD requires libz...
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Libiberty_LIBRARIES})
-
-include (FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
-        Binutils_LIBRARIES
-        Binutils_INCLUDE_DIRS)
 
 mark_as_advanced(Binutils_LIBRARIES Binutils_INCLUDE_DIRS)
