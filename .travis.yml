@@ -1,0 +1,41 @@
+language: generic
+
+sudo: required
+dist: trusty
+
+matrix:
+  include:
+    - os: linux
+      env: CXX="g++-7" CC="gcc-7"
+      compiler: gcc
+      addons:
+        apt:
+          packages:
+            - gcc-7
+            - g++-7
+            - cmake
+            - cmake-data
+            - binutils-dev
+            - zlib1g-dev
+            - libc6-dev
+            - libboost-system-dev
+            - libboost-program-options-dev
+            - libboost-filesystem-dev
+            - linux-libc-dev
+          sources: &sources
+            - ubuntu-toolchain-r-test
+before_script:
+  - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
+  - tar -xf otf2-2.0.tar.gz
+  - cd otf2-2.0
+  - ./configure --prefix=/usr/local
+  - make
+  - sudo make install
+  - cd ..
+  - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
+  - cmake --version
+  - cmake . -DUSE_RADARE=OFF
+script:
+  - make
+  - ctest -V .
+

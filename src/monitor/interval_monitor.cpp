@@ -25,7 +25,7 @@ IntervalMonitor::~IntervalMonitor()
 {
     if (!stop_requested_)
     {
-        Log::error() << "Destructing ActiveMonitor before being stopped. This should not happen, "
+        Log::error() << "Destructing IntervalMonitor before being stopped. This should not happen, "
                         "but it's fine anyway.";
         stop();
     }
@@ -46,7 +46,7 @@ void IntervalMonitor::stop()
     }
     catch (std::system_error& err)
     {
-        Log::error() << "Failed to join ActiveMonitor thread: " << err.what()
+        Log::error() << "Failed to join IntervalMonitor thread: " << err.what()
                      << " This is probably bad, we can't do anything about it.";
     }
 }

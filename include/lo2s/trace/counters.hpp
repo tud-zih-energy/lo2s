@@ -29,6 +29,7 @@
 #include <otf2xx/writer/local.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <cstdint>
 
