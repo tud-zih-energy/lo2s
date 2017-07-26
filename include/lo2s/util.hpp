@@ -22,6 +22,7 @@
 #pragma once
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include <mutex>
 #include <string>
