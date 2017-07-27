@@ -189,7 +189,7 @@ void parse_program_options(int argc, const char** argv)
 
     if (quiet)
     {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::warn);
+        lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
     }
     else
     {
@@ -200,10 +200,14 @@ void parse_program_options(int argc, const char** argv)
             lo2s::logging::set_min_severity_level(sl::warn);
             break;
         case 1:
+            lo2s::Log::info() << "Enabling log-level 'info'";
+            lo2s::logging::set_min_severity_level(sl::info);
+            break;
+        case 2:
             lo2s::Log::info() << "Enabling log-level 'debug'";
             lo2s::logging::set_min_severity_level(sl::debug);
             break;
-        case 2:
+        case 3:
         default:
             lo2s::Log::info() << "Enabling log-level 'trace'";
             lo2s::logging::set_min_severity_level(sl::trace);
