@@ -1,8 +1,10 @@
+[![Build Status](https://travis-ci.org/tud-zih-energy/lo2s.svg?branch=master)](https://travis-ci.org/tud-zih-energy/lo2s)
+
 # lo2s - Linux OTF2 sampling
- 
+
 lo2s creates a trace by running an uninstrumented executable. It uses the Linux perf
 infrastructure.
- 
+
 The trace contains the following information:
 
  * Calling context samples based on instruction overflows
@@ -20,14 +22,14 @@ The trace contains the following information:
  * libiberty
  * boost (1.62, older versions might also work)
  * CMake (>= 3.5)
- 
+
 <sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
 
 # Requirements for running
 
  * kernel.perf_event_paranoid should be less or equal than 1. If you have any trouble, use:
- 
-   `sudo sysctl kernel.perf_event_paranoid=1` 
+
+   `sudo sysctl kernel.perf_event_paranoid=1`
 
 # Installation
 
