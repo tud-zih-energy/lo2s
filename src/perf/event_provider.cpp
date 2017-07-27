@@ -24,6 +24,8 @@
 #include <lo2s/perf/event_provider.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <ios>
 #include <regex>
 #include <sstream>
 
@@ -209,7 +211,7 @@ static std::uint64_t parse_bitmask(const std::string& format)
     std::uint64_t mask = 0x0;
 
     static const std::regex bit_mask_regex(R"((\d+)?(?:-(\d+)))");
-    static const std::sregex_iterator end;
+    const std::sregex_iterator end;
     std::smatch bit_mask_match;
     for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; i++)
     {
@@ -223,8 +225,8 @@ static std::uint64_t parse_bitmask(const std::string& format)
             throw EventProvider::InvalidEvent("invalid config mask");
         }
 
-        /* set `len` bits and shift them to where they should start.
-         * 4-bit example: format "1-3" produces mask 0x1110.
+        /* Set `len` bits and shift them to where they should start.
+         * 4-bit example: format "1-3" produces mask 0b1110.
          *    start := 1, end := 3
          *    len  := 3 + 1 - 1 = 3
          *    bits := (1 << 3) - 1 = 0b1000 - 1 = 0b0111
@@ -262,7 +264,7 @@ static void event_description_update(platform::CounterDescription& event, std::u
         throw EventProvider::InvalidEvent("invalid format description: missing colon");
     }
 
-    const std::string target_config = format.substr(0, colon);
+    const auto target_config = format.substr(0, colon);
     const auto mask = parse_bitmask(format.substr(colon + 1));
 
     if (target_config == "config")
@@ -290,8 +292,8 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
     }
     const auto trailing_slash_pos = ev_desc.find('/', slash_pos + 1);
 
-    const std::string pmu = ev_desc.substr(0, slash_pos);
-    const std::string event_name = ev_desc.substr(
+    const auto pmu = ev_desc.substr(0, slash_pos);
+    const auto event_name = ev_desc.substr(
         slash_pos + 1, trailing_slash_pos == npos ? 0 : trailing_slash_pos - (slash_pos + 1));
 
     // PMU -- performance monitoring unit
@@ -362,7 +364,8 @@ const platform::CounterDescription& EventProvider::cache_event(const std::string
     Log::info() << "caching event '" << name << "'.";
     try
     {
-        // save event in event map; return a reference to the inserted event
+        // save event in event map; return a reference to the inserted event to
+        // the caller.
         return event_map_.emplace(name, sysfs_read_event(name)).first->second;
     }
     catch (const InvalidEvent& e)
@@ -386,4 +389,3 @@ const platform::CounterDescription& EventProvider::get_event_by_name(const std::
 }
 }
 }
-// to the caller.

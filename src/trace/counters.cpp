@@ -85,7 +85,7 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
     auto c = trace_.metric_class();
     const auto& user_events = lo2s::config().perf_events;
 
-    for (const auto& ev : lo2s::config().perf_events)
+    for (const auto& ev : user_events)
     {
         if (perf::EventProvider::has_event(ev))
         {
