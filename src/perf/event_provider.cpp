@@ -26,6 +26,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <ios>
+#include <limits>
 #include <regex>
 #include <sstream>
 
@@ -117,6 +118,16 @@ template <std::size_t N, typename T>
 inline constexpr std::size_t array_size(T (&)[N])
 {
     return N;
+}
+
+constexpr std::uint64_t operator"" _u64(unsigned long long int lit)
+{
+    return static_cast<std::uint64_t>(lit);
+}
+
+constexpr std::uint64_t bit(int bitnumber)
+{
+    return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
 }
 
@@ -229,10 +240,15 @@ static std::uint64_t parse_bitmask(const std::string& format)
          * 4-bit example: format "1-3" produces mask 0b1110.
          *    start := 1, end := 3
          *    len  := 3 + 1 - 1 = 3
-         *    bits := (1 << 3) - 1 = 0b1000 - 1 = 0b0111
+         *    bits := bit(3) - 1 = 0b1000 - 1 = 0b0111
          *    mask := 0b0111 << 1 = 0b1110
          * */
-        const auto bits = (len == 64) ? ~0x0UL : (1 << len) - 1;
+
+        // Shifting by 64 bits causes undefined behaviour, so in this case set
+        // all bits by assigning the maximum possible value for std::uint64_t.
+        const std::uint64_t bits =
+            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : bit(len) - 1;
+
         mask |= bits << start;
     }
     Log::debug() << std::showbase << std::hex << "config mask: " << format << " = " << mask
@@ -245,9 +261,9 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     std::uint64_t res = 0;
     for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
     {
-        if (mask & (1 << mask_bit))
+        if (mask & bit(mask_bit))
         {
-            res |= ((value >> value_bit) & 0x1) << mask_bit;
+            res |= ((value >> value_bit) & bit(0)) << mask_bit;
             value_bit++;
         }
     }
