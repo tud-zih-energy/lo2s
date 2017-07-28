@@ -21,6 +21,9 @@
 
 #include <lo2s/trace/counters.hpp>
 
+#include <lo2s/config.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/platform.hpp>
 
 namespace lo2s
@@ -37,14 +40,36 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric
              "stat")
 {
     auto mc = metric_instance_.metric_class();
+
     const auto& mem_events = platform::get_mem_events();
-    counters_.reserve(mem_events.size());
-    for (const auto& description : mem_events)
+    const auto& user_events = lo2s::config().perf_events;
+    counters_.reserve(mem_events.size() + user_events.size());
+
+    for (const auto& ev : user_events)
     {
-        counters_.emplace_back(tid, description.type, description.config, description.config1);
+        try
+        {
+            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+            counters_.emplace_back(tid, event_desc.type, event_desc.config, event_desc.config1);
+        }
+        catch (const perf::EventProvider::InvalidEvent& e)
+        {
+            lo2s::Log::warn() << "'" << ev
+                              << "' does not name a known event, ignoring! (reason: " << e.what()
+                              << ")";
+        }
     }
-    counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
-    counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
+
+    if (user_events.size() == 0)
+    {
+        for (const auto& description : mem_events)
+        {
+            counters_.emplace_back(tid, description.type, description.config, description.config1);
+        }
+
+        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
+        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
+    }
 
     assert(counters_.size() <= mc.size());
 
@@ -58,20 +83,33 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric
 otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
 {
     auto c = trace_.metric_class();
+    const auto& user_events = lo2s::config().perf_events;
 
-    for (const auto& description : platform::get_mem_events())
+    for (const auto& ev : user_events)
     {
-        c.add_member(trace_.metric_member(description.name, description.name,
+        if (perf::EventProvider::has_event(ev))
+        {
+            c.add_member(trace_.metric_member(ev, ev, otf2::common::metric_mode::accumulated_start,
+                                              otf2::common::type::Double, "#"));
+        }
+    }
+
+    if (user_events.size() == 0)
+    {
+        for (const auto& description : platform::get_mem_events())
+        {
+            c.add_member(trace_.metric_member(description.name, description.name,
+                                              otf2::common::metric_mode::accumulated_start,
+                                              otf2::common::type::Double, "#"));
+        }
+
+        c.add_member(trace_.metric_member("instructions", "instructions",
+                                          otf2::common::metric_mode::accumulated_start,
+                                          otf2::common::type::Double, "#"));
+        c.add_member(trace_.metric_member("cycles", "CPU cycles",
                                           otf2::common::metric_mode::accumulated_start,
                                           otf2::common::type::Double, "#"));
     }
-
-    c.add_member(trace_.metric_member("instructions", "instructions",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::Double, "#"));
-    c.add_member(trace_.metric_member("cycles", "CPU cycles",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::Double, "#"));
 
     c.add_member(trace_.metric_member("CPU", "CPU executing the task",
                                       otf2::common::metric_mode::absolute_last,
