@@ -62,6 +62,26 @@ matrix:
           sources:
             - llvm-toolchain-trusty
             - ubuntu-toolchain-r-test
+    - os: linux
+      env: CXX="clang++-4.0" CC="clang-4.0"
+      compiler: clang
+      addons:
+        apt:
+          packages:
+            - clang-4.0
+            - g++-5
+            - cmake
+            - cmake-data
+            - binutils-dev
+            - zlib1g-dev
+            - libc6-dev
+            - libboost-system-dev
+            - libboost-program-options-dev
+            - libboost-filesystem-dev
+            - linux-libc-dev
+          sources:
+            - llvm-toolchain-trusty-4.0
+            - ubuntu-toolchain-r-test
 before_script:
   - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
   - tar -xf otf2-2.0.tar.gz
