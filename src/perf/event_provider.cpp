@@ -224,7 +224,7 @@ static std::uint64_t parse_bitmask(const std::string& format)
     static const std::regex bit_mask_regex(R"((\d+)?(?:-(\d+)))");
     const std::sregex_iterator end;
     std::smatch bit_mask_match;
-    for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; i++)
+    for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
     {
         const auto& match = *i;
         int start = std::stoi(match[BIT_BEGIN]);
