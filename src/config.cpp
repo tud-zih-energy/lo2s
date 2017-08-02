@@ -22,6 +22,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <nitro/lang/optional.hpp>
@@ -86,7 +87,9 @@ void parse_program_options(int argc, const char** argv)
         ("output-trace,o", po::value(&config.trace_path),
              "output trace directory")
         ("count,c", po::value(&config.sampling_period)->default_value(11010113),
-             "sampling period (# instructions)")
+             "sampling period (# of events specified by -e)")
+        ("event,e", po::value(&config.sampling_event)->default_value("instructions"),
+             "interrupt source event for sampling")
         ("all-cpus,a", po::bool_switch(&all_cpus),
              "System-wide monitoring of all CPUs.")
         ("call-graph,g", po::bool_switch(&config.enable_cct),
@@ -138,6 +141,13 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
+
+    if (!perf::EventProvider::has_event(config.sampling_event))
+    {
+        lo2s::Log::error() << "requested as sampling event \'" << config.sampling_event
+                           << "\'is not available!";
+        std::exit(EXIT_FAILURE); // hmm...
+    }
 
     if (all_cpus)
     {

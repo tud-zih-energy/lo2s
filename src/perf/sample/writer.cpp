@@ -23,6 +23,7 @@
 
 #include <lo2s/perf/sample/reader.hpp>
 
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/address.hpp>
@@ -55,12 +56,20 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, t
   otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
   first_time_point_(lo2s::time::now())
 {
+    platform::CounterDescription sampling_event =
+        EventProvider::get_event_by_name(config().sampling_event); // config parser has already
+                                                                   // checked for event
+                                                                   // availability, should not throw
+
+    Log::debug() << "using sampling event \'" << config().sampling_event
+                 << "\', period: " << config().sampling_period;
 
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(struct perf_event_attr));
     attr.size = sizeof(struct perf_event_attr);
-    attr.type = PERF_TYPE_HARDWARE;
-    attr.config = PERF_COUNT_HW_INSTRUCTIONS;
+    attr.type = sampling_event.type;
+    attr.config = sampling_event.config;
+    attr.config1 = sampling_event.config1;
     attr.sample_period = config().sampling_period;
     attr.exclude_kernel = config().exclude_kernel;
 

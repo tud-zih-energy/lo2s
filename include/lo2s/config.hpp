@@ -60,6 +60,7 @@ struct Config
     bool exclude_kernel;
     // Instruction sampling
     std::uint64_t sampling_period;
+    std::string sampling_event;
     bool enable_cct;
     bool suppress_ip;
     bool disassemble;
