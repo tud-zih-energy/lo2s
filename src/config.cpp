@@ -85,7 +85,7 @@ void parse_program_options(int argc, const char** argv)
              "produce help message")
         ("output-trace,o", po::value(&config.trace_path),
              "output trace directory")
-        ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
+        ("count,c", po::value(&config.sampling_period)->default_value(11010113),
              "sampling period (# instructions)")
         ("all-cpus,a", po::bool_switch(&all_cpus),
              "System-wide monitoring of all CPUs.")
@@ -105,7 +105,7 @@ void parse_program_options(int argc, const char** argv)
              "time interval between metric and sampling buffer readouts in milliseconds")
         ("tracepoint,t", po::value(&config.tracepoint_events),
              "enable global recording of a raw tracepoint event (usually requires root)")
-        ("event,e", po::value(&config.perf_events),
+        ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
