@@ -126,9 +126,17 @@ void parse_program_options(int argc, const char** argv)
     p.add("command", -1);
 
     po::variables_map vm;
-    po::parsed_options parsed =
-        po::command_line_parser(argc, argv).options(desc).positional(p).run();
-    po::store(parsed, vm);
+    try
+    {
+        po::parsed_options parsed =
+            po::command_line_parser(argc, argv).options(desc).positional(p).run();
+        po::store(parsed, vm);
+    }
+    catch (const po::unknown_option& e)
+    {
+        std::cerr << e.what() << '\n' << desc << '\n';
+        std::exit(EXIT_FAILURE);
+    }
     po::notify(vm);
 
     if (all_cpus)
