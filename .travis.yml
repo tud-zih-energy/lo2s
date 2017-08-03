@@ -43,7 +43,7 @@ matrix:
             - linux-libc-dev
           sources: *sources
     - os: linux
-      env: CXX="clang++" CC="clang"
+      env: CXX="clang++-6.0" CC="clang-6.0"
       compiler: clang
       addons:
         apt:
