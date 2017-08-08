@@ -32,9 +32,7 @@
 
 #include <cstdint>
 
-extern "C" {
-#include <linux/perf_event.h>
-}
+#include "perf/counter_description.hpp"
 
 /* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
 
@@ -142,20 +140,6 @@ namespace platform
         ARM1176 = 204,
     };
 
-    struct CounterDescription
-    {
-        CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                            std::uint64_t config1 = 0)
-        : name(name), type(type), config(config), config1(config1)
-        {
-        }
-
-        std::string name;
-        perf_type_id type;
-        std::uint64_t config;
-        std::uint64_t config1;
-    };
-
-    std::vector<CounterDescription> get_mem_events();
+    std::vector<perf::CounterDescription> get_mem_events();
 }
 }

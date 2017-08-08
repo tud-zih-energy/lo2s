@@ -56,7 +56,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, t
   otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
   first_time_point_(lo2s::time::now())
 {
-    platform::CounterDescription sampling_event =
+    CounterDescription sampling_event =
         EventProvider::get_event_by_name(config().sampling_event); // config parser has already
                                                                    // checked for event
                                                                    // availability, should not throw

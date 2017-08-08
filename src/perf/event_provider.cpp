@@ -21,6 +21,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/counter_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
 
 #include <boost/filesystem.hpp>
@@ -46,7 +47,7 @@ namespace
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
-static const lo2s::platform::CounterDescription HW_EVENT_TABLE[] = {
+static const lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
     PERF_EVENT_HW("instructions", INSTRUCTIONS),
     PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
@@ -63,7 +64,7 @@ static const lo2s::platform::CounterDescription HW_EVENT_TABLE[] = {
 #endif
 };
 
-static const lo2s::platform::CounterDescription SW_EVENT_TABLE[] = {
+static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
     PERF_EVENT_SW("task-clock", TASK_CLOCK),
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
@@ -136,7 +137,7 @@ namespace lo2s
 namespace perf
 {
 
-static bool event_is_openable(const platform::CounterDescription& ev)
+static bool event_is_openable(const CounterDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -197,9 +198,8 @@ static void populate_event_map(EventProvider::EventMap& map)
                 name_fmt.str(std::string());
                 name_fmt << cache.name << '-' << operation.name << op_result.name;
 
-                platform::CounterDescription ev(
-                    name_fmt.str(), PERF_TYPE_HW_CACHE,
-                    make_cache_config(cache.id, operation.id, op_result.id));
+                CounterDescription ev(name_fmt.str(), PERF_TYPE_HW_CACHE,
+                                      make_cache_config(cache.id, operation.id, op_result.id));
 
                 if (event_is_openable(ev))
                 {
@@ -270,7 +270,7 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-static void event_description_update(platform::CounterDescription& event, std::uint64_t value,
+static void event_description_update(CounterDescription& event, std::uint64_t value,
                                      const std::string& format)
 {
     static constexpr auto npos = std::string::npos;
@@ -294,7 +294,7 @@ static void event_description_update(platform::CounterDescription& event, std::u
     }
 }
 
-const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
+const CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
     /* event description format (with optional trailing '/'):
      *   <pmu>/<event_name>[/]
@@ -321,7 +321,7 @@ const platform::CounterDescription sysfs_read_event(const std::string& ev_desc)
     {
         throw EventProvider::InvalidEvent("cannot read PMU device type");
     }
-    platform::CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
+    CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
 
     std::string ev_cfg;
     if ((fs::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
@@ -375,7 +375,7 @@ EventProvider::EventProvider()
     populate_event_map(event_map_);
 }
 
-const platform::CounterDescription& EventProvider::cache_event(const std::string& name)
+const CounterDescription& EventProvider::cache_event(const std::string& name)
 {
     Log::info() << "caching event '" << name << "'.";
     try
@@ -391,7 +391,7 @@ const platform::CounterDescription& EventProvider::cache_event(const std::string
     }
 }
 
-const platform::CounterDescription& EventProvider::get_event_by_name(const std::string& name)
+const CounterDescription& EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
     if (ev_map.count(name))

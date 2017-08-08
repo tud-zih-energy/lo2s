@@ -25,7 +25,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "lo2s/platform.hpp"
+#include "lo2s/perf/counter_description.hpp"
 
 namespace lo2s
 {
@@ -35,7 +35,7 @@ namespace perf
 class EventProvider
 {
 public:
-    using EventMap = std::unordered_map<std::string, platform::CounterDescription>;
+    using EventMap = std::unordered_map<std::string, CounterDescription>;
 
     EventProvider();
     EventProvider(const EventProvider&) = delete;
@@ -46,7 +46,7 @@ public:
         return instance_mutable();
     }
 
-    static const platform::CounterDescription& get_event_by_name(const std::string& name);
+    static const CounterDescription& get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name)
     {
@@ -88,7 +88,7 @@ private:
         return e;
     }
 
-    const platform::CounterDescription& cache_event(const std::string& name);
+    const CounterDescription& cache_event(const std::string& name);
 
     EventMap event_map_;
 };
