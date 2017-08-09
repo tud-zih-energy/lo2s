@@ -24,6 +24,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/platform.hpp>
+#include <lo2s/shared_mmap.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>
@@ -118,17 +119,20 @@ protected:
     void init_mmap(int fd, size_t mmap_pages)
     {
         assert(mmap_pages > 0);
-        base = mmap(NULL, (mmap_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                    fd, 0);
-        assert(mmap_pages_ == 0);
-        mmap_pages_ = mmap_pages;
-        // Should not be necessary to check for nullptr, but we've seen it!
-        if (base == MAP_FAILED || base == nullptr)
+
+        try
+        {
+            base.map((mmap_pages + 1) * get_page_size(), fd);
+        }
+        catch (std::system_error& e)
         {
             Log::error() << "mmap failed. You can decrease the buffer size or try to increase "
                             "/proc/sys/kernel/perf_event_mlock_kb";
-            throw_errno();
+            throw();
         }
+
+        assert(mmap_pages_ == 0);
+        mmap_pages_ = mmap_pages;
     }
 
 public:
@@ -237,12 +241,12 @@ public:
 private:
     const struct perf_event_mmap_page* header() const
     {
-        return (const struct perf_event_mmap_page*)base;
+        return (const struct perf_event_mmap_page*)base.get();
     }
 
     struct perf_event_mmap_page* header()
     {
-        return (struct perf_event_mmap_page*)base;
+        return (struct perf_event_mmap_page*)base.get();
     }
 
     uint64_t data_head() const
@@ -276,7 +280,7 @@ private:
     {
         // workaround for old kernels
         // assert(header()->data_offset == get_page_size());
-        return (char*)base + get_page_size();
+        return (char*)base.get() + get_page_size();
     }
 
 public:
@@ -302,7 +306,7 @@ protected:
     size_t mmap_pages_ = 0;
 
 private:
-    void* base;
+    SharedMmap base;
     char event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
 }

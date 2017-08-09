@@ -112,6 +112,7 @@ set(SOURCE_FILES
         src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
         src/mmap.cpp
         src/util.cpp
+        src/shared_mmap.cpp
 
         ${X86_ADAPT_SOURCE_FILES}
         ${RADARE_SOURCE_FILES}
