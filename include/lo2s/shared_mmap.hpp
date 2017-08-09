@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <cstddef >
+#include <cstddef>
 
 namespace lo2s
 {
