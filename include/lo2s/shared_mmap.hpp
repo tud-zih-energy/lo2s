@@ -22,6 +22,7 @@
 #pragma once
 
 #include <cstddef>
+#include <utility>
 
 namespace lo2s
 {
@@ -45,8 +46,8 @@ public:
     SharedMmap& operator=(SharedMmap&& other) noexcept
     {
         // We are swapping here, so we can make this function noexcept
-        swap(other.addr_, addr_);
-        swap(other.lenght_, lenght_);
+        std::swap(other.addr_, addr_);
+        std::swap(other.lenght_, lenght_);
     }
 
     ~SharedMmap();
