@@ -48,6 +48,8 @@ public:
         // We are swapping here, so we can make this function noexcept
         std::swap(other.addr_, addr_);
         std::swap(other.lenght_, lenght_);
+
+        return *this;
     }
 
     ~SharedMmap();

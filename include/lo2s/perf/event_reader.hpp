@@ -128,7 +128,7 @@ protected:
         {
             Log::error() << "mmap failed. You can decrease the buffer size or try to increase "
                             "/proc/sys/kernel/perf_event_mlock_kb";
-            throw();
+            throw;
         }
 
         assert(mmap_pages_ == 0);
