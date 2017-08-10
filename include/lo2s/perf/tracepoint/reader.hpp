@@ -25,8 +25,8 @@
 
 #include <lo2s/perf/event_reader.hpp>
 
-#include <lo2s/util.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/util.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -69,7 +69,8 @@ public:
                 return _get<int64_t>(field.offset());
             default:
                 // We do check this before setting up the event
-                Log::warn() << "Trying to get field " << field.name() << " of invalid size: " << field.size();
+                Log::warn() << "Trying to get field " << field.name()
+                            << " of invalid size: " << field.size();
                 return 0;
             }
         }
@@ -80,7 +81,8 @@ public:
             ret.resize(field.size());
             auto input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
             size_t i;
-            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++) {
+            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++)
+            {
                 ret[i] = input_cstr[i];
             }
             ret.resize(i);
@@ -160,8 +162,7 @@ public:
         }
     }
 
-    Reader(Reader&& other)
-    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
+    Reader(Reader&& other) : EventReader<T>(std::move(other)), cpu_(other.cpu_)
     {
         std::swap(fd_, other.fd_);
     }

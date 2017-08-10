@@ -19,8 +19,6 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include <lo2s/error.hpp>
 #include <lo2s/shared_mmap.hpp>
 

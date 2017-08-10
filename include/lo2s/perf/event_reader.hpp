@@ -115,6 +115,11 @@ public:
         }
     }
 
+    EventReader() = default;
+
+    EventReader(EventReader&&) = default;
+    EventReader& operator=(EventReader&&) = default;
+
 protected:
     void init_mmap(int fd, size_t mmap_pages)
     {

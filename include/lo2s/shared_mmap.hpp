@@ -19,8 +19,6 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include <cstddef>
 #include <utility>
 
@@ -59,7 +57,7 @@ public:
     void map(std::size_t size, int fd);
     void unmap();
 
-    void* get()
+    void* get() const
     {
         return addr_;
     }
