@@ -217,7 +217,7 @@ namespace platform
         return Processor::UNKNOWN;
     }
 
-    std::vector<CounterDescription> get_mem_events()
+    std::vector<perf::CounterDescription> get_mem_events()
     {
         static auto proc = detect_processor();
         switch (proc)

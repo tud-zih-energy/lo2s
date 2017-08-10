@@ -22,6 +22,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <nitro/lang/optional.hpp>
@@ -85,8 +86,10 @@ void parse_program_options(int argc, const char** argv)
              "produce help message")
         ("output-trace,o", po::value(&config.trace_path),
              "output trace directory")
-        ("sampling_period,s", po::value(&config.sampling_period)->default_value(11010113),
-             "sampling period (# instructions)")
+        ("count,c", po::value(&config.sampling_period)->default_value(11010113),
+             "sampling period (# of events specified by -e)")
+        ("event,e", po::value(&config.sampling_event)->default_value("instructions"),
+             "interrupt source event for sampling")
         ("all-cpus,a", po::bool_switch(&all_cpus),
              "System-wide monitoring of all CPUs.")
         ("call-graph,g", po::bool_switch(&config.enable_cct),
@@ -105,7 +108,7 @@ void parse_program_options(int argc, const char** argv)
              "time interval between metric and sampling buffer readouts in milliseconds")
         ("tracepoint,t", po::value(&config.tracepoint_events),
              "enable global recording of a raw tracepoint event (usually requires root)")
-        ("event,e", po::value(&config.perf_events),
+        ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
@@ -126,10 +129,25 @@ void parse_program_options(int argc, const char** argv)
     p.add("command", -1);
 
     po::variables_map vm;
-    po::parsed_options parsed =
-        po::command_line_parser(argc, argv).options(desc).positional(p).run();
-    po::store(parsed, vm);
+    try
+    {
+        po::parsed_options parsed =
+            po::command_line_parser(argc, argv).options(desc).positional(p).run();
+        po::store(parsed, vm);
+    }
+    catch (const po::unknown_option& e)
+    {
+        std::cerr << e.what() << '\n' << desc << '\n';
+        std::exit(EXIT_FAILURE);
+    }
     po::notify(vm);
+
+    if (!perf::EventProvider::has_event(config.sampling_event))
+    {
+        lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
+                           << "\'is not available!";
+        std::exit(EXIT_FAILURE); // hmm...
+    }
 
     if (all_cpus)
     {
