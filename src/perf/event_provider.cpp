@@ -310,7 +310,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
 
     const auto pmu = ev_desc.substr(0, slash_pos);
     const auto event_name = ev_desc.substr(
-        slash_pos + 1, trailing_slash_pos == npos ? 0 : trailing_slash_pos - (slash_pos + 1));
+        slash_pos + 1, trailing_slash_pos == npos ? npos : trailing_slash_pos - (slash_pos + 1));
 
     // PMU -- performance monitoring unit
     const fs::path pmu_path = fs::path("/sys/bus/event_source/devices") / pmu;
