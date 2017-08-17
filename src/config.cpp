@@ -79,6 +79,8 @@ void parse_program_options(int argc, const char** argv)
     bool kernel, no_kernel;
     std::uint64_t read_interval_ms;
 
+    std::string clock_name;
+
     // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     // clang-format off
     desc.add_options()
@@ -110,6 +112,7 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
+        ("clockid,k", po::value(&clock_name), "select timer to use for timestamps")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
@@ -188,6 +191,44 @@ void parse_program_options(int argc, const char** argv)
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
                            << "\'is not available!";
         std::exit(EXIT_FAILURE); // hmm...
+    }
+
+    // time synchronization
+    config.use_clockid = false;
+    if (!clock_name.empty())
+    {
+        struct clock_descripton
+        {
+            const char name[16];
+            clockid_t id;
+        };
+
+        static constexpr clock_descripton clocks[] = {
+            {
+                "monotonic", CLOCK_MONOTONIC,
+            },
+            {
+                "monotonic-raw", CLOCK_MONOTONIC_RAW,
+            },
+            {
+                "realtime", CLOCK_REALTIME,
+            },
+            {
+                "boottime", CLOCK_BOOTTIME,
+            },
+        };
+
+        const char* clock_name_ptr = clock_name.c_str();
+        for (auto clock : clocks)
+        {
+            if (std::strcmp(clock_name_ptr, clock.name) == 0)
+            {
+                lo2s::Log::debug() << "clockid: " << clock.name;
+                config.use_clockid = true;
+                config.clockid = clock.id;
+                break;
+            }
+        }
     }
 
     if (all_cpus)
