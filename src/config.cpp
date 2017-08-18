@@ -142,6 +142,47 @@ void parse_program_options(int argc, const char** argv)
     }
     po::notify(vm);
 
+    if (vm.count("help") || (config.monitor_type == lo2s::MonitorType::PROCESS &&
+                             config.pid == -1 && config.command.empty()))
+    {
+        std::cout << desc << "\n";
+        std::exit(0);
+    }
+
+    if (quiet && verbosity.count != 0)
+    {
+        lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
+        quiet = false;
+    }
+
+    if (quiet)
+    {
+        lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
+    }
+    else
+    {
+        using sl = nitro::log::severity_level;
+        switch (verbosity.count)
+        {
+        case 0:
+            lo2s::logging::set_min_severity_level(sl::warn);
+            break;
+        case 1:
+            lo2s::Log::info() << "Enabling log-level 'info'";
+            lo2s::logging::set_min_severity_level(sl::info);
+            break;
+        case 2:
+            lo2s::Log::info() << "Enabling log-level 'debug'";
+            lo2s::logging::set_min_severity_level(sl::debug);
+            break;
+        case 3:
+        default:
+            lo2s::Log::info() << "Enabling log-level 'trace'";
+            lo2s::logging::set_min_severity_level(sl::trace);
+            break;
+        }
+    }
+
     if (!perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
@@ -190,47 +231,6 @@ void parse_program_options(int argc, const char** argv)
     else if (no_kernel)
     {
         config.exclude_kernel = true;
-    }
-
-    if (vm.count("help") || (config.monitor_type == lo2s::MonitorType::PROCESS &&
-                             config.pid == -1 && config.command.empty()))
-    {
-        std::cout << desc << "\n";
-        std::exit(0);
-    }
-
-    if (quiet && verbosity.count != 0)
-    {
-        lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
-        quiet = false;
-    }
-
-    if (quiet)
-    {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
-    }
-    else
-    {
-        using sl = nitro::log::severity_level;
-        switch (verbosity.count)
-        {
-        case 0:
-            lo2s::logging::set_min_severity_level(sl::warn);
-            break;
-        case 1:
-            lo2s::Log::info() << "Enabling log-level 'info'";
-            lo2s::logging::set_min_severity_level(sl::info);
-            break;
-        case 2:
-            lo2s::Log::info() << "Enabling log-level 'debug'";
-            lo2s::logging::set_min_severity_level(sl::debug);
-            break;
-        case 3:
-        default:
-            lo2s::Log::info() << "Enabling log-level 'trace'";
-            lo2s::logging::set_min_severity_level(sl::trace);
-            break;
-        }
     }
 
     instance = std::move(config);
