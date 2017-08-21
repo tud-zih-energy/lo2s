@@ -84,8 +84,8 @@ matrix:
             - ubuntu-toolchain-r-test
 before_script:
   - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install linux-headers-$(uname -r)
-  - export CPATH="/usr/src/$(uname -r)/include:$CPATH"
-  - ls -l /usr/src/4.4.0-83-generic/include/linux
+  - export CPATH="/usr/src/linux-headers-$(uname -r)/include:$CPATH"
+  - ls -l /usr/src/linux-headers-4.4.0-83-generic/include/linux
   - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
   - tar -xf otf2-2.0.tar.gz
   - cd otf2-2.0
