@@ -83,7 +83,6 @@ matrix:
             - llvm-toolchain-trusty-4.0
             - ubuntu-toolchain-r-test
 before_script:
-  - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install linux-headers-$(uname -r)
   - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
   - tar -xf otf2-2.0.tar.gz
   - cd otf2-2.0
@@ -93,8 +92,7 @@ before_script:
   - cd ..
   - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
   - cmake --version
-  - cmake . -DUSE_RADARE=OFF -DCMAKE_REQUIRED_INCLUDES="/usr/src/linux-headers-$(uname -r)/include"
+  - cmake . -DUSE_RADARE=OFF
 script:
-  - export CPATH="/usr/src/linux-headers-$(uname -r)/include:$CPATH"
   - make
   - ctest -V .
