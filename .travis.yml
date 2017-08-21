@@ -83,6 +83,7 @@ matrix:
             - llvm-toolchain-trusty-4.0
             - ubuntu-toolchain-r-test
 before_script:
+  - sudo apt-get --no-install-suggests --no-install-recommends --force-yes linux-headers-$(uname -r)
   - ls -l /usr/src
   - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.0.tar.gz
   - tar -xf otf2-2.0.tar.gz
