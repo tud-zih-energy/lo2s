@@ -62,6 +62,10 @@ CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 
+INCLUDE(CheckStructHasMember)
+CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h
+    HAVE_PERF_EVENT_ATTR_CLOCKID)
+
 if (HW_BREAKPOINT_COMPAT)
     add_definitions(-DHW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
