@@ -79,7 +79,7 @@ protected:
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
 
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(HAVE_PERF_EVENT_ATTR_CLOCKID)
+#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif
@@ -130,7 +130,7 @@ protected:
             // TODO if there is a EACCESS, we should retry without the kernel flag!
             // Test if it then works with paranoid=2
             Log::error() << "perf_event_open for sampling failed";
-#ifdef HAVE_PERF_EVENT_ATTR_CLOCKID
+#ifdef USE_PERF_CLOCKID
             if (perf_attr.use_clockid) {
                 Log::error() << "maybe the specified clock is unavailable?";
             }

@@ -197,7 +197,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     if (!clock_name.empty())
     {
-#if defined(HAVE_PERF_EVENT_ATTR_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
+#if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
         struct clock_descripton
         {
             const char name[16];

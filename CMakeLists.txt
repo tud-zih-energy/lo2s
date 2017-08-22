@@ -62,10 +62,6 @@ CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 
-INCLUDE(CheckStructHasMember)
-CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h
-    HAVE_PERF_EVENT_ATTR_CLOCKID)
-
 if (HW_BREAKPOINT_COMPAT)
     add_definitions(-DHW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
@@ -74,6 +70,24 @@ if (HW_BREAKPOINT_COMPAT)
 else()
     if (NOT HAVE_HW_BREAKPOINT_H)
         message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
+    endif()
+endif()
+
+INCLUDE(CheckStructHasMember)
+CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h
+    HAVE_PERF_EVENT_ATTR_CLOCKID)
+
+option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+
+if (USE_PERF_CLOCKID)
+    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
+        add_definitions(-DUSE_PERF_CLOCKID)
+    else()
+        message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
+    endif()
+else()
+    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
+        message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
     endif()
 endif()
 

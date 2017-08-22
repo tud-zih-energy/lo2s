@@ -125,7 +125,7 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(HAVE_PERF_EVENT_ATTR_CLOCKID)
+#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         attr.use_clockid = config().use_clockid;
         attr.clockid = config().clockid;
 #endif
