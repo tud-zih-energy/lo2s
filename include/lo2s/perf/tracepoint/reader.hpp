@@ -25,8 +25,9 @@
 
 #include <lo2s/perf/event_reader.hpp>
 
-#include <lo2s/util.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/util.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -69,7 +70,8 @@ public:
                 return _get<int64_t>(field.offset());
             default:
                 // We do check this before setting up the event
-                Log::warn() << "Trying to get field " << field.name() << " of invalid size: " << field.size();
+                Log::warn() << "Trying to get field " << field.name()
+                            << " of invalid size: " << field.size();
                 return 0;
             }
         }
@@ -80,7 +82,8 @@ public:
             ret.resize(field.size());
             auto input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
             size_t i;
-            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++) {
+            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++)
+            {
                 ret[i] = input_cstr[i];
             }
             ret.resize(i);
@@ -121,6 +124,11 @@ public:
         attr.disabled = 1;
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
+
+#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+        attr.use_clockid = config().use_clockid;
+        attr.clockid = config().clockid;
+#endif
 
         attr.watermark = 1;
         attr.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * get_page_size());

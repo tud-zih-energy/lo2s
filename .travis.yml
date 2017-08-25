@@ -92,7 +92,7 @@ before_script:
   - cd ..
   - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
   - cmake --version
-  - cmake . -DUSE_RADARE=OFF
+  - cmake . -DUSE_RADARE=OFF -DUSE_PERF_CLOCKID=OFF
 script:
   - make
   - ctest -V .

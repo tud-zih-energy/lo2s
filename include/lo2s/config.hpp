@@ -66,6 +66,9 @@ struct Config
     bool disassemble;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
+    // time synchronization
+    bool use_clockid;
+    int clockid;
 };
 
 const Config& config();
