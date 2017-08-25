@@ -30,6 +30,7 @@
 #include <boost/program_options.hpp>
 
 #include <cstdlib>
+#include <ctime> // for CLOCK_* macros
 
 namespace po = boost::program_options;
 
@@ -79,7 +80,7 @@ void parse_program_options(int argc, const char** argv)
     bool kernel, no_kernel;
     std::uint64_t read_interval_ms;
 
-    std::string clock_name;
+    std::string requested_clock_name;
 
     // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     // clang-format off
@@ -112,7 +113,7 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
-        ("clockid,k", po::value(&clock_name), "select timer to use for timestamps")
+        ("clockid,k", po::value(&requested_clock_name), "clock used for perf timestamps")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
@@ -195,16 +196,16 @@ void parse_program_options(int argc, const char** argv)
 
     // time synchronization
     config.use_clockid = false;
-    if (!clock_name.empty())
+    if (!requested_clock_name.empty())
     {
 #if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
         struct clock_descripton
         {
-            const char name[16];
+            std::string name;
             clockid_t id;
         };
 
-        static constexpr clock_descripton clocks[] = {
+        static clock_descripton clocks[] = {
             {
                 "monotonic", CLOCK_MONOTONIC,
             },
@@ -219,12 +220,11 @@ void parse_program_options(int argc, const char** argv)
             },
         };
 
-        const char* clock_name_ptr = clock_name.c_str();
-        for (auto clock : clocks)
+        for (const auto& clock : clocks)
         {
-            if (std::strcmp(clock_name_ptr, clock.name) == 0)
+            if (requested_clock_name == clock.name)
             {
-                lo2s::Log::debug() << "clockid: " << clock.name;
+                lo2s::Log::debug() << "using clock \'" << clock.name << "\'.";
                 config.use_clockid = true;
                 config.clockid = clock.id;
                 break;

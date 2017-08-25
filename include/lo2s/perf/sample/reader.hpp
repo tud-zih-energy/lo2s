@@ -131,7 +131,8 @@ protected:
             // Test if it then works with paranoid=2
             Log::error() << "perf_event_open for sampling failed";
 #ifdef USE_PERF_CLOCKID
-            if (perf_attr.use_clockid) {
+            if (perf_attr.use_clockid)
+            {
                 Log::error() << "maybe the specified clock is unavailable?";
             }
 #endif
