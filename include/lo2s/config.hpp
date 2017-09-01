@@ -68,7 +68,7 @@ struct Config
     std::chrono::nanoseconds read_interval;
     // time synchronization
     bool use_clockid;
-    int clockid;
+    clockid_t clockid;
 };
 
 const Config& config();
