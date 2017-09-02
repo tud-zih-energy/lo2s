@@ -24,6 +24,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/time/time.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -227,6 +228,8 @@ void parse_program_options(int argc, const char** argv)
                 lo2s::Log::debug() << "using clock \'" << clock.name << "\'.";
                 config.use_clockid = true;
                 config.clockid = clock.id;
+
+                lo2s::time::Clock::set_clock(clock.id);
                 break;
             }
         }

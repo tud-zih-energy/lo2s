@@ -26,6 +26,7 @@
 #include <otf2xx/chrono/chrono.hpp>
 
 #include <chrono>
+#include <ctime>
 
 #include <cstdint>
 
@@ -34,7 +35,31 @@ namespace lo2s
 {
 namespace time
 {
-using Clock = std::chrono::steady_clock;
+
+struct Clock
+{
+    // This is except from the type = CamelCase naming convention to be compatible
+    using duration = std::chrono::nanoseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<Clock, duration>;
+
+    static time_point now() noexcept
+    {
+        timespec tp;
+        clock_gettime(_clockid, &tp);
+        return time_point(
+            duration(std::chrono::seconds(tp.tv_sec) + std::chrono::nanoseconds(tp.tv_nsec)));
+    }
+
+    static void set_clock(clockid_t id)
+    {
+        _clockid = id;
+    }
+
+private:
+    static clockid_t _clockid;
+};
 
 inline otf2::chrono::time_point now()
 {

@@ -123,6 +123,8 @@ set(SOURCE_FILES
         src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
         src/perf/tracepoint/exit_reader.cpp
 
+        src/time/time.cpp
+
         src/trace/counters.cpp src/trace/trace.cpp
 
         src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
