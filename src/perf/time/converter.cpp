@@ -29,7 +29,7 @@ namespace perf
 {
 namespace time
 {
-Converter::Converter()
+Converter::Converter() : offset(otf2::chrono::duration(0))
 {
     Reader reader;
     reader.read();
@@ -38,13 +38,27 @@ Converter::Converter()
     {
         Log::error()
             << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        offset = otf2::chrono::duration(0);
         return;
     }
-    offset = reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-    Log::debug() << "perf time offset: " << offset.count() << " ns ("
-                 << reader.local_time.time_since_epoch().count() << " - "
-                 << reader.perf_time.time_since_epoch().count() << ").";
+
+    // we expect local_time <= perf_time
+    const auto time_diff =
+        reader.perf_time.time_since_epoch() - reader.local_time.time_since_epoch();
+
+    if (time_diff < std::chrono::microseconds(0) or time_diff > std::chrono::microseconds(100))
+    {
+        Log::warn() << "Unusually large perf time offset detected after synchronization! ("
+                    << std::showpos << time_diff.count() << std::noshowpos << "ns)";
+    }
+
+    if (!lo2s::config().use_clockid)
+    {
+        offset = time_diff;
+    }
+
+    Log::debug() << "perf time offset: " << time_diff.count() << "ns ("
+                 << reader.perf_time.time_since_epoch().count() << "ns - "
+                 << reader.local_time.time_since_epoch().count() << "ns).";
 }
 }
 }
