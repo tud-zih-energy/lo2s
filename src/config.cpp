@@ -114,7 +114,8 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
-        ("clockid,k", po::value(&requested_clock_name), "clock used for perf timestamps")
+        ("clockid,k", po::value(&requested_clock_name)->default_value("monotonic-raw"),
+             "clock used for perf timestamps")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
