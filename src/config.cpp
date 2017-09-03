@@ -199,14 +199,13 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     if (!requested_clock_name.empty())
     {
-#if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
         struct clock_descripton
         {
             std::string name;
             clockid_t id;
         };
 
-        static clock_descripton clocks[] = {
+        static const clock_descripton clocks[] = {
             {
                 "monotonic", CLOCK_MONOTONIC,
             },
@@ -226,18 +225,19 @@ void parse_program_options(int argc, const char** argv)
             if (requested_clock_name == clock.name)
             {
                 lo2s::Log::debug() << "using clock \'" << clock.name << "\'.";
+#if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
                 config.use_clockid = true;
                 config.clockid = clock.id;
-
+#else
+                lo2s::Log::warn() << "This installation was built without support for setting a "
+                                     "perf reference clock.";
+                lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
+                                     "local reference clock.";
+#endif
                 lo2s::time::Clock::set_clock(clock.id);
                 break;
             }
         }
-#else
-        lo2s::Log::warn()
-            << "This installation was built without support for setting a perf reference clock.";
-        lo2s::Log::warn() << "Any parameter to -k/--clockid will be ignored.";
-#endif
     }
 
     if (all_cpus)
