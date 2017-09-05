@@ -41,11 +41,11 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
         return;
     }
 
-    // we expect local_time <= perf_time
+    // we expect local_time <= perf_time, i.e. time_diff < 0
     const auto time_diff =
-        reader.perf_time.time_since_epoch() - reader.local_time.time_since_epoch();
+        reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
 
-    if (time_diff < std::chrono::microseconds(0) or time_diff > std::chrono::microseconds(100))
+    if (time_diff < std::chrono::microseconds(-100) or time_diff > std::chrono::microseconds(0))
     {
         Log::warn() << "Unusually large perf time offset detected after synchronization! ("
                     << std::showpos << time_diff.count() << std::noshowpos << "ns)";
@@ -57,8 +57,8 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
     }
 
     Log::debug() << "perf time offset: " << time_diff.count() << "ns ("
-                 << reader.perf_time.time_since_epoch().count() << "ns - "
-                 << reader.local_time.time_since_epoch().count() << "ns).";
+                 << reader.local_time.time_since_epoch().count() << "ns - "
+                 << reader.perf_time.time_since_epoch().count() << "ns).";
 }
 }
 }
