@@ -45,13 +45,16 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
     const auto time_diff =
         reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
 
-    if (time_diff < std::chrono::microseconds(-100) or time_diff > std::chrono::microseconds(0))
+    if (lo2s::config().use_clockid)
     {
-        Log::warn() << "Unusually large perf time offset detected after synchronization! ("
-                    << std::showpos << time_diff.count() << std::noshowpos << "ns)";
+        if (time_diff < std::chrono::microseconds(-100) or time_diff > std::chrono::microseconds(0))
+        {
+            Log::warn() << "Unusually large perf time offset detected after synchronization! ("
+                        << std::showpos << time_diff.count() << std::noshowpos << "ns)";
+            offset = time_diff;
+        }
     }
-
-    if (!lo2s::config().use_clockid)
+    else
     {
         offset = time_diff;
     }
