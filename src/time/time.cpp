@@ -25,6 +25,6 @@ namespace lo2s
 {
 namespace time
 {
-clockid_t Clock::_clockid = CLOCK_MONOTONIC_RAW;
+clockid_t Clock::clockid_ = CLOCK_MONOTONIC_RAW;
 }
 }

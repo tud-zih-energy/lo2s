@@ -47,18 +47,18 @@ struct Clock
     static time_point now() noexcept
     {
         timespec tp;
-        clock_gettime(_clockid, &tp);
-        return time_point(
-            duration(std::chrono::seconds(tp.tv_sec) + std::chrono::nanoseconds(tp.tv_nsec)));
+        clock_gettime(clockid_, &tp);
+        return time_point(duration(std::chrono::seconds(tp.tv_sec)) +
+                          duration(std::chrono::nanoseconds(tp.tv_nsec)));
     }
 
     static void set_clock(clockid_t id)
     {
-        _clockid = id;
+        clockid_ = id;
     }
 
 private:
-    static clockid_t _clockid;
+    static clockid_t clockid_;
 };
 
 inline otf2::chrono::time_point now()
