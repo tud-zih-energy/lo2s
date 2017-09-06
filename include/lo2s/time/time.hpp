@@ -30,6 +30,9 @@
 
 #include <cstdint>
 
+#include <stdexcept> // for use by ClockProvider::InvalidClock
+#include <string>    // for use by ClockProvider::get_clock_by_name
+
 // All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
@@ -59,6 +62,62 @@ struct Clock
 
 private:
     static clockid_t clockid_;
+};
+
+struct ClockDescription
+{
+    const char* name;
+    clockid_t id;
+};
+
+class ClockProvider
+{
+public:
+    struct InvalidClock : std::runtime_error
+    {
+        InvalidClock(const std::string& what) : std::runtime_error(what)
+        {
+        }
+    };
+
+    static const ClockDescription& get_clock_by_name(const std::string& name);
+
+private:
+    static constexpr ClockDescription clocks_[] = {
+        {
+            "realtime", CLOCK_REALTIME,
+        },
+        {
+            "monotonic", CLOCK_MONOTONIC,
+        },
+        {
+            "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
+        },
+        {
+            "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
+        },
+        {
+            "monotonic-raw", CLOCK_MONOTONIC_RAW,
+        },
+        {
+            "realtime-coarse", CLOCK_REALTIME_COARSE,
+        },
+        {
+            "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
+        },
+        {
+            "boottime", CLOCK_BOOTTIME,
+        },
+        {
+            "realtime-alarm", CLOCK_REALTIME_ALARM,
+        },
+        {
+            "boottime-alarm", CLOCK_BOOTTIME_ALARM,
+        },
+        {
+            "tai", CLOCK_TAI,
+        }
+    };
 };
 
 inline otf2::chrono::time_point now()

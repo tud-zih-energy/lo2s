@@ -200,44 +200,26 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     if (!requested_clock_name.empty())
     {
-        struct clock_descripton
+        try
         {
-            std::string name;
-            clockid_t id;
-        };
+            const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
 
-        static const clock_descripton clocks[] = {
-            {
-                "monotonic", CLOCK_MONOTONIC,
-            },
-            {
-                "monotonic-raw", CLOCK_MONOTONIC_RAW,
-            },
-            {
-                "realtime", CLOCK_REALTIME,
-            },
-            {
-                "boottime", CLOCK_BOOTTIME,
-            },
-        };
-
-        for (const auto& clock : clocks)
-        {
-            if (requested_clock_name == clock.name)
-            {
-                lo2s::Log::debug() << "using clock \'" << clock.name << "\'.";
+            lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
-                config.use_clockid = true;
-                config.clockid = clock.id;
+            config.use_clockid = true;
+            config.clockid = clock.id;
 #else
-                lo2s::Log::warn() << "This installation was built without support for setting a "
-                                     "perf reference clock.";
-                lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
-                                     "local reference clock.";
+            lo2s::Log::warn() << "This installation was built without support for setting a "
+                                 "perf reference clock.";
+            lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
+                                 "local reference clock.";
 #endif
-                lo2s::time::Clock::set_clock(clock.id);
-                break;
-            }
+            lo2s::time::Clock::set_clock(clock.id);
+        }
+        catch (const lo2s::time::ClockProvider::InvalidClock& e)
+        {
+            lo2s::Log::error() << "Invalid clock requested: " << e.what();
+            std::exit(EXIT_FAILURE);
         }
     }
 

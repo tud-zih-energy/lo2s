@@ -26,5 +26,21 @@ namespace lo2s
 namespace time
 {
 clockid_t Clock::clockid_ = CLOCK_MONOTONIC_RAW;
+
+constexpr ClockDescription ClockProvider::clocks_[];
+
+const ClockDescription& ClockProvider::get_clock_by_name(const std::string& name)
+{
+    for (const auto& clock : clocks_)
+    {
+        if (name == clock.name)
+        {
+            return clock;
+        }
+    }
+
+    using namespace std::literals::string_literals;
+    throw InvalidClock("clock \'"s + name + "\' is not available"s);
+}
 }
 }
