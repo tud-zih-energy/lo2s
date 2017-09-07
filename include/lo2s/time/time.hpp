@@ -84,39 +84,61 @@ public:
 
 private:
     static constexpr ClockDescription clocks_[] = {
+#ifdef CLOCK_REALTIME
         {
             "realtime", CLOCK_REALTIME,
         },
+#endif
+#ifdef CLOCK_MONOTONIC
         {
             "monotonic", CLOCK_MONOTONIC,
         },
+#endif
+#ifdef CLOCK_PROCESS_CPUTIME_ID
         {
             "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
         },
+#endif
+#ifdef CLOCK_THREAD_CPUTIME_ID
         {
             "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
         },
+#endif
+#ifdef CLOCK_MONOTONIC_RAW
         {
             "monotonic-raw", CLOCK_MONOTONIC_RAW,
         },
+#endif
+#ifdef CLOCK_REALTIME_COARSE
         {
             "realtime-coarse", CLOCK_REALTIME_COARSE,
         },
+#endif
+#ifdef CLOCK_MONOTONIC_COARSE
         {
             "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
         },
+#endif
+#ifdef CLOCK_BOOTTIME
         {
             "boottime", CLOCK_BOOTTIME,
         },
+#endif
+#ifdef CLOCK_REALTIME_ALARM
         {
             "realtime-alarm", CLOCK_REALTIME_ALARM,
         },
+#endif
+#ifdef CLOCK_BOOTTIME_ALARM
         {
             "boottime-alarm", CLOCK_BOOTTIME_ALARM,
         },
+#endif
+#ifdef CLOCK_TAI
         {
             "tai", CLOCK_TAI,
         }
+#endif
     };
 };
 
