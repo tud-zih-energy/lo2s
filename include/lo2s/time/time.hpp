@@ -33,6 +33,11 @@
 #include <stdexcept> // for use by ClockProvider::InvalidClock
 #include <string>    // for use by ClockProvider::get_clock_by_name
 
+extern "C" {
+#include <unistd.h>
+#include <linux/version.h>
+}
+
 // All the time stuff is based on the assumption that all times are nanoseconds.
 namespace lo2s
 {
@@ -84,60 +89,49 @@ public:
 
 private:
     static constexpr ClockDescription clocks_[] = {
-#ifdef CLOCK_REALTIME
         {
             "realtime", CLOCK_REALTIME,
         },
-#endif
-#ifdef CLOCK_MONOTONIC
+#ifdef _POSIX_MONOTONIC_CLOCK
         {
             "monotonic", CLOCK_MONOTONIC,
         },
 #endif
-#ifdef CLOCK_PROCESS_CPUTIME_ID
+#ifdef _POSIX_CPUTIME
         {
             "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
         },
 #endif
-#ifdef CLOCK_THREAD_CPUTIME_ID
+#ifdef _POSIX_THREAD_CPUTIME
         {
             "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
-#ifdef CLOCK_MONOTONIC_RAW
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
         {
             "monotonic-raw", CLOCK_MONOTONIC_RAW,
         },
 #endif
-#ifdef CLOCK_REALTIME_COARSE
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
         {
             "realtime-coarse", CLOCK_REALTIME_COARSE,
         },
-#endif
-#ifdef CLOCK_MONOTONIC_COARSE
         {
             "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
         },
 #endif
-#ifdef CLOCK_BOOTTIME
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
         {
             "boottime", CLOCK_BOOTTIME,
         },
 #endif
-#ifdef CLOCK_REALTIME_ALARM
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
         {
             "realtime-alarm", CLOCK_REALTIME_ALARM,
         },
-#endif
-#ifdef CLOCK_BOOTTIME_ALARM
         {
             "boottime-alarm", CLOCK_BOOTTIME_ALARM,
         },
-#endif
-#ifdef CLOCK_TAI
-        {
-            "tai", CLOCK_TAI,
-        }
 #endif
     };
 };
