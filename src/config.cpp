@@ -79,6 +79,7 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
+    bool list_clockids;
     std::uint64_t read_interval_ms;
 
     std::string requested_clock_name;
@@ -114,8 +115,9 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
-        ("clockid,k", po::value(&requested_clock_name)->default_value("monotonic-raw"),
-             "clock used for perf timestamps")
+        ("clockid,k",
+             po::value(&requested_clock_name)->default_value("monotonic-raw"),
+             "clock used for perf timestamps (see --list_clockids for supported arguments)")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
@@ -128,6 +130,8 @@ void parse_program_options(int argc, const char** argv)
              "include events happening in kernel space (default)")
         ("no-kernel", po::bool_switch(&no_kernel),
              "exclude events happening in kernel space")
+        ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
+            "list all available clockids")
         ("command", po::value(&config.command));
     // clang-format on
 
@@ -187,6 +191,17 @@ void parse_program_options(int argc, const char** argv)
             lo2s::logging::set_min_severity_level(sl::trace);
             break;
         }
+    }
+
+    // list arguments to options and exit
+    if (list_clockids)
+    {
+        std::cout << "Available clockids:\n";
+        for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
+        {
+            std::cout << " * " << clock.name << '\n';
+        }
+        std::exit(EXIT_SUCCESS);
     }
 
     if (!perf::EventProvider::has_event(config.sampling_event))

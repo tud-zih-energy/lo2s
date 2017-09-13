@@ -87,6 +87,10 @@ public:
 
     static const ClockDescription& get_clock_by_name(const std::string& name);
 
+    static auto& get_descriptions() {
+        return clocks_;
+    }
+
 private:
     static constexpr ClockDescription clocks_[] = {
         {
