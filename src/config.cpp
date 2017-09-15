@@ -24,6 +24,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/time/time.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -78,6 +79,7 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
+    bool list_clockids;
     std::uint64_t read_interval_ms;
 
     std::string requested_clock_name;
@@ -113,7 +115,9 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
-        ("clockid,k", po::value(&requested_clock_name), "clock used for perf timestamps")
+        ("clockid,k",
+             po::value(&requested_clock_name)->default_value("monotonic-raw"),
+             "clock used for perf timestamps (see --list_clockids for supported arguments)")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
@@ -126,6 +130,8 @@ void parse_program_options(int argc, const char** argv)
              "include events happening in kernel space (default)")
         ("no-kernel", po::bool_switch(&no_kernel),
              "exclude events happening in kernel space")
+        ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
+            "list all available clockids")
         ("command", po::value(&config.command));
     // clang-format on
 
@@ -187,6 +193,17 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    // list arguments to options and exit
+    if (list_clockids)
+    {
+        std::cout << "Available clockids:\n";
+        for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
+        {
+            std::cout << " * " << clock.name << '\n';
+        }
+        std::exit(EXIT_SUCCESS);
+    }
+
     if (!perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
@@ -198,43 +215,27 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     if (!requested_clock_name.empty())
     {
+        try
+        {
+            const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
+
+            lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
-        struct clock_descripton
-        {
-            std::string name;
-            clockid_t id;
-        };
-
-        static clock_descripton clocks[] = {
-            {
-                "monotonic", CLOCK_MONOTONIC,
-            },
-            {
-                "monotonic-raw", CLOCK_MONOTONIC_RAW,
-            },
-            {
-                "realtime", CLOCK_REALTIME,
-            },
-            {
-                "boottime", CLOCK_BOOTTIME,
-            },
-        };
-
-        for (const auto& clock : clocks)
-        {
-            if (requested_clock_name == clock.name)
-            {
-                lo2s::Log::debug() << "using clock \'" << clock.name << "\'.";
-                config.use_clockid = true;
-                config.clockid = clock.id;
-                break;
-            }
-        }
+            config.use_clockid = true;
+            config.clockid = clock.id;
 #else
-        lo2s::Log::warn()
-            << "This installation was built without support for setting a perf reference clock.";
-        lo2s::Log::warn() << "Any parameter to -k/--clockid will be ignored.";
+            lo2s::Log::warn() << "This installation was built without support for setting a "
+                                 "perf reference clock.";
+            lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
+                                 "local reference clock.";
 #endif
+            lo2s::time::Clock::set_clock(clock.id);
+        }
+        catch (const lo2s::time::ClockProvider::InvalidClock& e)
+        {
+            lo2s::Log::error() << "Invalid clock requested: " << e.what();
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     if (all_cpus)
