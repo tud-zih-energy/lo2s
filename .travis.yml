@@ -43,6 +43,26 @@ matrix:
             - linux-libc-dev
           sources: *sources
     - os: linux
+      env: CXX="clang++-6.0" CC="clang-6.0"
+      compiler: clang
+      addons:
+        apt:
+          packages:
+            - clang
+            - g++-5
+            - cmake
+            - cmake-data
+            - binutils-dev
+            - zlib1g-dev
+            - libc6-dev
+            - libboost-system-dev
+            - libboost-program-options-dev
+            - libboost-filesystem-dev
+            - linux-libc-dev
+          sources:
+            - llvm-toolchain-trusty
+            - ubuntu-toolchain-r-test
+    - os: linux
       env: CXX="clang++-4.0" CC="clang-4.0"
       compiler: clang
       addons:
