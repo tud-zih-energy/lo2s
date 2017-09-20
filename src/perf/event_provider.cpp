@@ -73,7 +73,7 @@ static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("page-faults-minor", PAGE_FAULTS_MIN),
     PERF_EVENT_SW("page-faults-major", PAGE_FAULTS_MAJ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
-    PERF_EVENT_SW("aligment-faults", ALIGNMENT_FAULTS),
+    PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
 };
@@ -95,18 +95,19 @@ static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
 };
 
-static constexpr string_to_id<perf_hw_cache_op_id> CACHE_OPERATION_TABLE[] = {
-    { "load", PERF_COUNT_HW_CACHE_OP_READ },
-    { "store", PERF_COUNT_HW_CACHE_OP_WRITE },
-    { "prefetch", PERF_COUNT_HW_CACHE_OP_PREFETCH },
+struct cache_op_and_result
+{
+    perf_hw_cache_op_id op_id;
+    perf_hw_cache_op_result_id result_id;
 };
 
-static constexpr string_to_id<perf_hw_cache_op_result_id> CACHE_OP_RESULT_TABLE[] = {
-    /* use plural suffix on access; perf userland tools use
-       "(load|store|prefetche)s" to mean (load|store|prefetch)-accesses
-       TODO: fix pluralization prefetch -> prefetch(e)s */
-    { "s", PERF_COUNT_HW_CACHE_RESULT_ACCESS },
-    { "-misses", PERF_COUNT_HW_CACHE_RESULT_MISS },
+static constexpr string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
+    { "loads", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "stores", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "prefetches", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "load-misses", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_MISS } },
+    { "store-misses", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_MISS } },
+    { "prefetch-misses", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_MISS } },
 };
 
 inline constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw_cache_op_id op,
@@ -170,8 +171,7 @@ static void populate_event_map(EventProvider::EventMap& map)
 {
     Log::info() << "checking available events...";
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
-                array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE) *
-                    array_size(CACHE_OP_RESULT_TABLE));
+                array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
     for (const auto& ev : HW_EVENT_TABLE)
     {
         if (event_is_openable(ev))
@@ -193,18 +193,16 @@ static void populate_event_map(EventProvider::EventMap& map)
     {
         for (const auto& operation : CACHE_OPERATION_TABLE)
         {
-            for (const auto& op_result : CACHE_OP_RESULT_TABLE)
+            name_fmt.str(std::string());
+            name_fmt << cache.name << '-' << operation.name;
+
+            CounterDescription ev(
+                name_fmt.str(), PERF_TYPE_HW_CACHE,
+                make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
+
+            if (event_is_openable(ev))
             {
-                name_fmt.str(std::string());
-                name_fmt << cache.name << '-' << operation.name << op_result.name;
-
-                CounterDescription ev(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                                      make_cache_config(cache.id, operation.id, op_result.id));
-
-                if (event_is_openable(ev))
-                {
-                    map.emplace(name_fmt.str(), ev);
-                }
+                map.emplace(name_fmt.str(), ev);
             }
         }
     }
