@@ -174,18 +174,14 @@ static void populate_event_map(EventProvider::EventMap& map)
                 array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
     for (const auto& ev : HW_EVENT_TABLE)
     {
-        if (event_is_openable(ev))
-        {
-            map.emplace(ev.name, ev);
-        }
+        map.emplace(ev.name,
+                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
     for (const auto& ev : SW_EVENT_TABLE)
     {
-        if (event_is_openable(ev))
-        {
-            map.emplace(ev.name, ev);
-        }
+        map.emplace(ev.name,
+                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
     std::stringstream name_fmt;
@@ -200,10 +196,9 @@ static void populate_event_map(EventProvider::EventMap& map)
                 name_fmt.str(), PERF_TYPE_HW_CACHE,
                 make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
 
-            if (event_is_openable(ev))
-            {
-                map.emplace(name_fmt.str(), ev);
-            }
+            map.emplace(ev.name, event_is_openable(ev) ?
+                                     ev :
+                                     EventProvider::DescriptionCache::make_invalid());
         }
     }
 }
@@ -380,11 +375,13 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
     {
         // save event in event map; return a reference to the inserted event to
         // the caller.
-        return event_map_.emplace(name, sysfs_read_event(name)).first->second;
+        return event_map_.emplace(name, DescriptionCache(sysfs_read_event(name)))
+            .first->second.description;
     }
     catch (const InvalidEvent& e)
     {
-        Log::debug() << "invalid event: " << e.what();
+        event_map_.emplace(name, DescriptionCache::make_invalid());
+        Log::info() << "failed to cache event (reason: " << e.what() << ')';
         throw e;
     }
 }
@@ -392,13 +389,43 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
 const CounterDescription& EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
-    if (ev_map.count(name))
+    const auto event_it = ev_map.find(name);
+    if (event_it != ev_map.end())
     {
-        return ev_map.at(name);
+        if (event_it->second.is_valid())
+        {
+            return event_it->second.description;
+        }
+        else
+        {
+            throw InvalidEvent("Event failed to cache previously");
+        }
     }
     else
     {
         return instance_mutable().cache_event(name);
+    }
+}
+
+bool EventProvider::has_event(const std::string& name)
+{
+    auto& ev_map = instance().event_map_;
+    const auto event_it = ev_map.find(name);
+    if (event_it != ev_map.end())
+    {
+        return event_it->second.is_valid();
+    }
+    else
+    {
+        try
+        {
+            instance_mutable().cache_event(name);
+            return true;
+        }
+        catch (const InvalidEvent&)
+        {
+            return false;
+        }
     }
 }
 }
