@@ -85,10 +85,7 @@ public:
 
     static bool has_event(const std::string& name);
 
-    static const EventMap& event_map()
-    {
-        return instance().event_map_;
-    }
+    static std::vector<EventMap::key_type> get_event_names();
 
     class InvalidEvent : public std::runtime_error
     {

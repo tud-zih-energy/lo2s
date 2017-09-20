@@ -428,5 +428,26 @@ bool EventProvider::has_event(const std::string& name)
         }
     }
 }
+
+std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
+{
+
+    const auto& ev_map = instance().event_map_;
+
+    std::vector<EventMap::key_type> event_names;
+    event_names.reserve(ev_map.size());
+
+    for (const auto& event : ev_map)
+    {
+        if (event.second.is_valid())
+        {
+            event_names.push_back(event.first);
+        }
+    }
+
+    std::sort(event_names.begin(), event_names.end());
+
+    return event_names;
+}
 }
 }
