@@ -68,7 +68,30 @@ const Config& config()
 {
     return *instance;
 }
+int get_default_mmap_value()
+{
+    int retval = 16;
+    std::fstream mlock_kb_file;
+    //max mlock()able pages per user (in kilobytes)
+    int mlock_kb;
+    //We are only interested in the calculated value,
+    //so a catch-all approach works
+    try 
+    {
+        mlock_kb_file.open(
+                "/proc/sys/kernel/perf_event_mlock_kb",
+                std::fstream::in);
+        mlock_kb_file >> mlock_kb;
+        mlock_kb_file.close();
 
+        long pagesize = sysconf(_SC_PAGESIZE);
+        
+        if(pagesize > 0)
+            retval = (mlock_kb * 1024) / pagesize - 1;
+    }
+    catch (...){}
+    return retval;
+}
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description desc("Allowed options");
@@ -83,8 +106,7 @@ void parse_program_options(int argc, const char** argv)
     std::uint64_t read_interval_ms;
 
     std::string requested_clock_name;
-
-    // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
+    
     // clang-format off
     desc.add_options()
         ("help",
@@ -107,7 +129,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_default_mmap_value()),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
