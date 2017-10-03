@@ -33,6 +33,9 @@
 #include <cstdlib>
 #include <ctime> // for CLOCK_* macros
 
+extern "C" {
+#include <unistd.h>
+}
 namespace po = boost::program_options;
 
 namespace lo2s
@@ -72,24 +75,26 @@ int get_default_mmap_value()
 {
     int retval = 16;
     std::fstream mlock_kb_file;
-    //max mlock()able pages per user (in kilobytes)
+    // max mlock()able pages per user (in kilobytes)
     int mlock_kb;
-    //We are only interested in the calculated value,
-    //so a catch-all approach works
-    try 
+    try
     {
-        mlock_kb_file.open(
-                "/proc/sys/kernel/perf_event_mlock_kb",
-                std::fstream::in);
+        mlock_kb_file.exceptions(std::fstream::failbit | std::fstream::badbit);
+        mlock_kb_file.open("/proc/sys/kernel/perf_event_mlock_kb", std::fstream::in);
         mlock_kb_file >> mlock_kb;
         mlock_kb_file.close();
 
         long pagesize = sysconf(_SC_PAGESIZE);
-        
-        if(pagesize > 0)
+
+        if (pagesize > 0)
+        {
             retval = (mlock_kb * 1024) / pagesize - 1;
+        }
     }
-    catch (...){}
+    catch (std::exception& e)
+    {
+        lo2s::Log::debug() << "Could not retrieve the default mmap-pages value: " << e.what();
+    }
     return retval;
 }
 void parse_program_options(int argc, const char** argv)
@@ -106,7 +111,7 @@ void parse_program_options(int argc, const char** argv)
     std::uint64_t read_interval_ms;
 
     std::string requested_clock_name;
-    
+
     // clang-format off
     desc.add_options()
         ("help",
