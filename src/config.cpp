@@ -25,6 +25,7 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/util.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -71,32 +72,6 @@ const Config& config()
 {
     return *instance;
 }
-int get_default_mmap_value()
-{
-    int retval = 16;
-    std::fstream mlock_kb_file;
-    // max mlock()able pages per user (in kilobytes)
-    int mlock_kb;
-    try
-    {
-        mlock_kb_file.exceptions(std::fstream::failbit | std::fstream::badbit);
-        mlock_kb_file.open("/proc/sys/kernel/perf_event_mlock_kb", std::fstream::in);
-        mlock_kb_file >> mlock_kb;
-        mlock_kb_file.close();
-
-        long pagesize = sysconf(_SC_PAGESIZE);
-
-        if (pagesize > 0)
-        {
-            retval = (mlock_kb * 1024) / pagesize - 1;
-        }
-    }
-    catch (std::exception& e)
-    {
-        lo2s::Log::debug() << "Could not retrieve the default mmap-pages value: " << e.what();
-    }
-    return retval;
-}
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description desc("Allowed options");
@@ -134,7 +109,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_default_mmap_value()),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_perf_event_mlock()/get_page_size() - 1),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
