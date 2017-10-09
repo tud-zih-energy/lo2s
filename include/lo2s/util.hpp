@@ -66,7 +66,7 @@ private:
 };
 
 std::size_t get_page_size();
-
+std::size_t get_perf_event_mlock();
 std::string get_process_exe(pid_t pid);
 
 std::string get_datetime();

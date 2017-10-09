@@ -25,6 +25,7 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/util.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -33,6 +34,9 @@
 #include <cstdlib>
 #include <ctime> // for CLOCK_* macros
 
+extern "C" {
+#include <unistd.h>
+}
 namespace po = boost::program_options;
 
 namespace lo2s
@@ -68,7 +72,6 @@ const Config& config()
 {
     return *instance;
 }
-
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description desc("Allowed options");
@@ -84,7 +87,6 @@ void parse_program_options(int argc, const char** argv)
 
     std::string requested_clock_name;
 
-    // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     // clang-format off
     desc.add_options()
         ("help",
@@ -107,7 +109,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_perf_event_mlock()/get_page_size() - 1),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
