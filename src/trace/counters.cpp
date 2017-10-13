@@ -67,8 +67,8 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric
             counters_.emplace_back(tid, description.type, description.config, description.config1);
         }
 
-        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
-        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES);
+        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS, 0);
+        counters_.emplace_back(tid, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES, 0);
     }
 
     assert(counters_.size() <= mc.size());

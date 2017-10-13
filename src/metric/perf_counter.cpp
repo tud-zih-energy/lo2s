@@ -37,11 +37,33 @@ extern "C" {
 #include <linux/perf_event.h>
 }
 
+namespace
+{
+static int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
+                               unsigned long flags)
+{
+    int fd = lo2s::perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel &&
+        lo2s::perf::perf_event_paranoid() > 1)
+    {
+        perf_attr->exclude_kernel = 1;
+        lo2s::Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
+        lo2s::Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
+        lo2s::Log::warn() << " * run lo2s as root";
+        lo2s::Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
+                             "the first place,";
+        fd = lo2s::perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    }
+    return fd;
+}
+}
+
 namespace lo2s
 {
 namespace metric
 {
-PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1)
+PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
+                         int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
@@ -53,17 +75,8 @@ PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std
     perf_attr.exclude_kernel = lo2s::config().exclude_kernel;
     // Needed when scaling multiplexed events, and recognize activation phases
     perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-    fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, -1, -1, 0);
-    if (fd_ < 0 && errno == EACCES && !perf_attr.exclude_kernel && perf::perf_event_paranoid() > 1)
-    {
-        perf_attr.exclude_kernel = 1;
-        Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
-        Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
-        Log::warn() << " * run lo2s as root";
-        Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
-                       "the first place,";
-        fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, -1, -1, 0);
-    }
+
+    fd_ = perf_try_event_open(&perf_attr, tid, -1, group_fd, 0);
     if (fd_ < 0)
     {
         Log::error() << "perf_event_open for counter failed";

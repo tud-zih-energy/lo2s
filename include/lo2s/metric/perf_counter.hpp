@@ -38,7 +38,8 @@ namespace metric
 class PerfCounter
 {
 public:
-    PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1 = 0);
+    PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
+                int group_fd = -1);
 
     PerfCounter(const PerfCounter&) = delete;
 
