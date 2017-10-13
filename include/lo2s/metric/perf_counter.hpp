@@ -94,7 +94,7 @@ private:
             // there is a bug in perf where this is sometimes swapped
             if (enabled > running)
             {
-                return (static_cast<double>(value) / running) * value;
+                return (static_cast<double>(enabled) / running) * value;
             }
             return (static_cast<double>(running) / enabled) * value;
         }
