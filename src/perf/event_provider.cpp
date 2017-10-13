@@ -146,7 +146,7 @@ static bool event_is_openable(const CounterDescription& ev)
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = 1;
+    attr.exclude_kernel = 0;
 
     int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
     if (fd == -1)

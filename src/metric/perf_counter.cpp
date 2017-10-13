@@ -98,5 +98,91 @@ double PerfCounter::read()
     accumulated_ = value;
     return accumulated_;
 }
+
+std::unique_ptr<CounterBuffer::ReadFormat> CounterBuffer::make_buf(std::size_t ncounters)
+{
+    ReadFormat* raw_buf = reinterpret_cast<ReadFormat*>(new char[total_buf_size(ncounters)]);
+
+    assert(raw_buf != nullptr);
+
+    raw_buf->nr = ncounters;
+    raw_buf->time_enabled = 0;
+    raw_buf->time_running = 0;
+
+    // mem{cpy,set}'ing structs that are not plain old data does not seem like a
+    // good idea.
+    static_assert(std::is_pod<ReadFormat>::value,
+                  "PerfCounterGroup::ReadFormat is not a POD type!");
+
+    std::memset(&raw_buf->values, 0, ncounters);
+
+    return std::unique_ptr<ReadFormat>(raw_buf);
+}
+
+void CounterBuffer::read(int group_leader_fd)
+{
+    // Swap double buffers.  `previous_` now points to the data we read the last time this function
+    // was called, `current_` to the data from before that.  We will now read the new values into
+    // `current_`, thus overwriting the oldest data.
+    std::swap(current_, previous_);
+
+    assert(accumulated_.size() == previous_->nr);
+
+    auto ncounters = previous_->nr;
+    auto bufsz = total_buf_size(ncounters);
+
+    auto read_bytes = ::read(group_leader_fd, current_.get(), bufsz);
+    if (read_bytes < 0 || static_cast<decltype(bufsz)>(read_bytes) != bufsz)
+    {
+        Log::error() << "failed to read counter buffer";
+        throw_errno();
+    }
+
+    // Assert that we aren't doing any out-of-bounds reads/writes.
+    assert(current_->nr == previous_->nr);
+
+    // Compute difference between reads for scaling multiplexed events
+    auto diff_enabled = current_->time_enabled - previous_->time_enabled;
+    auto diff_running = current_->time_running - previous_->time_running;
+    for (std::size_t i = 0; i < ncounters; ++i)
+    {
+        accumulated_[i] +=
+            scale(current_->values[i] - previous_->values[i], diff_running, diff_enabled);
+    }
+}
+
+PerfCounterGroup::PerfCounterGroup(pid_t tid,
+                                   const std::vector<perf::CounterDescription>& counter_descs)
+: tid_(tid), buf_(counter_descs.size() + 1 /* add group leader counter */)
+{
+    struct perf_event_attr perf_attr;
+    ::memset(&perf_attr, 0, sizeof(perf_attr));
+    perf_attr.size = sizeof(perf_attr);
+    perf_attr.sample_period = 0;
+    perf_attr.type = PERF_TYPE_HARDWARE;
+    perf_attr.config = PERF_COUNT_HW_REF_CPU_CYCLES;
+    perf_attr.config1 = 0;
+    perf_attr.exclude_kernel = lo2s::config().exclude_kernel;
+    perf_attr.read_format =
+        PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
+
+    group_leader_fd_ = perf_try_event_open(&perf_attr, tid_, -1, -1, 0);
+    if (group_leader_fd_ < 0)
+    {
+        Log::error() << "perf_event_open for counter group leader failed";
+        throw_errno();
+    }
+
+    counters_.reserve(counter_descs.size());
+    for (auto& description : counter_descs)
+    {
+        add_counter(description);
+    }
+}
+
+void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)
+{
+    counters_.emplace_back(tid_, counter.type, counter.config, counter.config1, group_leader_fd_);
+}
 }
 }

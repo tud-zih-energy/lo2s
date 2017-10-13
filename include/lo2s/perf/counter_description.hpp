@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <string>
+
 extern "C" {
 #include <linux/perf_event.h>
 }

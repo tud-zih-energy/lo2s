@@ -21,8 +21,12 @@
 
 #pragma once
 
+#include <lo2s/perf/counter_description.hpp>
+
 #include <cstdint>
+#include <memory>
 #include <utility>
+#include <vector>
 
 extern "C" {
 #include <sys/types.h>
@@ -106,6 +110,139 @@ private:
     int fd_;
     Ver previous_;
     double accumulated_ = 0.0;
+};
+
+struct GroupReadFormat
+{
+    uint64_t nr;
+    uint64_t time_enabled;
+    uint64_t time_running;
+    uint64_t values[1];
+
+    static constexpr std::size_t header_size()
+    {
+        return sizeof(GroupReadFormat) - sizeof(values);
+    }
+};
+
+class PerfCounterGroup;
+
+class CounterBuffer
+{
+public:
+    using ReadFormat = GroupReadFormat;
+
+    CounterBuffer(const CounterBuffer&) = delete;
+    void operator=(const CounterBuffer&) = delete;
+
+    CounterBuffer(std::size_t ncounters)
+    : current_(make_buf(ncounters)), previous_(make_buf(ncounters)), accumulated_(ncounters, 0)
+    {
+    }
+
+    CounterBuffer& operator=(CounterBuffer&& other)
+    {
+        std::swap(current_, other.current_);
+        std::swap(previous_, other.previous_);
+        std::swap(accumulated_, other.accumulated_);
+        return *this;
+    }
+
+    auto operator[](std::size_t i) const
+    {
+        return accumulated_[i];
+    }
+
+    uint64_t enabled() const
+    {
+        return current_->time_enabled;
+    }
+
+    uint64_t running() const
+    {
+        return current_->time_running;
+    }
+
+    void read(int group_leader_fd);
+
+    std::size_t size() const
+    {
+        return accumulated_.size();
+    }
+
+private:
+    static double scale(uint64_t value, uint64_t time_running, uint64_t time_enabled)
+    {
+        if (time_running == 0 || time_running == time_enabled)
+        {
+            return value;
+        }
+        // there is a bug in perf where this is sometimes swapped
+        if (time_enabled > time_running)
+        {
+            return (static_cast<double>(time_enabled) / time_running) * value;
+        }
+        return (static_cast<double>(time_running) / time_enabled) * value;
+    }
+
+    static constexpr std::size_t total_buf_size(std::size_t ncounters)
+    {
+        return ReadFormat::header_size() + ncounters * sizeof(uint64_t);
+    }
+
+    static std::unique_ptr<ReadFormat> make_buf(std::size_t ncounters);
+
+    // Double-buffering of read values.  Allows to compute differences between reads
+    std::unique_ptr<ReadFormat> current_;
+    std::unique_ptr<ReadFormat> previous_;
+    std::vector<double> accumulated_;
+};
+
+class PerfCounterGroup
+{
+public:
+    PerfCounterGroup(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs);
+
+    ~PerfCounterGroup()
+    {
+        if (group_leader_fd_ != -1)
+        {
+            ::close(group_leader_fd_);
+        }
+    }
+
+    std::size_t size() const
+    {
+        return counters_.size();
+    }
+
+    auto operator[](std::size_t i)
+    {
+        return buf_[i + 1]; // skip group leader counter
+    }
+
+    void read()
+    {
+        buf_.read(group_leader_fd_);
+    }
+
+    auto enabled() const
+    {
+        return buf_.enabled();
+    }
+
+    auto running() const
+    {
+        return buf_.running();
+    }
+
+private:
+    void add_counter(const perf::CounterDescription& counter);
+
+    int group_leader_fd_;
+    pid_t tid_;
+    std::vector<PerfCounter> counters_;
+    CounterBuffer buf_;
 };
 }
 }
