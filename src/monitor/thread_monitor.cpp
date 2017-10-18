@@ -40,13 +40,13 @@ namespace lo2s
 namespace monitor
 {
 
-ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor_,
+ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
                              ProcessInfo& info, bool enable_on_exec)
-: IntervalMonitor(parent_monitor_.trace(), std::to_string(tid), config().read_interval), pid_(pid),
+: IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
   tid_(tid), info_(info),
-  sample_writer_(pid_, tid_, -1, *this, parent_monitor_.trace(),
-                 parent_monitor_.trace().sample_writer(pid, tid), enable_on_exec),
-  counters_(pid, tid, parent_monitor_.trace(), parent_monitor_.counters_metric_class(),
+  sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
+                 parent_monitor.trace().sample_writer(pid, tid), enable_on_exec),
+  counters_(pid, tid, parent_monitor.trace(), parent_monitor.counters_metric_class(),
             sample_writer_.location())
 {
     /* setup the sampling counter(s) and start a monitoring thread */
