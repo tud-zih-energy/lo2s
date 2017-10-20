@@ -99,24 +99,23 @@ double PerfCounter::read()
     return accumulated_;
 }
 
-std::unique_ptr<CounterBuffer::ReadFormat> CounterBuffer::make_buf(std::size_t ncounters)
+CounterBuffer::CounterBuffer(std::size_t ncounters)
+: buf_(new char[2 * total_buf_size(ncounters)]), accumulated_(ncounters, 0)
 {
-    ReadFormat* raw_buf = reinterpret_cast<ReadFormat*>(new char[total_buf_size(ncounters)]);
+    // `buf_` points to contiguous memory that holds both entries of the double
+    // buffer;  let the non-owning pointers `current_` and `previous_` point to the correct
+    // offsets in the former.
+    current_ = reinterpret_cast<ReadFormat*>(buf_.get());
+    current_->nr = ncounters;
+    current_->time_enabled = 0;
+    current_->time_running = 0;
+    std::memset(&current_->values, 0, ncounters * sizeof(uint64_t));
 
-    assert(raw_buf != nullptr);
-
-    raw_buf->nr = ncounters;
-    raw_buf->time_enabled = 0;
-    raw_buf->time_running = 0;
-
-    // mem{cpy,set}'ing structs that are not plain old data does not seem like a
-    // good idea.
-    static_assert(std::is_pod<ReadFormat>::value,
-                  "PerfCounterGroup::ReadFormat is not a POD type!");
-
-    std::memset(&raw_buf->values, 0, ncounters);
-
-    return std::unique_ptr<ReadFormat>(raw_buf);
+    previous_ = reinterpret_cast<ReadFormat*>(buf_.get() + total_buf_size(ncounters));
+    previous_->nr = ncounters;
+    previous_->time_enabled = 0;
+    previous_->time_running = 0;
+    std::memset(&current_->values, 0, ncounters * sizeof(uint64_t));
 }
 
 void CounterBuffer::read(int group_leader_fd)
@@ -131,7 +130,7 @@ void CounterBuffer::read(int group_leader_fd)
     auto ncounters = previous_->nr;
     auto bufsz = total_buf_size(ncounters);
 
-    auto read_bytes = ::read(group_leader_fd, current_.get(), bufsz);
+    auto read_bytes = ::read(group_leader_fd, current_, bufsz);
     if (read_bytes < 0 || static_cast<decltype(bufsz)>(read_bytes) != bufsz)
     {
         Log::error() << "failed to read counter buffer";

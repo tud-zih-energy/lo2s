@@ -135,18 +135,7 @@ public:
     CounterBuffer(const CounterBuffer&) = delete;
     void operator=(const CounterBuffer&) = delete;
 
-    CounterBuffer(std::size_t ncounters)
-    : current_(make_buf(ncounters)), previous_(make_buf(ncounters)), accumulated_(ncounters, 0)
-    {
-    }
-
-    CounterBuffer& operator=(CounterBuffer&& other)
-    {
-        std::swap(current_, other.current_);
-        std::swap(previous_, other.previous_);
-        std::swap(accumulated_, other.accumulated_);
-        return *this;
-    }
+    CounterBuffer(std::size_t ncounters);
 
     auto operator[](std::size_t i) const
     {
@@ -190,11 +179,10 @@ private:
         return ReadFormat::header_size() + ncounters * sizeof(uint64_t);
     }
 
-    static std::unique_ptr<ReadFormat> make_buf(std::size_t ncounters);
-
     // Double-buffering of read values.  Allows to compute differences between reads
-    std::unique_ptr<ReadFormat> current_;
-    std::unique_ptr<ReadFormat> previous_;
+    std::unique_ptr<char[]> buf_;
+    ReadFormat* current_;
+    ReadFormat* previous_;
     std::vector<double> accumulated_;
 };
 
