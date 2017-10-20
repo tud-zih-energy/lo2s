@@ -66,6 +66,18 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
+static inline void print_usage(std::ostream& os, const char* name,
+                               const po::options_description& desc)
+{
+    // clang-format off
+    os << "Usage:\n"
+          "  " << name << " [options] ./a.out\n"
+          "  " << name << " [options] -- ./a.out --option-to-a-out\n"
+          "  " << name << " [options] --pid $(pidof some-process)\n"
+          "\n" << desc;
+    // clang-format on
+}
+
 static nitro::lang::optional<Config> instance;
 
 const Config& config()
@@ -149,15 +161,15 @@ void parse_program_options(int argc, const char** argv)
     }
     catch (const po::unknown_option& e)
     {
-        std::cerr << e.what() << '\n' << desc << '\n';
+        std::cerr << e.what() << '\n';
+        print_usage(std::cerr, argv[0], desc);
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
 
-    if (vm.count("help") || (config.monitor_type == lo2s::MonitorType::PROCESS &&
-                             config.pid == -1 && config.command.empty()))
+    if (vm.count("help"))
     {
-        std::cout << desc << "\n";
+        print_usage(std::cout, argv[0], desc);
         std::exit(0);
     }
 
@@ -247,6 +259,13 @@ void parse_program_options(int argc, const char** argv)
     else
     {
         config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+        config.command.empty())
+    {
+        print_usage(std::cerr, argv[0], desc);
+        std::exit(0);
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
