@@ -30,6 +30,7 @@
 #include <cstring>
 
 extern "C" {
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <syscall.h>
 #include <unistd.h>
@@ -103,8 +104,8 @@ CounterBuffer::CounterBuffer(std::size_t ncounters)
 : buf_(new char[2 * total_buf_size(ncounters)]), accumulated_(ncounters, 0)
 {
     // `buf_` points to contiguous memory that holds both entries of the double
-    // buffer;  let the non-owning pointers `current_` and `previous_` point to the correct
-    // offsets in the former.
+    // buffer;  let the non-owning pointers `current_` and `previous_` point to
+    // the correct offsets in the former.
     current_ = reinterpret_cast<ReadFormat*>(buf_.get());
     current_->nr = ncounters;
     current_->time_enabled = 0;
@@ -120,52 +121,68 @@ CounterBuffer::CounterBuffer(std::size_t ncounters)
 
 void CounterBuffer::read(int group_leader_fd)
 {
-    // Swap double buffers.  `previous_` now points to the data we read the last time this function
-    // was called, `current_` to the data from before that.  We will now read the new values into
-    // `current_`, thus overwriting the oldest data.
-    std::swap(current_, previous_);
-
-    assert(accumulated_.size() == previous_->nr);
-
     auto ncounters = previous_->nr;
+    assert(accumulated_.size() == ncounters);
+
     auto bufsz = total_buf_size(ncounters);
 
     auto read_bytes = ::read(group_leader_fd, current_, bufsz);
     if (read_bytes < 0 || static_cast<decltype(bufsz)>(read_bytes) != bufsz)
     {
-        Log::error() << "failed to read counter buffer";
+        Log::error() << "failed to read counter buffer from file descriptor";
         throw_errno();
     }
 
+    update_buffers();
+}
+
+void CounterBuffer::read(const ReadFormat* inbuf)
+{
+    assert(accumulated_.size() == inbuf->nr);
+
+    auto ret = std::memcpy(current_, inbuf, total_buf_size(inbuf->nr));
+    if (ret == nullptr)
+    {
+        Log::error() << "failed to read counter buffer from memory";
+        throw_errno();
+    }
+
+    update_buffers();
+}
+
+void CounterBuffer::update_buffers()
+{
     // Assert that we aren't doing any out-of-bounds reads/writes.
     assert(current_->nr == previous_->nr);
+    assert(accumulated_.size() == current_->nr);
 
     // Compute difference between reads for scaling multiplexed events
     auto diff_enabled = current_->time_enabled - previous_->time_enabled;
     auto diff_running = current_->time_running - previous_->time_running;
-    for (std::size_t i = 0; i < ncounters; ++i)
+    for (std::size_t i = 0; i < current_->nr; ++i)
     {
         accumulated_[i] +=
             scale(current_->values[i] - previous_->values[i], diff_running, diff_enabled);
     }
+
+    // Swap double buffers.  `current_` now points to the oldest buffer.  Each
+    // call to this->read(...) stores the new counter values in `current_`, so
+    // only the oldest data is overwritten.
+    std::swap(current_, previous_);
 }
 
 PerfCounterGroup::PerfCounterGroup(pid_t tid,
-                                   const std::vector<perf::CounterDescription>& counter_descs)
+                                   const std::vector<perf::CounterDescription>& counter_descs,
+                                   struct perf_event_attr& leader_attr)
 : tid_(tid), buf_(counter_descs.size() + 1 /* add group leader counter */)
 {
-    struct perf_event_attr perf_attr;
-    ::memset(&perf_attr, 0, sizeof(perf_attr));
-    perf_attr.size = sizeof(perf_attr);
-    perf_attr.sample_period = 0;
-    perf_attr.type = PERF_TYPE_HARDWARE;
-    perf_attr.config = PERF_COUNT_HW_REF_CPU_CYCLES;
-    perf_attr.config1 = 0;
-    perf_attr.exclude_kernel = lo2s::config().exclude_kernel;
-    perf_attr.read_format =
+    leader_attr.size = sizeof(leader_attr);
+    leader_attr.disabled = 1; // disable until all events in the group are set up
+    leader_attr.exclude_kernel = lo2s::config().exclude_kernel;
+    leader_attr.read_format =
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
 
-    group_leader_fd_ = perf_try_event_open(&perf_attr, tid_, -1, -1, 0);
+    group_leader_fd_ = perf_try_event_open(&leader_attr, tid_, -1, -1, 0);
     if (group_leader_fd_ < 0)
     {
         Log::error() << "perf_event_open for counter group leader failed";
@@ -177,6 +194,9 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid,
     {
         add_counter(description);
     }
+
+    // enable recording only after having set up all events in the group
+    ::ioctl(group_leader_fd_, PERF_EVENT_IOC_ENABLE);
 }
 
 void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)

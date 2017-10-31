@@ -117,6 +117,7 @@ set(SOURCE_FILES
         src/monitor/threaded_monitor.cpp
 
         src/perf/event_provider.cpp
+        src/perf/counter/writer.cpp
         src/perf/sample/writer.cpp
         src/perf/time/converter.cpp src/perf/time/reader.cpp
         src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp

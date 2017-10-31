@@ -24,6 +24,7 @@
 #include <lo2s/monitor/interval_monitor.hpp>
 #include <lo2s/monitor/fwd.hpp>
 
+#include <lo2s/perf/counter/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/trace/counters.hpp>
 
@@ -86,7 +87,7 @@ private:
     cpu_set_t affinity_mask_;
 
     perf::sample::Writer sample_writer_;
-    trace::Counters counters_;
+    perf::counter::Writer counter_writer_;
 };
 }
 }

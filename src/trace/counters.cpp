@@ -26,63 +26,19 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/platform.hpp>
 
-namespace
-{
-static std::vector<lo2s::perf::CounterDescription> collect_counters()
-{
-
-    const auto& mem_events = lo2s::platform::get_mem_events();
-    const auto& user_events = lo2s::config().perf_events;
-
-    std::vector<lo2s::perf::CounterDescription> used_counters;
-
-    used_counters.reserve(mem_events.size() + user_events.size());
-    for (const auto& ev : user_events)
-    {
-        try
-        {
-            const auto event_desc = lo2s::perf::EventProvider::get_event_by_name(ev);
-            used_counters.emplace_back(event_desc);
-        }
-        catch (const lo2s::perf::EventProvider::InvalidEvent& e)
-        {
-            lo2s::Log::warn() << "'" << ev
-                              << "' does not name a known event, ignoring! (reason: " << e.what()
-                              << ")";
-        }
-    }
-
-    if (user_events.size() == 0)
-    {
-        for (const auto& description : mem_events)
-        {
-            used_counters.emplace_back(description);
-        }
-
-        used_counters.emplace_back(lo2s::perf::EventProvider::get_event_by_name("instructions"));
-        used_counters.emplace_back(lo2s::perf::EventProvider::get_event_by_name("cpu-cycles"));
-    }
-
-    return used_counters;
-}
-}
-
 namespace lo2s
 {
 namespace trace
 {
 // TODO This is an interdependent ball of ... please clean this up
-Counters::Counters(pid_t pid, pid_t tid, Trace& trace_, otf2::definition::metric_class metric_class,
+Counters::Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_class metric_class,
                    otf2::definition::location scope)
-: writer_(trace_.metric_writer(pid, tid)),
-  metric_instance_(trace_.metric_instance(metric_class, writer_.location(), scope)),
-  counters_(tid, collect_counters()),
+: writer_(trace.metric_writer(pid, tid)),
+  metric_instance_(trace.metric_instance(metric_class, writer_.location(), scope)),
   proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
              "stat")
 {
     auto mc = metric_instance_.metric_class();
-
-    assert(counters_.size() <= mc.size());
 
     values_.resize(mc.size());
     for (std::size_t i = 0; i < mc.size(); i++)
@@ -134,21 +90,54 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
     return c;
 }
 
-void Counters::write()
+std::vector<lo2s::perf::CounterDescription> Counters::collect_counters()
 {
-    auto read_time = time::now();
+    const auto& mem_events = platform::get_mem_events();
+    const auto& user_events = lo2s::config().perf_events;
 
-    assert(counters_.size() <= values_.size());
+    std::vector<perf::CounterDescription> used_counters;
 
-    counters_.read();
-    for (std::size_t i = 0; i < counters_.size(); i++)
+    used_counters.reserve(mem_events.size() + user_events.size());
+    for (const auto& ev : user_events)
     {
-        values_[i].set(counters_[i]);
+        try
+        {
+            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+            used_counters.emplace_back(event_desc);
+        }
+        catch (const perf::EventProvider::InvalidEvent& e)
+        {
+            Log::warn() << "'" << ev
+                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
+        }
     }
-    auto index = counters_.size();
+
+    if (user_events.size() == 0)
+    {
+        for (const auto& description : mem_events)
+        {
+            used_counters.emplace_back(description);
+        }
+
+        used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
+        used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+    }
+
+    return used_counters;
+}
+
+void Counters::write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point read_time)
+{
+    assert(counters.size() <= values_.size());
+
+    for (std::size_t i = 0; i < counters.size(); i++)
+    {
+        values_[i].set(counters[i]);
+    }
+    auto index = counters.size();
     values_[index++].set(get_task_last_cpu_id(proc_stat_));
-    values_[index++].set(counters_.enabled());
-    values_[index].set(counters_.running());
+    values_[index++].set(counters.enabled());
+    values_[index].set(counters.running());
 
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(read_time, metric_instance_, values_));

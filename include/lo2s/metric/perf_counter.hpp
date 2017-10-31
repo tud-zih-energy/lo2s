@@ -153,6 +153,7 @@ public:
     }
 
     void read(int group_leader_fd);
+    void read(const ReadFormat* buf);
 
     std::size_t size() const
     {
@@ -160,6 +161,8 @@ public:
     }
 
 private:
+    void update_buffers();
+
     static double scale(uint64_t value, uint64_t time_running, uint64_t time_enabled)
     {
         if (time_running == 0 || time_running == time_enabled)
@@ -190,6 +193,8 @@ class PerfCounterGroup
 {
 public:
     PerfCounterGroup(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs);
+    PerfCounterGroup(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs,
+                     struct perf_event_attr& leader_attr);
 
     ~PerfCounterGroup()
     {
@@ -204,7 +209,7 @@ public:
         return counters_.size();
     }
 
-    auto operator[](std::size_t i)
+    auto operator[](std::size_t i) const
     {
         return buf_[i + 1]; // skip group leader counter
     }
@@ -212,6 +217,11 @@ public:
     void read()
     {
         buf_.read(group_leader_fd_);
+    }
+
+    void read(const CounterBuffer::ReadFormat* inbuf)
+    {
+        buf_.read(inbuf);
     }
 
     auto enabled() const
@@ -222,6 +232,11 @@ public:
     auto running() const
     {
         return buf_.running();
+    }
+
+    int group_leader_fd() const
+    {
+        return group_leader_fd_;
     }
 
 private:
