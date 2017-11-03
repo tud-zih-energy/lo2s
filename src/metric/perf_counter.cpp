@@ -101,7 +101,7 @@ double PerfCounter::read()
 }
 
 CounterBuffer::CounterBuffer(std::size_t ncounters)
-: buf_(new char[2 * total_buf_size(ncounters)]), accumulated_(ncounters, 0)
+: buf_(std::make_unique<char[]>(2 * total_buf_size(ncounters))), accumulated_(ncounters, 0)
 {
     // `buf_` points to contiguous memory that holds both entries of the double
     // buffer;  let the non-owning pointers `current_` and `previous_` point to
@@ -140,13 +140,7 @@ void CounterBuffer::read(const ReadFormat* inbuf)
 {
     assert(accumulated_.size() == inbuf->nr);
 
-    auto ret = std::memcpy(current_, inbuf, total_buf_size(inbuf->nr));
-    if (ret == nullptr)
-    {
-        Log::error() << "failed to read counter buffer from memory";
-        throw_errno();
-    }
-
+    std::memcpy(current_, inbuf, total_buf_size(inbuf->nr));
     update_buffers();
 }
 
