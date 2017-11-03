@@ -23,6 +23,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/counter_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/util.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -34,7 +35,6 @@
 extern "C" {
 #include <linux/perf_event.h>
 #include <linux/version.h>
-#include <syscall.h>
 #include <unistd.h>
 }
 
@@ -148,7 +148,7 @@ static bool event_is_openable(const CounterDescription& ev)
     attr.config1 = ev.config1;
     attr.exclude_kernel = 0;
 
-    int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
+    int fd = perf_event_open(&attr, 0, -1, -1, 0);
     if (fd == -1)
     {
         switch (errno)

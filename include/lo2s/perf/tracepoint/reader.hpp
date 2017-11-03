@@ -24,6 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
@@ -39,7 +40,6 @@ extern "C" {
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <syscall.h>
 }
 
 namespace fs = boost::filesystem;
@@ -133,7 +133,7 @@ public:
         attr.watermark = 1;
         attr.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * get_page_size());
 
-        fd_ = syscall(__NR_perf_event_open, &attr, -1, cpu_, -1, 0);
+        fd_ = perf_event_open(&attr, -1, cpu_, -1, 0);
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";

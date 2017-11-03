@@ -32,7 +32,6 @@
 extern "C" {
 #include <sys/ioctl.h>
 #include <sys/types.h>
-#include <syscall.h>
 #include <unistd.h>
 
 #include <linux/perf_event.h>
