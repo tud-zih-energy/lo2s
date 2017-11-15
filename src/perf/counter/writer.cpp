@@ -21,6 +21,7 @@
 
 #include <lo2s/log.hpp>
 #include <lo2s/perf/counter/writer.hpp>
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s
@@ -31,8 +32,7 @@ namespace counter
 {
 Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace,
                otf2::definition::metric_class metric_class, otf2::definition::location scope)
-: Reader(tid, trace::Counters::collect_counters()),
-  counter_writer_(pid, tid, trace, metric_class, scope),
+: Reader(tid, collect_requested_events()), counter_writer_(pid, tid, trace, metric_class, scope),
   time_converter_(time::Converter::instance())
 {
 }

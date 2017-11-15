@@ -45,7 +45,6 @@ public:
              otf2::definition::location scope);
 
     static otf2::definition::metric_class get_metric_class(Trace& trace);
-    static std::vector<lo2s::perf::CounterDescription> collect_counters();
 
     void write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point tp);
 

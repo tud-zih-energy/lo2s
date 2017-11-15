@@ -90,42 +90,6 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
     return c;
 }
 
-std::vector<lo2s::perf::CounterDescription> Counters::collect_counters()
-{
-    const auto& mem_events = platform::get_mem_events();
-    const auto& user_events = lo2s::config().perf_events;
-
-    std::vector<perf::CounterDescription> used_counters;
-
-    used_counters.reserve(mem_events.size() + user_events.size());
-    for (const auto& ev : user_events)
-    {
-        try
-        {
-            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
-            used_counters.emplace_back(event_desc);
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "'" << ev
-                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
-        }
-    }
-
-    if (user_events.size() == 0)
-    {
-        for (const auto& description : mem_events)
-        {
-            used_counters.emplace_back(description);
-        }
-
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
-    }
-
-    return used_counters;
-}
-
 void Counters::write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point read_time)
 {
     assert(counters.size() <= values_.size());

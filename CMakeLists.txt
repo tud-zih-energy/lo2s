@@ -116,6 +116,7 @@ set(SOURCE_FILES
         src/monitor/thread_monitor.cpp
         src/monitor/threaded_monitor.cpp
 
+        src/perf/event_collection.cpp
         src/perf/event_provider.cpp
         src/perf/counter/writer.cpp
         src/perf/sample/writer.cpp
