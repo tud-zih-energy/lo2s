@@ -28,6 +28,7 @@
 
 #include <nitro/lang/optional.hpp>
 
+#include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
 #include <cstdlib>
@@ -81,6 +82,7 @@ void parse_program_options(int argc, const char** argv)
     bool kernel, no_kernel;
     bool list_clockids, list_events;
     std::uint64_t read_interval_ms;
+    boost::optional<std::uint64_t> metric_count, metric_frequency;
 
     std::string requested_clock_name;
 
@@ -115,6 +117,12 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
+        ("metric-leader", po::value(&config.metric_leader)->default_value("ref-cycles"),
+             "name of leading perf event")
+        ("metric-count", po::value(&metric_count),
+             "# of events to elapse by metric leader before reading metric buffer")
+        ("metric-frequency", po::value(&metric_frequency),
+             "metric buffer reads per second")
         ("clockid,k",
              po::value(&requested_clock_name)->default_value("monotonic-raw"),
              "clock used for perf timestamps (see --list_clockids for supported arguments)")
@@ -282,6 +290,31 @@ void parse_program_options(int argc, const char** argv)
         }
         config.disassemble = false;
 #endif
+    }
+
+    if (metric_count)
+    {
+        if (metric_frequency)
+        {
+            lo2s::Log::error()
+                << "Cannot specify metric read period and frequency at the same time.";
+            std::exit(EXIT_FAILURE);
+        }
+        else
+        {
+            config.metric_use_frequency = false;
+            config.metric_count = *metric_count;
+        }
+    } else {
+        config.metric_use_frequency = true;
+        config.metric_frequency = (metric_frequency) ?  *metric_frequency : 10;
+    }
+
+    if (!perf::EventProvider::has_event(config.metric_leader))
+    {
+        lo2s::Log::error() << "event '" << config.metric_leader
+                           << "' is not available as a metric leader!";
+        std::exit(EXIT_FAILURE);
     }
 
     config.exclude_kernel = false;

@@ -52,6 +52,12 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
     auto c = trace_.metric_class();
     const auto& user_events = lo2s::config().perf_events;
 
+    const auto metric_leader_event =
+        perf::EventProvider::get_event_by_name(lo2s::config().metric_leader);
+    c.add_member(trace_.metric_member(metric_leader_event.name, metric_leader_event.name,
+                                      otf2::common::metric_mode::accumulated_start,
+                                      otf2::common::type::Double, "#"));
+
     for (const auto& ev : user_events)
     {
         if (perf::EventProvider::has_event(ev))

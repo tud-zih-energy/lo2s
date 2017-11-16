@@ -212,12 +212,12 @@ public:
 
     std::size_t size() const
     {
-        return counters_.size();
+        return counters_.size() + 1; // account for group leader
     }
 
     auto operator[](std::size_t i) const
     {
-        return buf_[i + 1]; // skip group leader counter
+        return buf_[i];
     }
 
     void read()

@@ -24,6 +24,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
 #include <lo2s/metric/perf_counter.hpp>
@@ -56,19 +57,32 @@ public:
 private:
     static struct perf_event_attr& group_leader_attributes()
     {
-        double read_interval = config().read_interval.count();
-        Log::debug() << "perf::counter::Reader: sample_freq: " << 1.0e9 / read_interval << "Hz";
-
         static struct perf_event_attr leader_attr;
         std::memset(&leader_attr, 0, sizeof(leader_attr));
 
         leader_attr.size = sizeof(leader_attr);
-        leader_attr.freq = 1;
-        leader_attr.sample_freq = static_cast<uint64_t>(1.0e9 / read_interval);
+
         leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
-        leader_attr.type = PERF_TYPE_HARDWARE;
-        leader_attr.config = PERF_COUNT_HW_REF_CPU_CYCLES;
-        leader_attr.config1 = 0;
+        leader_attr.freq = config().metric_use_frequency;
+        if (leader_attr.freq)
+        {
+            Log::debug() << "perf::counter::Reader: sample_freq: " << config().metric_frequency
+                         << "Hz";
+            leader_attr.sample_freq = config().metric_frequency;
+        }
+        else
+        {
+            Log::debug() << "perf::counter::Reader: sample_period: " << config().metric_count
+                         << " events";
+            leader_attr.sample_period = config().metric_count;
+        }
+
+        Log::debug() << "perf::counter::Reader: leader event: '" << config().metric_leader << "'";
+        const auto leader_event = EventProvider::get_event_by_name(config().metric_leader);
+
+        leader_attr.type = leader_event.type;
+        leader_attr.config = leader_event.config;
+        leader_attr.config1 = leader_event.config1;
 
         return leader_attr;
     }
