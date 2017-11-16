@@ -66,6 +66,9 @@ public:
         }
     }
 
+    static int open(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
+                    int group_fd);
+
     double read();
 
     uint64_t enabled()
@@ -198,9 +201,12 @@ public:
 
     ~PerfCounterGroup()
     {
-        if (group_leader_fd_ != -1)
+        for (int fd : counters_)
         {
-            ::close(group_leader_fd_);
+            if (fd != -1)
+            {
+                ::close(fd);
+            }
         }
     }
 
@@ -244,7 +250,7 @@ private:
 
     int group_leader_fd_;
     pid_t tid_;
-    std::vector<PerfCounter> counters_;
+    std::vector<int> counters_;
     CounterBuffer buf_;
 };
 }

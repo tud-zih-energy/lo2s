@@ -64,6 +64,12 @@ namespace metric
 {
 PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
                          int group_fd)
+: fd_(open(tid, type, config, config1, group_fd))
+{
+}
+
+int PerfCounter::open(pid_t tid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
+                      int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
@@ -76,12 +82,13 @@ PerfCounter::PerfCounter(pid_t tid, perf_type_id type, std::uint64_t config, std
     // Needed when scaling multiplexed events, and recognize activation phases
     perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-    fd_ = perf_try_event_open(&perf_attr, tid, -1, group_fd, 0);
-    if (fd_ < 0)
+    int fd = perf_try_event_open(&perf_attr, tid, -1, group_fd, 0);
+    if (fd < 0)
     {
         Log::error() << "perf_event_open for counter failed";
         throw_errno();
     }
+    return fd;
 }
 
 double PerfCounter::read()
@@ -194,7 +201,8 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid,
 
 void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)
 {
-    counters_.emplace_back(tid_, counter.type, counter.config, counter.config1, group_leader_fd_);
+    counters_.emplace_back(
+        PerfCounter::open(tid_, counter.type, counter.config, counter.config1, group_leader_fd_));
 }
 }
 }
