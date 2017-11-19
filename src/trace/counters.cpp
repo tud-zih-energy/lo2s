@@ -23,6 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/platform.hpp>
 
@@ -50,36 +51,16 @@ Counters::Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_
 otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
 {
     auto c = trace_.metric_class();
-    const auto& user_events = lo2s::config().perf_events;
 
-    const auto metric_leader_event =
-        perf::EventProvider::get_event_by_name(lo2s::config().metric_leader);
-    c.add_member(trace_.metric_member(metric_leader_event.name, metric_leader_event.name,
+    const perf::EventCollection& event_collection = perf::requested_events();
+
+    c.add_member(trace_.metric_member(event_collection.leader.name, event_collection.leader.name,
                                       otf2::common::metric_mode::accumulated_start,
                                       otf2::common::type::Double, "#"));
 
-    for (const auto& ev : user_events)
+    for (const auto& ev : event_collection.events)
     {
-        if (perf::EventProvider::has_event(ev))
-        {
-            c.add_member(trace_.metric_member(ev, ev, otf2::common::metric_mode::accumulated_start,
-                                              otf2::common::type::Double, "#"));
-        }
-    }
-
-    if (user_events.size() == 0)
-    {
-        for (const auto& description : platform::get_mem_events())
-        {
-            c.add_member(trace_.metric_member(description.name, description.name,
-                                              otf2::common::metric_mode::accumulated_start,
-                                              otf2::common::type::Double, "#"));
-        }
-
-        c.add_member(trace_.metric_member("instructions", "instructions",
-                                          otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::Double, "#"));
-        c.add_member(trace_.metric_member("cycles", "CPU cycles",
+        c.add_member(trace_.metric_member(ev.name, ev.name,
                                           otf2::common::metric_mode::accumulated_start,
                                           otf2::common::type::Double, "#"));
     }

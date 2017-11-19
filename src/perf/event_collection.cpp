@@ -29,16 +29,25 @@ namespace lo2s
 {
 namespace perf
 {
-std::vector<lo2s::perf::CounterDescription> collect_requested_events()
+EventCollection collect_requested_events()
 {
     const auto& mem_events = platform::get_mem_events();
     const auto& user_events = lo2s::config().perf_events;
 
+    perf::CounterDescription leader(perf::EventProvider::get_event_by_name(config().metric_leader));
     std::vector<perf::CounterDescription> used_counters;
 
     used_counters.reserve(mem_events.size() + user_events.size());
     for (const auto& ev : user_events)
     {
+        // skip event if it has already been declared as group leader
+        if (ev == config().metric_leader)
+        {
+            Log::info() << "'" << ev
+                        << "' has been requested as both the metric leader event and a regular "
+                           "metric event. Will treat it as the leader.";
+            continue;
+        }
         try
         {
             const auto event_desc = perf::EventProvider::get_event_by_name(ev);
@@ -62,7 +71,13 @@ std::vector<lo2s::perf::CounterDescription> collect_requested_events()
         used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
     }
 
-    return used_counters;
+    return { leader, used_counters };
+}
+
+const EventCollection& requested_events()
+{
+    static EventCollection events{ collect_requested_events() };
+    return events;
 }
 }
 }

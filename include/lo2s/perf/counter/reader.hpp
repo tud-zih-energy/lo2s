@@ -24,6 +24,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
@@ -48,14 +49,14 @@ public:
         struct metric::GroupReadFormat v;
     };
 
-    Reader(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs)
-    : counters_(tid, counter_descs, group_leader_attributes())
+    Reader(pid_t tid, const EventCollection& event_collection)
+    : counters_(tid, event_collection.events, group_leader_attributes(event_collection.leader))
     {
         EventReader<T>::init_mmap(counters_.group_leader_fd(), config().mmap_pages);
     }
 
 private:
-    static struct perf_event_attr& group_leader_attributes()
+    static struct perf_event_attr& group_leader_attributes(const CounterDescription& leader_event)
     {
         static struct perf_event_attr leader_attr;
         std::memset(&leader_attr, 0, sizeof(leader_attr));
@@ -78,7 +79,6 @@ private:
         }
 
         Log::debug() << "perf::counter::Reader: leader event: '" << config().metric_leader << "'";
-        const auto leader_event = EventProvider::get_event_by_name(config().metric_leader);
 
         leader_attr.type = leader_event.type;
         leader_attr.config = leader_event.config;

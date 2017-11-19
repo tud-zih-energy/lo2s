@@ -19,6 +19,8 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
+
 #include <lo2s/perf/counter_description.hpp>
 
 #include <vector>
@@ -27,6 +29,12 @@ namespace lo2s
 {
 namespace perf
 {
-std::vector<lo2s::perf::CounterDescription> collect_requested_events();
+struct EventCollection
+{
+    CounterDescription leader;
+    std::vector<CounterDescription> events;
+};
+
+const EventCollection& requested_events();
 }
 }

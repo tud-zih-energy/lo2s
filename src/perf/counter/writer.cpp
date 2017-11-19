@@ -32,15 +32,13 @@ namespace counter
 {
 Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace,
                otf2::definition::metric_class metric_class, otf2::definition::location scope)
-: Reader(tid, collect_requested_events()), counter_writer_(pid, tid, trace, metric_class, scope),
+: Reader(tid, requested_events()), counter_writer_(pid, tid, trace, metric_class, scope),
   time_converter_(time::Converter::instance())
 {
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
-    Log::trace() << "counter::Writer::handle: time=" << sample->time << ", nr=" << sample->v.nr
-                 << ", leader-count=" << sample->v.values[0];
     auto tp = time_converter_(sample->time);
 
     counters_.read(&sample->v);
