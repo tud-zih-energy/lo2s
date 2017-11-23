@@ -82,7 +82,7 @@ void parse_program_options(int argc, const char** argv)
     bool kernel, no_kernel;
     bool list_clockids, list_events;
     std::uint64_t read_interval_ms;
-    boost::optional<std::uint64_t> metric_count, metric_frequency;
+    std::uint64_t metric_count, metric_frequency = 10;
 
     std::string requested_clock_name;
 
@@ -292,9 +292,9 @@ void parse_program_options(int argc, const char** argv)
 #endif
     }
 
-    if (metric_count)
+    if (vm.count("metric-count"))
     {
-        if (metric_frequency)
+        if (vm.count("metric-frequency"))
         {
             lo2s::Log::error()
                 << "Cannot specify metric read period and frequency at the same time.";
@@ -303,11 +303,11 @@ void parse_program_options(int argc, const char** argv)
         else
         {
             config.metric_use_frequency = false;
-            config.metric_count = *metric_count;
+            config.metric_count = metric_count;
         }
     } else {
         config.metric_use_frequency = true;
-        config.metric_frequency = (metric_frequency) ?  *metric_frequency : 10;
+        config.metric_frequency = metric_frequency;
     }
 
     if (!perf::EventProvider::has_event(config.metric_leader))
