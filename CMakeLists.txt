@@ -18,6 +18,23 @@ if(${COUNT_OTF2XX} EQUAL 0 OR ${COUNT_NITRO} EQUAL 0)
     execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif()
 
+option(USE_STATIC_LIBS "Link lo2s statically." OFF)
+if(USE_STATIC_LIBS)
+    set(Dl_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+    set(Boost_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+    set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
+    set(OTF2_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
+    set(X86Adapt_STATIC ON CACHE BOOL "" FORCE)
+
+    # Doesn't seem to work with clang, even though it should,
+    # but at least it doesn't complain about it either
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
+    set(CMAKE_LINK_SEARCH_START_STATIC 1)
+    set(CMAKE_LINK_SEARCH_END_STATIC 1)
+
+endif()
+
 include(lib/otf2xx/OTF2XX.cmake)
 
 include(lib/nitro/Nitro.cmake)
@@ -95,10 +112,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
-
-# Doesn't seem to work with clang, even though it should,
-# but at least it doesn't complain about it either
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 
 include_directories(include)
 
