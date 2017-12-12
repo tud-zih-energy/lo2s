@@ -147,12 +147,12 @@ public:
 
     uint64_t enabled() const
     {
-        return current_->time_enabled;
+        return previous_->time_enabled;
     }
 
     uint64_t running() const
     {
-        return current_->time_running;
+        return previous_->time_running;
     }
 
     void read(int group_leader_fd);
