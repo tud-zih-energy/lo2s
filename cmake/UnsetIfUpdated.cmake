@@ -1,4 +1,4 @@
-macro(NitroUnsetIfUpdated UnsetVar WatchedVar)
+macro(UnsetIfUpdated UnsetVar WatchedVar)
     if(NOT ${WatchedVar} STREQUAL OLD_${WatchedVar})
         set(OLD_${WatchedVar} ${${WatchedVar}} CACHE INTERNAL "previous value of ${WatchedVar}")
         unset(${UnsetVar} CACHE)

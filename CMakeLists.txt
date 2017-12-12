@@ -6,6 +6,7 @@ include(CMakeDependentOption)
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
+include(cmake/UnsetIfUpdated.cmake)
 
 # Intialize git submodules if not done already
 file(GLOB SUBMODULE_FILES "lib/otf2xx/*")
@@ -18,21 +19,47 @@ if(${COUNT_OTF2XX} EQUAL 0 OR ${COUNT_NITRO} EQUAL 0)
     execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif()
 
-option(USE_STATIC_LIBS "Link lo2s statically." OFF)
-if(USE_STATIC_LIBS)
-    set(Dl_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
-    set(Boost_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
-    set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "" FORCE)
-    set(OTF2_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
-    set(X86Adapt_STATIC ON CACHE BOOL "" FORCE)
+set(lo2s_USE_STATIC_LIBS "MOSTLY" CACHE STRING "Link lo2s statically.")
+set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
+
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS Dl_USE_STATIC_LIBS)
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS Binutils_USE_STATIC_LIBS)
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS Boost_USE_STATIC_LIBS)
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS Boost_USE_STATIC_RUNTIME)
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS OTF2_USE_STATIC_LIBS)
+UnsetIfUpdated(lo2s_USE_STATIC_LIBS X86Adapt_STATIC)
+
+if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
+    set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+    set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
+    set(Boost_USE_STATIC_LIBS    OFF CACHE BOOL "")
+    set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
+    set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
+    set(X86Adapt_STATIC          OFF CACHE BOOL "")
+endif()
+
+if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
+    set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
+    set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "")
+    set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(X86Adapt_STATIC          ON CACHE BOOL "")
+endif()
+
+if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
+    set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
+    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
+    set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "")
+    set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(X86Adapt_STATIC          ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
     set(CMAKE_LINK_SEARCH_START_STATIC 1)
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
-
 endif()
 
 include(lib/otf2xx/OTF2XX.cmake)
