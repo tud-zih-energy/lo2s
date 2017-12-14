@@ -197,7 +197,7 @@ class PerfCounterGroup
 public:
     PerfCounterGroup(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs);
     PerfCounterGroup(pid_t tid, const std::vector<perf::CounterDescription>& counter_descs,
-                     struct perf_event_attr& leader_attr);
+                     struct perf_event_attr& leader_attr, bool enable_on_exec);
 
     ~PerfCounterGroup()
     {

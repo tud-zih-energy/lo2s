@@ -173,7 +173,7 @@ void CounterBuffer::update_buffers()
 
 PerfCounterGroup::PerfCounterGroup(pid_t tid,
                                    const std::vector<perf::CounterDescription>& counter_descs,
-                                   struct perf_event_attr& leader_attr)
+                                   struct perf_event_attr& leader_attr, bool enable_on_exec)
 : tid_(tid), buf_(counter_descs.size() + 1 /* add group leader counter */)
 {
     leader_attr.size = sizeof(leader_attr);
@@ -181,6 +181,7 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid,
     leader_attr.exclude_kernel = lo2s::config().exclude_kernel;
     leader_attr.read_format =
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
+    leader_attr.enable_on_exec = enable_on_exec;
 
     group_leader_fd_ = perf_try_event_open(&leader_attr, tid_, -1, -1, 0);
     if (group_leader_fd_ < 0)
@@ -195,8 +196,16 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid,
         add_counter(description);
     }
 
-    // enable recording only after having set up all events in the group
-    ::ioctl(group_leader_fd_, PERF_EVENT_IOC_ENABLE);
+    if (!enable_on_exec)
+    {
+        auto ret = ::ioctl(group_leader_fd_, PERF_EVENT_IOC_ENABLE);
+        if (ret == -1)
+        {
+            Log::error() << "failed to enable perf counter group";
+            ::close(group_leader_fd_);
+            throw_errno();
+        }
+    }
 }
 
 void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)
