@@ -227,29 +227,29 @@ void parse_program_options(int argc, const char** argv)
 
     // time synchronization
     config.use_clockid = false;
-    if (!requested_clock_name.empty())
+    try
     {
-        try
-        {
-            const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
+        const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
 
-            lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
+        lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
-            config.use_clockid = true;
-            config.clockid = clock.id;
+        config.use_clockid = true;
+        config.clockid = clock.id;
 #else
+        if (!vm["clockid"].defaulted())
+        {
             lo2s::Log::warn() << "This installation was built without support for setting a "
                                  "perf reference clock.";
             lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
                                  "local reference clock.";
+        }
 #endif
-            lo2s::time::Clock::set_clock(clock.id);
-        }
-        catch (const lo2s::time::ClockProvider::InvalidClock& e)
-        {
-            lo2s::Log::error() << "Invalid clock requested: " << e.what();
-            std::exit(EXIT_FAILURE);
-        }
+        lo2s::time::Clock::set_clock(clock.id);
+    }
+    catch (const lo2s::time::ClockProvider::InvalidClock& e)
+    {
+        lo2s::Log::error() << "Invalid clock requested: " << e.what();
+        std::exit(EXIT_FAILURE);
     }
 
     if (all_cpus)
