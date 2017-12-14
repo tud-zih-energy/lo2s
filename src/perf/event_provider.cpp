@@ -70,8 +70,8 @@ static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
     PERF_EVENT_SW("context-switches", CONTEXT_SWITCHES),
     PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
-    PERF_EVENT_SW("page-faults-minor", PAGE_FAULTS_MIN),
-    PERF_EVENT_SW("page-faults-major", PAGE_FAULTS_MAJ),
+    PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
+    PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
     PERF_EVENT_SW("aligment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
