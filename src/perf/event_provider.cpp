@@ -93,6 +93,9 @@ static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "L1-dcache", PERF_COUNT_HW_CACHE_L1D }, { "L1-icache", PERF_COUNT_HW_CACHE_L1I },
     { "LLC", PERF_COUNT_HW_CACHE_LL },        { "dTLB", PERF_COUNT_HW_CACHE_DTLB },
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+    { "node", PERF_COUNT_HW_CACHE_NODE },
+#endif
 };
 
 static constexpr string_to_id<perf_hw_cache_op_id> CACHE_OPERATION_TABLE[] = {
