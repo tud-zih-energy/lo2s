@@ -193,7 +193,24 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid,
     counters_.reserve(counter_descs.size());
     for (auto& description : counter_descs)
     {
-        add_counter(description);
+        try
+        {
+            add_counter(description);
+        }
+        catch (const std::system_error& e)
+        {
+            Log::error() << "failed to add counter '" << description.name
+                         << "': " << e.code().message();
+
+            if (e.code().value() == EINVAL)
+            {
+                Log::error()
+                    << "opening " << counter_descs.size()
+                    << " counters at once might exceed the hardware limit of simultaneously "
+                       "openable counters.";
+            }
+            throw e;
+        }
     }
 
     if (!enable_on_exec)
