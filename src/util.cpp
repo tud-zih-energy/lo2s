@@ -79,24 +79,6 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     proc_stat >> cpu_id;
     return cpu_id;
 }
-std::size_t get_perf_event_mlock()
-{
-    std::fstream mlock_kb_file;
-    std::size_t mlock_kb;
-    try
-    {
-        mlock_kb_file.exceptions(std::fstream::failbit | std::fstream::badbit);
-        mlock_kb_file.open("/proc/sys/kernel/perf_event_mlock_kb", std::fstream::in);
-        mlock_kb_file >> mlock_kb;
-        mlock_kb_file.close();
-        return mlock_kb * 1024;
-    }
-    catch (std::exception& e)
-    {
-        Log::trace() << "Reading /proc/sys/kernel/perf_event_mlock_kb failed: " << e.what();
-        return 516 * 1024;
-    }
-}
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;
