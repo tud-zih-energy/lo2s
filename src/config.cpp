@@ -25,6 +25,7 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/util.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -34,6 +35,9 @@
 #include <cstdlib>
 #include <ctime> // for CLOCK_* macros
 
+extern "C" {
+#include <unistd.h>
+}
 namespace po = boost::program_options;
 
 namespace lo2s
@@ -63,13 +67,24 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
+static inline void print_usage(std::ostream& os, const char* name,
+                               const po::options_description& desc)
+{
+    // clang-format off
+    os << "Usage:\n"
+          "  " << name << " [options] ./a.out\n"
+          "  " << name << " [options] -- ./a.out --option-to-a-out\n"
+          "  " << name << " [options] --pid $(pidof some-process)\n"
+          "\n" << desc;
+    // clang-format on
+}
+
 static nitro::lang::optional<Config> instance;
 
 const Config& config()
 {
     return *instance;
 }
-
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description desc("Allowed options");
@@ -86,7 +101,6 @@ void parse_program_options(int argc, const char** argv)
 
     std::string requested_clock_name;
 
-    // TODO read default for mmap-pages from (/proc/sys/kernel/perf_event_mlock_kb / pagesize) - 1
     // clang-format off
     desc.add_options()
         ("help",
@@ -109,7 +123,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_perf_event_mlock()/get_page_size() - 1),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
@@ -157,15 +171,15 @@ void parse_program_options(int argc, const char** argv)
     }
     catch (const po::unknown_option& e)
     {
-        std::cerr << e.what() << '\n' << desc << '\n';
+        std::cerr << e.what() << '\n';
+        print_usage(std::cerr, argv[0], desc);
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
 
-    if (vm.count("help") || (config.monitor_type == lo2s::MonitorType::PROCESS &&
-                             config.pid == -1 && config.command.empty()))
+    if (vm.count("help"))
     {
-        std::cout << desc << "\n";
+        print_usage(std::cout, argv[0], desc);
         std::exit(0);
     }
 
@@ -234,29 +248,29 @@ void parse_program_options(int argc, const char** argv)
 
     // time synchronization
     config.use_clockid = false;
-    if (!requested_clock_name.empty())
+    try
     {
-        try
-        {
-            const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
+        const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
 
-            lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
+        lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
-            config.use_clockid = true;
-            config.clockid = clock.id;
+        config.use_clockid = true;
+        config.clockid = clock.id;
 #else
+        if (!vm["clockid"].defaulted())
+        {
             lo2s::Log::warn() << "This installation was built without support for setting a "
                                  "perf reference clock.";
             lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
                                  "local reference clock.";
+        }
 #endif
-            lo2s::time::Clock::set_clock(clock.id);
-        }
-        catch (const lo2s::time::ClockProvider::InvalidClock& e)
-        {
-            lo2s::Log::error() << "Invalid clock requested: " << e.what();
-            std::exit(EXIT_FAILURE);
-        }
+        lo2s::time::Clock::set_clock(clock.id);
+    }
+    catch (const lo2s::time::ClockProvider::InvalidClock& e)
+    {
+        lo2s::Log::error() << "Invalid clock requested: " << e.what();
+        std::exit(EXIT_FAILURE);
     }
 
     if (all_cpus)
@@ -266,6 +280,13 @@ void parse_program_options(int argc, const char** argv)
     else
     {
         config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+        config.command.empty())
+    {
+        print_usage(std::cerr, argv[0], desc);
+        std::exit(0);
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);

@@ -70,8 +70,8 @@ static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
     PERF_EVENT_SW("context-switches", CONTEXT_SWITCHES),
     PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
-    PERF_EVENT_SW("page-faults-minor", PAGE_FAULTS_MIN),
-    PERF_EVENT_SW("page-faults-major", PAGE_FAULTS_MAJ),
+    PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
+    PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
     PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
@@ -93,6 +93,9 @@ static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "L1-dcache", PERF_COUNT_HW_CACHE_L1D }, { "L1-icache", PERF_COUNT_HW_CACHE_L1I },
     { "LLC", PERF_COUNT_HW_CACHE_LL },        { "dTLB", PERF_COUNT_HW_CACHE_DTLB },
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+    { "node", PERF_COUNT_HW_CACHE_NODE },
+#endif
 };
 
 struct cache_op_and_result
