@@ -22,15 +22,16 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/cpu_set_monitor.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
+#include <lo2s/summary.hpp>
 
 #include <system_error>
 
 int main(int argc, const char** argv)
 {
     lo2s::parse_program_options(argc, argv);
-
     try
     {
+        lo2s::Summary::start();
         switch (lo2s::config().monitor_type)
         {
         case lo2s::MonitorType::CPU_SET:
@@ -47,6 +48,13 @@ int main(int argc, const char** argv)
         if (e.code())
         {
             lo2s::Log::error() << "Aborting: " << e.what();
+        }
+        else
+        {
+            if(!lo2s::config().quiet)
+            {
+                lo2s::Summary::finalize_and_print();
+            }
         }
         return e.code().value();
     }

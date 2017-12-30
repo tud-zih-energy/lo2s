@@ -58,6 +58,7 @@ struct Config
     // perf
     std::size_t mmap_pages;
     bool exclude_kernel;
+    bool quiet;
     // Instruction sampling
     std::uint64_t sampling_period;
     std::string sampling_event;

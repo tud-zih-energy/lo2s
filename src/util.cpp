@@ -14,10 +14,10 @@
 
 #include <cstdint>
 #include <ctime>
-
 extern "C" {
 #include <limits.h>
 #include <sys/syscall.h>
+#include <sys/times.h>
 #include <sys/types.h>
 #include <unistd.h>
 }
@@ -30,7 +30,18 @@ std::size_t get_page_size()
     static std::size_t page_size = sysconf(_SC_PAGESIZE);
     return page_size;
 }
-
+std::pair<double, double> get_process_times()
+{
+    int ticks_per_second = sysconf(_SC_CLK_TCK);
+    struct tms buffer;
+    double wall_time = times(&buffer);
+    if (wall_time == -1)
+    {
+        return std::make_pair(0.0, 0.0);
+    }
+    double cpu_time = buffer.tms_utime + buffer.tms_stime + buffer.tms_cutime + buffer.tms_cstime;
+    return std::make_pair(wall_time / ticks_per_second, cpu_time / ticks_per_second);
+}
 std::string get_process_exe(pid_t pid)
 {
     auto proc_exe_filename = (boost::format("/proc/%d/exe") % pid).str();

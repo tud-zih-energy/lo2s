@@ -171,12 +171,12 @@ set(SOURCE_FILES
 
         src/trace/counters.cpp src/trace/trace.cpp
 
+        src/util.cpp
+        src/summary.cpp
         src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
         src/platform.cpp
         src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
         src/mmap.cpp
-        src/util.cpp
-
         ${X86_ADAPT_SOURCE_FILES}
         ${RADARE_SOURCE_FILES}
 )

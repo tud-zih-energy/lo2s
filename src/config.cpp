@@ -90,7 +90,6 @@ void parse_program_options(int argc, const char** argv)
 
     lo2s::Config config;
     SwitchCounter verbosity;
-    bool quiet;
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
@@ -117,7 +116,7 @@ void parse_program_options(int argc, const char** argv)
              "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
         ("pid,p", po::value(&config.pid)->default_value(-1),
              "attach to specific pid")
-        ("quiet,q", po::bool_switch(&quiet),
+        ("quiet,q", po::bool_switch(&config.quiet),
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
@@ -173,13 +172,13 @@ void parse_program_options(int argc, const char** argv)
         std::exit(0);
     }
 
-    if (quiet && verbosity.count != 0)
+    if (config.quiet && verbosity.count != 0)
     {
         lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
-        quiet = false;
+        config.quiet = false;
     }
 
-    if (quiet)
+    if (config.quiet)
     {
         lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
     }
