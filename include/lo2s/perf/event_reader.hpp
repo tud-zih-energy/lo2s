@@ -126,9 +126,9 @@ protected:
         if (base == MAP_FAILED || base == nullptr)
         {
             Log::error() << "mapping memory for recording events failed. You can try "
-                "to decrease the buffer size with the -m flag, or try to increase "
-                "the amount of mappable memory by increasing /proc/sys/kernel/"
-                "perf_event_mlock_kb";
+                            "to decrease the buffer size with the -m flag, or try to increase "
+                            "the amount of mappable memory by increasing /proc/sys/kernel/"
+                            "perf_event_mlock_kb";
             throw_errno();
         }
     }
