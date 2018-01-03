@@ -6,12 +6,16 @@ class Summary
 public:
     static void start();
     static void finalize_and_print();
-    static void record_wakeups(int wakeups);
+    static void record_wakeups(int num_wakeups);
+    static void increase_thread_count();
+    static void set_trace_dir(std::string trace_dir);
 
 private:
     Summary();
-    static double start_cpu_time;
-    static double start_wall_time;
-    static long wakeups;
+    static std::string trace_dir_;
+    static double start_cpu_time_;
+    static double start_wall_time_;
+    static long num_wakeups_;
+    static long thread_count_;
 };
 }

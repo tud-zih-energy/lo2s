@@ -75,6 +75,7 @@ protected:
     std::thread thread_;
     trace::Trace& trace_;
     std::string name_;
+    long num_wakeups_;
 };
 }
 }

@@ -26,10 +26,10 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
-
 #include <nitro/env/hostname.hpp>
 
 #include <boost/format.hpp>
@@ -73,6 +73,7 @@ Trace::Trace()
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 
+    Summary::set_trace_dir(get_trace_name(config().trace_path));
     int otf2_id = 1;
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
