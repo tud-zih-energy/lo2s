@@ -113,6 +113,8 @@ if (X86Adapt_FOUND)
     target_link_libraries(lo2s-x86_adapt
         PUBLIC
             x86_adapt::x86_adapt
+            Nitro::Log
+            Nitro::Env
     )
     target_include_directories(lo2s-x86_adapt
         PRIVATE
