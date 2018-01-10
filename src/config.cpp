@@ -34,7 +34,8 @@
 #include <cstdlib>
 #include <ctime> // for CLOCK_* macros
 
-extern "C" {
+extern "C"
+{
 #include <unistd.h>
 }
 namespace po = boost::program_options;
@@ -170,7 +171,7 @@ void parse_program_options(int argc, const char** argv)
     if (vm.count("help"))
     {
         print_usage(std::cout, argv[0], desc);
-        std::exit(0);
+        std::exit(EXIT_SUCCESS);
     }
 
     if (quiet && verbosity.count != 0)
@@ -207,6 +208,22 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    if (all_cpus)
+    {
+        config.monitor_type = lo2s::MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+        config.command.empty())
+    {
+        print_usage(std::cerr, argv[0], desc);
+        std::exit(EXIT_SUCCESS);
+    }
+
     // list arguments to options and exit
     if (list_clockids)
     {
@@ -221,7 +238,7 @@ void parse_program_options(int argc, const char** argv)
     if (!perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
-                           << "\'is not available!";
+                           << "\' is not available!";
         std::exit(EXIT_FAILURE); // hmm...
     }
 
@@ -250,22 +267,6 @@ void parse_program_options(int argc, const char** argv)
     {
         lo2s::Log::error() << "Invalid clock requested: " << e.what();
         std::exit(EXIT_FAILURE);
-    }
-
-    if (all_cpus)
-    {
-        config.monitor_type = lo2s::MonitorType::CPU_SET;
-    }
-    else
-    {
-        config.monitor_type = lo2s::MonitorType::PROCESS;
-    }
-
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
-        config.command.empty())
-    {
-        print_usage(std::cerr, argv[0], desc);
-        std::exit(0);
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
@@ -304,4 +305,4 @@ void parse_program_options(int argc, const char** argv)
 
     instance = std::move(config);
 }
-}
+} // namespace lo2s
