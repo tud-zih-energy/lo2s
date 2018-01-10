@@ -115,6 +115,7 @@ if (X86Adapt_FOUND)
             x86_adapt::x86_adapt
             Nitro::Log
             Nitro::Env
+            otf2xx::Core
     )
     target_include_directories(lo2s-x86_adapt
         PRIVATE
