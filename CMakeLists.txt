@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 project(lo2s)
 
 include(CMakeDependentOption)
+include(CheckIncludeFiles)
+include(CheckStructHasMember)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
@@ -66,82 +68,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
 endif()
 
-set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
-add_subdirectory(lib/otf2xx)
-
-add_subdirectory(lib/nitro)
-
-include(lib/x86_adapt/x86_adapt.cmake)
-
-if (X86Adapt_FOUND)
-    set(X86_ADAPT_SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
-else()
-    set(X86_ADAPT_SOURCE_FILES "")
-endif()
-
-find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
-include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-
-find_package(Binutils REQUIRED)
-include_directories(SYSTEM ${Binutils_INCLUDE_DIRS})
-
-# TODO Shouldn't this be part of libc and handlded more elegantly?
-find_package(Dl REQUIRED)
-include_directories(SYSTEM ${Dl_INCLUDE_DIRS})
-
-find_package(Radare)
-
-CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
-
-if (USE_RADARE)
-    if (Radare_FOUND)
-        include_directories(SYSTEM ${Radare_INCLUDE_DIRS})
-        set(RADARE_SOURCE_FILES src/radare.cpp)
-        add_definitions(-DHAVE_RADARE)
-    else()
-        message(SEND_ERROR "Radare not found but requested.")
-        set(RADARE_SOURCE_FILES "")
-    endif()
-else()
-    set(RADARE_SOURCE_FILES "")
-endif()
-
-INCLUDE(CheckIncludeFiles)
-CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
-
-option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
-
-if (HW_BREAKPOINT_COMPAT)
-    add_definitions(-DHW_BREAKPOINT_COMPAT)
-    if (HAVE_HW_BREAKPOINT_H)
-        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
-    endif()
-else()
-    if (NOT HAVE_HW_BREAKPOINT_H)
-        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
-    endif()
-endif()
-
-INCLUDE(CheckStructHasMember)
-CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h
-    HAVE_PERF_EVENT_ATTR_CLOCKID)
-
-option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
-
-if (USE_PERF_CLOCKID)
-    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        add_definitions(-DUSE_PERF_CLOCKID)
-    else()
-        message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
-    endif()
-else()
-    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
-    endif()
-endif()
-
-find_package(Threads REQUIRED)
-
 set(SOURCE_FILES
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
     src/metric/perf_counter.cpp
@@ -172,22 +98,136 @@ set(SOURCE_FILES
     src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
     src/mmap.cpp
     src/util.cpp
+)
+add_executable(lo2s ${SOURCE_FILES})
 
-    ${X86_ADAPT_SOURCE_FILES}
-    ${RADARE_SOURCE_FILES}
+set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
+add_subdirectory(lib/otf2xx)
+
+add_subdirectory(lib/nitro)
+
+include(lib/x86_adapt/x86_adapt.cmake)
+
+if (X86Adapt_FOUND)
+    add_library(lo2s-x86_adapt STATIC src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
+    target_link_libraries(lo2s-x86_adapt
+        PUBLIC
+            x86_adapt::x86_adapt
+    )
+    target_include_directories(lo2s-x86_adapt
+        PRIVATE
+            include
+    )
+    target_link_libraries(lo2s
+        PRIVATE
+            lo2s-x86_adapt
+    )
+endif()
+
+find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
+target_link_libraries(lo2s
+    PRIVATE
+        Boost::system
+        Boost::program_options
+        Boost::filesystem
 )
 
-add_executable(lo2s ${SOURCE_FILES})
+find_package(Binutils REQUIRED)
+target_include_directories(lo2s SYSTEM
+    PRIVATE
+        ${Binutils_INCLUDE_DIRS}
+)
+target_link_libraries(lo2s
+    PRIVATE
+        ${Binutils_LIBRARIES}
+)
+
+find_package(Radare)
+
+CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
+
+if (USE_RADARE)
+    if (Radare_FOUND)
+        add_library(lo2s-radare STATIC src/radare.cpp)
+
+        target_compile_definitions(lo2s-radare
+            PUBLIC
+                HAVE_RADARE
+        )
+
+        target_include_directories(lo2s-radare
+            PRIVATE
+                include
+        )
+
+        target_include_directories(lo2s-radare SYSTEM
+            PUBLIC
+                ${Radare_INCLUDE_DIRS}
+        )
+
+        target_link_libraries(lo2s-radare
+            PRIVATE
+                Nitro::Log
+                Nitro::Env
+                ${Radare_LIBRARIES}
+        )
+
+        target_link_libraries(lo2s
+            PUBLIC
+                lo2s-radare
+        )
+    else()
+        message(SEND_ERROR "Radare not found but requested.")
+    endif()
+endif()
+
+CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
+
+option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+
+if (HW_BREAKPOINT_COMPAT)
+    target_compile_definitions(lo2s
+        PRIVATE
+            HW_BREAKPOINT_COMPAT
+    )
+    if (HAVE_HW_BREAKPOINT_H)
+        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
+    endif()
+else()
+    if (NOT HAVE_HW_BREAKPOINT_H)
+        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
+    endif()
+endif()
+
+CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
+
+option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+
+if (USE_PERF_CLOCKID)
+    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
+        target_compile_definitions(lo2s
+            PRIVATE
+                USE_PERF_CLOCKID
+        )
+    else()
+        message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
+    endif()
+else()
+    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
+        message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
+    endif()
+endif()
+
+find_package(Threads REQUIRED)
+
 target_link_libraries(lo2s
     PRIVATE
         otf2xx::Writer
         Nitro::Log
         Nitro::Env
+        Nitro::Dl
         Threads::Threads
-        ${Boost_LIBRARIES}
         ${Binutils_LIBRARIES}
-        ${Dl_LIBRARIES}
-        ${X86_ADAPT_LIBRARIES}
 )
 
 target_include_directories(lo2s

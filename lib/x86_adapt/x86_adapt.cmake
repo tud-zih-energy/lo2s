@@ -9,10 +9,27 @@ SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake;${CMAKE_MODULE_PATH}")
 find_package(X86Adapt)
 if (X86Adapt_FOUND)
     message(STATUS "X86Adapt found.")
-    add_definitions(-DHAVE_X86_ADAPT)
 
-    include_directories(${CMAKE_CURRENT_LIST_DIR}/include)
-    include_directories(SYSTEM ${X86_ADAPT_INCLUDE_DIRS})
-else()
-    set(X86_ADAPT_LIBRARIES "")
+    add_library(x86_adapt_cxx INTERFACE)
+    target_link_libraries(x86_adapt_cxx
+        INTERFACE
+            ${X86_ADAPT_LIBRARIES}
+    )
+
+    target_include_directories(x86_adapt_cxx SYSTEM
+        INTERFACE
+            ${X86_ADAPT_INCLUDE_DIRS}
+    )
+
+    target_include_directories(x86_adapt_cxx
+        INTERFACE
+            ${CMAKE_CURRENT_LIST_DIR}/include
+    )
+
+    target_compile_definitions(x86_adapt_cxx
+        INTERFACE
+            HAVE_X86_ADAPT
+    )
+
+    add_library(x86_adapt::x86_adapt ALIAS x86_adapt_cxx)
 endif()
