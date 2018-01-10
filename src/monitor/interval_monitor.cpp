@@ -23,7 +23,10 @@ IntervalMonitor::IntervalMonitor(trace::Trace& trace, const std::string& name,
 
 IntervalMonitor::~IntervalMonitor()
 {
-    if (!stop_requested_)
+    // If we had an exception in the initialization list of ThreadMonitor (e.g. Writer() fails
+    // because no more mappable memory is available thread_ will not be joinable (and not needed to
+    // be stopped) and stop_requested should be false
+    if (!stop_requested_ && thread_.joinable())
     {
         Log::error() << "Destructing IntervalMonitor before being stopped. This should not happen, "
                         "but it's fine anyway.";

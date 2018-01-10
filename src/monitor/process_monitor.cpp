@@ -21,12 +21,13 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 
-#include <exception>
-#include <limits>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/util.hpp>
+
+#include <exception>
+#include <limits>
 #include <system_error>
 
 #include <csignal>
@@ -153,6 +154,7 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
         catch (std::system_error& e)
         {
             Log::error() << "Failure while adding new process " << newpid << ": " << e.what();
+            throw;
         }
     }
     // new Thread?
@@ -167,17 +169,20 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
 
             // Parent may be a thread, get the process
             auto pid = threads_.pid(child);
-
             Log::info() << "New thread is cloned " << newpid << " parent: " << child
                         << " pid: " << pid;
 
             // register monitoring
             threads_.insert(pid, newpid, false);
         }
-        // TODO change type of exception we catch here accordingly
-        catch (std::exception& e)
+        catch (std::out_of_range& e)
+        {
+            Log::error() << "Failed to get pid of " << child;
+        }
+        catch (std::system_error& e)
         {
             Log::error() << "Failure while adding new thread " << newpid << ": " << e.what();
+            throw;
         }
     }
     // process or thread exited?

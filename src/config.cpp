@@ -120,7 +120,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_perf_event_mlock()/get_page_size() - 1),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
