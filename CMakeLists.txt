@@ -66,9 +66,10 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
 endif()
 
-include(lib/otf2xx/OTF2XX.cmake)
+set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
+add_subdirectory(lib/otf2xx)
 
-include(lib/nitro/Nitro.cmake)
+add_subdirectory(lib/nitro)
 
 include(lib/x86_adapt/x86_adapt.cmake)
 
@@ -139,55 +140,102 @@ else()
     endif()
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
-
-include_directories(include)
+find_package(Threads REQUIRED)
 
 set(SOURCE_FILES
-        src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
-        src/metric/perf_counter.cpp
+    src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
+    src/metric/perf_counter.cpp
 
-        src/monitor/cpu_set_monitor.cpp
-        src/monitor/cpu_switch_monitor.cpp
-        src/monitor/fd_monitor.cpp
-        src/monitor/interval_monitor.cpp
-        src/monitor/main_monitor.cpp
-        src/monitor/process_monitor.cpp
-        src/monitor/process_monitor_main.cpp
-        src/monitor/thread_monitor.cpp
-        src/monitor/threaded_monitor.cpp
+    src/monitor/cpu_set_monitor.cpp
+    src/monitor/cpu_switch_monitor.cpp
+    src/monitor/fd_monitor.cpp
+    src/monitor/interval_monitor.cpp
+    src/monitor/main_monitor.cpp
+    src/monitor/process_monitor.cpp
+    src/monitor/process_monitor_main.cpp
+    src/monitor/thread_monitor.cpp
+    src/monitor/threaded_monitor.cpp
 
-        src/perf/event_provider.cpp
-        src/perf/sample/writer.cpp
-        src/perf/time/converter.cpp src/perf/time/reader.cpp
-        src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
-        src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
-        src/perf/tracepoint/exit_reader.cpp
+    src/perf/event_provider.cpp
+    src/perf/sample/writer.cpp
+    src/perf/time/converter.cpp src/perf/time/reader.cpp
+    src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
+    src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
+    src/perf/tracepoint/exit_reader.cpp
 
-        src/time/time.cpp
+    src/time/time.cpp
 
-        src/trace/counters.cpp src/trace/trace.cpp
+    src/trace/counters.cpp src/trace/trace.cpp
 
-        src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
-        src/platform.cpp
-        src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
-        src/mmap.cpp
-        src/util.cpp
+    src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
+    src/platform.cpp
+    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
+    src/mmap.cpp
+    src/util.cpp
 
-        ${X86_ADAPT_SOURCE_FILES}
-        ${RADARE_SOURCE_FILES}
+    ${X86_ADAPT_SOURCE_FILES}
+    ${RADARE_SOURCE_FILES}
+)
+
+add_executable(lo2s ${SOURCE_FILES})
+target_link_libraries(lo2s
+    PRIVATE
+        otf2xx::Writer
+        Nitro::Log
+        Nitro::Env
+        Threads::Threads
+        ${Boost_LIBRARIES}
+        ${Binutils_LIBRARIES}
+        ${Dl_LIBRARIES}
+        ${X86_ADAPT_LIBRARIES}
+)
+
+target_include_directories(lo2s
+    PRIVATE
+        include
+)
+
+target_compile_features(lo2s
+    PRIVATE
+        cxx_auto_type
+        cxx_constexpr
+        cxx_decltype
+        cxx_decltype_auto
+        cxx_defaulted_functions
+        cxx_defaulted_move_initializers
+        cxx_delegating_constructors
+        cxx_deleted_functions
+        cxx_explicit_conversions
+        cxx_generalized_initializers
+        cxx_generic_lambdas
+        cxx_inheriting_constructors
+        cxx_lambdas
+        cxx_lambda_init_captures
+        cxx_noexcept
+        cxx_nullptr
+        cxx_override
+        cxx_range_for
+        cxx_return_type_deduction
+        cxx_rvalue_references
+        cxx_trailing_return_types
+        cxx_user_literals
+        cxx_variadic_templates
+        cxx_template_template_parameters
+)
+
+target_compile_definitions(lo2s
+    PRIVATE
+        _GNU_SOURCE
+)
+
+target_compile_options(lo2s
+    PRIVATE
+        -Wall -pedantic -Wextra
 )
 
 
-add_executable(lo2s ${SOURCE_FILES})
-target_link_libraries(lo2s ${OTF2_LIBRARIES} ${Boost_LIBRARIES}
-        ${Binutils_LIBRARIES} ${Dl_LIBRARIES} ${X86_ADAPT_LIBRARIES})
-
 if(USE_RADARE)
-    target_link_libraries(lo2s ${Radare_LIBRARIES})
+    target_link_libraries(lo2s PRIVATE ${Radare_LIBRARIES})
 endif()
 
 option(IWYU "Developer option for include what you use." OFF)
