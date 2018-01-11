@@ -45,7 +45,6 @@ void Summary::finalize_and_print()
         it, end, 0, [](long unsigned int sum, boost::filesystem::directory_entry& entry) {
             if (!boost::filesystem::is_directory(entry))
             {
-                std::cout << entry.path() << "\n";
                 return sum + boost::filesystem::file_size(entry);
             }
             return sum;
