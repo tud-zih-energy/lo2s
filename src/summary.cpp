@@ -50,12 +50,19 @@ void Summary::finalize_and_print()
             return sum;
         });
     std::cout << "EXECUTION SUMMARY\n";
-    std::cout << " * executed command: ";
-    for (auto i = config().command.begin(); i != config().command.end(); ++i)
+    if(config().monitor_type == lo2s::MonitorType::PROCESS)
     {
-        std::cout << *i << ' ';
+        std::cout << " * executed command: ";
+        for (auto i = config().command.begin(); i != config().command.end(); ++i)
+        {
+            std::cout << *i << ' ';
+        }
+        std::cout << "\n";
     }
-    std::cout << "\n";
+    else
+    {
+        std::cout << " * monitored all CPUs\n";
+    }
     std::cout << " * " << wall_time << "s Wall Time\n";
     std::cout << " * " << cpu_time << "s CPU time\n";
     std::cout << " * spawned threads: " << thread_count_ << '\n';

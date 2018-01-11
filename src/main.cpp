@@ -31,13 +31,13 @@ int main(int argc, const char** argv)
     lo2s::parse_program_options(argc, argv);
     try
     {
+        lo2s::Summary::start();
         switch (lo2s::config().monitor_type)
         {
         case lo2s::MonitorType::CPU_SET:
             lo2s::monitor::CpuSetMonitor().run();
             break;
         case lo2s::MonitorType::PROCESS:
-            lo2s::Summary::start();
             lo2s::monitor::process_monitor_main();
             break;
         }
@@ -51,7 +51,7 @@ int main(int argc, const char** argv)
         }
         else
         {
-            if (!lo2s::config().quiet && lo2s::config().monitor_type == lo2s::MonitorType::PROCESS)
+            if (!lo2s::config().quiet)
             {
                 lo2s::Summary::finalize_and_print();
             }
