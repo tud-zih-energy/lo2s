@@ -26,7 +26,6 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/pipe.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -48,7 +47,7 @@ namespace lo2s
 namespace monitor
 {
 
-static void run_command(const std::vector<std::string>& command_and_args, Pipe& go_pipe)
+static void run_command(const std::vector<std::string>& command_and_args)
 {
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
@@ -67,15 +66,6 @@ static void run_command(const std::vector<std::string>& command_and_args, Pipe& 
 
     Log::debug() << "execve(" << command_and_args.at(0) << ")";
 
-    // Wait until we are allowed to execve
-    auto ret = go_pipe.read();
-
-    if (ret != 1)
-    {
-        Log::info() << "Measurement aborted prematurely, will not run the command";
-        exit(0);
-    }
-
     // Stop yourself so the parent tracer can do initialize the options
     raise(SIGSTOP);
 
@@ -88,21 +78,17 @@ static void run_command(const std::vector<std::string>& command_and_args, Pipe& 
         delete[] cp;
     }
     Log::error() << "Could not execute command: " << command_and_args.at(0);
-    throw_errno();
+    exit(errno);
 }
 
 void process_monitor_main()
 {
 
-    std::unique_ptr<Pipe> child_ready_pipe;
-    std::unique_ptr<Pipe> go_pipe;
     auto pid = config().pid;
     assert(pid != 0);
     bool spawn = (pid == -1);
     if (spawn)
     {
-        child_ready_pipe = std::make_unique<Pipe>();
-        go_pipe = std::make_unique<Pipe>();
         pid = fork();
     }
     else
@@ -123,45 +109,20 @@ void process_monitor_main()
     else if (pid == 0)
     {
         assert(spawn);
-        child_ready_pipe->close_read_fd();
-        go_pipe->close_write_fd();
-        go_pipe->read_fd_flags(FD_CLOEXEC);
-
-        // Tell the parent we're ready to go
-        child_ready_pipe->close_write_fd();
-
-        run_command(config().command, *go_pipe);
+        run_command(config().command);
     }
     else
     {
-        if (spawn)
-        {
-            child_ready_pipe->close_write_fd();
-            go_pipe->close_read_fd();
-        }
         std::string proc_name;
         if (spawn)
         {
-            // Wait for child
-            child_ready_pipe->read();
-
-            // No idea why we do this... perf does it
-            go_pipe->write_fd_flags(FD_CLOEXEC);
-            child_ready_pipe->close_read_fd();
             proc_name = config().command.at(0);
         }
         else
         {
             proc_name = get_process_exe(pid);
         }
-
         monitor::ProcessMonitor monitor(pid, proc_name, spawn);
-
-        if (spawn)
-        {
-            // Signal child that it can exec
-            go_pipe->write();
-        }
 
         monitor.run();
     }
