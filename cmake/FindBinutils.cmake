@@ -66,4 +66,9 @@ list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Libiberty_LIBRARIES})
 
+add_library(binutils INTERFACE)
+target_link_libraries(binutils INTERFACE ${Binutils_LIBRARIES})
+target_include_directories(binutils SYSTEM INTERFACE ${Binutils_INCLUDE_DIRS})
+add_library(Binutils::Binutils ALIAS binutils)
+
 mark_as_advanced(Binutils_LIBRARIES Binutils_INCLUDE_DIRS Bfd_LIBRARIES Z_LIBRARIES Libiberty_LIBRARIES)

@@ -21,6 +21,7 @@ if(${COUNT_OTF2XX} EQUAL 0 OR ${COUNT_NITRO} EQUAL 0)
     execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif()
 
+# Set of variables to enforce static or dynamic linking
 set(lo2s_USE_STATIC_LIBS "MOSTLY" CACHE STRING "Link lo2s statically.")
 set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
@@ -74,6 +75,35 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
 endif()
 
+
+# configure OTF2xx submodule
+set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
+add_subdirectory(lib/otf2xx)
+mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
+
+# configure Nitro submodule
+add_subdirectory(lib/nitro)
+
+# configure x64_adapt_cxx library
+include(lib/x86_adapt/x86_adapt.cmake)
+
+# find external dependencies
+find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
+find_package(Binutils REQUIRED)
+find_package(Radare)
+find_package(Threads REQUIRED)
+
+# configurable options
+CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
+option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+option(IWYU "Developer option for include what you use." OFF)
+
+# system configuration checks
+CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
+CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
+
+# prepare list of source files
 set(SOURCE_FILES
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
     src/metric/perf_counter.cpp
@@ -105,101 +135,51 @@ set(SOURCE_FILES
     src/mmap.cpp
     src/util.cpp
 )
-add_executable(lo2s ${SOURCE_FILES})
-
-set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
-add_subdirectory(lib/otf2xx)
-mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
-
-add_subdirectory(lib/nitro)
-
-include(lib/x86_adapt/x86_adapt.cmake)
-
 if (X86Adapt_FOUND)
-    add_library(lo2s-x86_adapt STATIC src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
-    target_link_libraries(lo2s-x86_adapt
-        PUBLIC
-            x86_adapt::x86_adapt
-            Nitro::Log
-            Nitro::Env
-            otf2xx::Core
-    )
-    target_include_directories(lo2s-x86_adapt
-        PRIVATE
-            include
-    )
-    target_link_libraries(lo2s
-        PRIVATE
-            lo2s-x86_adapt
-    )
+    list(APPEND SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
+endif()
+if (USE_RADARE AND Radare_FOUND)
+    list(APPEND SOURCE_FILES src/radare.cpp)
 endif()
 
-find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
+# define lo2s target
+add_executable(lo2s ${SOURCE_FILES})
+
+# define dependencies of lo2s target
 target_link_libraries(lo2s
     PRIVATE
+        otf2xx::Writer
+        Nitro::Log
+        Nitro::Env
+        Nitro::Dl
+        Threads::Threads
         Boost::system
         Boost::program_options
         Boost::filesystem
+        Binutils::Binutils
 )
 
-find_package(Binutils REQUIRED)
-target_include_directories(lo2s SYSTEM
-    PRIVATE
-        ${Binutils_INCLUDE_DIRS}
-)
-target_link_libraries(lo2s
-    PRIVATE
-        ${Binutils_LIBRARIES}
-)
+# handle x86_adapt dependency
+if(X86Adapt_FOUND)
+    target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
+endif()
 
-find_package(Radare)
-
-CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
-
+# handle radare dependency
 if (USE_RADARE)
     if (Radare_FOUND)
-        add_library(lo2s-radare STATIC src/radare.cpp)
-
-        target_compile_definitions(lo2s-radare
-            PUBLIC
-                HAVE_RADARE
-        )
-
-        target_include_directories(lo2s-radare
-            PRIVATE
-                include
-        )
-
-        target_include_directories(lo2s-radare SYSTEM
-            PUBLIC
-                ${Radare_INCLUDE_DIRS}
-        )
-
-        target_link_libraries(lo2s-radare
-            PRIVATE
-                Nitro::Log
-                Nitro::Env
-                ${Radare_LIBRARIES}
-        )
-
-        target_link_libraries(lo2s
-            PUBLIC
-                lo2s-radare
-        )
+        target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
+        target_link_libraries(lo2s PRIVATE Radare::Radare)
     else()
         message(SEND_ERROR "Radare not found but requested.")
     endif()
 endif()
 
-CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
+# define include directory of target lo2s
+target_include_directories(lo2s PRIVATE include)
 
-option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
-
+# special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)
-    target_compile_definitions(lo2s
-        PRIVATE
-            HW_BREAKPOINT_COMPAT
-    )
+    target_compile_definitions(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
         message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
     endif()
@@ -209,16 +189,10 @@ else()
     endif()
 endif()
 
-CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
-
-option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
-
+# extra feature for newer kernel version
 if (USE_PERF_CLOCKID)
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        target_compile_definitions(lo2s
-            PRIVATE
-                USE_PERF_CLOCKID
-        )
+        target_compile_definitions(lo2s PRIVATE USE_PERF_CLOCKID)
     else()
         message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
     endif()
@@ -228,23 +202,7 @@ else()
     endif()
 endif()
 
-find_package(Threads REQUIRED)
-
-target_link_libraries(lo2s
-    PRIVATE
-        otf2xx::Writer
-        Nitro::Log
-        Nitro::Env
-        Nitro::Dl
-        Threads::Threads
-        ${Binutils_LIBRARIES}
-)
-
-target_include_directories(lo2s
-    PRIVATE
-        include
-)
-
+# define list of C++ features needed for compilation
 target_compile_features(lo2s
     PRIVATE
         cxx_auto_type
@@ -258,7 +216,6 @@ target_compile_features(lo2s
         cxx_explicit_conversions
         cxx_generalized_initializers
         cxx_generic_lambdas
-        cxx_inheriting_constructors
         cxx_lambdas
         cxx_lambda_init_captures
         cxx_noexcept
@@ -273,22 +230,11 @@ target_compile_features(lo2s
         cxx_template_template_parameters
 )
 
-target_compile_definitions(lo2s
-    PRIVATE
-        _GNU_SOURCE
-)
+# define feature test macro
+target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
-target_compile_options(lo2s
-    PRIVATE
-        -Wall -pedantic -Wextra
-)
-
-
-if(USE_RADARE)
-    target_link_libraries(lo2s PRIVATE ${Radare_LIBRARIES})
-endif()
-
-option(IWYU "Developer option for include what you use." OFF)
+# build Debug with all warnings
+target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Wall -pedantic -Wextra>)
 
 if (IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)

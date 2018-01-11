@@ -20,4 +20,10 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(Radare DEFAULT_MSG
   Radare_LIBRARIES
   Radare_INCLUDE_DIRS)
 
+# define CMake target object
+add_library(radare INTERFACE)
+target_link_libraries(radare INTERFACE ${Radare_LIBRARIES})
+target_include_directories(radare SYSTEM INTERFACE ${Radare_INCLUDE_DIRS})
+add_library(Radare::Radare ALIAS radare)
+
 mark_as_advanced(Radare_INCLUDE_DIRS Radare_LIBRARIES)
