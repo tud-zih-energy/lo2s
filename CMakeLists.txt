@@ -103,6 +103,8 @@ add_executable(lo2s ${SOURCE_FILES})
 
 set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
 add_subdirectory(lib/otf2xx)
+mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE)
+mark_as_advanced(OTF2XX_WITH_MPI)
 
 add_subdirectory(lib/nitro)
 
