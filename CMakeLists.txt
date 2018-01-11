@@ -30,6 +30,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Boost_USE_STATIC_LIBS
     Boost_USE_STATIC_RUNTIME
     OTF2_USE_STATIC_LIBS
+    OTF2XX_USE_STATIC_LIBS
     Radare_USE_STATIC_LIBS
     X86Adapt_STATIC
 )
@@ -40,6 +41,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Boost_USE_STATIC_LIBS    OFF CACHE BOOL "")
     set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
+    set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
 endif()
@@ -50,6 +52,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
 endif()
@@ -60,6 +63,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
 
@@ -105,8 +109,7 @@ add_executable(lo2s ${SOURCE_FILES})
 
 set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
 add_subdirectory(lib/otf2xx)
-mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE)
-mark_as_advanced(OTF2XX_WITH_MPI)
+mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
 add_subdirectory(lib/nitro)
 
