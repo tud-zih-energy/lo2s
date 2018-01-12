@@ -9,12 +9,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * lo2s is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -43,67 +43,43 @@ namespace lo2s
 namespace logging
 {
 
-    using Record =
-        nitro::log::record<nitro::log::message_attribute, nitro::log::timestamp_attribute,
-                           nitro::log::severity_attribute, nitro::log::pid_attribute,
-                           nitro::log::pthread_id_attribute>;
+using Record = nitro::log::record<nitro::log::message_attribute, nitro::log::timestamp_attribute,
+                                  nitro::log::severity_attribute, nitro::log::pid_attribute,
+                                  nitro::log::pthread_id_attribute>;
 
-    template <typename R>
-    class Lo2sLogFormatter
+template <typename R>
+class Lo2sLogFormatter
+{
+public:
+    std::string format(R& r)
     {
-    public:
-        std::string format(R& r)
-        {
-            std::stringstream s;
+        std::stringstream s;
 
-            s << "[" << r.timestamp().count() << "][pid: " << r.pid() << "][tid:" << r.pthread_id()
-              << "][" << r.severity() << "]: " << r.message();
+        s << "[" << r.timestamp().time_since_epoch().count() << "][pid: " << r.pid()
+          << "][tid: " << r.pthread_id() << "][" << r.severity() << "]: " << r.message() << '\n';
 
-            return s.str();
-        }
-    };
-
-    template <typename R>
-    using Lo2sFilter = nitro::log::filter::severity_filter<R>;
-
-    inline std::ostream& i_hate_init()
-    {
-        static std::ofstream fileout("output.txt");
-
-        return fileout;
+        return s.str();
     }
+};
 
-    template <bool Foo = false>
-    struct Fileout
-    {
-        static std::mutex stdout_mutex;
+template <typename R>
+using Lo2sFilter = nitro::log::filter::severity_filter<R>;
 
-        void sink(std::string formatted_record)
-        {
-            std::lock_guard<std::mutex> my_lock(stdout_mutex);
+using Logging =
+    nitro::log::logger<Record, Lo2sLogFormatter, nitro::log::sink::StdErrThreaded, Lo2sFilter>;
 
-            i_hate_init() << formatted_record << std::endl;
-        }
-    };
+inline void set_min_severity_level(nitro::log::severity_level sev)
+{
+    Lo2sFilter<Record>::set_severity(sev);
+}
 
-    template <bool Foo>
-    std::mutex Fileout<Foo>::stdout_mutex;
-
-    using Logging = nitro::log::logger<Record, Lo2sLogFormatter, nitro::log::sink::stderr_mt,
-                                       Lo2sFilter>;
-
-    inline void set_min_severity_level(nitro::log::severity_level sev)
-    {
-        Lo2sFilter<Record>::set_severity(sev);
-    }
-
-    inline void set_min_severity_level(std::string verbosity)
-    {
-        set_min_severity_level(
-            nitro::log::severity_from_string(verbosity, nitro::log::severity_level::info));
-    }
+inline void set_min_severity_level(std::string verbosity)
+{
+    set_min_severity_level(
+        nitro::log::severity_from_string(verbosity, nitro::log::severity_level::info));
+}
 
 } // namespace logging
 
 using Log = logging::Logging;
-}
+} // namespace lo2s

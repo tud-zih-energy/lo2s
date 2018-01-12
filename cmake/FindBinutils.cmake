@@ -27,7 +27,11 @@ include(${CMAKE_CURRENT_LIST_DIR}/UnsetIfUpdated.cmake)
 
 option(Binutils_USE_STATIC_LIBS "Link binutils libraries statically." ON)
 
-UnsetIfUpdated(Binutils_LIBRARIES Binutils_USE_STATIC_LIBS)
+IfUpdatedUnsetAll(Binutils_USE_STATIC_LIBS
+    Z_LIBRARIES
+    Libiberty_LIBRARIES
+    Bfd_LIBRARIES
+)
 
 find_path(Binutils_INCLUDE_DIRS bfd.h
         PATHS ENV C_INCLUDE_PATH
@@ -62,4 +66,9 @@ list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Libiberty_LIBRARIES})
 
-mark_as_advanced(Binutils_LIBRARIES Binutils_INCLUDE_DIRS)
+add_library(binutils INTERFACE)
+target_link_libraries(binutils INTERFACE ${Binutils_LIBRARIES})
+target_include_directories(binutils SYSTEM INTERFACE ${Binutils_INCLUDE_DIRS})
+add_library(Binutils::Binutils ALIAS binutils)
+
+mark_as_advanced(Binutils_LIBRARIES Binutils_INCLUDE_DIRS Bfd_LIBRARIES Z_LIBRARIES Libiberty_LIBRARIES)
