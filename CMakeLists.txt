@@ -56,6 +56,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
@@ -91,6 +92,7 @@ include(lib/x86_adapt/x86_adapt.cmake)
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 find_package(Binutils REQUIRED)
 find_package(Radare)
+set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 
 # configurable options
