@@ -15,8 +15,14 @@ double Summary::start_cpu_time_ = 0;
 double Summary::start_wall_time_ = 0;
 long Summary::thread_count_ = 0;
 long Summary::num_wakeups_ = 0;
+boost::dynamic_bitset<> processes_ = boost::dynamic_bitset<>(get_max_pid() + 1);
+
 Summary::Summary()
 {
+}
+void Summary::set_pid(pid_t pid)
+{
+    processes_[pid] = 1;
 }
 void Summary::record_wakeups(int num_wakeups)
 {
@@ -62,6 +68,7 @@ void Summary::finalize_and_print()
     else
     {
         std::cout << " * monitored all CPUs\n";
+        std::cout << " * sampled " << processes_.count() << " processes\n";
     }
     std::cout << " * " << wall_time << "s Wall Time\n";
     std::cout << " * " << cpu_time << "s CPU time\n";

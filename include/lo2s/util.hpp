@@ -64,7 +64,7 @@ private:
     std::unordered_map<std::string, T> elements_;
     std::mutex mutex_;
 };
-
+unsigned int get_max_pid();
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
 std::pair<double, double> get_process_times();

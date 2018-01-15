@@ -67,7 +67,22 @@ std::string get_process_exe(pid_t pid)
     }
     return "<unknown>";
 }
-
+unsigned int get_max_pid()
+{
+    unsigned  int pid_max = 32768;
+    try
+    {
+        std::ifstream pid_max_file;
+        pid_max_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        pid_max_file.open("/proc/sys/kernel/pid_max");
+        pid_max_file >> pid_max;
+        pid_max_file.close();
+    }
+    catch(std::ifstream::failure e)
+    {
+    }
+    return pid_max;
+}
 std::string get_datetime()
 {
     auto t = std::time(nullptr);
@@ -90,6 +105,7 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     proc_stat >> cpu_id;
     return cpu_id;
 }
+
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;
