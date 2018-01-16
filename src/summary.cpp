@@ -16,7 +16,7 @@ double Summary::start_wall_time_ = 0;
 long Summary::thread_count_ = 0;
 long Summary::num_wakeups_ = 0;
 boost::dynamic_bitset<> processes_ = boost::dynamic_bitset<>(get_max_pid() + 1);
-
+int Summary::exit_code_ = 0;
 Summary::Summary()
 {
 }
@@ -38,6 +38,30 @@ void Summary::set_trace_dir(std::string trace_dir)
 {
     trace_dir_ = trace_dir;
 }
+void Summary::set_exit_code(int exit_code)
+{
+    exit_code_ = exit_code;
+}
+std::string pretty_print_bytes(int trace_size)
+{
+    double result_size = trace_size;
+    int unit = 0;
+    std::string units[5] = { "B", "KiB", "MiB", "GiB", "TiB" };
+
+    for (; result_size > 1024; unit++, result_size /= 1024)
+        ;
+
+    if (unit > 4)
+    {
+        return std::to_string(trace_size) + "B";
+    }
+
+    // Rounding code;
+    result_size = (int)(result_size / 0.01) * 0.01;
+    std::ostringstream out;
+    out << result_size;
+    return out.str() + " " + units[unit];
+}
 void Summary::finalize_and_print()
 {
     int trace_size;
@@ -55,30 +79,30 @@ void Summary::finalize_and_print()
             }
             return sum;
         });
-    std::cout << "EXECUTION SUMMARY\n";
-    if(config().monitor_type == lo2s::MonitorType::PROCESS)
+    std::cout << "[ lo2s: ";
+    if (config().monitor_type == lo2s::MonitorType::PROCESS)
     {
-        std::cout << " * executed command: ";
         for (auto i = config().command.begin(); i != config().command.end(); ++i)
         {
             std::cout << *i << ' ';
         }
-        std::cout << "\n";
+        std::cout << " (" << exit_code_ << "), ";
     }
     else
     {
-        std::cout << " * monitored all CPUs\n";
-        std::cout << " * sampled " << processes_.count() << " processes\n";
+        std::cout << "-a mode, ";
+        std::cout << "sampled processes: " << processes_.count() << ", ";
     }
-    std::cout << " * " << wall_time << "s Wall Time\n";
-    std::cout << " * " << cpu_time << "s CPU time\n";
-    std::cout << " * spawned threads: " << thread_count_ << '\n';
-    std::cout << " * wakeups: " << num_wakeups_ << '\n';
+    std::cout << cpu_time << "s CPU, ";
+    std::cout << wall_time << "s total, ";
+    std::cout << thread_count_ << " threads ]\n";
+    std::cout << "[ lo2s: ";
+    std::cout << num_wakeups_ << " wakeups, ";
     if (trace_dir_ != "" && trace_size != -1)
     {
-        std::cout << " * traces have been written to: " << trace_dir_;
-        std::cout << "(" << trace_size << "B)\n";
+        std::cout << "wrote " << pretty_print_bytes(trace_size) << " " << trace_dir_;
     }
+    std::cout << " ]\n";
 }
 void Summary::increase_thread_count()
 {

@@ -271,6 +271,7 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
+            Summary::set_exit_code(WEXITSTATUS(status));
             throw std::system_error(0, std::system_category());
         }
         return;
