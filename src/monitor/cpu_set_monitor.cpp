@@ -62,6 +62,7 @@ void CpuSetMonitor::run()
     {
         monitor_elem.second.merge_trace();
     }
+    throw std::system_error(0, std::system_category());
 }
 }
 }

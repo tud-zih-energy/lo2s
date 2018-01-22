@@ -35,7 +35,8 @@
 #include <cstdlib>
 #include <ctime> // for CLOCK_* macros
 
-extern "C" {
+extern "C"
+{
 #include <unistd.h>
 }
 namespace po = boost::program_options;
@@ -123,7 +124,7 @@ void parse_program_options(int argc, const char** argv)
              "suppress output")
         ("verbose,v", po::value(&verbosity)->zero_tokens(),
              "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(get_perf_event_mlock()/get_page_size() - 1),
+        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
              "number of pages to be used by each internal buffer")
         ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
              "time interval between metric and sampling buffer readouts in milliseconds")
@@ -139,7 +140,7 @@ void parse_program_options(int argc, const char** argv)
              "metric buffer reads per second")
         ("clockid,k",
              po::value(&requested_clock_name)->default_value("monotonic-raw"),
-             "clock used for perf timestamps (see --list_clockids for supported arguments)")
+             "clock used for perf timestamps (see --list-clockids for supported arguments)")
 #ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
         ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
              "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
@@ -180,7 +181,7 @@ void parse_program_options(int argc, const char** argv)
     if (vm.count("help"))
     {
         print_usage(std::cout, argv[0], desc);
-        std::exit(0);
+        std::exit(EXIT_SUCCESS);
     }
 
     if (quiet && verbosity.count != 0)
@@ -217,6 +218,22 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    if (all_cpus)
+    {
+        config.monitor_type = lo2s::MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+        config.command.empty())
+    {
+        print_usage(std::cerr, argv[0], desc);
+        std::exit(EXIT_SUCCESS);
+    }
+
     // list arguments to options and exit
     if (list_clockids || list_events)
     {
@@ -242,7 +259,7 @@ void parse_program_options(int argc, const char** argv)
     if (!perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
-                           << "\'is not available!";
+                           << "\' is not available!";
         std::exit(EXIT_FAILURE); // hmm...
     }
 
@@ -271,22 +288,6 @@ void parse_program_options(int argc, const char** argv)
     {
         lo2s::Log::error() << "Invalid clock requested: " << e.what();
         std::exit(EXIT_FAILURE);
-    }
-
-    if (all_cpus)
-    {
-        config.monitor_type = lo2s::MonitorType::CPU_SET;
-    }
-    else
-    {
-        config.monitor_type = lo2s::MonitorType::PROCESS;
-    }
-
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
-        config.command.empty())
-    {
-        print_usage(std::cerr, argv[0], desc);
-        std::exit(0);
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
@@ -350,4 +351,4 @@ void parse_program_options(int argc, const char** argv)
 
     instance = std::move(config);
 }
-}
+} // namespace lo2s
