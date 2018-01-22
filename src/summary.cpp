@@ -92,7 +92,7 @@ void Summary::finalize_and_print()
     else
     {
         std::cout << "-a mode, ";
-        std::cout << "sampled processes: " << processes_.count() << ", ";
+        std::cout << "monitored processes: " << processes_.count() << ", ";
     }
     std::cout << cpu_time << "s CPU, ";
     std::cout << wall_time << "s total ]\n";
