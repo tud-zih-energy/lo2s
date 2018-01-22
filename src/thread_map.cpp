@@ -25,6 +25,7 @@
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
+#include <lo2s/summary.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -61,6 +62,7 @@ ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
 
 void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
 {
+    Summary::increase_thread_count();
     auto& info = insert_process(pid, enable_on_exec);
     if (threads_.count(tid) == 0)
     {

@@ -111,7 +111,6 @@ ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
     running = true;
 
     trace().process(child, name);
-    Summary::increase_thread_count();
     threads_.insert(child, child, spawn);
 }
 
@@ -150,7 +149,6 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
                          << " parent: " << child << ": " << get_process_exe(child);
 
             trace_.process(newpid, name);
-            Summary::increase_thread_count();
             threads_.insert(newpid, newpid, false);
         }
         catch (std::system_error& e)
@@ -174,7 +172,6 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
             Log::info() << "New thread is cloned " << newpid << " parent: " << child
                         << " pid: " << pid;
 
-            Summary::increase_thread_count();
             // register monitoring
             threads_.insert(pid, newpid, false);
         }

@@ -26,7 +26,10 @@ void Summary::set_pid(pid_t pid)
 }
 void Summary::record_wakeups(int num_wakeups)
 {
+    static std::mutex mux;
+    mux.lock();
     num_wakeups_ += num_wakeups;
+    mux.unlock();
 }
 void Summary::start()
 {
@@ -106,6 +109,9 @@ void Summary::finalize_and_print()
 }
 void Summary::increase_thread_count()
 {
+    static std::mutex mux;
+    mux.lock();
     thread_count_++;
+    mux.unlock();
 }
 }
