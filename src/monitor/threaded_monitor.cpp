@@ -21,10 +21,9 @@
 
 #include <lo2s/monitor/threaded_monitor.hpp>
 
-#include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
-
+#include <lo2s/summary.hpp>
 namespace lo2s
 {
 namespace monitor
@@ -43,7 +42,6 @@ ThreadedMonitor::~ThreadedMonitor()
 void ThreadedMonitor::start()
 {
     assert(!thread_.joinable());
-    Summary::increase_thread_count();
     thread_ = std::thread([this]() { this->thread_main(); });
 }
 

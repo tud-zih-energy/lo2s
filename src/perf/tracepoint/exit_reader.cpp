@@ -23,6 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/summary.hpp>
 
 namespace lo2s
 {
@@ -51,6 +52,7 @@ ExitReader::~ExitReader()
 bool ExitReader::handle(const Reader::RecordSampleType* sample)
 {
     pid_t pid = sample->raw_data.get(pid_field_);
+    Summary::set_pid(pid);
     std::string comm = sample->raw_data.get_str(comm_field_);
     comms_[pid] = comm;
     return false;

@@ -87,6 +87,7 @@ void Summary::finalize_and_print()
             std::cout << *i << ' ';
         }
         std::cout << " (" << exit_code_ << "), ";
+        std::cout << thread_count_ << " threads, ";
     }
     else
     {
@@ -94,8 +95,7 @@ void Summary::finalize_and_print()
         std::cout << "sampled processes: " << processes_.count() << ", ";
     }
     std::cout << cpu_time << "s CPU, ";
-    std::cout << wall_time << "s total, ";
-    std::cout << thread_count_ << " threads ]\n";
+    std::cout << wall_time << "s total ]\n";
     std::cout << "[ lo2s: ";
     std::cout << num_wakeups_ << " wakeups, ";
     if (trace_dir_ != "" && trace_size != -1)
