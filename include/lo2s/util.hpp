@@ -66,7 +66,6 @@ private:
     std::mutex mutex_;
 };
 std::chrono::duration<double> get_cpu_time();
-pid_t get_max_pid();
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
 std::pair<double, double> get_process_times();

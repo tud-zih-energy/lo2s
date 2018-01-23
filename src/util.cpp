@@ -73,22 +73,6 @@ std::string get_process_exe(pid_t pid)
     }
     return "<unknown>";
 }
-pid_t get_max_pid()
-{
-    unsigned int pid_max = 32768;
-    try
-    {
-        std::ifstream pid_max_file;
-        pid_max_file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-        pid_max_file.open("/proc/sys/kernel/pid_max");
-        pid_max_file >> pid_max;
-        pid_max_file.close();
-    }
-    catch (std::ifstream::failure e)
-    {
-    }
-    return pid_max;
-}
 std::string get_datetime()
 {
     auto t = std::time(nullptr);
