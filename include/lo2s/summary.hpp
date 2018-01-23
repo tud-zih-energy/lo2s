@@ -1,6 +1,7 @@
 #include <chrono>
 #include <mutex>
 #include <unordered_set>
+#include <atomic>
 extern "C" {
 #include <sys/types.h>
 }
