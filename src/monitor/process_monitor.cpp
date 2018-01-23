@@ -116,7 +116,7 @@ ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
 
 ProcessMonitor::~ProcessMonitor()
 {
-    Summary::record_wakeups(num_wakeups_);
+    summary().record_perf_wakeups(num_wakeups_);
     threads_.stop();
 }
 
@@ -271,7 +271,7 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
-            Summary::set_exit_code(WEXITSTATUS(status));
+            summary().set_exit_code(WEXITSTATUS(status));
             throw std::system_error(0, std::system_category());
         }
         return;

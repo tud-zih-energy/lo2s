@@ -31,7 +31,7 @@ int main(int argc, const char** argv)
     lo2s::parse_program_options(argc, argv);
     try
     {
-        lo2s::Summary::start();
+        lo2s::summary();
         switch (lo2s::config().monitor_type)
         {
         case lo2s::MonitorType::CPU_SET:
@@ -51,10 +51,7 @@ int main(int argc, const char** argv)
         }
         else
         {
-            if (!lo2s::config().quiet)
-            {
-                lo2s::Summary::finalize_and_print();
-            }
+            lo2s::summary().show();
         }
         return e.code().value();
     }

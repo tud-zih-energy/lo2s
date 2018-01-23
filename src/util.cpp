@@ -16,8 +16,9 @@
 #include <ctime>
 extern "C" {
 #include <limits.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
-#include <sys/times.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 }
@@ -30,17 +31,22 @@ std::size_t get_page_size()
     static std::size_t page_size = sysconf(_SC_PAGESIZE);
     return page_size;
 }
-std::pair<double, double> get_process_times()
+std::chrono::duration<double> get_cpu_time()
 {
-    int ticks_per_second = sysconf(_SC_CLK_TCK);
-    struct tms buffer;
-    double wall_time = times(&buffer);
-    if (wall_time == -1)
+    struct rusage usage, child_usage;
+    timeval time;
+    if (getrusage(RUSAGE_SELF, &usage) == -1)
     {
-        return std::make_pair(0.0, 0.0);
+        return std::chrono::seconds(0);
     }
-    double cpu_time = buffer.tms_utime + buffer.tms_stime + buffer.tms_cutime + buffer.tms_cstime;
-    return std::make_pair(wall_time / ticks_per_second, cpu_time / ticks_per_second);
+    if (getrusage(RUSAGE_CHILDREN, &child_usage) == -1)
+    {
+        return std::chrono::seconds(0);
+    }
+    timeradd(&usage.ru_utime, &usage.ru_stime, &time);
+    timeradd(&time, &child_usage.ru_utime, &time);
+    timeradd(&time, &child_usage.ru_stime, &time);
+    return std::chrono::seconds(time.tv_sec) + std::chrono::microseconds(time.tv_usec);
 }
 std::string get_process_exe(pid_t pid)
 {
@@ -69,7 +75,7 @@ std::string get_process_exe(pid_t pid)
 }
 unsigned int get_max_pid()
 {
-    unsigned  int pid_max = 32768;
+    unsigned int pid_max = 32768;
     try
     {
         std::ifstream pid_max_file;
@@ -78,7 +84,7 @@ unsigned int get_max_pid()
         pid_max_file >> pid_max;
         pid_max_file.close();
     }
-    catch(std::ifstream::failure e)
+    catch (std::ifstream::failure e)
     {
     }
     return pid_max;

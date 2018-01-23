@@ -1,26 +1,32 @@
-#include <boost/dynamic_bitset.hpp>
-#include <ctime>
+#include <chrono>
+#include <mutex>
+#include <unordered_set>
+extern "C" {
+#include <sys/types.h>
+}
 namespace lo2s
 {
 class Summary
 {
 public:
-    static void start();
-    static void finalize_and_print();
-    static void record_wakeups(int num_wakeups);
-    static void increase_thread_count();
-    static void set_trace_dir(std::string trace_dir);
-    static void set_pid(pid_t pid);
-    static void set_exit_code(int exit_code);
+    void show();
+    void record_perf_wakeups(std::size_t num_wakeups);
+    void add_thread();
+    void register_process(pid_t pid);
+    void set_exit_code(int exit_code);
+    void set_trace_dir(std::string trace_dir);
+    friend Summary& summary();
 
 private:
     Summary();
-    static int exit_code_;
-    static std::string trace_dir_;
-    static double start_cpu_time_;
-    static double start_wall_time_;
-    static long num_wakeups_;
-    static long thread_count_;
-    static boost::dynamic_bitset<> processes;
+    std::chrono::steady_clock::time_point start_wall_time_;
+    std::atomic<std::size_t> num_wakeups_;
+    std::atomic<std::size_t> thread_count_;
+    std::unordered_set<pid_t> pids_;
+    std::mutex pids_mutex_;
+    std::string trace_dir_;
+    int exit_code_;
 };
+
+Summary& summary();
 }

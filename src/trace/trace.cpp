@@ -73,7 +73,7 @@ Trace::Trace()
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 
-    Summary::set_trace_dir(get_trace_name(config().trace_path));
+    summary().set_trace_dir(get_trace_name(config().trace_path));
     int otf2_id = 1;
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
