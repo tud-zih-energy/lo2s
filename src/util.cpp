@@ -73,7 +73,7 @@ std::string get_process_exe(pid_t pid)
     }
     return "<unknown>";
 }
-unsigned int get_max_pid()
+pid_t get_max_pid()
 {
     unsigned int pid_max = 32768;
     try
