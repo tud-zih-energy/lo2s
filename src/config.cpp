@@ -218,22 +218,6 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (all_cpus)
-    {
-        config.monitor_type = lo2s::MonitorType::CPU_SET;
-    }
-    else
-    {
-        config.monitor_type = lo2s::MonitorType::PROCESS;
-    }
-
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
-        config.command.empty())
-    {
-        print_usage(std::cerr, argv[0], desc);
-        std::exit(EXIT_SUCCESS);
-    }
-
     // list arguments to options and exit
     if (list_clockids || list_events)
     {
@@ -254,6 +238,22 @@ void parse_program_options(int argc, const char** argv)
             }
         }
         std::exit(EXIT_SUCCESS);
+    }
+
+    if (all_cpus)
+    {
+        config.monitor_type = lo2s::MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = lo2s::MonitorType::PROCESS;
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+        config.command.empty())
+    {
+        print_usage(std::cerr, argv[0], desc);
+        std::exit(EXIT_FAILURE);
     }
 
     if (!perf::EventProvider::has_event(config.sampling_event))
