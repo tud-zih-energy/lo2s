@@ -29,9 +29,11 @@
 int main(int argc, const char** argv)
 {
     lo2s::parse_program_options(argc, argv);
+
     try
     {
         lo2s::summary();
+
         switch (lo2s::config().monitor_type)
         {
         case lo2s::MonitorType::CPU_SET:

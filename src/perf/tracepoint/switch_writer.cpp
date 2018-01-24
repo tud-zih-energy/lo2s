@@ -29,6 +29,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
+
 namespace lo2s
 {
 namespace perf
@@ -76,7 +77,6 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
         otf2_writer_.write_leave(tp, current_region_);
     }
     current_pid_ = next_pid;
-    summary().register_process(next_pid);
     if (current_pid_ != 0)
     {
         current_region_ = thread_region_ref(current_pid_);
@@ -86,6 +86,9 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     {
         current_region_ = current_region_.undefined();
     }
+
+    summary().register_process(next_pid);
+
     return false;
 }
 

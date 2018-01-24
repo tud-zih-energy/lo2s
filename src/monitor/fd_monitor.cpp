@@ -77,6 +77,7 @@ void FdMonitor::run()
     {
         auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
         num_wakeups_++;
+
         if (ret == 0)
         {
             throw std::runtime_error("Received poll timeout despite requesting no timeout.");

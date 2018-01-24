@@ -30,6 +30,7 @@
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
+
 #include <nitro/env/hostname.hpp>
 
 #include <boost/format.hpp>
@@ -70,10 +71,11 @@ Trace::Trace()
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, config().sampling_period)
 {
+    summary().set_trace_dir(get_trace_name(config().trace_path));
+
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 
-    summary().set_trace_dir(get_trace_name(config().trace_path));
     int otf2_id = 1;
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())

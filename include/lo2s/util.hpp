@@ -25,12 +25,12 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <chrono>
-#include <cstdint>
-#include <ctime>
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <utility>
+
+#include <cstdint>
+#include <ctime>
 
 extern "C" {
 #include <sys/types.h>
@@ -65,10 +65,11 @@ private:
     std::unordered_map<std::string, T> elements_;
     std::mutex mutex_;
 };
-std::chrono::duration<double> get_cpu_time();
+
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
-std::pair<double, double> get_process_times();
+
+std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
 
 template <typename T>

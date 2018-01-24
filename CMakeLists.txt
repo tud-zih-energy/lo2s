@@ -77,7 +77,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
 endif()
 
 
-
 # configure OTF2xx submodule
 set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
 add_subdirectory(lib/otf2xx)
@@ -175,7 +174,6 @@ if (USE_RADARE)
         target_link_libraries(lo2s PRIVATE Radare::Radare)
     else()
         message(SEND_ERROR "Radare not found but requested.")
-        
     endif()
 endif()
 

@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <ctime>
+
 extern "C" {
 #include <limits.h>
 #include <sys/resource.h>
@@ -31,23 +32,31 @@ std::size_t get_page_size()
     static std::size_t page_size = sysconf(_SC_PAGESIZE);
     return page_size;
 }
+
 std::chrono::duration<double> get_cpu_time()
 {
     struct rusage usage, child_usage;
     timeval time;
+
     if (getrusage(RUSAGE_SELF, &usage) == -1)
     {
         return std::chrono::seconds(0);
     }
+
     if (getrusage(RUSAGE_CHILDREN, &child_usage) == -1)
     {
         return std::chrono::seconds(0);
     }
+
+    //Add together the system and user CPU time of the process and all children
     timeradd(&usage.ru_utime, &usage.ru_stime, &time);
+
     timeradd(&time, &child_usage.ru_utime, &time);
     timeradd(&time, &child_usage.ru_stime, &time);
+
     return std::chrono::seconds(time.tv_sec) + std::chrono::microseconds(time.tv_usec);
 }
+
 std::string get_process_exe(pid_t pid)
 {
     auto proc_exe_filename = (boost::format("/proc/%d/exe") % pid).str();
@@ -73,6 +82,7 @@ std::string get_process_exe(pid_t pid)
     }
     return "<unknown>";
 }
+
 std::string get_datetime()
 {
     auto t = std::time(nullptr);
@@ -95,7 +105,6 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     proc_stat >> cpu_id;
     return cpu_id;
 }
-
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;

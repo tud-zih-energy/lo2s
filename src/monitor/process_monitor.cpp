@@ -95,8 +95,8 @@ void check_ptrace_setoptions(pid_t pid, long options)
 }
 
 ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
-: MainMonitor(), num_wakeups_(0), first_child_(child), threads_(*this),
-  default_signal_handler(signal(SIGINT, sig_handler))
+: MainMonitor(), first_child_(child), threads_(*this),
+  default_signal_handler(signal(SIGINT, sig_handler)), num_wakeups_(0)
 {
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 
@@ -128,7 +128,9 @@ void ProcessMonitor::run()
         /* wait for signal */
         int status;
         pid_t child = waitpid(-1, &status, __WALL);
+
         num_wakeups_++;
+
         handle_signal(child, status);
     }
 }

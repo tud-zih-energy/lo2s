@@ -47,6 +47,7 @@ struct Config
     MonitorType monitor_type;
     pid_t pid;
     std::vector<std::string> command;
+    bool quiet;
     // Optional features
     std::vector<std::string> tracepoint_events;
     std::vector<std::string> perf_events;
@@ -58,7 +59,6 @@ struct Config
     // perf
     std::size_t mmap_pages;
     bool exclude_kernel;
-    bool quiet;
     // Instruction sampling
     std::uint64_t sampling_period;
     std::string sampling_event;

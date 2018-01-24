@@ -63,6 +63,7 @@ ProcessInfo& ThreadMap::insert_process(pid_t pid, bool enable_on_exec)
 void ThreadMap::insert(pid_t pid, pid_t tid, bool enable_on_exec)
 {
     summary().add_thread();
+
     auto& info = insert_process(pid, enable_on_exec);
     if (threads_.count(tid) == 0)
     {

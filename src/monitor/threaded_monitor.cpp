@@ -24,6 +24,7 @@
 #include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
+
 namespace lo2s
 {
 namespace monitor

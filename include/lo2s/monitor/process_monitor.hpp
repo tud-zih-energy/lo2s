@@ -48,10 +48,12 @@ private:
     void handle_ptrace_event(pid_t child, int event);
 
     void handle_signal(pid_t child, int status);
-    std::size_t num_wakeups_;
+
     const pid_t first_child_;
     ThreadMap threads_;
     sighandler_t default_signal_handler;
+
+    std::size_t num_wakeups_;
 };
 }
 }
