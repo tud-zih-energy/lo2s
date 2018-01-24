@@ -21,28 +21,20 @@
 
 #pragma once
 
-#include <string>
+#include <lo2s/perf/counter_description.hpp>
 
-extern "C" {
-#include <linux/perf_event.h>
-}
+#include <vector>
 
 namespace lo2s
 {
 namespace perf
 {
-struct CounterDescription
+struct EventCollection
 {
-    CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                       std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1)
-    {
-    }
-
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
+    CounterDescription leader;
+    std::vector<CounterDescription> events;
 };
+
+const EventCollection& requested_events();
 }
 }

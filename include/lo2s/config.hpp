@@ -66,6 +66,13 @@ struct Config
     bool disassemble;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
+    // Metrics
+    bool metric_use_frequency;
+    union {
+        std::uint64_t metric_count;
+        std::uint64_t metric_frequency;
+    };
+    std::string metric_leader;
     // time synchronization
     bool use_clockid;
     clockid_t clockid;

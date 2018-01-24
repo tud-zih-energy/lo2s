@@ -29,6 +29,7 @@
 
 #include <nitro/lang/optional.hpp>
 
+#include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
 #include <cstdlib>
@@ -95,8 +96,9 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
-    bool list_clockids;
+    bool list_clockids, list_events;
     std::uint64_t read_interval_ms;
+    std::uint64_t metric_count, metric_frequency = 10;
 
     std::string requested_clock_name;
 
@@ -130,6 +132,12 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
+        ("metric-leader", po::value(&config.metric_leader)->default_value("ref-cycles"),
+             "name of leading perf event")
+        ("metric-count", po::value(&metric_count),
+             "# of events to elapse by metric leader before reading metric buffer")
+        ("metric-frequency", po::value(&metric_frequency),
+             "metric buffer reads per second")
         ("clockid,k",
              po::value(&requested_clock_name)->default_value("monotonic-raw"),
              "clock used for perf timestamps (see --list-clockids for supported arguments)")
@@ -147,6 +155,8 @@ void parse_program_options(int argc, const char** argv)
              "exclude events happening in kernel space")
         ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
             "list all available clockids")
+        ("list-events", po::bool_switch(&list_events)->default_value(false),
+            "list all available events")
         ("command", po::value(&config.command));
     // clang-format on
 
@@ -225,12 +235,23 @@ void parse_program_options(int argc, const char** argv)
     }
 
     // list arguments to options and exit
-    if (list_clockids)
+    if (list_clockids || list_events)
     {
-        std::cout << "Available clockids:\n";
-        for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
+        if (list_clockids)
         {
-            std::cout << " * " << clock.name << '\n';
+            std::cout << "Available clockids:\n";
+            for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
+            {
+                std::cout << " * " << clock.name << '\n';
+            }
+        }
+        if (list_events)
+        {
+            std::cout << "Available events:\n";
+            for (const auto& event_name : lo2s::perf::EventProvider::get_event_names())
+            {
+                std::cout << " * " << event_name << '\n';
+            }
         }
         std::exit(EXIT_SUCCESS);
     }
@@ -291,6 +312,31 @@ void parse_program_options(int argc, const char** argv)
         }
         config.disassemble = false;
 #endif
+    }
+
+    if (vm.count("metric-count"))
+    {
+        if (vm.count("metric-frequency"))
+        {
+            lo2s::Log::error()
+                << "Cannot specify metric read period and frequency at the same time.";
+            std::exit(EXIT_FAILURE);
+        }
+        else
+        {
+            config.metric_use_frequency = false;
+            config.metric_count = metric_count;
+        }
+    } else {
+        config.metric_use_frequency = true;
+        config.metric_frequency = metric_frequency;
+    }
+
+    if (!perf::EventProvider::has_event(config.metric_leader))
+    {
+        lo2s::Log::error() << "event '" << config.metric_leader
+                           << "' is not available as a metric leader!";
+        std::exit(EXIT_FAILURE);
     }
 
     config.exclude_kernel = false;

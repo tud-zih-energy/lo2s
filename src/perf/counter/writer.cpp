@@ -19,30 +19,34 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <string>
-
-extern "C" {
-#include <linux/perf_event.h>
-}
+#include <lo2s/log.hpp>
+#include <lo2s/perf/counter/writer.hpp>
+#include <lo2s/perf/event_collection.hpp>
+#include <lo2s/time/time.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-struct CounterDescription
+namespace counter
 {
-    CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                       std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1)
-    {
-    }
+Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace,
+               otf2::definition::metric_class metric_class, otf2::definition::location scope,
+               bool enable_on_exec)
+: Reader(tid, requested_events(), enable_on_exec),
+  counter_writer_(pid, tid, trace, metric_class, scope),
+  time_converter_(time::Converter::instance())
+{
+}
 
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
-};
+bool Writer::handle(const Reader::RecordSampleType* sample)
+{
+    auto tp = time_converter_(sample->time);
+
+    counters_.read(&sample->v);
+    counter_writer_.write(counters_, tp);
+    return false;
+}
+}
 }
 }
