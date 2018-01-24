@@ -21,7 +21,7 @@ public:
     void record_perf_wakeups(std::size_t num_wakeups);
 
     void set_exit_code(int exit_code);
-    void set_trace_dir(const std::string trace_dir);
+    void set_trace_dir(const std::string& trace_dir);
 
     friend Summary& summary();
 

@@ -74,7 +74,7 @@ std::string pretty_print_bytes(std::size_t trace_size)
     return out.str();
 }
 
-void Summary::set_trace_dir(const std::string trace_dir)
+void Summary::set_trace_dir(const std::string& trace_dir)
 {
     trace_dir_ = trace_dir;
 }
