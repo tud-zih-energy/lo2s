@@ -9,6 +9,7 @@
 #include <iostream>
 #include <numeric>
 #include <ratio>
+#include <array>
 
 extern "C" {
 #include <sys/time.h>
@@ -49,24 +50,33 @@ void Summary::add_thread()
     thread_count_++;
 }
 
-std::string pretty_print_bytes(int trace_size)
+std::string pretty_print_bytes(std::size_t trace_size)
 {
     double result_size = trace_size;
     int unit = 0;
 
     std::ostringstream out;
-    std::string units[5] = { "B", "KiB", "MiB", "GiB", "TiB" };
+    std::array<std::string, 5> units = { "B", "KiB", "MiB", "GiB", "TiB" };
 
-    for (; result_size > 1024; unit++, result_size /= 1024)
-        ;
-
-    if (unit > 4)
+    while(result_size > 1024)
     {
-        return std::to_string(trace_size) + "B";
+        result_size /= 1024;
+        unit++;
+
+        //We can not get higher than TiB so break here
+        if(unit == units.size() - 1)
+        {
+            break;
+        }
     }
 
     out << std::fixed << std::setprecision(2) << result_size << units[unit];
     return out.str();
+}
+
+void Summary::set_trace_dir(const std::string trace_dir)
+{
+    trace_dir_ = trace_dir;
 }
 
 void Summary::show()
@@ -126,10 +136,5 @@ void Summary::show()
     }
 
     std::cout << " ]\n";
-}
-
-void Summary::set_trace_dir(std::string trace_dir)
-{
-    trace_dir_ = trace_dir;
 }
 }
