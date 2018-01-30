@@ -53,9 +53,8 @@ void Summary::add_thread()
 std::string pretty_print_bytes(std::size_t trace_size)
 {
     double result_size = trace_size;
-    int unit = 0;
+    std::size_t unit = 0;
 
-    std::ostringstream out;
     std::array<std::string, 5> units = { "B", "KiB", "MiB", "GiB", "TiB" };
 
     while(result_size > 1024)
@@ -70,7 +69,8 @@ std::string pretty_print_bytes(std::size_t trace_size)
         }
     }
 
-    out << std::fixed << std::setprecision(2) << result_size << units[unit];
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(2) << result_size << " " << units[unit];
     return out.str();
 }
 
@@ -81,7 +81,6 @@ void Summary::set_trace_dir(const std::string& trace_dir)
 
 void Summary::show()
 {
-    std::chrono::duration<double> wall_time, cpu_time;
 
     std::size_t trace_size;
 
@@ -90,7 +89,10 @@ void Summary::show()
         return;
     }
 
+    std::chrono::duration<double> wall_time;
     wall_time = std::chrono::steady_clock::now() - start_wall_time_;
+
+    std::chrono::duration<double> cpu_time;
     cpu_time = get_cpu_time();
 
     boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
@@ -120,7 +122,7 @@ void Summary::show()
     }
     else
     {
-        std::cout << "-a mode, ";
+        std::cout << "system mode, ";
         std::cout << "monitored processes: " << pids_.size() << ", ";
     }
     std::cout << cpu_time.count() << "s CPU, ";
