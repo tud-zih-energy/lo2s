@@ -23,6 +23,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/counter_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/util.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -34,7 +35,6 @@
 extern "C" {
 #include <linux/perf_event.h>
 #include <linux/version.h>
-#include <syscall.h>
 #include <unistd.h>
 }
 
@@ -73,7 +73,7 @@ static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
     PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33)
-    PERF_EVENT_SW("aligment-faults", ALIGNMENT_FAULTS),
+    PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
 };
@@ -98,18 +98,19 @@ static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
 #endif
 };
 
-static constexpr string_to_id<perf_hw_cache_op_id> CACHE_OPERATION_TABLE[] = {
-    { "load", PERF_COUNT_HW_CACHE_OP_READ },
-    { "store", PERF_COUNT_HW_CACHE_OP_WRITE },
-    { "prefetch", PERF_COUNT_HW_CACHE_OP_PREFETCH },
+struct cache_op_and_result
+{
+    perf_hw_cache_op_id op_id;
+    perf_hw_cache_op_result_id result_id;
 };
 
-static constexpr string_to_id<perf_hw_cache_op_result_id> CACHE_OP_RESULT_TABLE[] = {
-    /* use plural suffix on access; perf userland tools use
-       "(load|store|prefetche)s" to mean (load|store|prefetch)-accesses
-       TODO: fix pluralization prefetch -> prefetch(e)s */
-    { "s", PERF_COUNT_HW_CACHE_RESULT_ACCESS },
-    { "-misses", PERF_COUNT_HW_CACHE_RESULT_MISS },
+static constexpr string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
+    { "loads", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "stores", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "prefetches", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
+    { "load-misses", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_MISS } },
+    { "store-misses", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_MISS } },
+    { "prefetch-misses", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_MISS } },
 };
 
 inline constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw_cache_op_id op,
@@ -148,9 +149,9 @@ static bool event_is_openable(const CounterDescription& ev)
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = 1;
+    attr.exclude_kernel = 0;
 
-    int fd = syscall(__NR_perf_event_open, &attr, 0, -1, -1, 0);
+    int fd = perf_event_open(&attr, 0, -1, -1, 0);
     if (fd == -1)
     {
         switch (errno)
@@ -173,22 +174,17 @@ static void populate_event_map(EventProvider::EventMap& map)
 {
     Log::info() << "checking available events...";
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
-                array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE) *
-                    array_size(CACHE_OP_RESULT_TABLE));
+                array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
     for (const auto& ev : HW_EVENT_TABLE)
     {
-        if (event_is_openable(ev))
-        {
-            map.emplace(ev.name, ev);
-        }
+        map.emplace(ev.name,
+                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
     for (const auto& ev : SW_EVENT_TABLE)
     {
-        if (event_is_openable(ev))
-        {
-            map.emplace(ev.name, ev);
-        }
+        map.emplace(ev.name,
+                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
     std::stringstream name_fmt;
@@ -196,19 +192,16 @@ static void populate_event_map(EventProvider::EventMap& map)
     {
         for (const auto& operation : CACHE_OPERATION_TABLE)
         {
-            for (const auto& op_result : CACHE_OP_RESULT_TABLE)
-            {
-                name_fmt.str(std::string());
-                name_fmt << cache.name << '-' << operation.name << op_result.name;
+            name_fmt.str(std::string());
+            name_fmt << cache.name << '-' << operation.name;
 
-                CounterDescription ev(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                                      make_cache_config(cache.id, operation.id, op_result.id));
+            CounterDescription ev(
+                name_fmt.str(), PERF_TYPE_HW_CACHE,
+                make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
 
-                if (event_is_openable(ev))
-                {
-                    map.emplace(name_fmt.str(), ev);
-                }
-            }
+            map.emplace(ev.name, event_is_openable(ev) ?
+                                     ev :
+                                     EventProvider::DescriptionCache::make_invalid());
         }
     }
 }
@@ -385,11 +378,13 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
     {
         // save event in event map; return a reference to the inserted event to
         // the caller.
-        return event_map_.emplace(name, sysfs_read_event(name)).first->second;
+        return event_map_.emplace(name, DescriptionCache(sysfs_read_event(name)))
+            .first->second.description;
     }
     catch (const InvalidEvent& e)
     {
-        Log::debug() << "invalid event: " << e.what();
+        event_map_.emplace(name, DescriptionCache::make_invalid());
+        Log::info() << "failed to cache event (reason: " << e.what() << ')';
         throw e;
     }
 }
@@ -397,14 +392,65 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
 const CounterDescription& EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
-    if (ev_map.count(name))
+    const auto event_it = ev_map.find(name);
+    if (event_it != ev_map.end())
     {
-        return ev_map.at(name);
+        if (event_it->second.is_valid())
+        {
+            return event_it->second.description;
+        }
+        else
+        {
+            throw InvalidEvent("Event failed to cache previously");
+        }
     }
     else
     {
         return instance_mutable().cache_event(name);
     }
+}
+
+bool EventProvider::has_event(const std::string& name)
+{
+    auto& ev_map = instance().event_map_;
+    const auto event_it = ev_map.find(name);
+    if (event_it != ev_map.end())
+    {
+        return event_it->second.is_valid();
+    }
+    else
+    {
+        try
+        {
+            instance_mutable().cache_event(name);
+            return true;
+        }
+        catch (const InvalidEvent&)
+        {
+            return false;
+        }
+    }
+}
+
+std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
+{
+
+    const auto& ev_map = instance().event_map_;
+
+    std::vector<EventMap::key_type> event_names;
+    event_names.reserve(ev_map.size());
+
+    for (const auto& event : ev_map)
+    {
+        if (event.second.is_valid())
+        {
+            event_names.push_back(event.first);
+        }
+    }
+
+    std::sort(event_names.begin(), event_names.end());
+
+    return event_names;
 }
 }
 }

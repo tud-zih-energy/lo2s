@@ -36,7 +36,6 @@
 
 extern "C" {
 #include <fcntl.h>
-#include <syscall.h>
 #include <unistd.h>
 
 #include <linux/perf_event.h>
@@ -105,7 +104,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = syscall(__NR_perf_event_open, &perf_attr, tid, cpu, -1, 0);
+            fd_ = perf_event_open(&perf_attr, tid, cpu, -1, 0);
 
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {

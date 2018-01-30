@@ -21,28 +21,30 @@
 
 #pragma once
 
-#include <string>
-
-extern "C" {
-#include <linux/perf_event.h>
-}
+#include <lo2s/perf/counter/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/counters.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-struct CounterDescription
+namespace counter
 {
-    CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                       std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1)
-    {
-    }
+class Writer : public Reader<Writer>
+{
+public:
+    Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::metric_class metric_class,
+           otf2::definition::location scope, bool enable_on_exec);
 
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
+    using Reader<Writer>::handle;
+    bool handle(const RecordSampleType* sample);
+
+private:
+    trace::Counters counter_writer_;
+    time::Converter time_converter_;
 };
+}
 }
 }

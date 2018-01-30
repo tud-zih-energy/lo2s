@@ -24,6 +24,7 @@
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/metric/perf_counter.hpp>
+#include <lo2s/perf/counter_description.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <otf2xx/writer/local.hpp>
@@ -45,13 +46,12 @@ public:
 
     static otf2::definition::metric_class get_metric_class(Trace& trace);
 
-    void write();
+    void write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point tp);
 
 private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!
-    std::vector<metric::PerfCounter> counters_;
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
 };

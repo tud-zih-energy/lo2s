@@ -35,7 +35,42 @@ namespace perf
 class EventProvider
 {
 public:
-    using EventMap = std::unordered_map<std::string, CounterDescription>;
+    struct DescriptionCache
+    {
+    private:
+        DescriptionCache()
+        : description(std::string(), static_cast<perf_type_id>(-1), 0, 0), valid_(false)
+        {
+        }
+
+    public:
+        DescriptionCache(const CounterDescription& description)
+        : description(description), valid_(true)
+        {
+        }
+
+        DescriptionCache(CounterDescription&& description)
+        : description(std::move(description)), valid_(true)
+        {
+        }
+
+        static DescriptionCache make_invalid()
+        {
+            return DescriptionCache();
+        }
+
+        bool is_valid() const
+        {
+            return valid_;
+        }
+
+        CounterDescription description;
+
+    private:
+        bool valid_;
+    };
+
+    using EventMap = std::unordered_map<std::string, DescriptionCache>;
 
     EventProvider();
     EventProvider(const EventProvider&) = delete;
@@ -48,30 +83,9 @@ public:
 
     static const CounterDescription& get_event_by_name(const std::string& name);
 
-    static bool has_event(const std::string& name)
-    {
-        if (instance().event_map_.count(name))
-        {
-            return true;
-        }
-        else
-        {
-            try
-            {
-                instance_mutable().cache_event(name);
-                return true;
-            }
-            catch (const InvalidEvent&)
-            {
-                return false;
-            }
-        }
-    }
+    static bool has_event(const std::string& name);
 
-    static const EventMap& event_map()
-    {
-        return instance().event_map_;
-    }
+    static std::vector<EventMap::key_type> get_event_names();
 
     class InvalidEvent : public std::runtime_error
     {

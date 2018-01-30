@@ -46,8 +46,8 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
   tid_(tid), info_(info),
   sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
                  parent_monitor.trace().sample_writer(pid, tid), enable_on_exec),
-  counters_(pid, tid, parent_monitor.trace(), parent_monitor.counters_metric_class(),
-            sample_writer_.location())
+  counter_writer_(pid, tid, parent_monitor.trace(), parent_monitor.counters_metric_class(),
+                  sample_writer_.location(), enable_on_exec)
 {
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
@@ -80,7 +80,7 @@ void ThreadMonitor::monitor()
 {
     check_affinity();
     sample_writer_.read();
-    counters_.write();
+    counter_writer_.read();
 }
 }
 }
