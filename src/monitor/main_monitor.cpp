@@ -41,6 +41,8 @@ MainMonitor::MainMonitor()
     // the first possible timestamp in the trace
     trace_.begin_record();
 
+    trace_.archive().set_creator(config().command_line);
+
     // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
