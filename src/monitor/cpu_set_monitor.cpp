@@ -6,6 +6,10 @@
 
 #include <csignal>
 
+extern "C" {
+#include <sys/wait.h>
+}
+
 namespace lo2s
 {
 namespace monitor
@@ -44,8 +48,52 @@ void CpuSetMonitor::run()
 
     trace_.register_tids(read_all_tid_exe());
 
-    int sig;
-    ret = sigwait(&ss, &sig);
+    if(config().command.size() == 0)
+    {
+        int sig;
+        ret = sigwait(&ss, &sig);
+    }
+    else
+    {
+        auto pid = fork();
+
+        if(pid == -1)
+        {
+            Log::error() << "Fork failed.";
+            throw_errno();
+        }
+        else if(pid == 0)
+        {
+            std::vector<char*> tmp;
+
+            std::transform(config().command.begin(), config().command.end(), std::back_inserter(tmp),
+                   [](const std::string& s) {
+                       char* pc = new char[s.size() + 1];
+                       std::strcpy(pc, s.c_str());
+                       return pc;
+                   });
+            tmp.push_back(nullptr);
+
+            execvp(tmp[0], &tmp[0]);
+
+            // should not be executed -> exec failed, let's clean up anyway.
+            for (auto cp : tmp)
+            {
+                delete[] cp;
+            }
+
+            Log::error() << "Could not execute command: " << config().command.at(0);
+            exit(errno);
+        }
+        else
+        {
+            //Wait for process termination
+            if(waitpid(pid, NULL, 0) == -1)
+            {
+                ret = -1;
+            }
+        }
+    }
     if (ret)
     {
         throw make_system_error();
