@@ -26,12 +26,13 @@ Summary& summary()
 
 Summary::Summary()
 : start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0),
-  thread_count_(0), trace_dir_(""), exit_code_(0)
+  thread_count_(0), exit_code_(0)
 {
 }
 
 void Summary::register_process(pid_t pid)
 {
+    std::lock_guard<std::mutex> lock(pids_mutex_);
     pids_.emplace(pid);
 }
 
@@ -89,11 +90,9 @@ void Summary::show()
         return;
     }
 
-    std::chrono::duration<double> wall_time;
-    wall_time = std::chrono::steady_clock::now() - start_wall_time_;
+    std::chrono::duration<double> wall_time = std::chrono::steady_clock::now() - start_wall_time_;
 
-    std::chrono::duration<double> cpu_time;
-    cpu_time = get_cpu_time();
+    std::chrono::duration<double> cpu_time = get_cpu_time();
 
     boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
