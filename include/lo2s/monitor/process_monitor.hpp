@@ -52,6 +52,8 @@ private:
     const pid_t first_child_;
     ThreadMap threads_;
     sighandler_t default_signal_handler;
+
+    std::size_t num_wakeups_;
 };
 }
 }

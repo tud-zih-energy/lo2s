@@ -21,6 +21,7 @@
 
 #include <lo2s/monitor/threaded_monitor.hpp>
 
+#include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
@@ -29,12 +30,13 @@ namespace lo2s
 namespace monitor
 {
 ThreadedMonitor::ThreadedMonitor(trace::Trace& trace, const std::string& name)
-: trace_(trace), name_(name)
+: trace_(trace), name_(name), num_wakeups_(0)
 {
 }
 
 ThreadedMonitor::~ThreadedMonitor()
 {
+    summary().record_perf_wakeups(num_wakeups_);
     assert(!thread_.joinable());
 }
 

@@ -24,6 +24,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <chrono>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -68,6 +69,7 @@ private:
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
 
+std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
 
 template <typename T>

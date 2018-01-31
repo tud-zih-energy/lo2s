@@ -67,6 +67,7 @@ void IntervalMonitor::run()
     {
         Log::trace() << "Monitoring thread active.";
         monitor();
+        num_wakeups_++;
 
         // TODO skip samples if we cannot keep up with the deadlines
         deadline += interval_;

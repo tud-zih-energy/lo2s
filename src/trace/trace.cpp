@@ -26,6 +26,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
@@ -70,6 +71,8 @@ Trace::Trace()
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, config().sampling_period)
 {
+    summary().set_trace_dir(get_trace_name(config().trace_path));
+
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 

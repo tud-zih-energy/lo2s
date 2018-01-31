@@ -138,6 +138,7 @@ set(SOURCE_FILES
     src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
     src/mmap.cpp
     src/util.cpp
+    src/summary.cpp
 )
 if (X86Adapt_FOUND)
     list(APPEND SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)

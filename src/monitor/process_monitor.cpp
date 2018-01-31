@@ -23,6 +23,7 @@
 
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/summary.hpp>
 #include <lo2s/util.hpp>
 
 #include <exception>
@@ -95,7 +96,7 @@ void check_ptrace_setoptions(pid_t pid, long options)
 
 ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
 : MainMonitor(), first_child_(child), threads_(*this),
-  default_signal_handler(signal(SIGINT, sig_handler))
+  default_signal_handler(signal(SIGINT, sig_handler)), num_wakeups_(0)
 {
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 
@@ -115,6 +116,7 @@ ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
 
 ProcessMonitor::~ProcessMonitor()
 {
+    summary().record_perf_wakeups(num_wakeups_);
     threads_.stop();
 }
 
@@ -126,6 +128,9 @@ void ProcessMonitor::run()
         /* wait for signal */
         int status;
         pid_t child = waitpid(-1, &status, __WALL);
+
+        num_wakeups_++;
+
         handle_signal(child, status);
     }
 }
@@ -268,6 +273,7 @@ void ProcessMonitor::handle_signal(pid_t child, int status)
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
+            summary().set_exit_code(WEXITSTATUS(status));
             throw std::system_error(0, std::system_category());
         }
         return;

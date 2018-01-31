@@ -27,6 +27,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -85,6 +86,9 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     {
         current_region_ = current_region_.undefined();
     }
+
+    summary().register_process(next_pid);
+
     return false;
 }
 

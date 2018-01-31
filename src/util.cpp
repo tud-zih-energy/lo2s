@@ -17,7 +17,9 @@
 
 extern "C" {
 #include <limits.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 }
@@ -29,6 +31,30 @@ std::size_t get_page_size()
 {
     static std::size_t page_size = sysconf(_SC_PAGESIZE);
     return page_size;
+}
+
+std::chrono::duration<double> get_cpu_time()
+{
+    struct rusage usage, child_usage;
+    timeval time;
+
+    if (getrusage(RUSAGE_SELF, &usage) == -1)
+    {
+        return std::chrono::seconds(0);
+    }
+
+    if (getrusage(RUSAGE_CHILDREN, &child_usage) == -1)
+    {
+        return std::chrono::seconds(0);
+    }
+
+    //Add together the system and user CPU time of the process and all children
+    timeradd(&usage.ru_utime, &usage.ru_stime, &time);
+
+    timeradd(&time, &child_usage.ru_utime, &time);
+    timeradd(&time, &child_usage.ru_stime, &time);
+
+    return std::chrono::seconds(time.tv_sec) + std::chrono::microseconds(time.tv_usec);
 }
 
 std::string get_process_exe(pid_t pid)

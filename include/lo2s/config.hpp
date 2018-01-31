@@ -47,6 +47,7 @@ struct Config
     MonitorType monitor_type;
     pid_t pid;
     std::vector<std::string> command;
+    bool quiet;
     // Optional features
     std::vector<std::string> tracepoint_events;
     std::vector<std::string> perf_events;
