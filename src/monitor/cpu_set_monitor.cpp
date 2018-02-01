@@ -48,6 +48,9 @@ void CpuSetMonitor::run()
 
     trace_.register_tids(read_all_tid_exe());
 
+    //If we were given no command, sample until we receive SIGINT
+    //Otherwise execute the command, and sample as long as the child
+    //process is running.
     if(config().command.size() == 0)
     {
         int sig;
