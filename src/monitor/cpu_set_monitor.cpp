@@ -34,11 +34,10 @@ void CpuSetMonitor::run()
     sigemptyset(&ss);
     sigaddset(&ss, SIGINT);
 
-    auto ret = pthread_sigmask(SIG_BLOCK, &ss, NULL);
-    if (ret)
+    if(pthread_sigmask(SIG_BLOCK, &ss, NULL) == -1)
     {
-        Log::error() << "Failed to set pthread_sigmask: " << ret;
-        throw std::runtime_error("Failed to set pthread_sigmask");
+        Log::error() << "Failed to set pthread_sigmask";
+        throw_errno();
     }
 
     for (auto& monitor_elem : monitors_)
@@ -51,10 +50,13 @@ void CpuSetMonitor::run()
     //If we were given no command, sample until we receive SIGINT
     //Otherwise execute the command, and sample as long as the child
     //process is running.
-    if(config().command.size() == 0)
+    if(config().command.empty())
     {
         int sig;
-        ret = sigwait(&ss, &sig);
+        if(sigwait(&ss, &sig) != 0)
+        {
+            throw make_system_error();
+        }
     }
     else
     {
@@ -67,8 +69,16 @@ void CpuSetMonitor::run()
         }
         else if(pid == 0)
         {
-            std::vector<char*> tmp;
+            //We want to receive SIGINT in the child, but not in the parent
+            //so that we can interrupt long-running childs without interfering
+            //with the trace generation process
+            if(pthread_sigmask(SIG_UNBLOCK, &ss, NULL) == -1)
+            {
+                Log::error() << "Failed to set pthread_sigmask";
+                exit(errno);
+            }
 
+            std::vector<char*> tmp;
             std::transform(config().command.begin(), config().command.end(), std::back_inserter(tmp),
                    [](const std::string& s) {
                        char* pc = new char[s.size() + 1];
@@ -76,6 +86,9 @@ void CpuSetMonitor::run()
                        return pc;
                    });
             tmp.push_back(nullptr);
+
+
+            Log::debug() << "execve(" << config().command.at(0) << ")";
 
             execvp(tmp[0], &tmp[0]);
 
@@ -93,13 +106,9 @@ void CpuSetMonitor::run()
             //Wait for process termination
             if(waitpid(pid, NULL, 0) == -1)
             {
-                ret = -1;
+                throw make_system_error();
             }
         }
-    }
-    if (ret)
-    {
-        throw make_system_error();
     }
 
     trace_.register_tids(read_all_tid_exe());
