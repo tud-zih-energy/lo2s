@@ -348,6 +348,13 @@ void parse_program_options(int argc, const char** argv)
         config.exclude_kernel = true;
     }
 
+    for(int arg = 0; arg < argc - 1; arg++)
+    {
+        config.command_line.append(argv[arg]);
+        config.command_line.append(" ");
+    }
+    config.command_line.append(argv[argc - 1]);
+
     instance = std::move(config);
 }
 } // namespace lo2s
