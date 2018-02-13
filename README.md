@@ -46,6 +46,18 @@ The trace contains the following information:
  
 See `lo2s --help` for a current listing of options.
 
+# Quirks
+
+The `perf_event_open` kernel infrastructure changed significantly over time.
+Therefore, it is already hard to just keep track which kernel version introduced which new feature. 
+Combine that with the abundance of backports of particular features by different distributors, and you end with a mess of options.
+
+In the effort to keep compatible with older kernels, several quirks have been added to `lo2s`:
+
+1. The initial time synchronization between lo2s and the kernel-space perf is done with a hardware breakpoint. If your kernel doesn't support that, you can disable it using the CMake option `HW_BREAKPOINT_COMPAT`.
+2. The used clock source for the kernel-space time measurments can be changed, however if you kernel doesn't support that, you can disable it with the CMake option `USE_PERF_CLOCKID`.
+3. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
+
 # Reference
 
 A description and use cases can be found in the following paper. Please cite this if you use `lo2s` for scientific work.
