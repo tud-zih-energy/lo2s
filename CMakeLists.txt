@@ -4,6 +4,7 @@ project(lo2s)
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
 include(CheckStructHasMember)
+include(CheckFunctionExists)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
@@ -104,6 +105,7 @@ option(IWYU "Developer option for include what you use." OFF)
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
+check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 
 # prepare list of source files
 set(SOURCE_FILES
@@ -163,6 +165,11 @@ target_link_libraries(lo2s
         Boost::filesystem
         Binutils::Binutils
 )
+
+# old glibc versions require -lrt for clock_gettime()
+if(NOT CLOCK_GETTIME_FOUND)
+    target_link_libraries(lo2s PRIVATE rt)
+endif()
 
 # handle x86_adapt dependency
 if(X86Adapt_FOUND)
