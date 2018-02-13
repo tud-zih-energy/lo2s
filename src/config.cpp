@@ -40,6 +40,10 @@ extern "C"
 {
 #include <unistd.h>
 }
+
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
 namespace po = boost::program_options;
 
 namespace lo2s
@@ -143,7 +147,7 @@ void parse_program_options(int argc, const char** argv)
              "enable global recording of a raw tracepoint event (usually requires root)")
         ("metric-event,E", po::value(&config.perf_events),
              "the name of a perf event to measure") // TODO: optionally list available events
-        ("metric-leader", po::value(&config.metric_leader)->default_value("ref-cycles"),
+        ("metric-leader", po::value(&config.metric_leader)->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
              "name of leading perf event")
         ("metric-count", po::value(&metric_count),
              "# of events to elapse by metric leader before reading metric buffer")

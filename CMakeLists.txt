@@ -77,6 +77,10 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
 endif()
 
+# Check if we are running Linux
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    message(FATAL_ERROR "You can only build and run lo2s on a Linux machine. I'm sorry.")
+endif()
 
 # configure OTF2xx submodule
 set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
@@ -106,6 +110,14 @@ option(IWYU "Developer option for include what you use." OFF)
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
+if(NOT CLOCK_GETTIME_FOUND)
+    set(CMAKE_REQUIRED_LIBRARIES "rt")
+    check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
+# detect version of running kernel
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSION})
 
 # prepare list of source files
 set(SOURCE_FILES
@@ -168,7 +180,11 @@ target_link_libraries(lo2s
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
-    target_link_libraries(lo2s PRIVATE rt)
+    if(CLOCK_GETTIME_FOUND_WITH_RT)
+        target_link_libraries(lo2s PRIVATE rt)
+    else()
+        message(SEND_ERROR "Could not find the function clock_gettime(), but it is required.")
+    endif()
 endif()
 
 # handle x86_adapt dependency
@@ -224,6 +240,14 @@ else()
     endif()
 endif()
 
+message(STATUS "Linux kernel version: ${LINUX_VERSION}")
+if (LINUX_VERSION VERSION_LESS 3.3.0)
+    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=bus-cycles)
+    message(STATUS "  Detected Linux older than 3.3.0. Falling back to bus-cycle as metric leader.")
+    message(STATUS "  The prefered ref-cycles may still be available. (See --metric-leader)")
+else()
+    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=ref-cycles)
+endif()
 # define list of C++ features needed for compilation
 target_compile_features(lo2s
     PRIVATE
