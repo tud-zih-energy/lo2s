@@ -41,8 +41,6 @@ MainMonitor::MainMonitor()
     // the first possible timestamp in the trace
     trace_.begin_record();
 
-    trace_.archive().set_description(config().command_line);
-
     // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
@@ -74,7 +72,6 @@ MainMonitor::MainMonitor()
         }
     }
 #endif
-
 }
 
 MainMonitor::~MainMonitor()
@@ -94,5 +91,5 @@ MainMonitor::~MainMonitor()
     // the last possible timestamp in the trace
     trace_.end_record();
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

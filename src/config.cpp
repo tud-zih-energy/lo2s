@@ -26,6 +26,7 @@
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/util.hpp>
+#include <lo2s/version.hpp>
 
 #include <nitro/lang/optional.hpp>
 
@@ -68,6 +69,16 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
+static inline void print_version(std::ostream& os)
+{
+    // clang-format off
+    os << "lo2s " << lo2s::version() << "\n"
+       << "Copyright (C) 2018 Technische Universitaet Dresden, Germany\n"
+       << "This is free software; see the source for copying conditions.  There is NO\n"
+       << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
+    // clang-format on
+}
+
 static inline void print_usage(std::ostream& os, const char* name,
                                const po::options_description& desc)
 {
@@ -105,6 +116,7 @@ void parse_program_options(int argc, const char** argv)
     desc.add_options()
         ("help",
              "produce help message")
+        ("version", "print version information")
         ("output-trace,o", po::value(&config.trace_path),
              "output trace directory")
         ("count,c", po::value(&config.sampling_period)->default_value(11010113),
@@ -180,6 +192,12 @@ void parse_program_options(int argc, const char** argv)
     if (vm.count("help"))
     {
         print_usage(std::cout, argv[0], desc);
+        std::exit(EXIT_SUCCESS);
+    }
+
+    if (vm.count("version"))
+    {
+        print_version(std::cout);
         std::exit(EXIT_SUCCESS);
     }
 
@@ -326,7 +344,9 @@ void parse_program_options(int argc, const char** argv)
             config.metric_use_frequency = false;
             config.metric_count = metric_count;
         }
-    } else {
+    }
+    else
+    {
         config.metric_use_frequency = true;
         config.metric_frequency = metric_frequency;
     }
@@ -348,7 +368,7 @@ void parse_program_options(int argc, const char** argv)
         config.exclude_kernel = true;
     }
 
-    for(int arg = 0; arg < argc - 1; arg++)
+    for (int arg = 0; arg < argc - 1; arg++)
     {
         config.command_line.append(argv[arg]);
         config.command_line.append(" ");

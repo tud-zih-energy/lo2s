@@ -179,8 +179,18 @@ if (USE_RADARE)
     endif()
 endif()
 
+# generate version string used in lo2s
+execute_process(COMMAND git describe --always --tags --dirty
+    OUTPUT_VARIABLE LO2S_VERSION_STRING
+)
+string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
+configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
+
 # define include directory of target lo2s
-target_include_directories(lo2s PRIVATE include)
+target_include_directories(lo2s PRIVATE
+    include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
 
 # special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)

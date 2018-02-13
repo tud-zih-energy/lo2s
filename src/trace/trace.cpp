@@ -30,6 +30,7 @@
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
+#include <lo2s/version.hpp>
 
 #include <nitro/env/hostname.hpp>
 
@@ -72,6 +73,9 @@ Trace::Trace()
                        otf2::common::base_type::decimal, 0, config().sampling_period)
 {
     summary().set_trace_dir(get_trace_name(config().trace_path));
+
+    archive_.set_creator(std::string("lo2s - ") + lo2s::version());
+    archive_.set_description(config().command_line);
 
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
@@ -531,5 +535,5 @@ otf2::definition::string Trace::intern(const std::string& name)
                                 std::forward_as_tuple(ref, name));
     return ret.first->second;
 }
-}
-}
+} // namespace trace
+} // namespace lo2s
