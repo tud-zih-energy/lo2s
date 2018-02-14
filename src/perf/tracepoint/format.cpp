@@ -39,7 +39,10 @@ namespace tracepoint
 
 EventFormat::EventFormat(const std::string& name) : name_(name)
 {
-    boost::filesystem::path path_event = base_path_ / name;
+    // allow perf-like name format which uses ':' as a separator
+    std::replace(name_.begin(), name_.end(), ':', '/');
+
+    boost::filesystem::path path_event = base_path_ / name_;
     boost::filesystem::ifstream ifs_id, ifs_format;
 
     ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
