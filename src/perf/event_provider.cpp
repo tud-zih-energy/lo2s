@@ -25,6 +25,8 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
+#define BOOST_FILESYSTEM_NO_DEPRECATED
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <ios>
@@ -208,11 +210,11 @@ static void populate_event_map(EventProvider::EventMap& map)
 
 static std::uint64_t parse_bitmask(const std::string& format)
 {
-    enum format_regex_groups
+    enum BITMASK_REGEX_GROUPS
     {
-        WHOLE_MATCH,
-        BIT_BEGIN,
-        BIT_END,
+        BM_WHOLE_MATCH,
+        BM_BEGIN,
+        BM_END,
     };
 
     std::uint64_t mask = 0x0;
@@ -223,8 +225,8 @@ static std::uint64_t parse_bitmask(const std::string& format)
     for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
     {
         const auto& match = *i;
-        int start = std::stoi(match[BIT_BEGIN]);
-        int end = (match[BIT_END].length() == 0) ? start : std::stoi(match[BIT_END]);
+        int start = std::stoi(match[BM_BEGIN]);
+        int end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
 
         const auto len = (end + 1) - start;
         if (start < 0 || end > 63 || len > 64)
@@ -269,6 +271,14 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
 static void event_description_update(CounterDescription& event, std::uint64_t value,
                                      const std::string& format)
 {
+    // Parse config terms //
+
+    /* Format:  <term>:<bitmask>
+     *
+     * We only assign the terms 'config' and 'config1'.
+     *
+     * */
+
     static constexpr auto npos = std::string::npos;
     const auto colon = format.find_first_of(':');
     if (colon == npos)
@@ -292,51 +302,98 @@ static void event_description_update(CounterDescription& event, std::uint64_t va
 
 const CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
-    /* event description format (with optional trailing '/'):
-     *   <pmu>/<event_name>[/]
-     * */
     namespace fs = boost::filesystem;
-    static constexpr auto npos = std::string::npos;
-    const auto slash_pos = ev_desc.find_first_of('/');
-    if (slash_pos == npos)
+
+    // Parse event description //
+
+    /* Event description format:
+     *   Name of a Performance Monitoring Unit (PMU) and an event name,
+     *   separated by either '/' or ':' (for perf-like syntax);  followed by an
+     *   optional separator:
+     *
+     *     <pmu>/<event_name>[/]
+     *   OR
+     *     <pmu>:<event_name>[/]
+     *
+     *   Examples (both specify the same event):
+     *
+     *     cpu/cache-misses/
+     *     cpu:cache-misses
+     *
+     * */
+
+    enum EVENT_DESCRIPTION_REGEX_GROUPS
     {
-        throw EventProvider::InvalidEvent("missing '/' in event description");
+        ED_WHOLE_MATCH,
+        ED_PMU,
+        ED_NAME,
+    };
+    static const std::regex ev_desc_regex(R"(([a-z-_]+)[\/:]([a-z-_]+)\/?)");
+    std::smatch ev_desc_match;
+
+    if (!std::regex_match(ev_desc, ev_desc_match, ev_desc_regex))
+    {
+        throw EventProvider::InvalidEvent("invalid event description format");
     }
-    const auto trailing_slash_pos = ev_desc.find('/', slash_pos + 1);
 
-    const auto pmu = ev_desc.substr(0, slash_pos);
-    const auto event_name = ev_desc.substr(
-        slash_pos + 1, trailing_slash_pos == npos ? npos : trailing_slash_pos - (slash_pos + 1));
+    const std::string& pmu_name = ev_desc_match[ED_PMU];
+    const std::string& event_name = ev_desc_match[ED_NAME];
 
-    // PMU -- performance monitoring unit
-    const fs::path pmu_path = fs::path("/sys/bus/event_source/devices") / pmu;
+    Log::debug() << "parsing event description: pmu='" << pmu_name << "', event='" << event_name
+                 << "'";
+
+    const fs::path pmu_path = fs::path("/sys/bus/event_source/devices") / pmu_name;
 
     // read PMU type id
     std::underlying_type<perf_type_id>::type type;
     if ((fs::ifstream(pmu_path / "type") >> type).fail())
     {
-        throw EventProvider::InvalidEvent("cannot read PMU device type");
+        using namespace std::string_literals;
+        throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
     }
     CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
 
+    // Parse event configuration from sysfs //
+
+    // read event configuration
     std::string ev_cfg;
     if ((fs::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
     {
-        throw EventProvider::InvalidEvent("cannot read event configuration");
+        using namespace std::string_literals;
+        throw EventProvider::InvalidEvent("unknown event '"s + event_name + "' for PMU '"s +
+                                          pmu_name + "'");
     }
 
-    // parse event description:
-    //   <term>[=<value>][,<term>[=<value>]]...
-    //
-    // (taken from linux/Documentation/ABI/testing/sysfs-bus-event_source-devices-events)
+    /* Event configuration format:
+     *   One or more terms with optional values, separated by ','.  (Taken from
+     *   linux/Documentation/ABI/testing/sysfs-bus-event_source-devices-events):
+     *
+     *     <term>[=<value>][,<term>[=<value>]...]
+     *
+     *   Example (config for 'cpu/cache-misses' on an Intel Core i5-7200U):
+     *
+     *     event=0x2e,umask=0x41
+     *
+     *  */
+
+    enum EVENT_CONFIG_REGEX_GROUPS
+    {
+        EC_WHOLE_MATCH,
+        EC_TERM,
+        EC_VALUE,
+    };
+
     static const std::regex kv_regex(R"(([^=,]+)(?:=([^,]+))?)");
 
     Log::debug() << "parsing event configuration: " << ev_cfg;
     std::smatch kv_match;
     while (std::regex_search(ev_cfg, kv_match, kv_regex))
     {
-        const std::string& term = kv_match[1];
-        const std::string& value = (kv_match[2].length() != 0) ? kv_match[2] : std::string("0x1");
+        static const std::string default_value("0x1");
+
+        const std::string& term = kv_match[EC_TERM];
+        const std::string& value =
+            (kv_match[EC_VALUE].length() != 0) ? kv_match[EC_VALUE] : default_value;
 
         std::string format;
         if (!(fs::ifstream(pmu_path / "format" / term) >> format))
@@ -355,7 +412,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
         ev_cfg = kv_match.suffix();
     }
 
-    Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu << "/"
+    Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
 
@@ -373,7 +430,6 @@ EventProvider::EventProvider()
 
 const CounterDescription& EventProvider::cache_event(const std::string& name)
 {
-    Log::info() << "caching event '" << name << "'.";
     try
     {
         // save event in event map; return a reference to the inserted event to
@@ -384,7 +440,6 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
     catch (const InvalidEvent& e)
     {
         event_map_.emplace(name, DescriptionCache::make_invalid());
-        Log::info() << "failed to cache event (reason: " << e.what() << ')';
         throw e;
     }
 }
