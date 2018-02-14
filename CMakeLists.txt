@@ -12,15 +12,8 @@ include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 
 # Intialize git submodules if not done already
-file(GLOB SUBMODULE_FILES "lib/otf2xx/*")
-list(LENGTH SUBMODULE_FILES COUNT_OTF2XX)
-file(GLOB SUBMODULE_FILES "lib/nitro/*")
-list(LENGTH SUBMODULE_FILES COUNT_NITRO)
-if(${COUNT_OTF2XX} EQUAL 0 OR ${COUNT_NITRO} EQUAL 0)
-    message(STATUS "Initializing git submodule")
-    execute_process(COMMAND "git" "submodule" "init" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-    execute_process(COMMAND "git" "submodule" "update" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-endif()
+include(cmake/GitSubmoduleUpdate.cmake)
+git_submodule_update()
 
 # Set of variables to enforce static or dynamic linking
 set(lo2s_USE_STATIC_LIBS "MOSTLY" CACHE STRING "Link lo2s statically.")
