@@ -27,3 +27,6 @@
 *.exe
 *.out
 *.app
+
+# CMake-generated files
+include/lo2s/version.hpp
