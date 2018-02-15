@@ -147,12 +147,6 @@ set(SOURCE_FILES
     src/util.cpp
     src/summary.cpp
 )
-if (X86Adapt_FOUND)
-    list(APPEND SOURCE_FILES src/metric/x86_adapt/metrics.cpp src/metric/x86_adapt/monitor.cpp)
-endif()
-if (USE_RADARE AND Radare_FOUND)
-    list(APPEND SOURCE_FILES src/radare.cpp)
-endif()
 
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
@@ -182,6 +176,10 @@ endif()
 
 # handle x86_adapt dependency
 if(X86Adapt_FOUND)
+    target_sources(lo2s PRIVATE
+        src/metric/x86_adapt/metrics.cpp
+        src/metric/x86_adapt/monitor.cpp
+    )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
 endif()
 
@@ -190,6 +188,9 @@ if (USE_RADARE)
     if (Radare_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
         target_link_libraries(lo2s PRIVATE Radare::Radare)
+        target_sources(lo2s PRIVATE
+            src/radare.cpp
+        )
     else()
         message(SEND_ERROR "Radare not found but requested.")
     endif()
