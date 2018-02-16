@@ -155,9 +155,9 @@ add_executable(lo2s ${SOURCE_FILES})
 target_link_libraries(lo2s
     PRIVATE
         otf2xx::Writer
-        Nitro::Log
-        Nitro::Env
-        Nitro::Dl
+        Nitro::nitro-log
+        Nitro::nitro-env
+        Nitro::nitro-dl
         Threads::Threads
         Boost::system
         Boost::program_options
