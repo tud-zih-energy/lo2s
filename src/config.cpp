@@ -118,7 +118,7 @@ void parse_program_options(int argc, const char** argv)
 
     // clang-format off
     desc.add_options()
-        ("help",
+        ("help,h",
              "produce help message")
         ("version", "print version information")
         ("output-trace,o", po::value(&config.trace_path),
