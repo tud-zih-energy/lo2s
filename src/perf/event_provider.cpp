@@ -208,6 +208,49 @@ static void populate_event_map(EventProvider::EventMap& map)
     }
 }
 
+static std::vector<std::string> get_pmu_event_names()
+{
+    std::vector<std::string> names;
+
+    namespace fs = boost::filesystem;
+
+    const fs::path pmu_devices("/sys/bus/event_source/devices");
+
+    for (const auto& pmu : fs::directory_iterator(pmu_devices))
+    {
+        const auto pmu_path = pmu.path();
+
+        const fs::path event_dir(pmu_path / "events");
+
+        // some PMUs don't have any events, in that case event_dir doesn't exist
+        if (!fs::is_directory(event_dir))
+        {
+            continue;
+        }
+
+        for (const auto& event : fs::directory_iterator(event_dir))
+        {
+            std::stringstream event_name;
+
+            const auto event_path = event.path();
+            const auto extension = event_path.extension();
+
+            // ignore scaling and unit information
+            if (extension == ".scale" || extension == ".unit")
+            {
+                continue;
+            }
+
+            // use fs::path::string, otherwise the paths are formatted quoted
+            event_name << pmu_path.filename().string() << '/' << event_path.filename().string()
+                       << '/';
+            names.emplace_back(event_name.str());
+        }
+    }
+
+    return names;
+}
+
 static std::uint64_t parse_bitmask(const std::string& format)
 {
     enum BITMASK_REGEX_GROUPS
@@ -503,7 +546,14 @@ std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
         }
     }
 
+    auto pmu_event_names = get_pmu_event_names();
+
     std::sort(event_names.begin(), event_names.end());
+    std::sort(pmu_event_names.begin(), pmu_event_names.end());
+
+    event_names.reserve(event_names.size() + pmu_event_names.size());
+    std::move(std::begin(pmu_event_names), std::end(pmu_event_names),
+              std::back_inserter(event_names));
 
     return event_names;
 }
