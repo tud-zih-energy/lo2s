@@ -29,6 +29,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <ios>
 #include <limits>
 #include <regex>
@@ -216,7 +217,7 @@ static std::vector<std::string> get_pmu_event_names()
 
     const fs::path pmu_devices("/sys/bus/event_source/devices");
 
-    for (const auto& pmu : fs::directory_iterator(pmu_devices))
+    for (const auto& pmu : boost::make_iterator_range(fs::directory_iterator{ pmu_devices }, {}))
     {
         const auto pmu_path = pmu.path();
 
@@ -228,7 +229,8 @@ static std::vector<std::string> get_pmu_event_names()
             continue;
         }
 
-        for (const auto& event : fs::directory_iterator(event_dir))
+        for (const auto& event :
+             boost::make_iterator_range(fs::directory_iterator{ event_dir }, {}))
         {
             std::stringstream event_name;
 
