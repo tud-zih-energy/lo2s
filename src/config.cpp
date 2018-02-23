@@ -34,10 +34,10 @@
 #include <boost/program_options.hpp>
 
 #include <cstdlib>
-#include <ctime> // for CLOCK_* macros
+#include <ctime>   // for CLOCK_* macros
+#include <iomanip> // for std::setw
 
-extern "C"
-{
+extern "C" {
 #include <unistd.h>
 }
 
@@ -70,6 +70,54 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     else
     {
         boost::any_cast<SwitchCounter&>(v).count++;
+    }
+}
+
+static void list_event_names(std::ostream& os, const std::string& category_name)
+{
+    struct event_category
+    {
+        using listing_function_t = std::vector<std::string> (*)();
+
+        const char* name;
+        const char* description;
+        listing_function_t event_list;
+    };
+
+    static constexpr event_category CATEGORIES[] = {
+        { "predefined", "predefined events", &perf::EventProvider::get_predefined_event_names },
+        { "pmu", "Kernel PMU events", &perf::EventProvider::get_pmu_event_names },
+    };
+
+    bool list_all = category_name == "all";
+    bool listed_any = false;
+
+    for (const auto category : CATEGORIES)
+    {
+        if (list_all || category_name == category.name)
+        {
+            listed_any = true;
+            os << "\nList of " << category.description << ":\n\n";
+            for (const auto& event : category.event_list())
+            {
+                os << "  " << event << '\n';
+            }
+            os << '\n';
+        }
+    }
+
+    if (!listed_any)
+    {
+        std::cerr << "Cannot list events from unknown category \"" << category_name
+                  << "\"!\n"
+                     "\n"
+                     "Known event categories are:\n\n";
+        for (const auto category : CATEGORIES)
+        {
+            std::cerr << "  " << std::setw(20) << std::left << category.name << "("
+                      << category.description << ")\n";
+        }
+        std::cerr << '\n';
     }
 }
 
@@ -110,7 +158,8 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
-    bool list_clockids, list_events;
+    bool list_clockids;
+    std::string list_event_category;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
 
@@ -170,8 +219,11 @@ void parse_program_options(int argc, const char** argv)
              "exclude events happening in kernel space")
         ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
             "list all available clockids")
-        ("list-events", po::bool_switch(&list_events)->default_value(false),
-            "list all available events")
+        ("list-events",
+            po::value(&list_event_category)
+                ->value_name("category")
+                ->implicit_value("all"),
+            "list available metric and sampling events from a given category")
         ("command", po::value(&config.command));
     // clang-format on
 
@@ -185,7 +237,7 @@ void parse_program_options(int argc, const char** argv)
             po::command_line_parser(argc, argv).options(desc).positional(p).run();
         po::store(parsed, vm);
     }
-    catch (const po::unknown_option& e)
+    catch (const po::error& e)
     {
         std::cerr << e.what() << '\n';
         print_usage(std::cerr, argv[0], desc);
@@ -240,7 +292,6 @@ void parse_program_options(int argc, const char** argv)
     }
 
     // list arguments to options and exit
-    if (list_clockids || list_events)
     {
         if (list_clockids)
         {
@@ -249,16 +300,14 @@ void parse_program_options(int argc, const char** argv)
             {
                 std::cout << " * " << clock.name << '\n';
             }
+            std::exit(EXIT_SUCCESS);
         }
-        if (list_events)
+
+        if (vm.count("list-events"))
         {
-            std::cout << "Available events:\n";
-            for (const auto& event_name : lo2s::perf::EventProvider::get_event_names())
-            {
-                std::cout << " * " << event_name << '\n';
-            }
+            list_event_names(std::cout, list_event_category);
+            std::exit(EXIT_SUCCESS);
         }
-        std::exit(EXIT_SUCCESS);
     }
 
     if (all_cpus)

@@ -532,7 +532,7 @@ bool EventProvider::has_event(const std::string& name)
     }
 }
 
-std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
+std::vector<std::string> EventProvider::get_predefined_event_names()
 {
 
     const auto& ev_map = instance().event_map_;
@@ -548,16 +548,18 @@ std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
         }
     }
 
-    auto pmu_event_names = get_pmu_event_names();
-
     std::sort(event_names.begin(), event_names.end());
-    std::sort(pmu_event_names.begin(), pmu_event_names.end());
-
-    event_names.reserve(event_names.size() + pmu_event_names.size());
-    std::move(std::begin(pmu_event_names), std::end(pmu_event_names),
-              std::back_inserter(event_names));
 
     return event_names;
+}
+
+std::vector<std::string> EventProvider::get_pmu_event_names()
+{
+    auto pmu_event_names = lo2s::perf::get_pmu_event_names();
+
+    std::sort(pmu_event_names.begin(), pmu_event_names.end());
+
+    return pmu_event_names;
 }
 }
 }

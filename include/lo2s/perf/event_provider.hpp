@@ -85,7 +85,8 @@ public:
 
     static bool has_event(const std::string& name);
 
-    static std::vector<EventMap::key_type> get_event_names();
+    static std::vector<std::string> get_predefined_event_names();
+    static std::vector<std::string> get_pmu_event_names();
 
     class InvalidEvent : public std::runtime_error
     {
