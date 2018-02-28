@@ -78,7 +78,8 @@ Trace::Trace()
     archive_.set_description(config().command_line);
 
     // TODO clean this up, avoid side effect comm stuff
-    process(METRIC_PID, "Metric Location Group");
+    attach_process_location_group(system_tree_root_node_, METRIC_PID,
+                                  intern("Metric Location Group"));
 
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
@@ -166,6 +167,7 @@ Trace::~Trace()
     archive_ << system_tree_package_nodes_;
     archive_ << system_tree_core_nodes_;
     archive_ << system_tree_cpu_nodes_;
+    archive_ << system_tree_process_nodes_;
     archive_ << location_groups_process_;
     archive_ << location_groups_cpu_;
     archive_ << locations_;
@@ -209,24 +211,62 @@ std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sam
     return groups;
 }
 
-void Trace::process(pid_t pid, const std::string& name)
+otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
+{
+    auto node_it = system_tree_process_nodes_.find(pid);
+
+    if (node_it != system_tree_process_nodes_.end())
+    {
+        return node_it->second;
+    }
+    else
+    {
+        return system_tree_root_node_;
+    }
+}
+
+void Trace::process(pid_t pid, pid_t parent, const std::string& name)
 {
     auto iname = intern(name);
-    auto r_lg = location_groups_process_.emplace(
+    const auto& parent_node =
+        (parent == NO_PARENT_PROCESS_PID) ? system_tree_root_node_ : intern_process_node(parent);
+
+    auto emplace_result = system_tree_process_nodes_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
+        std::forward_as_tuple(system_tree_ref(), iname, intern("process"), parent_node));
+
+    if (!emplace_result.second) /* emplace failed */
+    {
+        // TODO: process already exists process tree; update its name.
+        //
+        // Needed in otf2xx: support setting the name of a system tree
+        // node after construction.
+
+        return;
+    }
+
+    const auto& emplaced_node = emplace_result.first->second;
+    attach_process_location_group(emplaced_node, pid, iname);
+}
+
+void Trace::attach_process_location_group(const otf2::definition::system_tree_node& parent,
+                                          pid_t id, const otf2::definition::string& iname)
+{
+    auto r_lg = location_groups_process_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(id),
         std::forward_as_tuple(location_group_ref(), iname,
                               otf2::definition::location_group::location_group_type::process,
-                              system_tree_root_node_));
+                              parent));
     if (r_lg.second)
     {
         auto r_cg = process_comm_groups_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(pid),
+            std::piecewise_construct, std::forward_as_tuple(id),
             std::forward_as_tuple(group_ref(), iname, otf2::common::paradigm_type::pthread,
                                   otf2::common::group_flag_type::none));
         assert(r_cg.second);
         const auto& group = r_cg.first->second;
         auto r_c = process_comms_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(pid),
+            std::piecewise_construct, std::forward_as_tuple(id),
             std::forward_as_tuple(comm_ref(), iname, group, otf2::definition::comm::undefined()));
         assert(r_c.second);
         (void)(r_c.second);
@@ -234,7 +274,7 @@ void Trace::process(pid_t pid, const std::string& name)
     else
     {
         // TODO also fix name of comm groups and comms`
-        r_lg.first->second.name(intern(name));
+        r_lg.first->second.name(iname);
     }
 }
 

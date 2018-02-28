@@ -70,6 +70,8 @@ class Trace
 {
 public:
     static constexpr pid_t METRIC_PID = 0;
+    static constexpr pid_t NO_PARENT_PROCESS_PID =
+        0; //<! sentinel value for an inserted process that has no known parent
 
     Trace();
     ~Trace();
@@ -85,7 +87,7 @@ public:
         return archive_;
     }
 
-    void process(pid_t pid, const std::string& name = "");
+    void process(pid_t pid, pid_t parent, const std::string& name = "");
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
     otf2::writer::local& cpu_writer(int cpuid);
@@ -160,7 +162,7 @@ private:
     {
         // + for system_tree_root_node_
         return 1 + system_tree_package_nodes_.size() + system_tree_core_nodes_.size() +
-               system_tree_cpu_nodes_.size();
+               system_tree_cpu_nodes_.size() + system_tree_process_nodes_.size();
     }
 
     otf2::definition::region::reference_type region_ref() const
@@ -206,6 +208,11 @@ private:
         return strings_.size();
     }
 
+    otf2::definition::system_tree_node& intern_process_node(pid_t pid);
+
+    void attach_process_location_group(const otf2::definition::system_tree_node& parent, pid_t id,
+                                       const otf2::definition::string& iname);
+
 private:
     std::mutex mutex_;
 
@@ -217,9 +224,11 @@ private:
     std::map<std::string, otf2::definition::string> strings_;
 
     otf2::definition::system_tree_node system_tree_root_node_;
+
     std::map<int, otf2::definition::system_tree_node> system_tree_package_nodes_;
     std::map<std::pair<int, int>, otf2::definition::system_tree_node> system_tree_core_nodes_;
     std::map<int, otf2::definition::system_tree_node> system_tree_cpu_nodes_;
+    std::map<pid_t, otf2::definition::system_tree_node> system_tree_process_nodes_;
 
     otf2::definition::interrupt_generator interrupt_generator_;
 
