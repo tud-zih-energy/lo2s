@@ -80,7 +80,6 @@ Trace::Trace()
     // TODO clean this up, avoid side effect comm stuff
     process(METRIC_PID, "Metric Location Group");
 
-    int otf2_id = 1;
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
     {
@@ -88,8 +87,8 @@ Trace::Trace()
         const auto& parent = system_tree_root_node_;
         system_tree_package_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(package.id),
-            std::forward_as_tuple(otf2_id++, intern(std::to_string(package.id)), intern("package"),
-                                  parent));
+            std::forward_as_tuple(system_tree_ref(), intern(std::to_string(package.id)),
+                                  intern("package"), parent));
     }
     for (auto& core : sys.cores())
     {
@@ -98,7 +97,8 @@ Trace::Trace()
         system_tree_core_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(core.id, core.package_id),
             std::forward_as_tuple(
-                otf2_id++, intern(std::to_string(core.package_id) + ":"s + std::to_string(core.id)),
+                system_tree_ref(),
+                intern(std::to_string(core.package_id) + ":"s + std::to_string(core.id)),
                 intern("core"), parent));
     }
     for (auto& cpu : sys.cpus())
@@ -107,7 +107,7 @@ Trace::Trace()
         const auto& parent =
             system_tree_core_nodes_.at(std::make_pair(cpu.core_id, cpu.package_id));
         system_tree_cpu_nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                       std::forward_as_tuple(otf2_id++,
+                                       std::forward_as_tuple(system_tree_ref(),
                                                              intern(std::to_string(cpu.id)),
                                                              intern("cpu"), parent));
     }
@@ -242,7 +242,7 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("thread %d") % tid).str();
     auto location =
-        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(pid),
+        locations_.emplace(location_ref(), intern(name), location_groups_process_.at(pid),
                            otf2::definition::location::location_type::cpu_thread);
     process_comm_groups_.at(pid).add_member(location);
     return archive()(location);
@@ -258,7 +258,7 @@ otf2::writer::local& Trace::cpu_writer(int cpuid)
                               system_tree_cpu_nodes_.at(cpuid)));
     const auto& group = r_group.first->second;
 
-    auto location = locations_.emplace(locations_.size(), name, group,
+    auto location = locations_.emplace(location_ref(), name, group,
                                        otf2::definition::location::location_type::cpu_thread);
     return archive()(location);
 }
@@ -267,7 +267,7 @@ otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
     auto location =
-        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(pid),
+        locations_.emplace(location_ref(), intern(name), location_groups_process_.at(pid),
                            otf2::definition::location::location_type::metric);
     return archive()(location);
 }
@@ -275,7 +275,7 @@ otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     auto location =
-        locations_.emplace(locations_.size(), intern(name), location_groups_process_.at(METRIC_PID),
+        locations_.emplace(location_ref(), intern(name), location_groups_process_.at(METRIC_PID),
                            otf2::definition::location::location_type::metric);
     return archive()(location);
 }
@@ -286,7 +286,7 @@ otf2::definition::metric_member Trace::metric_member(const std::string& name,
                                                      otf2::common::type value_type,
                                                      const std::string& unit)
 {
-    auto ref = metric_members_.size();
+    auto ref = metric_member_ref();
     return metric_members_.emplace(ref, intern(name), intern(description),
                                    otf2::common::metric_type::other, mode, value_type,
                                    otf2::common::base_type::decimal, 0, intern(unit));
@@ -296,7 +296,7 @@ otf2::definition::metric_instance
 Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder, otf2::definition::location scope)
 {
-    auto ref = metric_instances_.size() + metric_classes_.size();
+    auto ref = metric_instance_ref();
     return metric_instances_.emplace(ref, metric_class, recorder, scope);
 }
 
@@ -305,13 +305,13 @@ Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder,
                        otf2::definition::system_tree_node scope)
 {
-    auto ref = metric_instances_.size() + metric_classes_.size();
+    auto ref = metric_instance_ref();
     return metric_instances_.emplace(ref, metric_class, recorder, scope);
 }
 
 otf2::definition::metric_class Trace::metric_class()
 {
-    auto ref = metric_instances_.size() + metric_classes_.size();
+    auto ref = metric_class_ref();
     return metric_classes_.emplace(ref, otf2::common::metric_occurence::async,
                                    otf2::common::recorder_kind::abstract);
 }
@@ -509,7 +509,7 @@ otf2::definition::comm Trace::process_comm(pid_t pid)
 
 otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)
 {
-    auto ref = source_code_locations_.size();
+    auto ref = scl_ref();
     auto ret =
         source_code_locations_.emplace(std::piecewise_construct, std::forward_as_tuple(info),
                                        std::forward_as_tuple(ref, intern(info.file), info.line));
@@ -530,7 +530,7 @@ otf2::definition::region Trace::intern_region(const LineInfo& info)
 
 otf2::definition::string Trace::intern(const std::string& name)
 {
-    auto ref = strings_.size();
+    auto ref = string_ref();
     auto ret = strings_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                                 std::forward_as_tuple(ref, name));
     return ret.first->second;

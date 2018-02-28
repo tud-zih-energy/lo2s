@@ -146,9 +146,21 @@ private:
 
     otf2::definition::string intern(const std::string&);
 
+    otf2::definition::location::reference_type location_ref() const
+    {
+        return locations_.size();
+    }
+
     otf2::definition::location_group::reference_type location_group_ref() const
     {
         return location_groups_process_.size() + location_groups_cpu_.size();
+    }
+
+    otf2::definition::system_tree_node::reference_type system_tree_ref() const
+    {
+        // + for system_tree_root_node_
+        return 1 + system_tree_package_nodes_.size() + system_tree_core_nodes_.size() +
+               system_tree_cpu_nodes_.size();
     }
 
     otf2::definition::region::reference_type region_ref() const
@@ -166,6 +178,32 @@ private:
     otf2::definition::comm::reference_type comm_ref() const
     {
         return process_comms_.size();
+    }
+
+    otf2::definition::metric_member::reference_type metric_member_ref() const
+    {
+        return metric_members_.size();
+    }
+
+    // metric classes and metric instances share a reference space
+    otf2::definition::metric_class::reference_type metric_class_ref() const
+    {
+        return metric_instances_.size() + metric_classes_.size();
+    }
+
+    otf2::definition::metric_instance::reference_type metric_instance_ref() const
+    {
+        return metric_instances_.size() + metric_classes_.size();
+    }
+
+    otf2::definition::source_code_location::reference_type scl_ref() const
+    {
+        return source_code_locations_.size();
+    }
+
+    otf2::definition::string::reference_type string_ref() const
+    {
+        return strings_.size();
     }
 
 private:
