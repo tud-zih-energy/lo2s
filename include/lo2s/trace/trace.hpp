@@ -89,6 +89,8 @@ public:
 
     void process(pid_t pid, pid_t parent, const std::string& name = "");
 
+    void process_update_executable(pid_t pid, const std::string& exe_name);
+
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
     otf2::writer::local& cpu_writer(int cpuid);
     otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
@@ -212,6 +214,8 @@ private:
 
     void attach_process_location_group(const otf2::definition::system_tree_node& parent, pid_t id,
                                        const otf2::definition::string& iname);
+
+    void process_update_executable(pid_t pid, const otf2::definition::string& exe_name);
 
 private:
     std::mutex mutex_;

@@ -237,11 +237,8 @@ void Trace::process(pid_t pid, pid_t parent, const std::string& name)
 
     if (!emplace_result.second) /* emplace failed */
     {
-        // TODO: process already exists process tree; update its name.
-        //
-        // Needed in otf2xx: support setting the name of a system tree
-        // node after construction.
-
+        // process already exists process tree; update its name.
+        process_update_executable(pid, iname);
         return;
     }
 
@@ -257,25 +254,41 @@ void Trace::attach_process_location_group(const otf2::definition::system_tree_no
         std::forward_as_tuple(location_group_ref(), iname,
                               otf2::definition::location_group::location_group_type::process,
                               parent));
-    if (r_lg.second)
+    if (!r_lg.second)
     {
-        auto r_cg = process_comm_groups_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(id),
-            std::forward_as_tuple(group_ref(), iname, otf2::common::paradigm_type::pthread,
-                                  otf2::common::group_flag_type::none));
-        assert(r_cg.second);
-        const auto& group = r_cg.first->second;
-        auto r_c = process_comms_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(id),
-            std::forward_as_tuple(comm_ref(), iname, group, otf2::definition::comm::undefined()));
-        assert(r_c.second);
-        (void)(r_c.second);
+        const auto err = boost::format("failed to attach process location group for pid %d (%s)") %
+                         id % iname.str();
+        throw std::runtime_error(err.str());
     }
-    else
-    {
-        // TODO also fix name of comm groups and comms`
-        r_lg.first->second.name(iname);
-    }
+
+    auto r_cg = process_comm_groups_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(id),
+        std::forward_as_tuple(group_ref(), iname, otf2::common::paradigm_type::pthread,
+                              otf2::common::group_flag_type::none));
+    assert(r_cg.second);
+    const auto& group = r_cg.first->second;
+    auto r_c = process_comms_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(id),
+        std::forward_as_tuple(comm_ref(), iname, group, otf2::definition::comm::undefined()));
+    assert(r_c.second);
+    (void)(r_c.second);
+}
+
+void Trace::process_update_executable(pid_t pid, const otf2::definition::string& exe_name)
+{
+    system_tree_process_nodes_.at(pid).name(exe_name);
+    location_groups_process_.at(pid).name(exe_name);
+
+    // TODO: add setters to otf2xx to also update the names in comms and comm
+    // groups
+
+    // process_comm_groups_.at(pid).name(exe_name);
+    // process_comms_.at(pid).name(exe_name);
+}
+
+void Trace::process_update_executable(pid_t pid, const std::string& exe_name)
+{
+    process_update_executable(pid, intern(exe_name));
 }
 
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)

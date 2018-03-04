@@ -197,6 +197,10 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
             {
                 auto name = get_process_exe(child);
                 Log::info() << "Process " << child << " / " << name << " about to exit";
+
+                // record the executable name used before exit; it may have
+                // changed since first time child was added (e.g. by an exec)
+                trace().process_update_executable(child, name);
             }
             else
             {
