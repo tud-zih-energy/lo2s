@@ -151,7 +151,14 @@ const Config& config()
 }
 void parse_program_options(int argc, const char** argv)
 {
-    po::options_description desc("Allowed options");
+    po::options_description general_options("Options");
+    po::options_description system_wide_options("System-wide monitoring");
+    po::options_description sampling_options("Sampling options");
+    po::options_description kernel_tracepoint_options("Kernel tracepoint options");
+    po::options_description perf_metric_options("perf metric options");
+#ifdef HAVE_X86_ADAPT
+    po::options_description x86_adapt_options("x86_adapt options");
+#endif
 
     lo2s::Config config;
     SwitchCounter verbosity;
@@ -166,66 +173,132 @@ void parse_program_options(int argc, const char** argv)
     std::string requested_clock_name;
 
     // clang-format off
-    desc.add_options()
+    general_options.add_options()
         ("help,h",
-             "produce help message")
-        ("version", "print version information")
-        ("output-trace,o", po::value(&config.trace_path),
-             "output trace directory")
-        ("count,c", po::value(&config.sampling_period)->default_value(11010113),
-             "sampling period (# of events specified by -e)")
-        ("event,e", po::value(&config.sampling_event)->default_value("instructions"),
-             "interrupt source event for sampling")
-        ("all-cpus,a", po::bool_switch(&all_cpus),
-             "System-wide monitoring of all CPUs.")
-        ("call-graph,g", po::bool_switch(&config.enable_cct),
-             "call-graph recording")
-        ("no-ip,n", po::bool_switch(&config.suppress_ip),
-             "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-        ("pid,p", po::value(&config.pid)->default_value(-1),
-             "attach to specific pid")
-        ("quiet,q", po::bool_switch(&config.quiet),
-             "suppress output")
-        ("verbose,v", po::value(&verbosity)->zero_tokens(),
-             "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
-             "number of pages to be used by each internal buffer")
-        ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
-             "time interval between metric and sampling buffer readouts in milliseconds")
-        ("tracepoint,t", po::value(&config.tracepoint_events),
-             "enable global recording of a raw tracepoint event (usually requires root)")
-        ("metric-event,E", po::value(&config.perf_events),
-             "the name of a perf event to measure") // TODO: optionally list available events
-        ("metric-leader", po::value(&config.metric_leader)->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
-             "name of leading perf event")
-        ("metric-count", po::value(&metric_count),
-             "# of events to elapse by metric leader before reading metric buffer")
-        ("metric-frequency", po::value(&metric_frequency),
-             "metric buffer reads per second")
+            "Show this help message.")
+        ("version",
+            "Print version information.")
+        ("output-trace,o",
+            po::value(&config.trace_path)
+                ->value_name("PATH"),
+            "Output trace directory.")
+        ("quiet,q",
+            po::bool_switch(&config.quiet),
+            "Suppress output.")
+        ("verbose,v",
+            po::value(&verbosity)
+                ->zero_tokens(),
+            "Verbose output (specify multiple times to get increasingly more verbose output).")
+        ("mmap-pages,m",
+            po::value(&config.mmap_pages)
+                ->value_name("PAGES")
+                ->default_value(16),
+            "Number of pages to be used by internal buffers.")
         ("clockid,k",
-             po::value(&requested_clock_name)->default_value("monotonic-raw"),
-             "clock used for perf timestamps (see --list-clockids for supported arguments)")
-#ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
-        ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
-             "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
-#endif
-        ("disassemble", po::bool_switch(&disassemble),
-             "enable augmentation of samples with instructions (default if supported)")
-        ("no-disassemble", po::bool_switch(&no_disassemble),
-             "disable augmentation of samples with instructions")
-        ("kernel", po::bool_switch(&kernel),
-             "include events happening in kernel space (default)")
-        ("no-kernel", po::bool_switch(&no_kernel),
-             "exclude events happening in kernel space")
-        ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
-            "list all available clockids")
+            po::value(&requested_clock_name)
+                ->value_name("CLOCKID")
+                ->default_value("monotonic-raw"),
+            "Clock used for perf timestamps (see --list-clockids for supported arguments).")
+        ("list-clockids",
+            po::bool_switch(&list_clockids)
+                ->default_value(false),
+            "List all available clockids.")
         ("list-events",
             po::value(&list_event_category)
-                ->value_name("category")
+                ->value_name("CATEGORY")
                 ->implicit_value("all"),
-            "list available metric and sampling events from a given category")
-        ("command", po::value(&config.command));
+            "List available metric and sampling events from a given category.");
+
+    system_wide_options.add_options()
+        ("all-cpus,a",
+            po::bool_switch(&all_cpus),
+            "System-wide monitoring of all CPUs.");
+
+    sampling_options.add_options()
+        ("command",
+            po::value(&config.command))
+        ("count,c",
+            po::value(&config.sampling_period)
+                ->value_name("N")
+                ->default_value(11010113),
+            "Sampling period (in number of events specified by -e).")
+        ("event,e",
+            po::value(&config.sampling_event)
+                ->value_name("EVENT")
+                ->default_value("instructions"),
+            "Interrupt source event for sampling.")
+        ("call-graph,g",
+            po::bool_switch(&config.enable_cct),
+            "Enable call-graph recording.")
+        ("no-ip,n",
+            po::bool_switch(&config.suppress_ip),
+            "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
+        ("pid,p",
+            po::value(&config.pid)
+                ->value_name("PID")
+                ->default_value(-1),
+            "Attach to process of given PID.")
+        ("readout-interval,i",
+            po::value(&read_interval_ms)
+                ->value_name("MSEC")
+                ->default_value(100),
+            "Time interval between metric and sampling buffer readouts in milliseconds.")
+        ("disassemble",
+            po::bool_switch(&disassemble),
+            "Enable augmentation of samples with instructions (default if supported).")
+        ("no-disassemble",
+            po::bool_switch(&no_disassemble),
+            "Disable augmentation of samples with instructions.")
+        ("kernel",
+            po::bool_switch(&kernel),
+            "Include events happening in kernel space (default).")
+        ("no-kernel",
+            po::bool_switch(&no_kernel),
+            "Exclude events happening in kernel space.");
+
+    kernel_tracepoint_options.add_options()
+        ("tracepoint,t",
+            po::value(&config.tracepoint_events)
+                ->value_name("TRACEPOINT"),
+            "Enable global recording of a raw tracepoint event (usually requires root).");
+
+    perf_metric_options.add_options()
+        ("metric-event,E",
+            po::value(&config.perf_events)
+                ->value_name("EVENT"),
+            "Record metrics for this perf event.")
+        ("metric-leader",
+            po::value(&config.metric_leader)
+                ->value_name("EVENT")
+                ->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
+            "The leading metric event.")
+        ("metric-count",
+            po::value(&metric_count)
+                ->value_name("N"),
+            "Number of metric leader events to elapse before reading metric buffer.")
+        ("metric-frequency",
+            po::value(&metric_frequency)
+                ->value_name("HZ"),
+            "Metric buffer reads per second.");
+
+#ifdef HAVE_X86_ADAPT
+    x86_adapt_options.add_options()
+        ("x86-adapt-cpu-knob,x",
+         po::value(&config.x86_adapt_cpu_knobs),
+         "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
+#endif
     // clang-format on
+
+    po::options_description all_options;
+    all_options.add(general_options)
+        .add(system_wide_options)
+        .add(sampling_options)
+        .add(kernel_tracepoint_options)
+        .add(perf_metric_options)
+#ifdef HAVE_X86_ADAPT
+        .add(x86_adapt_options)
+#endif
+        ;
 
     po::positional_options_description p;
     p.add("command", -1);
@@ -234,20 +307,20 @@ void parse_program_options(int argc, const char** argv)
     try
     {
         po::parsed_options parsed =
-            po::command_line_parser(argc, argv).options(desc).positional(p).run();
+            po::command_line_parser(argc, argv).options(all_options).positional(p).run();
         po::store(parsed, vm);
     }
     catch (const po::error& e)
     {
         std::cerr << e.what() << '\n';
-        print_usage(std::cerr, argv[0], desc);
+        print_usage(std::cerr, argv[0], all_options);
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
 
     if (vm.count("help"))
     {
-        print_usage(std::cout, argv[0], desc);
+        print_usage(std::cout, argv[0], all_options);
         std::exit(EXIT_SUCCESS);
     }
 
@@ -322,7 +395,7 @@ void parse_program_options(int argc, const char** argv)
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
         config.command.empty())
     {
-        print_usage(std::cerr, argv[0], desc);
+        print_usage(std::cerr, argv[0], all_options);
         std::exit(EXIT_FAILURE);
     }
 
