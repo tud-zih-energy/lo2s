@@ -156,9 +156,7 @@ void parse_program_options(int argc, const char** argv)
     po::options_description sampling_options("Sampling options");
     po::options_description kernel_tracepoint_options("Kernel tracepoint options");
     po::options_description perf_metric_options("perf metric options");
-#ifdef HAVE_X86_ADAPT
     po::options_description x86_adapt_options("x86_adapt options");
-#endif
 
     lo2s::Config config;
     SwitchCounter verbosity;
@@ -169,6 +167,7 @@ void parse_program_options(int argc, const char** argv)
     std::string list_event_category;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
+    std::vector<std::string> x86_adapt_cpu_knobs;
 
     std::string requested_clock_name;
 
@@ -281,12 +280,10 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("HZ"),
             "Metric buffer reads per second.");
 
-#ifdef HAVE_X86_ADAPT
     x86_adapt_options.add_options()
         ("x86-adapt-cpu-knob,x",
-         po::value(&config.x86_adapt_cpu_knobs),
+         po::value(&x86_adapt_cpu_knobs),
          "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
-#endif
     // clang-format on
 
     po::options_description all_options;
@@ -295,10 +292,7 @@ void parse_program_options(int argc, const char** argv)
         .add(sampling_options)
         .add(kernel_tracepoint_options)
         .add(perf_metric_options)
-#ifdef HAVE_X86_ADAPT
-        .add(x86_adapt_options)
-#endif
-        ;
+        .add(x86_adapt_options);
 
     po::positional_options_description p;
     p.add("command", -1);
@@ -492,6 +486,16 @@ void parse_program_options(int argc, const char** argv)
     else if (no_kernel)
     {
         config.exclude_kernel = true;
+    }
+
+    if (!x86_adapt_cpu_knobs.empty())
+    {
+#ifdef HAVE_X86_ADAPT
+        config.x86_adapt_cpu_knobs = std::move(x86_adapt_cpu_knobs);
+#else
+        std::cerr << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.";
+        std::exit(EXIT_FAILURE);
+#endif
     }
 
     for (int arg = 0; arg < argc - 1; arg++)
