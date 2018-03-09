@@ -98,9 +98,19 @@ static void list_event_names(std::ostream& os, const std::string& category_name)
         {
             listed_any = true;
             os << "\nList of " << category.description << ":\n\n";
-            for (const auto& event : category.event_list())
+
+            const auto list = category.event_list();
+
+            if (!list.empty())
             {
-                os << "  " << event << '\n';
+                for (const auto& event : list)
+                {
+                    os << "  " << event << '\n';
+                }
+            }
+            else
+            {
+                os << "  (none available)\n";
             }
             os << '\n';
         }
