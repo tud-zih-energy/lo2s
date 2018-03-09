@@ -148,12 +148,36 @@ static inline void print_version(std::ostream& os)
 static inline void print_usage(std::ostream& os, const char* name,
                                const po::options_description& desc)
 {
+    static constexpr char argument_detail[] =
+        R"(
+Arguments to options:
+
+    EVENT       Name of a perf event.  Format is either
+                    <name>
+                for a predefined event or one of
+                    <pmu>/<event>/
+                    <pmu>:<event>
+                for kernel PMU events.  Kernel PMU events can be found at
+                    /sys/bus/event_source/devices/<pmu>/event/<event>.
+
+    TRACEPOINT  Name of a kernel tracepoint event.  Format is either
+                    <group>:<name>
+                or
+                    <group>/<name>.
+                Tracepoint events can be found at
+                    /sys/kernel/debug/tracing/events/<group>/<name>.
+                Accessing tracepoints (even for --list-events=tracepoint)
+                usually requires read/execute permissions on
+                    /sys/kernel/debug,
+                which by default is owned by root:root.
+)";
+
     // clang-format off
     os << "Usage:\n"
           "  " << name << " [options] ./a.out\n"
           "  " << name << " [options] -- ./a.out --option-to-a-out\n"
           "  " << name << " [options] --pid $(pidof some-process)\n"
-          "\n" << desc;
+          "\n" << desc << argument_detail;
     // clang-format on
 }
 
@@ -507,7 +531,8 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_X86_ADAPT
         config.x86_adapt_cpu_knobs = std::move(x86_adapt_cpu_knobs);
 #else
-        std::cerr << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.";
+        std::cerr
+            << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.";
         std::exit(EXIT_FAILURE);
 #endif
     }
