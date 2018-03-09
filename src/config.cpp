@@ -38,7 +38,8 @@
 #include <ctime>   // for CLOCK_* macros
 #include <iomanip> // for std::setw
 
-extern "C" {
+extern "C"
+{
 #include <unistd.h>
 }
 
@@ -151,13 +152,16 @@ static inline void print_usage(std::ostream& os, const char* name,
     static constexpr char argument_detail[] =
         R"(
 Arguments to options:
+    PATH        A filesystem path.  It can be either relative to the
+                current working directory or absolute.
 
     EVENT       Name of a perf event.  Format is either
+                - for a predefined event:
                     <name>
-                for a predefined event or one of
+                - for a kernel PMU event one of:
                     <pmu>/<event>/
                     <pmu>:<event>
-                for kernel PMU events.  Kernel PMU events can be found at
+                  Kernel PMU events can be found at
                     /sys/bus/event_source/devices/<pmu>/event/<event>.
 
     TRACEPOINT  Name of a kernel tracepoint event.  Format is either
@@ -168,8 +172,7 @@ Arguments to options:
                     /sys/kernel/debug/tracing/events/<group>/<name>.
                 Accessing tracepoints (even for --list-events=tracepoint)
                 usually requires read/execute permissions on
-                    /sys/kernel/debug,
-                which by default is owned by root:root.
+                    /sys/kernel/debug
 )";
 
     // clang-format off
@@ -218,7 +221,7 @@ void parse_program_options(int argc, const char** argv)
         ("output-trace,o",
             po::value(&config.trace_path)
                 ->value_name("PATH"),
-            "Output trace directory.")
+            "Output trace directory. If not specified, lo2s_trace_$(date +%Y-%m-%dT%H-%M-%S) will be used.")
         ("quiet,q",
             po::bool_switch(&config.quiet),
             "Suppress output.")
@@ -235,7 +238,7 @@ void parse_program_options(int argc, const char** argv)
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
                 ->default_value("monotonic-raw"),
-            "Clock used for perf timestamps (see --list-clockids for supported arguments).")
+            "Clock used for perf timestamps (see --list-clockids).")
         ("list-clockids",
             po::bool_switch(&list_clockids)
                 ->default_value(false),
@@ -253,7 +256,10 @@ void parse_program_options(int argc, const char** argv)
 
     sampling_options.add_options()
         ("command",
-            po::value(&config.command))
+            po::value(&config.command)
+                ->value_name("CMD")
+        )
+
         ("count,c",
             po::value(&config.sampling_period)
                 ->value_name("N")
@@ -312,11 +318,11 @@ void parse_program_options(int argc, const char** argv)
         ("metric-count",
             po::value(&metric_count)
                 ->value_name("N"),
-            "Number of metric leader events to elapse before reading metric buffer.")
+            "Number of metric leader events to elapse before reading metric buffer. Prefer this setting over --metric-freqency")
         ("metric-frequency",
             po::value(&metric_frequency)
                 ->value_name("HZ"),
-            "Metric buffer reads per second.");
+            "Number of metric buffer reads per second. When given, it will be used to set an approximate value for --metric-count");
 
     x86_adapt_options.add_options()
         ("x86-adapt-cpu-knob,x",
