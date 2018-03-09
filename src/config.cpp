@@ -99,10 +99,11 @@ static void list_event_names(std::ostream& os, const std::string& category_name)
             listed_any = true;
             os << "\nList of " << category.description << ":\n\n";
 
-            const auto list = category.event_list();
+            auto list = category.event_list();
 
             if (!list.empty())
             {
+                std::sort(list.begin(), list.end());
                 for (const auto& event : list)
                 {
                     os << "  " << event << '\n';

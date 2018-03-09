@@ -209,7 +209,7 @@ static void populate_event_map(EventProvider::EventMap& map)
     }
 }
 
-static std::vector<std::string> get_pmu_event_names()
+std::vector<std::string> EventProvider::get_pmu_event_names()
 {
     std::vector<std::string> names;
 
@@ -548,18 +548,7 @@ std::vector<std::string> EventProvider::get_predefined_event_names()
         }
     }
 
-    std::sort(event_names.begin(), event_names.end());
-
     return event_names;
-}
-
-std::vector<std::string> EventProvider::get_pmu_event_names()
-{
-    auto pmu_event_names = lo2s::perf::get_pmu_event_names();
-
-    std::sort(pmu_event_names.begin(), pmu_event_names.end());
-
-    return pmu_event_names;
 }
 }
 }
