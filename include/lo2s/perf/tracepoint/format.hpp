@@ -119,6 +119,8 @@ public:
         throw std::out_of_range("field not found");
     }
 
+    static std::vector<std::string> get_tracepoint_event_names();
+
 private:
     void parse_format_line(const std::string& line);
 

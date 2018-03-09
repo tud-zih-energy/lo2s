@@ -23,6 +23,7 @@
 
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/util.hpp>
@@ -87,6 +88,8 @@ static void list_event_names(std::ostream& os, const std::string& category_name)
     static constexpr event_category CATEGORIES[] = {
         { "predefined", "predefined events", &perf::EventProvider::get_predefined_event_names },
         { "pmu", "Kernel PMU events", &perf::EventProvider::get_pmu_event_names },
+        { "tracepoint", "Kernel tracepoint events",
+          &perf::tracepoint::EventFormat::get_tracepoint_event_names },
     };
 
     bool list_all = category_name == "all";
