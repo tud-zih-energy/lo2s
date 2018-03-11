@@ -109,6 +109,7 @@ static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
 
     os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
 #else
+    (void) os;
     std::cerr << "lo2s was built without support for x86_adapt; cannot read CPU knobs.\n";
     std::exit(EXIT_FAILURE);
 #endif
