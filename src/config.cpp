@@ -180,6 +180,7 @@ Arguments to options:
           "  " << name << " [options] ./a.out\n"
           "  " << name << " [options] -- ./a.out --option-to-a-out\n"
           "  " << name << " [options] --pid $(pidof some-process)\n"
+          "  " << name << " [options] --all-cpus"
           "\n" << desc << argument_detail;
     // clang-format on
 }
