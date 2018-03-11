@@ -213,6 +213,10 @@ void parse_program_options(int argc, const char** argv)
 
     std::string requested_clock_name;
 
+    config.pid = -1; // Default value is set here and not with
+                     // po::typed_value::default_value to hide
+                     // it from usage message.
+
     // clang-format off
     general_options.add_options()
         ("help,h",
@@ -279,8 +283,7 @@ void parse_program_options(int argc, const char** argv)
             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
         ("pid,p",
             po::value(&config.pid)
-                ->value_name("PID")
-                ->default_value(-1),
+                ->value_name("PID"),
             "Attach to process of given PID.")
         ("readout-interval,i",
             po::value(&read_interval_ms)
