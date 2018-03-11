@@ -273,7 +273,7 @@ void parse_program_options(int argc, const char** argv)
             "Interrupt source event for sampling.")
         ("call-graph,g",
             po::bool_switch(&config.enable_cct),
-            "Enable call-graph recording.")
+            "Record call stack of instruction samples.")
         ("no-ip,n",
             po::bool_switch(&config.suppress_ip),
             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
