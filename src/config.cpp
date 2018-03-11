@@ -21,6 +21,7 @@
 
 #include <lo2s/config.hpp>
 
+#include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -38,8 +39,7 @@
 #include <ctime>   // for CLOCK_* macros
 #include <iomanip> // for std::setw
 
-extern "C"
-{
+extern "C" {
 #include <unistd.h>
 }
 
@@ -75,65 +75,11 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
-static void list_event_names(std::ostream& os, const std::string& category_name)
+static inline void list_arguments_sorted(std::ostream& os, const char* description,
+                                         std::vector<std::string> items)
 {
-    struct event_category
-    {
-        using listing_function_t = std::vector<std::string> (*)();
-
-        const char* name;
-        const char* description;
-        listing_function_t event_list;
-    };
-
-    static constexpr event_category CATEGORIES[] = {
-        { "predefined", "predefined events", &perf::EventProvider::get_predefined_event_names },
-        { "pmu", "Kernel PMU events", &perf::EventProvider::get_pmu_event_names },
-        { "tracepoint", "Kernel tracepoint events",
-          &perf::tracepoint::EventFormat::get_tracepoint_event_names },
-    };
-
-    bool list_all = category_name == "all";
-    bool listed_any = false;
-
-    for (const auto category : CATEGORIES)
-    {
-        if (list_all || category_name == category.name)
-        {
-            listed_any = true;
-            os << "\nList of " << category.description << ":\n\n";
-
-            auto list = category.event_list();
-
-            if (!list.empty())
-            {
-                std::sort(list.begin(), list.end());
-                for (const auto& event : list)
-                {
-                    os << "  " << event << '\n';
-                }
-            }
-            else
-            {
-                os << "  (none available)\n";
-            }
-            os << '\n';
-        }
-    }
-
-    if (!listed_any)
-    {
-        std::cerr << "Cannot list events from unknown category \"" << category_name
-                  << "\"!\n"
-                     "\n"
-                     "Known event categories are:\n\n";
-        for (const auto category : CATEGORIES)
-        {
-            std::cerr << "  " << std::setw(20) << std::left << category.name << "("
-                      << category.description << ")\n";
-        }
-        std::cerr << '\n';
-    }
+    std::sort(items.begin(), items.end());
+    os << io::make_argument_list(description, items.begin(), items.end());
 }
 
 static inline void print_version(std::ostream& os)
@@ -170,7 +116,7 @@ Arguments to options:
                     <group>/<name>.
                 Tracepoint events can be found at
                     /sys/kernel/debug/tracing/events/<group>/<name>.
-                Accessing tracepoints (even for --list-events=tracepoint)
+                Accessing tracepoints (even for --list-tracepoints)
                 usually requires read/execute permissions on
                     /sys/kernel/debug
 )";
@@ -205,8 +151,7 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
-    bool list_clockids;
-    std::string list_event_category;
+    bool list_clockids, list_events, list_tracepoints;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
     std::vector<std::string> x86_adapt_cpu_knobs;
@@ -249,10 +194,13 @@ void parse_program_options(int argc, const char** argv)
                 ->default_value(false),
             "List all available clockids.")
         ("list-events",
-            po::value(&list_event_category)
-                ->value_name("CATEGORY")
-                ->implicit_value("all"),
-            "List available metric and sampling events from a given category.");
+            po::bool_switch(&list_events)
+                ->default_value(false),
+            "List available metric and sampling events.")
+        ("list-tracepoints",
+            po::bool_switch(&list_tracepoints)
+                ->default_value(false),
+            "List available kernel tracepoint events.");
 
     system_wide_options.add_options()
         ("all-cpus,a",
@@ -410,17 +358,24 @@ void parse_program_options(int argc, const char** argv)
     {
         if (list_clockids)
         {
-            std::cout << "Available clockids:\n";
-            for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
-            {
-                std::cout << " * " << clock.name << '\n';
-            }
+            std::cout << io::make_argument_list("available clockids",
+                                                time::ClockProvider::get_descriptions());
             std::exit(EXIT_SUCCESS);
         }
 
-        if (vm.count("list-events"))
+        if (list_events)
         {
-            list_event_names(std::cout, list_event_category);
+            list_arguments_sorted(std::cout, "predefined events",
+                                  perf::EventProvider::get_predefined_event_names());
+            list_arguments_sorted(std::cout, "Kernel PMU events",
+                                  perf::EventProvider::get_pmu_event_names());
+            std::exit(EXIT_SUCCESS);
+        }
+
+        if (list_tracepoints)
+        {
+            list_arguments_sorted(std::cout, "Kernel tracepoint events",
+                                  perf::tracepoint::EventFormat::get_tracepoint_event_names());
             std::exit(EXIT_SUCCESS);
         }
     }
