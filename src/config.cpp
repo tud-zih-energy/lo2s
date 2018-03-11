@@ -32,6 +32,11 @@
 
 #include <nitro/lang/optional.hpp>
 
+#ifdef HAVE_X86_ADAPT
+#include <x86_adapt_cxx/exception.hpp>
+#include <x86_adapt_cxx/x86_adapt.hpp>
+#endif
+
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
@@ -80,6 +85,33 @@ static inline void list_arguments_sorted(std::ostream& os, const char* descripti
 {
     std::sort(items.begin(), items.end());
     os << io::make_argument_list(description, items.begin(), items.end());
+}
+
+static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
+{
+#ifdef HAVE_X86_ADAPT
+    std::vector<std::string> knobs;
+    try
+    {
+        ::x86_adapt::x86_adapt x86_adapt;
+        auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
+
+        knobs.reserve(cpu_cfg_items.size());
+        for (const auto& item : cpu_cfg_items)
+        {
+            knobs.emplace_back(item.name());
+        }
+    }
+    catch (const ::x86_adapt::x86_adapt_error& e)
+    {
+        Log::debug() << "Failed to access x86_adapt CPU knobs! (error: " << e.what() << ")";
+    }
+
+    os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
+#else
+    std::cerr << "lo2s was built without support for x86_adapt; cannot read CPU knobs.\n";
+    std::exit(EXIT_FAILURE);
+#endif
 }
 
 static inline void print_version(std::ostream& os)
@@ -151,7 +183,7 @@ void parse_program_options(int argc, const char** argv)
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
-    bool list_clockids, list_events, list_tracepoints;
+    bool list_clockids, list_events, list_tracepoints, list_knobs;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
     std::vector<std::string> x86_adapt_cpu_knobs;
@@ -278,8 +310,13 @@ void parse_program_options(int argc, const char** argv)
 
     x86_adapt_options.add_options()
         ("x86-adapt-cpu-knob,x",
-         po::value(&x86_adapt_cpu_knobs),
-         "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
+            po::value(&x86_adapt_cpu_knobs)
+                ->value_name("KNOB"),
+            "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
+        ("list-knobs",
+            po::bool_switch(&list_knobs)
+                ->default_value(false),
+            "List available x86_adapt CPU knobs.");
     // clang-format on
 
     po::options_description all_options;
@@ -376,6 +413,12 @@ void parse_program_options(int argc, const char** argv)
         {
             list_arguments_sorted(std::cout, "Kernel tracepoint events",
                                   perf::tracepoint::EventFormat::get_tracepoint_event_names());
+            std::exit(EXIT_SUCCESS);
+        }
+
+        if (list_knobs)
+        {
+            list_x86_adapt_cpu_knobs(std::cout);
             std::exit(EXIT_SUCCESS);
         }
     }
@@ -497,7 +540,7 @@ void parse_program_options(int argc, const char** argv)
         config.x86_adapt_cpu_knobs = std::move(x86_adapt_cpu_knobs);
 #else
         std::cerr
-            << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.";
+            << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.\n";
         std::exit(EXIT_FAILURE);
 #endif
     }
