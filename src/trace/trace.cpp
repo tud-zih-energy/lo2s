@@ -55,7 +55,12 @@ constexpr pid_t Trace::METRIC_PID;
 
 std::string get_trace_name(std::string prefix = "")
 {
-    if (prefix.length() == 0)
+    if (prefix.size() == 0)
+    {
+        prefix = nitro::env::get("LO2S_OUTPUT_TRACE");
+    }
+
+    if (prefix.size() == 0)
     {
         prefix = "lo2s_trace_{DATE}";
     }
