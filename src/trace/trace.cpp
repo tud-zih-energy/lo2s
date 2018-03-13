@@ -32,12 +32,15 @@
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
 
+#include <nitro/env/get.hpp>
 #include <nitro/env/hostname.hpp>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/format.hpp>
 
 #include <map>
 #include <mutex>
+#include <regex>
 #include <stdexcept>
 #include <tuple>
 
@@ -50,29 +53,39 @@ namespace trace
 
 constexpr pid_t Trace::METRIC_PID;
 
-std::string get_trace_name(std::string prefix = "", bool append_time = false)
+std::string get_trace_name(std::string prefix = "")
 {
     if (prefix.length() == 0)
     {
-        prefix = "lo2s_trace";
-        append_time = true;
+        prefix = "lo2s_trace_{DATE}";
     }
-    if (append_time)
+
+    boost::replace_all(prefix, "{DATE}", get_datetime());
+    boost::replace_all(prefix, "{HOSTNAME}", nitro::env::hostname());
+
+    auto result = prefix;
+
+    std::regex env_re("\\{ENV=([^}]*)\\}");
+    auto env_begin = std::sregex_iterator(prefix.begin(), prefix.end(), env_re);
+    auto env_end = std::sregex_iterator();
+
+    for (std::sregex_iterator it = env_begin; it != env_end; ++it)
     {
-        prefix += "_" + get_datetime();
+        boost::replace_all(result, it->str(), nitro::env::get((*it)[1]));
     }
-    Log::info() << "Using trace directory: " << prefix;
-    return prefix;
+
+    return result;
 }
 
 Trace::Trace()
-: archive_(get_trace_name(config().trace_path), "traces"),
+: trace_name_(get_trace_name(config().trace_path)), archive_(trace_name_, "traces"),
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, config().sampling_period)
 {
-    summary().set_trace_dir(get_trace_name(config().trace_path));
+    Log::info() << "Using trace directory: " << trace_name_;
+    summary().set_trace_dir(trace_name_);
 
     archive_.set_creator(std::string("lo2s - ") + lo2s::version());
     archive_.set_description(config().command_line);

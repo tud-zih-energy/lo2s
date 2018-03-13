@@ -174,6 +174,8 @@ private:
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;
 
+    std::string trace_name_;
+
     otf2::writer::archive archive_;
 
     std::map<std::string, otf2::definition::string> strings_;
@@ -209,5 +211,5 @@ private:
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::container<otf2::definition::metric_instance> metric_instances_;
 };
-}
-}
+} // namespace trace
+} // namespace lo2s
