@@ -24,6 +24,7 @@
 
 #include <lo2s/trace/trace.hpp>
 
+#include <nitro/dl/dl.hpp>
 #include <nitro/env/get.hpp>
 
 #include <algorithm>
@@ -104,6 +105,11 @@ Metrics::Metrics(trace::Trace& trace) : trace_(trace)
         {
             metric_plugins_.emplace_back(std::make_unique<Plugin>(
                 plugin_name_options.first, plugin_name_options.second, trace_));
+        }
+        catch (nitro::dl::exception& e)
+        {
+            Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what()
+                         << " (" << e.dlerror() << ")";
         }
         catch (std::exception& e)
         {
