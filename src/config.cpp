@@ -143,15 +143,30 @@ Arguments to options:
                   Kernel PMU events can be found at
                     /sys/bus/event_source/devices/<pmu>/event/<event>.
 
+                To list all available event names, use --list-events.
+
     TRACEPOINT  Name of a kernel tracepoint event.  Format is either
                     <group>:<name>
                 or
                     <group>/<name>.
                 Tracepoint events can be found at
                     /sys/kernel/debug/tracing/events/<group>/<name>.
-                Accessing tracepoints (even for --list-tracepoints)
-                usually requires read/execute permissions on
-                    /sys/kernel/debug
+
+                Use --list-tracepoints to get the names of available
+                tracepoints events.
+
+                NOTE:  Accessing tracepoint  events usually requires
+                read+execute permissions on /sys/kernel/debug.
+
+    CLOCKID     Name of a system clock.  To show a list of available
+                clock names, use --list-clockids.
+
+                NOTE: Clock names are determined at compile time and
+                might not be available when running on a system that
+                is not the build system.
+
+    KNOB        Name of a x86_adapt CPU configuration item.  To show
+                a list of available knobs, use --list-knobs.
 )";
 
     // clang-format off
@@ -221,7 +236,7 @@ void parse_program_options(int argc, const char** argv)
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
                 ->default_value("monotonic-raw"),
-            "Clock used for perf timestamps (see --list-clockids).")
+            "Reference clock used as timestamp source.")
         ("list-clockids",
             po::bool_switch(&list_clockids)
                 ->default_value(false),
@@ -233,7 +248,11 @@ void parse_program_options(int argc, const char** argv)
         ("list-tracepoints",
             po::bool_switch(&list_tracepoints)
                 ->default_value(false),
-            "List available kernel tracepoint events.");
+            "List available kernel tracepoint events.")
+        ("list-knobs",
+            po::bool_switch(&list_knobs)
+                ->default_value(false),
+            "List available x86_adapt CPU knobs.");
 
     system_wide_options.add_options()
         ("all-cpus,a",
@@ -313,11 +332,7 @@ void parse_program_options(int argc, const char** argv)
         ("x86-adapt-cpu-knob,x",
             po::value(&x86_adapt_cpu_knobs)
                 ->value_name("KNOB"),
-            "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
-        ("list-knobs",
-            po::bool_switch(&list_knobs)
-                ->default_value(false),
-            "List available x86_adapt CPU knobs.");
+            "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
     // clang-format on
 
     po::options_description all_options;
