@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -20,12 +20,34 @@
  */
 
 #pragma once
+
+#include <lo2s/process_map/process_map.hpp>
 #include <lo2s/monitor/dummy_monitor.hpp>
+#include <string>
+
+extern "C" {
+#include <signal.h>
+}
 
 namespace lo2s
 {
-namespace monitor
+class ProcessController
 {
-void process_monitor_main(monitor::DummyMonitor &monitor);
-}
+public:
+    ProcessController(pid_t child, const std::string& name, bool spawn, monitor::DummyMonitor &monitor);
+
+    ~ProcessController();
+
+    void run();
+
+private:
+    void handle_ptrace_event(pid_t child, int event);
+
+    void handle_signal(pid_t child, int status);
+
+    const pid_t first_child_;
+    sighandler_t default_signal_handler;
+    monitor::DummyMonitor &monitor_;
+    std::size_t num_wakeups_;
+};
 }

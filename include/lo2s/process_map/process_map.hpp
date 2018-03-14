@@ -21,12 +21,10 @@
 
 #pragma once
 
-#include <mutex>
-#include <unordered_map>
+#include <lo2s/process_map/process.hpp>
+#include <lo2s/process_map/thread.hpp>
 
-#include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
-#include <lo2s/process_info.hpp>
+#include <unordered_map>
 
 extern "C" {
 #include <sys/types.h>
@@ -35,32 +33,22 @@ extern "C" {
 namespace lo2s
 {
 
-/**
- * This class manages the ThreadMonitors for each thread
- * It is interfaced only by the main Monitor, hence no locks are needed
- */
-class ThreadMap
+class ProcessMap
 {
 public:
-    ThreadMap(monitor::ProcessMonitor& parent_monitor);
+    Process &get_process(pid_t pid);
+    Thread &get_thread(pid_t tid);
 
-    ~ThreadMap();
+    void insert(pid_t pid, pid_t tid);
+    void erase(pid_t tid);
 
+    friend ProcessMap &process_map();
+
+    std::unordered_map<pid_t, Process> processes;
+    std::unordered_map<pid_t, Thread> threads;
 private:
-    ProcessInfo& insert_process(pid_t pid, bool enable_on_exec);
-
-public:
-    // Insert a thread and if needed it's process
-    void insert(pid_t pid, pid_t tid, bool enable_on_exec);
-
-    void stop(pid_t tid);
-    void stop();
-    pid_t pid(pid_t tid) const;
-    bool is_process(pid_t tid) const;
-
-private:
-    std::unordered_map<pid_t, ProcessInfo> processes_;
-    std::unordered_map<pid_t, monitor::ThreadMonitor> threads_;
-    monitor::ProcessMonitor& parent_monitor_;
+    ProcessMap();
 };
+
+ProcessMap &process_map();
 }

@@ -19,41 +19,40 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/process_map/process_map.hpp>
+#include <lo2s/process_map/process.hpp>
+#include <lo2s/process_map/thread.hpp>
 
 #include <lo2s/monitor/main_monitor.hpp>
-
-#include <lo2s/thread_map.hpp>
+#include <lo2s/monitor/dummy_monitor.hpp>
 
 #include <string>
 
 extern "C" {
-#include <signal.h>
+#include <sys/types.h>
 }
 
 namespace lo2s
 {
 namespace monitor
 {
-class ProcessMonitor : public MainMonitor
+
+class ProcessMonitor : public DummyMonitor, public MainMonitor
 {
 public:
-    ProcessMonitor(pid_t child, const std::string& name, bool spawn);
-
+    ProcessMonitor();
     ~ProcessMonitor();
 
-    void run() override;
+    void insert_process(pid_t pid, std::string proc_name) override;
+    void insert_first_process(pid_t pid, std::string proc_name,
+            bool spawn) override;
+    void insert_thread(pid_t pid, pid_t tid) override;
 
-private:
-    void handle_ptrace_event(pid_t child, int event);
+    void exit_process(pid_t pid, std::string name) override;
+    void exit_thread(pid_t pid, pid_t tid) override;
 
-    void handle_signal(pid_t child, int status);
-
-    const pid_t first_child_;
-    ThreadMap threads_;
-    sighandler_t default_signal_handler;
-
-    std::size_t num_wakeups_;
+    //MainMonitor has this function as purely virtual so we ought to define it
+    void run() override{}
 };
 }
 }

@@ -4,6 +4,9 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
+#include <lo2s/monitor/process_monitor_main.hpp>
+#include <lo2s/monitor/dummy_monitor.hpp>
+
 #include <csignal>
 
 namespace lo2s
@@ -27,16 +30,18 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 void CpuSetMonitor::run()
 {
     sigset_t ss;
-    sigemptyset(&ss);
-    sigaddset(&ss, SIGINT);
-
-    auto ret = pthread_sigmask(SIG_BLOCK, &ss, NULL);
-    if (ret)
+    if(config().command.empty() && config().pid == -1)
     {
-        Log::error() << "Failed to set pthread_sigmask: " << ret;
-        throw std::runtime_error("Failed to set pthread_sigmask");
-    }
+        sigemptyset(&ss);
+        sigaddset(&ss, SIGINT);
 
+        auto ret = pthread_sigmask(SIG_BLOCK, &ss, NULL);
+        if (ret)
+        {
+            Log::error() << "Failed to set pthread_sigmask: " << ret;
+            throw std::runtime_error("Failed to set pthread_sigmask");
+        }
+    }
     for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.start();
@@ -44,11 +49,29 @@ void CpuSetMonitor::run()
 
     trace_.register_tids(read_all_tid_exe());
 
-    int sig;
-    ret = sigwait(&ss, &sig);
-    if (ret)
+    if(config().command.empty() && config().pid == -1)
     {
-        throw make_system_error();
+        int sig;
+        auto ret = sigwait(&ss, &sig);
+        if (ret)
+        {
+            throw make_system_error();
+        }
+    }
+    else
+    {
+        try
+        {
+            DummyMonitor monitor;
+            process_monitor_main(monitor);
+        }
+        catch(std::system_error &e)
+        {
+            if(e.code())
+            {
+                throw e;
+            }
+        }
     }
 
     trace_.register_tids(read_all_tid_exe());

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -20,12 +20,25 @@
  */
 
 #pragma once
-#include <lo2s/monitor/dummy_monitor.hpp>
+
+#include <lo2s/process_map/thread.hpp>
+#include <lo2s/process_info.hpp>
+
+#include <unordered_map>
+
+extern "C" {
+#include <sys/types.h>
+}
 
 namespace lo2s
 {
-namespace monitor
+
+class Process
 {
-void process_monitor_main(monitor::DummyMonitor &monitor);
-}
+public:
+    Process()
+    : info(nullptr){}
+
+    ProcessInfo *info;
+};
 }

@@ -23,6 +23,8 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 
+#include <lo2s/process_controller.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
@@ -81,7 +83,7 @@ static void run_command(const std::vector<std::string>& command_and_args)
     exit(errno);
 }
 
-void process_monitor_main()
+void process_monitor_main(DummyMonitor &monitor)
 {
 
     auto pid = config().pid;
@@ -122,9 +124,9 @@ void process_monitor_main()
         {
             proc_name = get_process_exe(pid);
         }
-        monitor::ProcessMonitor monitor(pid, proc_name, spawn);
 
-        monitor.run();
+        ProcessController controller(pid, proc_name, spawn, monitor);
+        controller.run();
     }
 }
 }

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -18,14 +18,18 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #pragma once
-#include <lo2s/monitor/dummy_monitor.hpp>
+#include <lo2s/monitor/thread_monitor.hpp>
 
 namespace lo2s
 {
-namespace monitor
+class Thread
 {
-void process_monitor_main(monitor::DummyMonitor &monitor);
-}
+public:
+    Thread(pid_t parent_pid)
+    : monitor(nullptr), parent_pid(parent_pid){}
+
+    monitor::ThreadMonitor *monitor;
+    pid_t parent_pid;
+};
 }

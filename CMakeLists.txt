@@ -127,6 +127,10 @@ set(SOURCE_FILES
     src/monitor/thread_monitor.cpp
     src/monitor/threaded_monitor.cpp
 
+    src/process_map/process_map.cpp
+
+    src/process_controller.cpp
+
     src/perf/event_collection.cpp
     src/perf/event_provider.cpp
     src/perf/counter/writer.cpp
@@ -140,7 +144,7 @@ set(SOURCE_FILES
 
     src/trace/counters.cpp src/trace/trace.cpp
 
-    src/config.cpp src/main.cpp src/monitor/process_monitor.cpp src/thread_map.cpp
+    src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
     src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
     src/mmap.cpp
