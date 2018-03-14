@@ -80,7 +80,7 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
-static inline void list_arguments_sorted(std::ostream& os, const char* description,
+static inline void list_arguments_sorted(std::ostream& os, const std::string& description,
                                          std::vector<std::string> items)
 {
     std::sort(items.begin(), items.end());
@@ -109,7 +109,7 @@ static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
 
     os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
 #else
-    (void) os;
+    (void)os;
     std::cerr << "lo2s was built without support for x86_adapt; cannot read CPU knobs.\n";
     std::exit(EXIT_FAILURE);
 #endif
@@ -396,8 +396,9 @@ void parse_program_options(int argc, const char** argv)
     {
         if (list_clockids)
         {
-            std::cout << io::make_argument_list("available clockids",
-                                                time::ClockProvider::get_descriptions());
+            auto& clockids = time::ClockProvider::get_descriptions();
+            std::cout << io::make_argument_list("available clockids", std::begin(clockids),
+                                                std::end(clockids));
             std::exit(EXIT_SUCCESS);
         }
 

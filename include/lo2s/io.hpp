@@ -31,6 +31,7 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 
 #include <lo2s/time/time.hpp>
 
@@ -61,23 +62,19 @@ struct ArgumentList
      * \param first         iterator pointing to first item to print
      * \param last          iterator pointing past the last item to print
      * */
-    constexpr ArgumentList(const char* description, InputIterator first, InputIterator last)
+    constexpr ArgumentList(const std::string& description, InputIterator first, InputIterator last)
     : description_(description), first_(first), last_(last)
     {
     }
 
     template <class _InputIt>
-    friend ArgumentList<InputIterator> make_argument_list(const char*, _InputIt, _InputIt);
-
-    template <class T, std::size_t N>
-    friend ArgumentList<InputIterator> make_argument_list(const char* description,
-                                                          const T (&array)[N]);
+    friend ArgumentList<InputIterator> make_argument_list(const std::string&, _InputIt, _InputIt);
 
     template <class _InputIt>
     friend std::ostream& operator<<(std::ostream&, const ArgumentList<_InputIt>&);
 
 private:
-    const char* description_;
+    std::string description_;
     InputIterator first_, last_;
 };
 
@@ -86,19 +83,10 @@ private:
  *          of the arguments
  */
 template <class InputIterator>
-inline constexpr auto make_argument_list(const char* description, InputIterator first,
+inline constexpr auto make_argument_list(const std::string& description, InputIterator first,
                                          InputIterator last)
 {
     return ArgumentList<InputIterator>{ description, first, last };
-}
-
-/**
- * \brief Creates ArgumentList object from a fixed-size array of elements
- */
-template <class T, std::size_t N>
-inline constexpr auto make_argument_list(const char* description, const T (&array)[N])
-{
-    return ArgumentList<const T*>{ description, array, array + N };
 }
 
 template <class InputIterator>
