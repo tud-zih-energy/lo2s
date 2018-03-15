@@ -131,8 +131,23 @@ static inline void print_usage(std::ostream& os, const char* name,
     static constexpr char argument_detail[] =
         R"(
 Arguments to options:
-    PATH        A filesystem path.  It can be either relative to the
-                current working directory or absolute.
+    PATH        A filesystem path.  If the pathname given in PATH is
+                relative, then  it is  interpreted  relative  to the
+                current working  directory of  lo2s, otherwise it is
+                interpreted as an absolute path.
+
+                NOTE: PATH arguments given to --output-trace support
+                simple variable substitution, where any occurence of
+                {<var>} will be replaced before being interpreted.
+
+                For substitution, <var> is one of the following:
+                - DATE:       current date (format %Y-%m-%dT%H-%M-%S)
+                - HOSTNAME:   current system host name
+                - ENV=<VAR>:  contents of environment variable <VAR>
+
+                Example:
+                    $ FOO=bar lo2s -o lo2s_{ENV=FOO}_{HOSTNAME} ...
+                    > Using trace directory: lo2s_bar_HAL-9000
 
     EVENT       Name of a perf event.  Format is either
                 - for a predefined event:
@@ -219,7 +234,7 @@ void parse_program_options(int argc, const char** argv)
         ("output-trace,o",
             po::value(&config.trace_path)
                 ->value_name("PATH"),
-            "Output trace directory. If not specified, lo2s_trace_$(date +%Y-%m-%dT%H-%M-%S) will be used.")
+            "Output trace directory. Defaults to lo2s_trace_{DATE} if not specified.")
         ("quiet,q",
             po::bool_switch(&config.quiet),
             "Suppress output.")
