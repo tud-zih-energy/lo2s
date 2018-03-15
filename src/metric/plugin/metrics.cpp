@@ -24,6 +24,7 @@
 
 #include <lo2s/trace/trace.hpp>
 
+#include <nitro/dl/dl.hpp>
 #include <nitro/env/get.hpp>
 
 #include <algorithm>
@@ -64,18 +65,29 @@ static auto upper_case(std::string input)
     return input;
 }
 
+auto read_env(const std::string& name)
+{
+    try
+    {
+        return nitro::env::get(std::string("LO2S_") + name, nitro::env::no_default);
+    }
+    catch (std::exception& e)
+    {
+        return nitro::env::get(std::string("SCOREP_") + name);
+    }
+}
+
 static auto read_env_variables()
 {
     std::vector<std::pair<std::string, std::vector<std::string>>> v;
 
-    for (const auto& plugin : explode(nitro::env::get("SCOREP_METRIC_PLUGINS")))
+    for (const auto& plugin : explode(read_env("METRIC_PLUGINS")))
     {
-        auto events = nitro::env::get(std::string("SCOREP_METRIC_") + upper_case(plugin));
+        auto events = read_env(std::string("METRIC_") + upper_case(plugin));
 
         if (events.empty())
         {
-            events =
-                nitro::env::get(std::string("SCOREP_METRIC_") + upper_case(plugin) + "_PLUGIN");
+            events = read_env(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
         }
 
         v.push_back({ plugin, explode(events) });
@@ -93,6 +105,11 @@ Metrics::Metrics(trace::Trace& trace) : trace_(trace)
         {
             metric_plugins_.emplace_back(std::make_unique<Plugin>(
                 plugin_name_options.first, plugin_name_options.second, trace_));
+        }
+        catch (nitro::dl::exception& e)
+        {
+            Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what()
+                         << " (" << e.dlerror() << ")";
         }
         catch (std::exception& e)
         {
@@ -126,6 +143,6 @@ Metrics::~Metrics()
         (*pi)->fetch_data(trace_.record_from(), trace_.record_to());
     }
 }
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s

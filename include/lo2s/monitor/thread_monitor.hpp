@@ -2,8 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
- *    Technische Universitaet Dresden, Germany
+ * Copyright (c) 2016-2018, Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +20,8 @@
 
 #pragma once
 
-#include <lo2s/monitor/interval_monitor.hpp>
 #include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/interval_monitor.hpp>
 
 #include <lo2s/perf/counter/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
@@ -34,7 +33,8 @@
 
 #include <cstddef>
 
-extern "C" {
+extern "C"
+{
 #include <sched.h>
 #include <unistd.h>
 }
@@ -75,8 +75,9 @@ public:
     void finalize_thread() override;
     void monitor() override;
 
-    std::string group() const override {
-        return "lo2s::CpuSwitchMonitor";
+    std::string group() const override
+    {
+        return "lo2s::ThreadMonitor";
     }
 
 private:
@@ -89,5 +90,5 @@ private:
     perf::sample::Writer sample_writer_;
     perf::counter::Writer counter_writer_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s
