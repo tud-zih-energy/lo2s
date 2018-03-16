@@ -96,7 +96,7 @@ void Summary::show()
 
     boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
-    trace_size = std::accumulate(it, end, 0,
+    trace_size = std::accumulate(it, end, static_cast<size_t>(0),
                 [](std::size_t sum, boost::filesystem::directory_entry& entry)
                 {
                     if (!boost::filesystem::is_directory(entry))
