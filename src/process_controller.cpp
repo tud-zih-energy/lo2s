@@ -196,7 +196,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             {
                 Log::info() << "Thread " << child << " in process " << pid << " / "
                             << get_process_exe(pid) << " is about to exit";
-                monitor_.exit_thread(pid, child);
+                monitor_.exit_thread(child);
             }
             process_map().erase(child);
         }

@@ -55,8 +55,6 @@ public:
         return trace_;
     }
 
-    virtual void run() = 0;
-
     otf2::definition::metric_class counters_metric_class() const
     {
         return counters_metric_class_;

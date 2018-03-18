@@ -69,10 +69,10 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid)
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
 {
     trace_.process(pid, name);
-    exit_thread(pid, pid);
+    exit_thread(pid);
 }
 
-void ProcessMonitor::exit_thread(pid_t pid, pid_t tid)
+void ProcessMonitor::exit_thread(pid_t tid)
 {
     if(process_map().get_thread(tid).monitor != nullptr)
     {

@@ -40,13 +40,13 @@ class DummyMonitor
 public:
     DummyMonitor() {}
 
-    virtual void insert_process(pid_t pid, std::string proc_name) {}
-    virtual void insert_first_process(pid_t pid, std::string proc_name,
-            bool spawn) {}
-    virtual void insert_thread(pid_t pid, pid_t tid) {}
+    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/) {}
+    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/,
+            bool /*spawn*/) {}
+    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/) {}
 
-    virtual void exit_process(pid_t pid, std::string name) {}
-    virtual void exit_thread(pid_t pid, pid_t tid) {}
+    virtual void exit_process(pid_t /*pid*/, std::string /*name*/) {}
+    virtual void exit_thread(pid_t /*tid*/) {}
 };
 }
 }

@@ -49,10 +49,7 @@ public:
     void insert_thread(pid_t pid, pid_t tid) override;
 
     void exit_process(pid_t pid, std::string name) override;
-    void exit_thread(pid_t pid, pid_t tid) override;
-
-    //MainMonitor has this function as purely virtual so we ought to define it
-    void run() override{}
+    void exit_thread(pid_t tid) override;
 };
 }
 }
