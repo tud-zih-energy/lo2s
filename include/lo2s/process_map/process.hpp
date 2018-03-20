@@ -25,6 +25,7 @@
 #include <lo2s/process_info.hpp>
 
 #include <unordered_map>
+#include <memory>
 
 extern "C" {
 #include <sys/types.h>
@@ -36,9 +37,8 @@ namespace lo2s
 class Process
 {
 public:
-    Process()
-    : info(nullptr){}
+    Process(){}
 
-    ProcessInfo *info;
+    std::unique_ptr<ProcessInfo> info;
 };
 }

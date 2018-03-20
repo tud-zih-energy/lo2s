@@ -26,6 +26,9 @@
 #include <lo2s/process_map/process_map.hpp>
 #include <lo2s/process_map/thread.hpp>
 
+#include <memory>
+
+
 namespace lo2s
 {
 namespace monitor
@@ -43,9 +46,11 @@ void ProcessMonitor::insert_first_process(pid_t pid, std::string proc_name, bool
     trace_.process(pid, proc_name);
 
     Process &process = process_map().get_process(pid);
-    process.info =  new ProcessInfo(pid, spawn);
-
-    process_map().get_thread(pid).monitor = new ThreadMonitor(pid, pid, *this, *process.info, spawn);
+    if(process.info == nullptr)
+    {
+        process.info =  std::unique_ptr<ProcessInfo>(new ProcessInfo(pid, spawn));
+    }
+    process_map().get_thread(pid).monitor = std::unique_ptr<ThreadMonitor>(new ThreadMonitor(pid, pid, *this, *process.info, spawn));
 }
 
 void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
@@ -57,13 +62,12 @@ void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
 void ProcessMonitor::insert_thread(pid_t pid, pid_t tid)
 {
     Process &process = process_map().get_process(pid);
-
     if(process.info == nullptr)
     {
-        process.info = new ProcessInfo(pid, false);
+        process.info = std::unique_ptr<ProcessInfo>(new ProcessInfo(pid, false));
     }
-    process_map().get_thread(tid).monitor = new ThreadMonitor(pid, tid,
-            *this, *process.info, false);
+    process_map().get_thread(tid).monitor = std::unique_ptr<ThreadMonitor>(new ThreadMonitor(pid, tid,
+            *this, *process.info, false));
 }
 
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
@@ -77,7 +81,6 @@ void ProcessMonitor::exit_thread(pid_t tid)
     if(process_map().get_thread(tid).monitor != nullptr)
     {
         process_map().get_thread(tid).monitor->stop();
-        delete process_map().get_thread(tid).monitor;
     }
 }
 
@@ -88,7 +91,6 @@ ProcessMonitor::~ProcessMonitor()
         if(thread.second.monitor != nullptr)
         {
             thread.second.monitor->stop();
-            delete thread.second.monitor;
         }
     }
 }

@@ -27,9 +27,9 @@ class Thread
 {
 public:
     Thread(pid_t parent_pid)
-    : monitor(nullptr), parent_pid(parent_pid){}
+    : parent_pid(parent_pid){}
 
-    monitor::ThreadMonitor *monitor;
+    std::unique_ptr<monitor::ThreadMonitor> monitor;
     pid_t parent_pid;
 };
 }

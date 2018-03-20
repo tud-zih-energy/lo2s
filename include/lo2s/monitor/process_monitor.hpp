@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#pragma once
 #include <lo2s/process_map/process_map.hpp>
 #include <lo2s/process_map/process.hpp>
 #include <lo2s/process_map/thread.hpp>
