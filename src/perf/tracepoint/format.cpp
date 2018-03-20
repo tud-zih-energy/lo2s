@@ -98,6 +98,31 @@ void EventFormat::parse_format_line(const std::string& line)
     }
 }
 
+std::vector<std::string> EventFormat::get_tracepoint_event_names()
+{
+    try
+    {
+        boost::filesystem::ifstream ifs_available_events;
+        ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
+
+        ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
+        ifs_available_events.exceptions(std::ios::badbit);
+
+        std::vector<std::string> available;
+
+        for (std::string tracepoint; std::getline(ifs_available_events, tracepoint);)
+        {
+            available.emplace_back(std::move(tracepoint));
+        }
+
+        return available;
+    }
+    catch (const std::ios_base::failure& e)
+    {
+        Log::debug() << "Retrieving kernel tracepoint event names failed: " << e.what();
+        return {};
+    }
+}
 const boost::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
 }
 }

@@ -21,8 +21,10 @@
 
 #include <lo2s/config.hpp>
 
+#include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/util.hpp>
@@ -30,14 +32,19 @@
 
 #include <nitro/lang/optional.hpp>
 
+#ifdef HAVE_X86_ADAPT
+#include <x86_adapt_cxx/exception.hpp>
+#include <x86_adapt_cxx/x86_adapt.hpp>
+#endif
+
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
 #include <cstdlib>
-#include <ctime> // for CLOCK_* macros
+#include <ctime>   // for CLOCK_* macros
+#include <iomanip> // for std::setw
 
-extern "C"
-{
+extern "C" {
 #include <unistd.h>
 }
 
@@ -73,6 +80,41 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
+static inline void list_arguments_sorted(std::ostream& os, const std::string& description,
+                                         std::vector<std::string> items)
+{
+    std::sort(items.begin(), items.end());
+    os << io::make_argument_list(description, items.begin(), items.end());
+}
+
+static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
+{
+#ifdef HAVE_X86_ADAPT
+    std::vector<std::string> knobs;
+    try
+    {
+        ::x86_adapt::x86_adapt x86_adapt;
+        auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
+
+        knobs.reserve(cpu_cfg_items.size());
+        for (const auto& item : cpu_cfg_items)
+        {
+            knobs.emplace_back(item.name());
+        }
+    }
+    catch (const ::x86_adapt::x86_adapt_error& e)
+    {
+        Log::debug() << "Failed to access x86_adapt CPU knobs! (error: " << e.what() << ")";
+    }
+
+    os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
+#else
+    (void)os;
+    std::cerr << "lo2s was built without support for x86_adapt; cannot read CPU knobs.\n";
+    std::exit(EXIT_FAILURE);
+#endif
+}
+
 static inline void print_version(std::ostream& os)
 {
     // clang-format off
@@ -86,12 +128,69 @@ static inline void print_version(std::ostream& os)
 static inline void print_usage(std::ostream& os, const char* name,
                                const po::options_description& desc)
 {
+    static constexpr char argument_detail[] =
+        R"(
+Arguments to options:
+    PATH        A filesystem path.  If the pathname given in PATH is
+                relative, then  it is  interpreted  relative  to the
+                current working  directory of  lo2s, otherwise it is
+                interpreted as an absolute path.
+
+                NOTE: PATH arguments given to --output-trace support
+                simple variable substitution, where any occurence of
+                {<var>} will be replaced before being interpreted.
+
+                For substitution, <var> is one of the following:
+                - DATE:       current date (format %Y-%m-%dT%H-%M-%S)
+                - HOSTNAME:   current system host name
+                - ENV=<VAR>:  contents of environment variable <VAR>
+
+                Example:
+                    $ FOO=bar lo2s -o lo2s_{ENV=FOO}_{HOSTNAME} ...
+                    > Using trace directory: lo2s_bar_HAL-9000
+
+    EVENT       Name of a perf event.  Format is either
+                - for a predefined event:
+                    <name>
+                - for a kernel PMU event one of:
+                    <pmu>/<event>/
+                    <pmu>:<event>
+                  Kernel PMU events can be found at
+                    /sys/bus/event_source/devices/<pmu>/event/<event>.
+
+                To list all available event names, use --list-events.
+
+    TRACEPOINT  Name of a kernel tracepoint event.  Format is either
+                    <group>:<name>
+                or
+                    <group>/<name>.
+                Tracepoint events can be found at
+                    /sys/kernel/debug/tracing/events/<group>/<name>.
+
+                Use --list-tracepoints to get the names of available
+                tracepoints events.
+
+                NOTE:  Accessing tracepoint  events usually requires
+                read+execute permissions on /sys/kernel/debug.
+
+    CLOCKID     Name of a system clock.  To show a list of available
+                clock names, use --list-clockids.
+
+                NOTE: Clock names are determined at compile time and
+                might not be available when running on a system that
+                is not the build system.
+
+    KNOB        Name of a x86_adapt CPU configuration item.  To show
+                a list of available knobs, use --list-knobs.
+)";
+
     // clang-format off
     os << "Usage:\n"
           "  " << name << " [options] ./a.out\n"
           "  " << name << " [options] -- ./a.out --option-to-a-out\n"
           "  " << name << " [options] --pid $(pidof some-process)\n"
-          "\n" << desc;
+          "  " << name << " [options] --all-cpus"
+          "\n" << desc << argument_detail;
     // clang-format on
 }
 
@@ -103,77 +202,161 @@ const Config& config()
 }
 void parse_program_options(int argc, const char** argv)
 {
-    po::options_description desc("Allowed options");
+    po::options_description general_options("Options");
+    po::options_description system_wide_options("System-wide monitoring");
+    po::options_description sampling_options("Sampling options");
+    po::options_description kernel_tracepoint_options("Kernel tracepoint options");
+    po::options_description perf_metric_options("perf metric options");
+    po::options_description x86_adapt_options("x86_adapt options");
 
     lo2s::Config config;
     SwitchCounter verbosity;
     bool all_cpus;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
-    bool list_clockids, list_events;
+    bool list_clockids, list_events, list_tracepoints, list_knobs;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
+    std::vector<std::string> x86_adapt_cpu_knobs;
 
     std::string requested_clock_name;
 
+    config.pid = -1; // Default value is set here and not with
+                     // po::typed_value::default_value to hide
+                     // it from usage message.
+
     // clang-format off
-    desc.add_options()
+    general_options.add_options()
         ("help,h",
-             "produce help message")
-        ("version", "print version information")
-        ("output-trace,o", po::value(&config.trace_path),
-             "output trace directory")
-        ("count,c", po::value(&config.sampling_period)->default_value(11010113),
-             "sampling period (# of events specified by -e)")
-        ("event,e", po::value(&config.sampling_event)->default_value("instructions"),
-             "interrupt source event for sampling")
-        ("all-cpus,a", po::bool_switch(&all_cpus),
-             "System-wide monitoring of all CPUs.")
-        ("call-graph,g", po::bool_switch(&config.enable_cct),
-             "call-graph recording")
-        ("no-ip,n", po::bool_switch(&config.suppress_ip),
-             "do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-        ("pid,p", po::value(&config.pid)->default_value(-1),
-             "attach to specific pid")
-        ("quiet,q", po::bool_switch(&config.quiet),
-             "suppress output")
-        ("verbose,v", po::value(&verbosity)->zero_tokens(),
-             "verbose output (specify multiple times to get increasingly more verbose output)")
-        ("mmap-pages,m", po::value(&config.mmap_pages)->default_value(16),
-             "number of pages to be used by each internal buffer")
-        ("readout-interval,i", po::value(&read_interval_ms)->default_value(100),
-             "time interval between metric and sampling buffer readouts in milliseconds")
-        ("tracepoint,t", po::value(&config.tracepoint_events),
-             "enable global recording of a raw tracepoint event (usually requires root)")
-        ("metric-event,E", po::value(&config.perf_events),
-             "the name of a perf event to measure") // TODO: optionally list available events
-        ("metric-leader", po::value(&config.metric_leader)->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
-             "name of leading perf event")
-        ("metric-count", po::value(&metric_count),
-             "# of events to elapse by metric leader before reading metric buffer")
-        ("metric-frequency", po::value(&metric_frequency),
-             "metric buffer reads per second")
+            "Show this help message.")
+        ("version",
+            "Print version information.")
+        ("output-trace,o",
+            po::value(&config.trace_path)
+                ->value_name("PATH"),
+            "Output trace directory. Defaults to lo2s_trace_{DATE} if not specified.")
+        ("quiet,q",
+            po::bool_switch(&config.quiet),
+            "Suppress output.")
+        ("verbose,v",
+            po::value(&verbosity)
+                ->zero_tokens(),
+            "Verbose output (specify multiple times to get increasingly more verbose output).")
+        ("mmap-pages,m",
+            po::value(&config.mmap_pages)
+                ->value_name("PAGES")
+                ->default_value(16),
+            "Number of pages to be used by internal buffers.")
         ("clockid,k",
-             po::value(&requested_clock_name)->default_value("monotonic-raw"),
-             "clock used for perf timestamps (see --list-clockids for supported arguments)")
-#ifdef HAVE_X86_ADAPT // I am going to burn in hell for this
-        ("x86-adapt-cpu-knob,x", po::value(&config.x86_adapt_cpu_knobs),
-             "add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
-#endif
-        ("disassemble", po::bool_switch(&disassemble),
-             "enable augmentation of samples with instructions (default if supported)")
-        ("no-disassemble", po::bool_switch(&no_disassemble),
-             "disable augmentation of samples with instructions")
-        ("kernel", po::bool_switch(&kernel),
-             "include events happening in kernel space (default)")
-        ("no-kernel", po::bool_switch(&no_kernel),
-             "exclude events happening in kernel space")
-        ("list-clockids", po::bool_switch(&list_clockids)->default_value(false),
-            "list all available clockids")
-        ("list-events", po::bool_switch(&list_events)->default_value(false),
-            "list all available events")
-        ("command", po::value(&config.command));
+            po::value(&requested_clock_name)
+                ->value_name("CLOCKID")
+                ->default_value("monotonic-raw"),
+            "Reference clock used as timestamp source.")
+        ("list-clockids",
+            po::bool_switch(&list_clockids)
+                ->default_value(false),
+            "List all available clockids.")
+        ("list-events",
+            po::bool_switch(&list_events)
+                ->default_value(false),
+            "List available metric and sampling events.")
+        ("list-tracepoints",
+            po::bool_switch(&list_tracepoints)
+                ->default_value(false),
+            "List available kernel tracepoint events.")
+        ("list-knobs",
+            po::bool_switch(&list_knobs)
+                ->default_value(false),
+            "List available x86_adapt CPU knobs.");
+
+    system_wide_options.add_options()
+        ("all-cpus,a",
+            po::bool_switch(&all_cpus),
+            "System-wide monitoring of all CPUs.");
+
+    sampling_options.add_options()
+        ("command",
+            po::value(&config.command)
+                ->value_name("CMD")
+        )
+
+        ("count,c",
+            po::value(&config.sampling_period)
+                ->value_name("N")
+                ->default_value(11010113),
+            "Sampling period (in number of events specified by -e).")
+        ("event,e",
+            po::value(&config.sampling_event)
+                ->value_name("EVENT")
+                ->default_value("instructions"),
+            "Interrupt source event for sampling.")
+        ("call-graph,g",
+            po::bool_switch(&config.enable_cct),
+            "Record call stack of instruction samples.")
+        ("no-ip,n",
+            po::bool_switch(&config.suppress_ip),
+            "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
+        ("pid,p",
+            po::value(&config.pid)
+                ->value_name("PID"),
+            "Attach to process of given PID.")
+        ("readout-interval,i",
+            po::value(&read_interval_ms)
+                ->value_name("MSEC")
+                ->default_value(100),
+            "Time interval between metric and sampling buffer readouts in milliseconds.")
+        ("disassemble",
+            po::bool_switch(&disassemble),
+            "Enable augmentation of samples with instructions (default if supported).")
+        ("no-disassemble",
+            po::bool_switch(&no_disassemble),
+            "Disable augmentation of samples with instructions.")
+        ("kernel",
+            po::bool_switch(&kernel),
+            "Include events happening in kernel space (default).")
+        ("no-kernel",
+            po::bool_switch(&no_kernel),
+            "Exclude events happening in kernel space.");
+
+    kernel_tracepoint_options.add_options()
+        ("tracepoint,t",
+            po::value(&config.tracepoint_events)
+                ->value_name("TRACEPOINT"),
+            "Enable global recording of a raw tracepoint event (usually requires root).");
+
+    perf_metric_options.add_options()
+        ("metric-event,E",
+            po::value(&config.perf_events)
+                ->value_name("EVENT"),
+            "Record metrics for this perf event.")
+        ("metric-leader",
+            po::value(&config.metric_leader)
+                ->value_name("EVENT")
+                ->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
+            "The leading metric event.")
+        ("metric-count",
+            po::value(&metric_count)
+                ->value_name("N"),
+            "Number of metric leader events to elapse before reading metric buffer. Prefer this setting over --metric-freqency")
+        ("metric-frequency",
+            po::value(&metric_frequency)
+                ->value_name("HZ"),
+            "Number of metric buffer reads per second. When given, it will be used to set an approximate value for --metric-count");
+
+    x86_adapt_options.add_options()
+        ("x86-adapt-cpu-knob,x",
+            po::value(&x86_adapt_cpu_knobs)
+                ->value_name("KNOB"),
+            "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
     // clang-format on
+
+    po::options_description all_options;
+    all_options.add(general_options)
+        .add(system_wide_options)
+        .add(sampling_options)
+        .add(kernel_tracepoint_options)
+        .add(perf_metric_options)
+        .add(x86_adapt_options);
 
     po::positional_options_description p;
     p.add("command", -1);
@@ -182,20 +365,20 @@ void parse_program_options(int argc, const char** argv)
     try
     {
         po::parsed_options parsed =
-            po::command_line_parser(argc, argv).options(desc).positional(p).run();
+            po::command_line_parser(argc, argv).options(all_options).positional(p).run();
         po::store(parsed, vm);
     }
-    catch (const po::unknown_option& e)
+    catch (const po::error& e)
     {
         std::cerr << e.what() << '\n';
-        print_usage(std::cerr, argv[0], desc);
+        print_usage(std::cerr, argv[0], all_options);
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
 
     if (vm.count("help"))
     {
-        print_usage(std::cout, argv[0], desc);
+        print_usage(std::cout, argv[0], all_options);
         std::exit(EXIT_SUCCESS);
     }
 
@@ -240,25 +423,36 @@ void parse_program_options(int argc, const char** argv)
     }
 
     // list arguments to options and exit
-    if (list_clockids || list_events)
     {
         if (list_clockids)
         {
-            std::cout << "Available clockids:\n";
-            for (const auto& clock : lo2s::time::ClockProvider::get_descriptions())
-            {
-                std::cout << " * " << clock.name << '\n';
-            }
+            auto& clockids = time::ClockProvider::get_descriptions();
+            std::cout << io::make_argument_list("available clockids", std::begin(clockids),
+                                                std::end(clockids));
+            std::exit(EXIT_SUCCESS);
         }
+
         if (list_events)
         {
-            std::cout << "Available events:\n";
-            for (const auto& event_name : lo2s::perf::EventProvider::get_event_names())
-            {
-                std::cout << " * " << event_name << '\n';
-            }
+            list_arguments_sorted(std::cout, "predefined events",
+                                  perf::EventProvider::get_predefined_event_names());
+            list_arguments_sorted(std::cout, "Kernel PMU events",
+                                  perf::EventProvider::get_pmu_event_names());
+            std::exit(EXIT_SUCCESS);
         }
-        std::exit(EXIT_SUCCESS);
+
+        if (list_tracepoints)
+        {
+            list_arguments_sorted(std::cout, "Kernel tracepoint events",
+                                  perf::tracepoint::EventFormat::get_tracepoint_event_names());
+            std::exit(EXIT_SUCCESS);
+        }
+
+        if (list_knobs)
+        {
+            list_x86_adapt_cpu_knobs(std::cout);
+            std::exit(EXIT_SUCCESS);
+        }
     }
 
     if (all_cpus)
@@ -273,7 +467,7 @@ void parse_program_options(int argc, const char** argv)
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
         config.command.empty())
     {
-        print_usage(std::cerr, argv[0], desc);
+        print_usage(std::cerr, argv[0], all_options);
         std::exit(EXIT_FAILURE);
     }
 
@@ -370,6 +564,17 @@ void parse_program_options(int argc, const char** argv)
     else if (no_kernel)
     {
         config.exclude_kernel = true;
+    }
+
+    if (!x86_adapt_cpu_knobs.empty())
+    {
+#ifdef HAVE_X86_ADAPT
+        config.x86_adapt_cpu_knobs = std::move(x86_adapt_cpu_knobs);
+#else
+        std::cerr
+            << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.\n";
+        std::exit(EXIT_FAILURE);
+#endif
     }
 
     for (int arg = 0; arg < argc - 1; arg++)
