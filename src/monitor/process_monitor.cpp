@@ -48,9 +48,9 @@ void ProcessMonitor::insert_first_process(pid_t pid, std::string proc_name, bool
     Process &process = process_map().get_process(pid);
     if(process.info == nullptr)
     {
-        process.info =  std::unique_ptr<ProcessInfo>(new ProcessInfo(pid, spawn));
+        process.info =  std::make_unique<ProcessInfo>(pid, spawn);
     }
-    process_map().get_thread(pid).monitor = std::unique_ptr<ThreadMonitor>(new ThreadMonitor(pid, pid, *this, *process.info, spawn));
+    process_map().get_thread(pid).monitor = std::make_unique<ThreadMonitor>(pid, pid, *this, *process.info, spawn);
 }
 
 void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
@@ -64,10 +64,10 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid)
     Process &process = process_map().get_process(pid);
     if(process.info == nullptr)
     {
-        process.info = std::unique_ptr<ProcessInfo>(new ProcessInfo(pid, false));
+        process.info = std::make_unique<ProcessInfo>(pid, false);
     }
-    process_map().get_thread(tid).monitor = std::unique_ptr<ThreadMonitor>(new ThreadMonitor(pid, tid,
-            *this, *process.info, false));
+    process_map().get_thread(tid).monitor = std::make_unique<ThreadMonitor>(pid, tid,
+            *this, *process.info, false);
 }
 
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
