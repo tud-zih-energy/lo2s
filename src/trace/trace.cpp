@@ -339,8 +339,7 @@ otf2::definition::metric_member Trace::metric_member(const std::string& name,
                                                      otf2::common::type value_type,
                                                      const std::string& unit)
 {
-    auto ref = metric_member_ref();
-    return metric_members_.emplace(ref, intern(name), intern(description),
+    return metric_members_.emplace(metric_member_ref(), intern(name), intern(description),
                                    otf2::common::metric_type::other, mode, value_type,
                                    otf2::common::base_type::decimal, 0, intern(unit));
 }
@@ -349,8 +348,7 @@ otf2::definition::metric_instance
 Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder, otf2::definition::location scope)
 {
-    auto ref = metric_instance_ref();
-    return metric_instances_.emplace(ref, metric_class, recorder, scope);
+    return metric_instances_.emplace(metric_instance_ref(), metric_class, recorder, scope);
 }
 
 otf2::definition::metric_instance
@@ -358,14 +356,12 @@ Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::location recorder,
                        otf2::definition::system_tree_node scope)
 {
-    auto ref = metric_instance_ref();
-    return metric_instances_.emplace(ref, metric_class, recorder, scope);
+    return metric_instances_.emplace(metric_instance_ref(), metric_class, recorder, scope);
 }
 
 otf2::definition::metric_class Trace::metric_class()
 {
-    auto ref = metric_class_ref();
-    return metric_classes_.emplace(ref, otf2::common::metric_occurence::async,
+    return metric_classes_.emplace(metric_class_ref(), otf2::common::metric_occurence::async,
                                    otf2::common::recorder_kind::abstract);
 }
 
@@ -458,11 +454,10 @@ void Trace::register_tid(pid_t tid, const std::string& exe)
     // Lock this to avoid conflict on regions_thread_ with register_monitoring_tid
     std::lock_guard<std::mutex> guard(mutex_);
 
-    auto ref = region_ref();
     auto iname = intern((boost::format("%s (%d)") % exe % tid).str());
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
+        std::forward_as_tuple(region_ref(), iname, iname, iname, otf2::common::role_type::function,
                               otf2::common::paradigm_type::user, otf2::common::flags_type::none,
                               iname, 0, 0));
     if (ret.second)
@@ -479,13 +474,12 @@ void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const st
     std::lock_guard<std::mutex> guard(mutex_);
 
     Log::debug() << "register_monitoring_tid(" << tid << "," << name << "," << group << ");";
-    auto ref = region_ref();
     auto iname = intern((boost::format("lo2s::%s") % name).str());
 
     // TODO, should be paradigm_type::measurement_system, but that's a bug in Vampir
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(ref, iname, iname, iname, otf2::common::role_type::function,
+        std::forward_as_tuple(region_ref(), iname, iname, iname, otf2::common::role_type::function,
                               otf2::common::paradigm_type::user, otf2::common::flags_type::none,
                               iname, 0, 0));
     if (ret.second)
@@ -562,20 +556,19 @@ otf2::definition::comm Trace::process_comm(pid_t pid)
 
 otf2::definition::source_code_location Trace::intern_scl(const LineInfo& info)
 {
-    auto ref = scl_ref();
-    auto ret =
-        source_code_locations_.emplace(std::piecewise_construct, std::forward_as_tuple(info),
-                                       std::forward_as_tuple(ref, intern(info.file), info.line));
+    auto ret = source_code_locations_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(info),
+        std::forward_as_tuple(scl_ref(), intern(info.file), info.line));
     return ret.first->second;
 }
 
 otf2::definition::region Trace::intern_region(const LineInfo& info)
 {
-    auto ref = region_ref();
     auto name_str = intern(info.function);
     auto ret = regions_line_info_.emplace(
         std::piecewise_construct, std::forward_as_tuple(info),
-        std::forward_as_tuple(ref, name_str, name_str, name_str, otf2::common::role_type::function,
+        std::forward_as_tuple(region_ref(), name_str, name_str, name_str,
+                              otf2::common::role_type::function,
                               otf2::common::paradigm_type::sampling, otf2::common::flags_type::none,
                               intern(info.file), info.line, 0));
     return ret.first->second;
@@ -583,9 +576,8 @@ otf2::definition::region Trace::intern_region(const LineInfo& info)
 
 otf2::definition::string Trace::intern(const std::string& name)
 {
-    auto ref = string_ref();
     auto ret = strings_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                                std::forward_as_tuple(ref, name));
+                                std::forward_as_tuple(string_ref(), name));
     return ret.first->second;
 }
 } // namespace trace
