@@ -208,6 +208,7 @@ void parse_program_options(int argc, const char** argv)
     po::options_description kernel_tracepoint_options("Kernel tracepoint options");
     po::options_description perf_metric_options("perf metric options");
     po::options_description x86_adapt_options("x86_adapt options");
+    po::options_description hidden_options;
 
     lo2s::Config config;
     SwitchCounter verbosity;
@@ -275,11 +276,6 @@ void parse_program_options(int argc, const char** argv)
             "System-wide monitoring of all CPUs.");
 
     sampling_options.add_options()
-        ("command",
-            po::value(&config.command)
-                ->value_name("CMD")
-        )
-
         ("count,c",
             po::value(&config.sampling_period)
                 ->value_name("N")
@@ -348,10 +344,16 @@ void parse_program_options(int argc, const char** argv)
             po::value(&x86_adapt_cpu_knobs)
                 ->value_name("KNOB"),
             "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
+
+    hidden_options.add_options()
+        ("command",
+            po::value(&config.command)
+                ->value_name("CMD")
+        );
     // clang-format on
 
-    po::options_description all_options;
-    all_options.add(general_options)
+    po::options_description visible_options;
+    visible_options.add(general_options)
         .add(system_wide_options)
         .add(sampling_options)
         .add(kernel_tracepoint_options)
@@ -364,6 +366,9 @@ void parse_program_options(int argc, const char** argv)
     po::variables_map vm;
     try
     {
+        po::options_description all_options;
+        all_options.add(visible_options).add(hidden_options);
+
         po::parsed_options parsed =
             po::command_line_parser(argc, argv).options(all_options).positional(p).run();
         po::store(parsed, vm);
@@ -371,14 +376,14 @@ void parse_program_options(int argc, const char** argv)
     catch (const po::error& e)
     {
         std::cerr << e.what() << '\n';
-        print_usage(std::cerr, argv[0], all_options);
+        print_usage(std::cerr, argv[0], visible_options);
         std::exit(EXIT_FAILURE);
     }
     po::notify(vm);
 
     if (vm.count("help"))
     {
-        print_usage(std::cout, argv[0], all_options);
+        print_usage(std::cout, argv[0], visible_options);
         std::exit(EXIT_SUCCESS);
     }
 
@@ -467,7 +472,7 @@ void parse_program_options(int argc, const char** argv)
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
         config.command.empty())
     {
-        print_usage(std::cerr, argv[0], all_options);
+        print_usage(std::cerr, argv[0], visible_options);
         std::exit(EXIT_FAILURE);
     }
 
