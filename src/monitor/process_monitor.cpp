@@ -110,7 +110,8 @@ ProcessMonitor::ProcessMonitor(pid_t child, const std::string& name, bool spawn)
     }
     running = true;
 
-    trace().process(child, name);
+    // insert first child as root process in the resulting trace
+    trace().process(child, trace::Trace::NO_PARENT_PROCESS_PID, name);
     threads_.insert(child, child, spawn);
 }
 
@@ -150,7 +151,7 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
             Log::debug() << "New process is forked " << newpid << ": " << name
                          << " parent: " << child << ": " << get_process_exe(child);
 
-            trace_.process(newpid, name);
+            trace_.process(newpid, child, name);
             threads_.insert(newpid, newpid, false);
         }
         catch (std::system_error& e)
@@ -196,7 +197,10 @@ void ProcessMonitor::handle_ptrace_event(pid_t child, int event)
             {
                 auto name = get_process_exe(child);
                 Log::info() << "Process " << child << " / " << name << " about to exit";
-                trace_.process(child, name);
+
+                // record the executable name used before exit; it may have
+                // changed since first time child was added (e.g. by an exec)
+                trace().process_update_executable(child, name);
             }
             else
             {
