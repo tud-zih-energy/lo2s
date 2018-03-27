@@ -20,12 +20,8 @@
  */
 
 #pragma once
-#include <lo2s/process_map/process_map.hpp>
-#include <lo2s/process_map/process.hpp>
-#include <lo2s/process_map/thread.hpp>
-
 #include <lo2s/monitor/main_monitor.hpp>
-#include <lo2s/monitor/dummy_monitor.hpp>
+#include <lo2s/monitor/abstract_process_monitor.hpp>
 
 #include <string>
 
@@ -38,7 +34,7 @@ namespace lo2s
 namespace monitor
 {
 
-class ProcessMonitor : public DummyMonitor, public MainMonitor
+class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
 {
 public:
     ProcessMonitor();

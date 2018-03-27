@@ -92,7 +92,7 @@ void check_ptrace_setoptions(pid_t pid, long options)
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
 }
 
-ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn, monitor::DummyMonitor &monitor)
+ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn, monitor::AbstractProcessMonitor &monitor)
 : first_child_(child), default_signal_handler(signal(SIGINT, sig_handler)), monitor_(monitor), num_wakeups_(0)
 {
     if (spawn)

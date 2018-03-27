@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -18,14 +18,29 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #pragma once
-#include <lo2s/monitor/abstract_process_monitor.hpp>
+
+#include  <string>
+
+extern "C" {
+#include <sys/types.h>
+}
 
 namespace lo2s
 {
+
 namespace monitor
 {
-void process_monitor_main(monitor::AbstractProcessMonitor &monitor);
+
+class AbstractProcessMonitor
+{
+public:
+    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/) = 0;
+    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/,
+            bool /*spawn*/) = 0;
+    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/) = 0;
+    virtual void exit_process(pid_t /*pid*/, std::string /*name*/) = 0;
+    virtual void exit_thread(pid_t /*tid*/) = 0;
+};
 }
 }
