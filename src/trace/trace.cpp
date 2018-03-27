@@ -279,11 +279,8 @@ void Trace::process_update_executable(pid_t pid, const otf2::definition::string&
     system_tree_process_nodes_.at(pid).name(exe_name);
     location_groups_process_.at(pid).name(exe_name);
 
-    // TODO: add setters to otf2xx to also update the names in comms and comm
-    // groups
-
-    // process_comm_groups_.at(pid).name(exe_name);
-    // process_comms_.at(pid).name(exe_name);
+    process_comm_groups_.at(pid).name(exe_name);
+    process_comms_.at(pid).name(exe_name);
 }
 
 void Trace::process_update_executable(pid_t pid, const std::string& exe_name)
