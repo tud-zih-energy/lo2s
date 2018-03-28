@@ -45,17 +45,35 @@ EventFormat::EventFormat(const std::string& name) : name_(name)
     boost::filesystem::path path_event = base_path_ / name_;
     boost::filesystem::ifstream ifs_id, ifs_format;
 
-    ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
-    ifs_format.exceptions(std::ios::failbit | std::ios::badbit);
+    auto id_path = path_event / "id";
 
-    ifs_id.open(path_event / "id");
+    ifs_id.open(id_path);
+    if (ifs_id.fail())
+    {
+        throw Error(name, "failed to open tracepoint ID file");
+    }
+
     ifs_id >> id_;
+    if (ifs_id.fail())
+    {
+        throw Error(name, "failed to read tracepoint ID");
+    }
 
     ifs_format.open(path_event / "format");
+    if (ifs_format.fail())
+    {
+        throw Error(name, "failed to open tracepoint format file");
+    }
+
     std::string line;
     ifs_format.exceptions(std::ios::badbit);
     while (getline(ifs_format, line))
     {
+        if (ifs_format.bad())
+        {
+            throw Error(name, "failed to read tracepoint format");
+        }
+
         parse_format_line(line);
     }
 }
@@ -124,6 +142,6 @@ std::vector<std::string> EventFormat::get_tracepoint_event_names()
     }
 }
 const boost::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

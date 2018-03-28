@@ -43,13 +43,23 @@ static const EventFormat& get_sched_switch_event()
     return evt;
 }
 
-SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
+SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
 : Reader(cpu, get_sched_switch_event().id(), config().mmap_pages),
-  otf2_writer_(trace.cpu_writer(cpu)), trace_(trace), time_converter_(time::Converter::instance()),
+  otf2_writer_(trace.cpu_writer(cpu)),
+  trace_(trace),
+  time_converter_(time::Converter::instance()),
   prev_pid_field_(get_sched_switch_event().field("prev_pid")),
   next_pid_field_(get_sched_switch_event().field("next_pid")),
   prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
+}
+catch (const EventFormat::Error& e)
+{
+    Log::error() << "Cannot open tracepoint switch writer!";
+    Log::error() << "Failed to open tracepoint event '" << e.event() << "': " << e.what();
+    Log::warn() << "Tracepoint events are inaccessible if read/execute permissions are missing "
+                   "on /sys/kernel/debug";
+    throw std::system_error(EIO, std::system_category());
 }
 
 SwitchWriter::~SwitchWriter()
@@ -105,6 +115,6 @@ otf2::definition::region::reference_type SwitchWriter::thread_region_ref(pid_t t
     }
     return it->second;
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

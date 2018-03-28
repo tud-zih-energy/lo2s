@@ -90,6 +90,24 @@ private:
 class EventFormat
 {
 public:
+    class Error : public std::runtime_error
+    {
+    public:
+        Error(const std::string& event, const std::string& what)
+        : std::runtime_error(what), event_name_(event)
+        {
+        }
+
+        const std::string& event() const
+        {
+            return event_name_;
+        }
+
+    private:
+        std::string event_name_;
+    };
+
+public:
     EventFormat(const std::string& name);
 
     int id() const
@@ -131,6 +149,6 @@ private:
 
     const static boost::filesystem::path base_path_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

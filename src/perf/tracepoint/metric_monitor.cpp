@@ -33,7 +33,8 @@
 
 #include <boost/format.hpp>
 
-extern "C" {
+extern "C"
+{
 #include <poll.h>
 }
 
@@ -74,6 +75,11 @@ MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::FdMonitor(trace, ""
                 (void)index;
             }
         }
+        catch (const std::exception& e)
+        {
+            Log::error() << "Couldn't read information for tracepoint event " << event_name << ": "
+                         << e.what();
+        }
         catch (...)
         {
             Log::error() << "Couldn't read information for tracepoint event " << event_name;
@@ -90,6 +96,6 @@ void MetricMonitor::finalize_thread()
 {
     perf_writers_.clear();
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

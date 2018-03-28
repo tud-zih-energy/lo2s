@@ -38,11 +38,21 @@ static const EventFormat& get_sched_process_exit_event()
     return evt;
 }
 
-ExitReader::ExitReader(int cpu, trace::Trace& trace)
-: Reader(cpu, get_sched_process_exit_event().id(), config().mmap_pages), trace_(trace),
+ExitReader::ExitReader(int cpu, trace::Trace& trace) try
+: Reader(cpu, get_sched_process_exit_event().id(), config().mmap_pages),
+  trace_(trace),
   pid_field_(get_sched_process_exit_event().field("pid")),
   comm_field_(get_sched_process_exit_event().field("comm"))
 {
+}
+catch (const EventFormat::Error& e)
+{
+
+    Log::error() << "Cannot open tracepoint exit reader!";
+    Log::error() << "Failed to open tracepoint event '" << e.event() << "': " << e.what();
+    Log::warn() << "Tracepoint events are inaccessible if read/execute permissions are missing "
+                   "on /sys/kernel/debug";
+    throw std::system_error(EIO, std::system_category());
 }
 
 ExitReader::~ExitReader()
@@ -64,6 +74,6 @@ void ExitReader::merge_trace()
 {
     trace_.register_tids(comms_);
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s
