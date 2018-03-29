@@ -34,22 +34,9 @@
 namespace x86_adapt
 {
 
-class x86_adapt_error : public std::runtime_error
-{
-public:
-    x86_adapt_error(int error_code)
-    : std::runtime_error("Error happend in x86_adapt. Error code was: " +
-                         std::to_string(error_code)),
-      error_code(error_code)
-    {
-    }
-
-    int error_code;
-};
-
 inline void raise(int error)
 {
-    throw x86_adapt_error(error);
+    throw std::system_error(-error, std::generic_category(), "x86_adapt");
 }
 
 inline int check(int error)
@@ -61,4 +48,4 @@ inline int check(int error)
 
     return error;
 }
-}
+} // namespace x86_adapt
