@@ -58,12 +58,12 @@ MainMonitor::MainMonitor()
     }
 
 #ifdef HAVE_X86_ADAPT
-    if (!config().x86_adapt_cpu_knobs.empty())
+    if (!config().x86_adapt_knobs.empty())
     {
         try
         {
             x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config().read_interval, config().x86_adapt_cpu_knobs);
+                trace_, config().read_interval, config().x86_adapt_knobs);
             x86_adapt_metrics_->start();
         }
         catch (std::exception& e)

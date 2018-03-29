@@ -44,7 +44,8 @@
 #include <ctime>   // for CLOCK_* macros
 #include <iomanip> // for std::setw
 
-extern "C" {
+extern "C"
+{
 #include <unistd.h>
 }
 
@@ -115,6 +116,34 @@ static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
 #endif
 }
 
+static inline void list_x86_adapt_node_knobs(std::ostream& os)
+{
+#ifdef HAVE_X86_ADAPT
+    std::vector<std::string> knobs;
+    try
+    {
+        ::x86_adapt::x86_adapt x86_adapt;
+        auto node_cfg_items = x86_adapt.node_configuration_items();
+
+        knobs.reserve(node_cfg_items.size());
+        for (const auto& item : node_cfg_items)
+        {
+            knobs.emplace_back(item.name());
+        }
+    }
+    catch (const ::x86_adapt::x86_adapt_error& e)
+    {
+        Log::debug() << "Failed to access x86_adapt node knobs! (error: " << e.what() << ")";
+    }
+
+    os << io::make_argument_list("x86_adapt node knobs", knobs.begin(), knobs.end());
+#else
+    (void)os;
+    std::cerr << "lo2s was built without support for x86_adapt; cannot read node knobs.\n";
+    std::exit(EXIT_FAILURE);
+#endif
+}
+
 static inline void print_version(std::ostream& os)
 {
     // clang-format off
@@ -180,8 +209,8 @@ Arguments to options:
                 might not be available when running on a system that
                 is not the build system.
 
-    KNOB        Name of a x86_adapt CPU configuration item.  To show
-                a list of available knobs, use --list-knobs.
+    KNOB        Name of a  x86_adapt  configuration item.  To show a
+                list of available knobs, use --list-knobs.
 )";
 
     // clang-format off
@@ -218,7 +247,7 @@ void parse_program_options(int argc, const char** argv)
     bool list_clockids, list_events, list_tracepoints, list_knobs;
     std::uint64_t read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
-    std::vector<std::string> x86_adapt_cpu_knobs;
+    std::vector<std::string> x86_adapt_knobs;
 
     std::string requested_clock_name;
 
@@ -340,8 +369,8 @@ void parse_program_options(int argc, const char** argv)
             "Number of metric buffer reads per second. When given, it will be used to set an approximate value for --metric-count");
 
     x86_adapt_options.add_options()
-        ("x86-adapt-cpu-knob,x",
-            po::value(&x86_adapt_cpu_knobs)
+        ("x86-adapt-knob,x",
+            po::value(&x86_adapt_knobs)
                 ->value_name("KNOB"),
             "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
 
@@ -456,6 +485,7 @@ void parse_program_options(int argc, const char** argv)
         if (list_knobs)
         {
             list_x86_adapt_cpu_knobs(std::cout);
+            list_x86_adapt_node_knobs(std::cout);
             std::exit(EXIT_SUCCESS);
         }
     }
@@ -571,10 +601,10 @@ void parse_program_options(int argc, const char** argv)
         config.exclude_kernel = true;
     }
 
-    if (!x86_adapt_cpu_knobs.empty())
+    if (!x86_adapt_knobs.empty())
     {
 #ifdef HAVE_X86_ADAPT
-        config.x86_adapt_cpu_knobs = std::move(x86_adapt_cpu_knobs);
+        config.x86_adapt_knobs = std::move(x86_adapt_knobs);
 #else
         std::cerr
             << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.\n";

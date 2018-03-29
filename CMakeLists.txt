@@ -179,6 +179,7 @@ if(X86Adapt_FOUND)
     target_sources(lo2s PRIVATE
         src/metric/x86_adapt/metrics.cpp
         src/metric/x86_adapt/monitor.cpp
+        src/metric/x86_adapt/node_monitor.cpp
     )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
 endif()

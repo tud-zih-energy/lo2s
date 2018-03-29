@@ -137,6 +137,11 @@ public:
         return system_tree_cpu_nodes_.at(cpuid);
     }
 
+    const otf2::definition::system_tree_node& system_tree_package_node(int packageid) const
+    {
+        return system_tree_package_nodes_.at(packageid);
+    }
+
     otf2::definition::regions_group regions_group_executable(const std::string& name);
     otf2::definition::regions_group regions_group_monitoring(const std::string& name);
     otf2::definition::comm process_comm(pid_t pid);
