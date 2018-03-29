@@ -34,9 +34,18 @@
 namespace x86_adapt
 {
 
+class x86_adapt_error : public std::system_error
+{
+public:
+    x86_adapt_error(int error_code)
+    : std::system_error(error_code, std::generic_category(), "x86_adapt")
+    {
+    }
+};
+
 inline void raise(int error)
 {
-    throw std::system_error(-error, std::generic_category(), "x86_adapt");
+    throw x86_adapt_error(error < 0 ? -error : error);
 }
 
 inline int check(int error)
