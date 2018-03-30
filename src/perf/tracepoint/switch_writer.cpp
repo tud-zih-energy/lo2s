@@ -53,13 +53,10 @@ SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
   prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
 }
-catch (const EventFormat::Error& e)
+catch (const EventFormat::ParseError& e)
 {
-    Log::error() << "Cannot open tracepoint switch writer!";
-    Log::error() << "Failed to open tracepoint event '" << e.event() << "': " << e.what();
-    Log::warn() << "Tracepoint events are inaccessible if read/execute permissions are missing "
-                   "on /sys/kernel/debug";
-    throw std::system_error(EIO, std::system_category());
+    Log::error() << "Failed to open scheduler switch tracepoint event: " << e.what();
+    throw std::runtime_error("Failed to open tracepoint switch writer");
 }
 
 SwitchWriter::~SwitchWriter()

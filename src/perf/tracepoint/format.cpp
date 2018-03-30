@@ -30,50 +30,74 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <cstdio>
+
 namespace lo2s
 {
 namespace perf
 {
 namespace tracepoint
 {
+void EventFormat::parse_id()
+{
+    // Yes, this is C file I/O.  Tell me when you have found a way to easily
+    // access POSIX filesystem errors in C++.
+
+    boost::filesystem::path id_path{ base_path_ / name_ / "id" };
+
+    std::FILE* id_file = std::fopen(id_path.c_str(), "rb");
+    if (id_file == nullptr)
+    {
+        int errsv = errno;
+        Log::error() << "Failed to read tracepoint ID file " << id_path.string() << ": "
+                     << std::strerror(errsv);
+
+        switch (errsv)
+        {
+        case ENOENT:
+            Log::warn() << "Tracepoint event '" << name_ << "' might not exist";
+            break;
+        case EACCES:
+            Log::warn() << "Read+execute permissions are required on " << base_path_.string()
+                        << " to open tracepoint events";
+            break;
+        }
+
+        throw EventFormat::ParseError{ "Unable to determine tracepoint ID" };
+    }
+
+    int num_parsed = std::fscanf(id_file, "%i", &id_);
+    if (num_parsed != 1)
+    {
+        Log::error() << "Failed to parse tracepoint ID from " << id_path.string();
+        throw EventFormat::ParseError{ "Unexpected tracepoint ID format" };
+    }
+}
 
 EventFormat::EventFormat(const std::string& name) : name_(name)
 {
     // allow perf-like name format which uses ':' as a separator
     std::replace(name_.begin(), name_.end(), ':', '/');
 
-    boost::filesystem::path path_event = base_path_ / name_;
-    boost::filesystem::ifstream ifs_id, ifs_format;
+    parse_id();
 
-    auto id_path = path_event / "id";
+    boost::filesystem::ifstream ifs_format;
+    auto format_path = base_path_ / name_ / "format";
 
-    ifs_id.open(id_path);
-    if (ifs_id.fail())
-    {
-        throw Error(name, "failed to open tracepoint ID file");
-    }
-
-    ifs_id >> id_;
-    if (ifs_id.fail())
-    {
-        throw Error(name, "failed to read tracepoint ID");
-    }
-
-    ifs_format.open(path_event / "format");
+    ifs_format.open(format_path);
     if (ifs_format.fail())
     {
-        throw Error(name, "failed to open tracepoint format file");
+        Log::error() << "Failed to open tracepoint format file " << format_path.string();
+        throw ParseError{ "Unparseable tracepoint format" };
     }
 
     std::string line;
-    ifs_format.exceptions(std::ios::badbit);
-    while (getline(ifs_format, line))
+    while (std::getline(ifs_format, line))
     {
         if (ifs_format.bad())
         {
-            throw Error(name, "failed to read tracepoint format");
+            throw ParseError{ "Unexpected error while reading tracepoint format description" };
         }
-
         parse_format_line(line);
     }
 }

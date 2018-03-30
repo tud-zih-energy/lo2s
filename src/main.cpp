@@ -49,13 +49,19 @@ int main(int argc, const char** argv)
         // Check for success
         if (e.code())
         {
-            lo2s::Log::error() << "Aborting: " << e.what();
+            lo2s::Log::fatal() << "Aborting: " << e.what();
+            return EXIT_FAILURE;
         }
         else
         {
             lo2s::summary().show();
+            return EXIT_SUCCESS;
         }
-        return e.code().value();
+    }
+    catch (const std::runtime_error& e)
+    {
+        lo2s::Log::fatal() << "Aborting: " << e.what();
+        return EXIT_FAILURE;
     }
 
     return 0;

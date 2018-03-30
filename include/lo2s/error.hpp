@@ -25,7 +25,6 @@
 
 namespace lo2s
 {
-
 inline std::system_error make_system_error()
 {
     return std::system_error(errno, std::system_category());
@@ -43,4 +42,4 @@ inline void check_errno(long retval)
         throw_errno();
     }
 }
-}
+} // namespace lo2s

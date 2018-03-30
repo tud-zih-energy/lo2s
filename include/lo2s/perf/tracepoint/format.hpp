@@ -90,21 +90,12 @@ private:
 class EventFormat
 {
 public:
-    class Error : public std::runtime_error
+    class ParseError : public std::runtime_error
     {
     public:
-        Error(const std::string& event, const std::string& what)
-        : std::runtime_error(what), event_name_(event)
+        ParseError(const std::string& what) : std::runtime_error(what)
         {
         }
-
-        const std::string& event() const
-        {
-            return event_name_;
-        }
-
-    private:
-        std::string event_name_;
     };
 
 public:
@@ -140,6 +131,7 @@ public:
     static std::vector<std::string> get_tracepoint_event_names();
 
 private:
+    void parse_id();
     void parse_format_line(const std::string& line);
 
     std::string name_;
