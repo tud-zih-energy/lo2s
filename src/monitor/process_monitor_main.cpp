@@ -83,7 +83,7 @@ static void run_command(const std::vector<std::string>& command_and_args)
     exit(errno);
 }
 
-void process_monitor_main(AbstractProcessMonitor &monitor)
+void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
     auto pid = config().pid;

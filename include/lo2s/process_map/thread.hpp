@@ -26,8 +26,9 @@ namespace lo2s
 class Thread
 {
 public:
-    Thread(pid_t parent_pid)
-    : parent_pid(parent_pid){}
+    Thread(pid_t parent_pid) : parent_pid(parent_pid)
+    {
+    }
 
     std::unique_ptr<monitor::ThreadMonitor> monitor;
     pid_t parent_pid;

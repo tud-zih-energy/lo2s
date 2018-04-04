@@ -20,7 +20,7 @@
  */
 #pragma once
 
-#include  <string>
+#include <string>
 
 extern "C" {
 #include <sys/types.h>
@@ -36,8 +36,7 @@ class AbstractProcessMonitor
 {
 public:
     virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/) = 0;
-    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/,
-            bool /*spawn*/) = 0;
+    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/, bool /*spawn*/) = 0;
     virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/) = 0;
     virtual void exit_process(pid_t /*pid*/, std::string /*name*/) = 0;
     virtual void exit_thread(pid_t /*tid*/) = 0;

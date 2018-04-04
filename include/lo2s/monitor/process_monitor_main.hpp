@@ -26,6 +26,6 @@ namespace lo2s
 {
 namespace monitor
 {
-void process_monitor_main(monitor::AbstractProcessMonitor &monitor);
+void process_monitor_main(monitor::AbstractProcessMonitor& monitor);
 }
 }

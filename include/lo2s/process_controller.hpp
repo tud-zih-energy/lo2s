@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <lo2s/process_map/process_map.hpp>
 #include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/process_map/process_map.hpp>
 #include <string>
 
 extern "C" {
@@ -34,7 +34,8 @@ namespace lo2s
 class ProcessController
 {
 public:
-    ProcessController(pid_t child, const std::string& name, bool spawn, monitor::AbstractProcessMonitor &monitor);
+    ProcessController(pid_t child, const std::string& name, bool spawn,
+                      monitor::AbstractProcessMonitor& monitor);
 
     ~ProcessController();
 
@@ -47,7 +48,7 @@ private:
 
     const pid_t first_child_;
     sighandler_t default_signal_handler;
-    monitor::AbstractProcessMonitor &monitor_;
+    monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_;
 };
 }

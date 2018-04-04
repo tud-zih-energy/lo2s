@@ -28,29 +28,27 @@
 
 #include <memory>
 
-
 namespace lo2s
 {
 namespace monitor
 {
 
-ProcessMonitor::ProcessMonitor()
-    : MainMonitor()
+ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
-    trace_.register_monitoring_tid(gettid(), "ProcessMonitor",
-            "ProcessMonitor");
+    trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
 void ProcessMonitor::insert_first_process(pid_t pid, std::string proc_name, bool spawn)
 {
     trace_.process(pid, proc_name);
 
-    Process &process = process_map().get_process(pid);
-    if(process.info == nullptr)
+    Process& process = process_map().get_process(pid);
+    if (process.info == nullptr)
     {
-        process.info =  std::make_unique<ProcessInfo>(pid, spawn);
+        process.info = std::make_unique<ProcessInfo>(pid, spawn);
     }
-    process_map().get_thread(pid).monitor = std::make_unique<ThreadMonitor>(pid, pid, *this, *process.info, spawn);
+    process_map().get_thread(pid).monitor =
+        std::make_unique<ThreadMonitor>(pid, pid, *this, *process.info, spawn);
 }
 
 void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
@@ -61,13 +59,13 @@ void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
 
 void ProcessMonitor::insert_thread(pid_t pid, pid_t tid)
 {
-    Process &process = process_map().get_process(pid);
-    if(process.info == nullptr)
+    Process& process = process_map().get_process(pid);
+    if (process.info == nullptr)
     {
         process.info = std::make_unique<ProcessInfo>(pid, false);
     }
-    process_map().get_thread(tid).monitor = std::make_unique<ThreadMonitor>(pid, tid,
-            *this, *process.info, false);
+    process_map().get_thread(tid).monitor =
+        std::make_unique<ThreadMonitor>(pid, tid, *this, *process.info, false);
 }
 
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
@@ -78,7 +76,7 @@ void ProcessMonitor::exit_process(pid_t pid, std::string name)
 
 void ProcessMonitor::exit_thread(pid_t tid)
 {
-    if(process_map().get_thread(tid).monitor != nullptr)
+    if (process_map().get_thread(tid).monitor != nullptr)
     {
         process_map().get_thread(tid).monitor->stop();
     }
@@ -86,9 +84,9 @@ void ProcessMonitor::exit_thread(pid_t tid)
 
 ProcessMonitor::~ProcessMonitor()
 {
-    for(auto &thread : process_map().threads)
+    for (auto& thread : process_map().threads)
     {
-        if(thread.second.monitor != nullptr)
+        if (thread.second.monitor != nullptr)
         {
             thread.second.monitor->stop();
         }

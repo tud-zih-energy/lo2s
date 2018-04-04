@@ -22,7 +22,7 @@
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 
-#include  <string>
+#include <string>
 
 extern "C" {
 #include <sys/types.h>
@@ -37,15 +37,26 @@ namespace monitor
 class DummyMonitor : public AbstractProcessMonitor
 {
 public:
-    DummyMonitor() {}
+    DummyMonitor()
+    {
+    }
 
-    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/) {}
-    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/,
-            bool /*spawn*/) {}
-    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/) {}
+    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/)
+    {
+    }
+    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/, bool /*spawn*/)
+    {
+    }
+    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/)
+    {
+    }
 
-    virtual void exit_process(pid_t /*pid*/, std::string /*name*/) {}
-    virtual void exit_thread(pid_t /*tid*/) {}
+    virtual void exit_process(pid_t /*pid*/, std::string /*name*/)
+    {
+    }
+    virtual void exit_thread(pid_t /*tid*/)
+    {
+    }
 };
 }
 }

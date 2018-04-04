@@ -21,8 +21,8 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/cpu_set_monitor.hpp>
-#include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/process_monitor.hpp>
+#include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/summary.hpp>
 
 #include <system_error>

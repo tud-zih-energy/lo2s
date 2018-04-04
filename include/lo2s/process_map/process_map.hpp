@@ -36,19 +36,20 @@ namespace lo2s
 class ProcessMap
 {
 public:
-    Process &get_process(pid_t pid);
-    Thread &get_thread(pid_t tid);
+    Process& get_process(pid_t pid);
+    Thread& get_thread(pid_t tid);
 
     void insert(pid_t pid, pid_t tid);
     void erase(pid_t tid);
 
-    friend ProcessMap &process_map();
+    friend ProcessMap& process_map();
 
     std::unordered_map<pid_t, Process> processes;
     std::unordered_map<pid_t, Thread> threads;
+
 private:
     ProcessMap();
 };
 
-ProcessMap &process_map();
+ProcessMap& process_map();
 }

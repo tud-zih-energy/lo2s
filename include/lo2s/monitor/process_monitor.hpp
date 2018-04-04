@@ -20,8 +20,8 @@
  */
 
 #pragma once
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 
 #include <string>
 
@@ -41,8 +41,7 @@ public:
     ~ProcessMonitor();
 
     void insert_process(pid_t pid, std::string proc_name) override;
-    void insert_first_process(pid_t pid, std::string proc_name,
-            bool spawn) override;
+    void insert_first_process(pid_t pid, std::string proc_name, bool spawn) override;
     void insert_thread(pid_t pid, pid_t tid) override;
 
     void exit_process(pid_t pid, std::string name) override;

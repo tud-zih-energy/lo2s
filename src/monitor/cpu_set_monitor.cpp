@@ -4,8 +4,8 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
-#include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/dummy_monitor.hpp>
+#include <lo2s/monitor/process_monitor_main.hpp>
 
 #include <csignal>
 
@@ -30,7 +30,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 void CpuSetMonitor::run()
 {
     sigset_t ss;
-    if(config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().pid == -1)
     {
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
@@ -49,7 +49,7 @@ void CpuSetMonitor::run()
 
     trace_.register_tids(read_all_tid_exe());
 
-    if(config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().pid == -1)
     {
         int sig;
         auto ret = sigwait(&ss, &sig);
@@ -65,9 +65,9 @@ void CpuSetMonitor::run()
             DummyMonitor monitor;
             process_monitor_main(monitor);
         }
-        catch(std::system_error &e)
+        catch (std::system_error& e)
         {
-            if(e.code())
+            if (e.code())
             {
                 throw e;
             }

@@ -19,9 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/process_map/process.hpp>
 #include <lo2s/process_map/process_map.hpp>
 #include <lo2s/summary.hpp>
-#include <lo2s/process_map/process.hpp>
 
 namespace lo2s
 {
@@ -36,12 +36,12 @@ ProcessMap::ProcessMap()
 {
 }
 
-Process &ProcessMap::get_process(pid_t pid)
+Process& ProcessMap::get_process(pid_t pid)
 {
     return processes.at(pid);
 }
 
-Thread &ProcessMap::get_thread(pid_t tid)
+Thread& ProcessMap::get_thread(pid_t tid)
 {
     return threads.at(tid);
 }
@@ -50,11 +50,11 @@ void ProcessMap::insert(pid_t pid, pid_t tid)
 {
     summary().add_thread();
 
-    if(processes.count(pid) == 0)
+    if (processes.count(pid) == 0)
     {
         processes.emplace(pid, Process());
     }
-    if(threads.count(tid) == 0)
+    if (threads.count(tid) == 0)
     {
         threads.emplace(tid, Thread(pid));
     }

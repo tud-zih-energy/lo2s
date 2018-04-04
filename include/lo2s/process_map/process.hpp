@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include <lo2s/process_map/thread.hpp>
 #include <lo2s/process_info.hpp>
+#include <lo2s/process_map/thread.hpp>
 
-#include <unordered_map>
 #include <memory>
+#include <unordered_map>
 
 extern "C" {
 #include <sys/types.h>
@@ -37,7 +37,9 @@ namespace lo2s
 class Process
 {
 public:
-    Process(){}
+    Process()
+    {
+    }
 
     std::unique_ptr<ProcessInfo> info;
 };
