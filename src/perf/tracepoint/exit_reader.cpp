@@ -45,6 +45,9 @@ ExitReader::ExitReader(int cpu, trace::Trace& trace) try
   comm_field_(get_sched_process_exit_event().field("comm"))
 {
 }
+// NOTE: function-try-block is intentional; catch get_sched_process_exit_event()
+// throwing in constructor initializers if sched/sched_process_exit tracepoint
+// event is unavailable.
 catch (const EventFormat::ParseError& e)
 {
     Log::error() << "Failed to open process exit tracepoint event: " << e.what();

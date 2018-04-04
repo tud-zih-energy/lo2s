@@ -53,6 +53,9 @@ SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
   prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
 }
+// NOTE: function-try-block is intentional; catch get_sched_switch_event()
+// throwing in constructor initializers if sched/sched_switch tracepoint
+// event is unavailable.
 catch (const EventFormat::ParseError& e)
 {
     Log::error() << "Failed to open scheduler switch tracepoint event: " << e.what();
