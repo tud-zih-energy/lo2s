@@ -96,6 +96,8 @@ public:
         ParseError(const std::string& what) : std::runtime_error(what)
         {
         }
+
+        ParseError(const std::string& what, int error_code);
     };
 
 public:
