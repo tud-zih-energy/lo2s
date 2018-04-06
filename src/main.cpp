@@ -50,7 +50,7 @@ int main(int argc, const char** argv)
         if (e.code())
         {
             lo2s::Log::fatal() << "Aborting: " << e.what();
-            return EXIT_FAILURE;
+            return e.code().value();
         }
         else
         {
