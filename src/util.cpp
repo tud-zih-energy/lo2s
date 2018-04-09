@@ -15,12 +15,14 @@
 #include <cstdint>
 #include <ctime>
 
-extern "C" {
+extern "C"
+{
 #include <limits.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 }
 
@@ -105,6 +107,22 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     proc_stat >> cpu_id;
     return cpu_id;
 }
+
+std::string get_uname()
+{
+    struct ::utsname uname;
+    std::stringstream fmt;
+
+    if (::uname(&uname) < 0)
+    {
+        return {};
+    }
+
+    fmt << uname.sysname << " " << uname.release << " " << uname.version;
+
+    return fmt.str();
+}
+
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;

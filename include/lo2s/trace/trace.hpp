@@ -266,6 +266,8 @@ private:
     otf2::definition::container<otf2::definition::metric_member> metric_members_;
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::container<otf2::definition::metric_instance> metric_instances_;
+    otf2::definition::container<otf2::definition::system_tree_node_property>
+        system_tree_node_properties_;
 };
 } // namespace trace
 } // namespace lo2s

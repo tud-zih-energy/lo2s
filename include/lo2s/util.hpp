@@ -72,6 +72,8 @@ std::string get_process_exe(pid_t pid);
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
 
+std::string get_uname();
+
 template <typename T>
 T get_sysctl(const std::string& group, const std::string& name)
 {
