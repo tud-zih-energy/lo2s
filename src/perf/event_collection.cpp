@@ -71,6 +71,16 @@ EventCollection collect_requested_events()
         used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
     }
 
+    // if not already present, add sampling event as a counter
+    const auto& sampling_event = config().sampling_event;
+    if (std::count_if(used_counters.begin(), used_counters.end(),
+                      [&sampling_event](const perf::CounterDescription& desc) {
+                          return desc.name == sampling_event;
+                      }) == 0)
+    {
+        used_counters.emplace_back(perf::EventProvider::get_event_by_name(sampling_event));
+    }
+
     return { leader, used_counters };
 }
 
