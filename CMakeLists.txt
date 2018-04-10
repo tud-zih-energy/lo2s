@@ -127,8 +127,6 @@ set(SOURCE_FILES
     src/monitor/thread_monitor.cpp
     src/monitor/threaded_monitor.cpp
 
-    src/process_map/process_map.cpp
-
     src/process_controller.cpp
 
     src/perf/event_collection.cpp

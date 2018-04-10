@@ -34,7 +34,8 @@
 #include <cstdlib>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -106,8 +107,12 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
         attached_pid = child;
     }
     running = true;
-    process_map().insert(child, child);
-    monitor_.insert_first_process(child, name, spawn);
+
+    threads_.emplace(child, child);
+
+    monitor_.insert_process(child, name, spawn);
+
+    summary().add_thread();
 }
 
 ProcessController::~ProcessController()
@@ -144,8 +149,10 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             Log::debug() << "New process is forked " << newpid << ": " << name
                          << " parent: " << child << ": " << get_process_exe(child);
 
-            process_map().insert(newpid, newpid);
+            threads_.emplace(newpid, newpid);
             monitor_.insert_process(newpid, name);
+
+            summary().add_thread();
         }
         catch (std::system_error& e)
         {
@@ -164,13 +171,15 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
 
             // Parent may be a thread, get the process
-            auto pid = process_map().get_thread(child).parent_pid;
+            auto pid = threads_.at(newpid);
             Log::info() << "New thread is cloned " << newpid << " parent: " << child
                         << " pid: " << pid;
 
             // register monitoring
-            process_map().insert(pid, newpid);
+            threads_.emplace(pid, newpid);
             monitor_.insert_thread(pid, newpid);
+
+            summary().add_thread();
         }
         catch (std::out_of_range& e)
         {
@@ -187,7 +196,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
     {
         try
         {
-            auto pid = process_map().get_thread(child).parent_pid;
+            auto pid = threads_.at(child);
             if (pid == child)
             {
                 auto name = get_process_exe(child);
@@ -200,7 +209,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                             << get_process_exe(pid) << " is about to exit";
                 monitor_.exit_thread(child);
             }
-            process_map().erase(child);
+            threads_.erase(child);
         }
         catch (std::out_of_range&)
         {
@@ -305,4 +314,4 @@ void ProcessController::handle_signal(pid_t child, int status)
         }
     }
 }
-}
+} // namespace lo2s

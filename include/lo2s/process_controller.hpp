@@ -22,10 +22,12 @@
 #pragma once
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/process_map/process_map.hpp>
+
+#include <map>
 #include <string>
 
-extern "C" {
+extern "C"
+{
 #include <signal.h>
 }
 
@@ -50,5 +52,7 @@ private:
     sighandler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_;
+
+    std::map<pid_t, pid_t> threads_;
 };
-}
+} // namespace lo2s

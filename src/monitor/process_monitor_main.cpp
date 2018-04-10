@@ -24,6 +24,7 @@
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 
 #include <lo2s/process_controller.hpp>
+#include <lo2s/util.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
@@ -36,7 +37,8 @@
 
 #include <cassert>
 
-extern "C" {
+extern "C"
+{
 #include <signal.h>
 #include <unistd.h>
 
@@ -129,5 +131,5 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         controller.run();
     }
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

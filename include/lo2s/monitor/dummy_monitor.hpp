@@ -24,7 +24,8 @@
 
 #include <string>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -41,13 +42,10 @@ public:
     {
     }
 
-    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/)
+    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/, bool = false)
     {
     }
-    virtual void insert_first_process(pid_t /*pid*/, std::string /*proc_name*/, bool /*spawn*/)
-    {
-    }
-    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/)
+    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/, bool = false)
     {
     }
 
@@ -58,5 +56,5 @@ public:
     {
     }
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

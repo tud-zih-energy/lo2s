@@ -22,10 +22,14 @@
 #pragma once
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/thread_monitor.hpp>
+#include <lo2s/process_info.hpp>
 
+#include <map>
 #include <string>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -39,13 +43,15 @@ class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
 public:
     ProcessMonitor();
     ~ProcessMonitor();
-
-    void insert_process(pid_t pid, std::string proc_name) override;
-    void insert_first_process(pid_t pid, std::string proc_name, bool spawn) override;
-    void insert_thread(pid_t pid, pid_t tid) override;
+    void insert_process(pid_t pid, std::string proc_name, bool spawn = false) override;
+    void insert_thread(pid_t pid, pid_t tid, bool spawn = false) override;
 
     void exit_process(pid_t pid, std::string name) override;
     void exit_thread(pid_t tid) override;
+
+private:
+    std::map<pid_t, ProcessInfo> processes_;
+    std::map<pid_t, ThreadMonitor> threads_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

@@ -23,11 +23,6 @@
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
-#include <lo2s/process_map/process_map.hpp>
-#include <lo2s/process_map/thread.hpp>
-
-#include <memory>
-
 namespace lo2s
 {
 namespace monitor
@@ -38,34 +33,24 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_first_process(pid_t pid, std::string proc_name, bool spawn)
+void ProcessMonitor::insert_process(pid_t pid, std::string proc_name, bool spawn)
 {
     trace_.process(pid, proc_name);
-
-    Process& process = process_map().get_process(pid);
-    if (process.info == nullptr)
-    {
-        process.info = std::make_unique<ProcessInfo>(pid, spawn);
-    }
-    process_map().get_thread(pid).monitor =
-        std::make_unique<ThreadMonitor>(pid, pid, *this, *process.info, spawn);
+    insert_thread(pid, pid, spawn);
 }
 
-void ProcessMonitor::insert_process(pid_t pid, std::string proc_name)
+void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, bool spawn)
 {
-    trace_.process(pid, proc_name);
-    insert_thread(pid, pid);
-}
-
-void ProcessMonitor::insert_thread(pid_t pid, pid_t tid)
-{
-    Process& process = process_map().get_process(pid);
-    if (process.info == nullptr)
+    if (processes_.count(pid) == 0)
     {
-        process.info = std::make_unique<ProcessInfo>(pid, false);
+        processes_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+                           std::forward_as_tuple(pid, spawn));
     }
-    process_map().get_thread(tid).monitor =
-        std::make_unique<ThreadMonitor>(pid, tid, *this, *process.info, false);
+    if (threads_.count(tid) == 0)
+    {
+        threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                         std::forward_as_tuple(pid, tid, *this, processes_.at(pid), spawn));
+    }
 }
 
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
@@ -76,21 +61,19 @@ void ProcessMonitor::exit_process(pid_t pid, std::string name)
 
 void ProcessMonitor::exit_thread(pid_t tid)
 {
-    if (process_map().get_thread(tid).monitor != nullptr)
+    if (threads_.count(tid) != 0)
     {
-        process_map().get_thread(tid).monitor->stop();
+        threads_.at(tid).stop();
+        threads_.erase(tid);
     }
 }
 
 ProcessMonitor::~ProcessMonitor()
 {
-    for (auto& thread : process_map().threads)
+    for (auto& thread : threads_)
     {
-        if (thread.second.monitor != nullptr)
-        {
-            thread.second.monitor->stop();
-        }
+        thread.second.stop();
     }
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s
