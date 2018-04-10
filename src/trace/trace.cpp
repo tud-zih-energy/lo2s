@@ -95,8 +95,12 @@ Trace::Trace()
     archive_.set_creator(std::string("lo2s - ") + lo2s::version());
     archive_.set_description(config().command_line);
 
-    system_tree_node_properties_.emplace(system_tree_root_node_, intern("LO2S::UNAME"),
-                                         otf2::attribute_value{ intern(get_uname()) });
+    auto& uname = lo2s::get_uname();
+    archive_.set_property("LO2S::UNAME_SYSNAME", std::string{ uname.sysname });
+    archive_.set_property("LO2S::UNAME_NODENAME", std::string{ uname.nodename });
+    archive_.set_property("LO2S::UNAME_RELEASE", std::string{ uname.release });
+    archive_.set_property("LO2S::UNAME_VERSION", std::string{ uname.version });
+    archive_.set_property("LO2S::UNAME_MACHINE", std::string{ uname.machine });
 
     // TODO clean this up, avoid side effect comm stuff
     attach_process_location_group(system_tree_root_node_, METRIC_PID,
@@ -210,7 +214,6 @@ Trace::~Trace()
     archive_ << metric_members_;
     archive_ << metric_classes_;
     archive_ << metric_instances_;
-    archive_ << system_tree_node_properties_;
 }
 
 std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sampling_dso()

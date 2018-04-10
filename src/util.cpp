@@ -9,7 +9,6 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
-#include <sstream>
 #include <unordered_map>
 
 #include <cstdint>
@@ -108,19 +107,21 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     return cpu_id;
 }
 
-std::string get_uname()
+const struct ::utsname& get_uname()
 {
-    struct ::utsname uname;
-    std::stringstream fmt;
-
-    if (::uname(&uname) < 0)
+    static struct instance_wrapper
     {
-        return {};
-    }
+        instance_wrapper()
+        {
+            if (::uname(&uname) < 0)
+            {
+                throw_errno();
+            }
+        }
+        struct ::utsname uname;
+    } instance{};
 
-    fmt << uname.sysname << " " << uname.release << " " << uname.version;
-
-    return fmt.str();
+    return instance.uname;
 }
 
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
