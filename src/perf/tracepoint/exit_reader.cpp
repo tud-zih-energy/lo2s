@@ -38,11 +38,20 @@ static const EventFormat& get_sched_process_exit_event()
     return evt;
 }
 
-ExitReader::ExitReader(int cpu, trace::Trace& trace)
-: Reader(cpu, get_sched_process_exit_event().id(), config().mmap_pages), trace_(trace),
+ExitReader::ExitReader(int cpu, trace::Trace& trace) try
+: Reader(cpu, get_sched_process_exit_event().id(), config().mmap_pages),
+  trace_(trace),
   pid_field_(get_sched_process_exit_event().field("pid")),
   comm_field_(get_sched_process_exit_event().field("comm"))
 {
+}
+// NOTE: function-try-block is intentional; catch get_sched_process_exit_event()
+// throwing in constructor initializers if sched/sched_process_exit tracepoint
+// event is unavailable.
+catch (const EventFormat::ParseError& e)
+{
+    Log::error() << "Failed to open process exit tracepoint event: " << e.what();
+    throw std::runtime_error("Failed to open tracepoint exit reader");
 }
 
 ExitReader::~ExitReader()
@@ -64,6 +73,6 @@ void ExitReader::merge_trace()
 {
     trace_.register_tids(comms_);
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

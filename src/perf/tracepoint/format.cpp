@@ -30,33 +30,56 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <cerrno>
+
 namespace lo2s
 {
 namespace perf
 {
 namespace tracepoint
 {
+EventFormat::ParseError::ParseError(const std::string& what, int error_code)
+: std::runtime_error{ what + ": " + std::strerror(error_code) }
+{
+}
 
 EventFormat::EventFormat(const std::string& name) : name_(name)
 {
+    using namespace std::string_literals;
+
     // allow perf-like name format which uses ':' as a separator
     std::replace(name_.begin(), name_.end(), ':', '/');
 
     boost::filesystem::path path_event = base_path_ / name_;
     boost::filesystem::ifstream ifs_id, ifs_format;
 
-    ifs_id.exceptions(std::ios::failbit | std::ios::badbit);
-    ifs_format.exceptions(std::ios::failbit | std::ios::badbit);
+    auto id_path = path_event / "id";
+    auto format_path = path_event / "format";
 
-    ifs_id.open(path_event / "id");
+    ifs_id.open(id_path);
     ifs_id >> id_;
 
-    ifs_format.open(path_event / "format");
+    if (ifs_id.fail())
+    {
+        throw ParseError{ "Failed to read tracepoint ID file "s + id_path.string(), errno };
+    }
+
+    ifs_format.open(format_path);
+
+    if (ifs_format.fail())
+    {
+        throw ParseError{ "Failed to open tracepoint format file "s + format_path.string(), errno };
+    }
+
     std::string line;
-    ifs_format.exceptions(std::ios::badbit);
-    while (getline(ifs_format, line))
+    while (std::getline(ifs_format, line))
     {
         parse_format_line(line);
+    }
+
+    if (ifs_format.bad())
+    {
+        throw ParseError{ "Unexpected error while reading tracepoint format description" };
     }
 }
 
@@ -124,6 +147,6 @@ std::vector<std::string> EventFormat::get_tracepoint_event_names()
     }
 }
 const boost::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s
