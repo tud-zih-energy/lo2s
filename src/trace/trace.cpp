@@ -96,11 +96,11 @@ Trace::Trace()
     archive_.set_description(config().command_line);
 
     auto& uname = lo2s::get_uname();
-    archive_.set_property("LO2S::UNAME_SYSNAME", std::string{ uname.sysname });
-    archive_.set_property("LO2S::UNAME_NODENAME", std::string{ uname.nodename });
-    archive_.set_property("LO2S::UNAME_RELEASE", std::string{ uname.release });
-    archive_.set_property("LO2S::UNAME_VERSION", std::string{ uname.version });
-    archive_.set_property("LO2S::UNAME_MACHINE", std::string{ uname.machine });
+    add_lo2s_property("UNAME::SYSNAME", std::string{ uname.sysname });
+    add_lo2s_property("UNAME::NODENAME", std::string{ uname.nodename });
+    add_lo2s_property("UNAME::RELEASE", std::string{ uname.release });
+    add_lo2s_property("UNAME::VERSION", std::string{ uname.version });
+    add_lo2s_property("UNAME::MACHINE", std::string{ uname.machine });
 
     // TODO clean this up, avoid side effect comm stuff
     attach_process_location_group(system_tree_root_node_, METRIC_PID,
@@ -214,6 +214,7 @@ Trace::~Trace()
     archive_ << metric_members_;
     archive_ << metric_classes_;
     archive_ << metric_instances_;
+    archive_ << system_tree_node_properties_;
 }
 
 std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sampling_dso()
@@ -311,6 +312,21 @@ void Trace::process_update_executable(pid_t pid, const otf2::definition::string&
 void Trace::process_update_executable(pid_t pid, const std::string& exe_name)
 {
     process_update_executable(pid, intern(exe_name));
+}
+
+void Trace::add_lo2s_property(const std::string& name, const std::string& value)
+{
+    std::string property_name{ "LO2S::" };
+    property_name.append(name);
+
+    // Add to trace properties.  This is likely not the place to put this
+    // information, but it's easily accessible in trace analysis tools.
+    archive_.set_property(property_name, value);
+
+    // Add to machine-specific properties which are stored in the system tree
+    // root node.  This is the correct way (TM).
+    system_tree_node_properties_.emplace(system_tree_root_node_, intern(property_name),
+                                         otf2::attribute_value{ intern(value) });
 }
 
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
