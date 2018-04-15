@@ -9,18 +9,19 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
-#include <sstream>
 #include <unordered_map>
 
 #include <cstdint>
 #include <ctime>
 
-extern "C" {
+extern "C"
+{
 #include <limits.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 }
 
@@ -105,6 +106,24 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
     proc_stat >> cpu_id;
     return cpu_id;
 }
+
+const struct ::utsname& get_uname()
+{
+    static struct instance_wrapper
+    {
+        instance_wrapper()
+        {
+            if (::uname(&uname) < 0)
+            {
+                throw_errno();
+            }
+        }
+        struct ::utsname uname;
+    } instance{};
+
+    return instance.uname;
+}
+
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;

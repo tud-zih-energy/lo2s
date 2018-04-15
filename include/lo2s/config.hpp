@@ -27,7 +27,8 @@
 
 #include <cstdint>
 
-extern "C" {
+extern "C"
+{
 #include <unistd.h>
 }
 
@@ -53,7 +54,7 @@ struct Config
     std::vector<std::string> tracepoint_events;
     std::vector<std::string> perf_events;
 #ifdef HAVE_X86_ADAPT
-    std::vector<std::string> x86_adapt_cpu_knobs;
+    std::vector<std::string> x86_adapt_knobs;
 #endif
     // OTF2
     std::string trace_path;
@@ -82,4 +83,4 @@ struct Config
 
 const Config& config();
 void parse_program_options(int argc, const char** argv);
-}
+} // namespace lo2s

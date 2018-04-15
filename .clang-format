@@ -25,6 +25,7 @@ IndentWidth:     4
 IndentFunctionDeclarationAfterType: false
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
+FixNamespaceComments: true
 
 PointerBindsToType: true
 
@@ -53,4 +54,3 @@ SpaceAfterControlStatementKeyword: true
 SpaceBeforeAssignmentOperators: true
 ContinuationIndentWidth: 4
 ...
-

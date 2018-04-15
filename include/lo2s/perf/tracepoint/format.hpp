@@ -90,6 +90,17 @@ private:
 class EventFormat
 {
 public:
+    class ParseError : public std::runtime_error
+    {
+    public:
+        ParseError(const std::string& what) : std::runtime_error(what)
+        {
+        }
+
+        ParseError(const std::string& what, int error_code);
+    };
+
+public:
     EventFormat(const std::string& name);
 
     int id() const
@@ -119,7 +130,10 @@ public:
         throw std::out_of_range("field not found");
     }
 
+    static std::vector<std::string> get_tracepoint_event_names();
+
 private:
+    void parse_id();
     void parse_format_line(const std::string& line);
 
     std::string name_;
@@ -129,6 +143,6 @@ private:
 
     const static boost::filesystem::path base_path_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

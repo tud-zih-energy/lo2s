@@ -29,6 +29,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <ios>
 #include <limits>
 #include <regex>
@@ -206,6 +207,50 @@ static void populate_event_map(EventProvider::EventMap& map)
                                      EventProvider::DescriptionCache::make_invalid());
         }
     }
+}
+
+std::vector<std::string> EventProvider::get_pmu_event_names()
+{
+    std::vector<std::string> names;
+
+    namespace fs = boost::filesystem;
+
+    const fs::path pmu_devices("/sys/bus/event_source/devices");
+
+    for (const auto& pmu : boost::make_iterator_range(fs::directory_iterator{ pmu_devices }, {}))
+    {
+        const auto pmu_path = pmu.path();
+
+        const fs::path event_dir(pmu_path / "events");
+
+        // some PMUs don't have any events, in that case event_dir doesn't exist
+        if (!fs::is_directory(event_dir))
+        {
+            continue;
+        }
+
+        for (const auto& event :
+             boost::make_iterator_range(fs::directory_iterator{ event_dir }, {}))
+        {
+            std::stringstream event_name;
+
+            const auto event_path = event.path();
+            const auto extension = event_path.extension();
+
+            // ignore scaling and unit information
+            if (extension == ".scale" || extension == ".unit")
+            {
+                continue;
+            }
+
+            // use fs::path::string, otherwise the paths are formatted quoted
+            event_name << pmu_path.filename().string() << '/' << event_path.filename().string()
+                       << '/';
+            names.emplace_back(event_name.str());
+        }
+    }
+
+    return names;
 }
 
 static std::uint64_t parse_bitmask(const std::string& format)
@@ -487,7 +532,7 @@ bool EventProvider::has_event(const std::string& name)
     }
 }
 
-std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
+std::vector<std::string> EventProvider::get_predefined_event_names()
 {
 
     const auto& ev_map = instance().event_map_;
@@ -502,8 +547,6 @@ std::vector<EventProvider::EventMap::key_type> EventProvider::get_event_names()
             event_names.push_back(event.first);
         }
     }
-
-    std::sort(event_names.begin(), event_names.end());
 
     return event_names;
 }

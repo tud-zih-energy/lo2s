@@ -43,13 +43,23 @@ static const EventFormat& get_sched_switch_event()
     return evt;
 }
 
-SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
+SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
 : Reader(cpu, get_sched_switch_event().id(), config().mmap_pages),
-  otf2_writer_(trace.cpu_writer(cpu)), trace_(trace), time_converter_(time::Converter::instance()),
+  otf2_writer_(trace.cpu_writer(cpu)),
+  trace_(trace),
+  time_converter_(time::Converter::instance()),
   prev_pid_field_(get_sched_switch_event().field("prev_pid")),
   next_pid_field_(get_sched_switch_event().field("next_pid")),
   prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
+}
+// NOTE: function-try-block is intentional; catch get_sched_switch_event()
+// throwing in constructor initializers if sched/sched_switch tracepoint
+// event is unavailable.
+catch (const EventFormat::ParseError& e)
+{
+    Log::error() << "Failed to open scheduler switch tracepoint event: " << e.what();
+    throw std::runtime_error("Failed to open tracepoint switch writer");
 }
 
 SwitchWriter::~SwitchWriter()
@@ -105,6 +115,6 @@ otf2::definition::region::reference_type SwitchWriter::thread_region_ref(pid_t t
     }
     return it->second;
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s
