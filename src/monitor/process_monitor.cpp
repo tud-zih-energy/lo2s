@@ -33,9 +33,9 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_process(pid_t pid, std::string proc_name, bool spawn)
+void ProcessMonitor::insert_process(pid_t pid,pid_t ppid, std::string proc_name, bool spawn)
 {
-    trace_.process(pid, proc_name);
+    trace_.process(pid, ppid, proc_name);
     insert_thread(pid, pid, spawn);
 }
 
@@ -55,7 +55,7 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, bool spawn)
 
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
 {
-    trace_.process(pid, name);
+    trace_.process_update_executable(pid, name);
     exit_thread(pid);
 }
 

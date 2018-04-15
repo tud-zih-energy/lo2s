@@ -42,7 +42,7 @@ public:
     {
     }
 
-    virtual void insert_process(pid_t /*pid*/, std::string /*proc_name*/, bool = false)
+    virtual void insert_process(pid_t /*pid*/,pid_t /*ppid*/, std::string /*proc_name*/, bool = false)
     {
     }
     virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/, bool = false)

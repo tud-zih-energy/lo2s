@@ -24,6 +24,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
+#include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
 #include <exception>
@@ -110,7 +111,7 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
 
     threads_.emplace(child, child);
 
-    monitor_.insert_process(child, name, spawn);
+    monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, name, spawn);
 
     summary().add_thread();
 }
@@ -150,7 +151,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                          << " parent: " << child << ": " << get_process_exe(child);
 
             threads_.emplace(newpid, newpid);
-            monitor_.insert_process(newpid, name);
+            monitor_.insert_process(newpid,child, name);
 
             summary().add_thread();
         }
