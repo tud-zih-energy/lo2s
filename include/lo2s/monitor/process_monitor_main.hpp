@@ -20,11 +20,12 @@
  */
 
 #pragma once
+#include <lo2s/monitor/abstract_process_monitor.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
-void process_monitor_main();
+void process_monitor_main(monitor::AbstractProcessMonitor& monitor);
 }
 }

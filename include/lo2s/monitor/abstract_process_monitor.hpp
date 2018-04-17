@@ -18,14 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #pragma once
-#include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
-#include <lo2s/process_info.hpp>
 
-#include <map>
 #include <string>
 
 extern "C"
@@ -35,23 +29,19 @@ extern "C"
 
 namespace lo2s
 {
+
 namespace monitor
 {
 
-class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
+class AbstractProcessMonitor
 {
 public:
-    ProcessMonitor();
-    ~ProcessMonitor();
-    void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn = false) override;
-    void insert_thread(pid_t pid, pid_t tid, bool spawn = false) override;
+    virtual void insert_process(pid_t /*pid*/, pid_t /*ppid*/, std::string /*proc_name*/,
+                                bool = false /*spawn*/) = 0;
+    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/, bool = false /*spawn*/) = 0;
 
-    void exit_process(pid_t pid, std::string name) override;
-    void exit_thread(pid_t tid) override;
-
-private:
-    std::map<pid_t, ProcessInfo> processes_;
-    std::map<pid_t, ThreadMonitor> threads_;
+    virtual void exit_process(pid_t /*pid*/, std::string /*name*/) = 0;
+    virtual void exit_thread(pid_t /*tid*/) = 0;
 };
 } // namespace monitor
 } // namespace lo2s

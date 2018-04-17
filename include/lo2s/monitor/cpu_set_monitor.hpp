@@ -41,7 +41,7 @@ class CpuSetMonitor : public MainMonitor
 public:
     CpuSetMonitor();
 
-    void run() override;
+    void run();
 
 private:
     std::map<int, CpuSwitchMonitor> monitors_;

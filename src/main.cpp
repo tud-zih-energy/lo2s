@@ -21,6 +21,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/cpu_set_monitor.hpp>
+#include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/summary.hpp>
 
@@ -40,7 +41,8 @@ int main(int argc, const char** argv)
             lo2s::monitor::CpuSetMonitor().run();
             break;
         case lo2s::MonitorType::PROCESS:
-            lo2s::monitor::process_monitor_main();
+            lo2s::monitor::ProcessMonitor monitor;
+            lo2s::monitor::process_monitor_main(monitor);
             break;
         }
     }

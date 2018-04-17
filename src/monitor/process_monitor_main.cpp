@@ -21,7 +21,10 @@
 
 #include <lo2s/monitor/process_monitor_main.hpp>
 
-#include <lo2s/monitor/process_monitor.hpp>
+#include <lo2s/monitor/abstract_process_monitor.hpp>
+
+#include <lo2s/process_controller.hpp>
+#include <lo2s/util.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
@@ -34,7 +37,8 @@
 
 #include <cassert>
 
-extern "C" {
+extern "C"
+{
 #include <signal.h>
 #include <unistd.h>
 
@@ -81,7 +85,7 @@ static void run_command(const std::vector<std::string>& command_and_args)
     exit(errno);
 }
 
-void process_monitor_main()
+void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
     auto pid = config().pid;
@@ -122,10 +126,10 @@ void process_monitor_main()
         {
             proc_name = get_process_exe(pid);
         }
-        monitor::ProcessMonitor monitor(pid, proc_name, spawn);
 
-        monitor.run();
+        ProcessController controller(pid, proc_name, spawn, monitor);
+        controller.run();
     }
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

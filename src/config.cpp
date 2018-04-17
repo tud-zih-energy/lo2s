@@ -218,7 +218,7 @@ Arguments to options:
           "  " << name << " [options] ./a.out\n"
           "  " << name << " [options] -- ./a.out --option-to-a-out\n"
           "  " << name << " [options] --pid $(pidof some-process)\n"
-          "  " << name << " [options] --all-cpus"
+          "  " << name << " [options] --all-cpus [./a.out]\n"
           "\n" << desc << argument_detail;
     // clang-format on
 }
@@ -302,7 +302,7 @@ void parse_program_options(int argc, const char** argv)
     system_wide_options.add_options()
         ("all-cpus,a",
             po::bool_switch(&all_cpus),
-            "System-wide monitoring of all CPUs.");
+            "System-wide monitoring of all CPUs. If the name of an executable or a pid is given, monitor as long as it is running");
 
     sampling_options.add_options()
         ("count,c",

@@ -20,38 +20,39 @@
  */
 
 #pragma once
+
 #include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
-#include <lo2s/process_info.hpp>
 
 #include <map>
 #include <string>
 
 extern "C"
 {
-#include <sys/types.h>
+#include <signal.h>
 }
 
 namespace lo2s
 {
-namespace monitor
-{
-
-class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
+class ProcessController
 {
 public:
-    ProcessMonitor();
-    ~ProcessMonitor();
-    void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn = false) override;
-    void insert_thread(pid_t pid, pid_t tid, bool spawn = false) override;
+    ProcessController(pid_t child, const std::string& name, bool spawn,
+                      monitor::AbstractProcessMonitor& monitor);
 
-    void exit_process(pid_t pid, std::string name) override;
-    void exit_thread(pid_t tid) override;
+    ~ProcessController();
+
+    void run();
 
 private:
-    std::map<pid_t, ProcessInfo> processes_;
-    std::map<pid_t, ThreadMonitor> threads_;
+    void handle_ptrace_event(pid_t child, int event);
+
+    void handle_signal(pid_t child, int status);
+
+    const pid_t first_child_;
+    sighandler_t default_signal_handler;
+    monitor::AbstractProcessMonitor& monitor_;
+    std::size_t num_wakeups_;
+
+    std::map<pid_t, pid_t> threads_;
 };
-} // namespace monitor
 } // namespace lo2s
