@@ -13,17 +13,22 @@ The trace contains the following information:
  * Several performance counter readings
  * The node-level system tree (cpus (HW-threads), cores, packages)
 
-# Requirements for installation
+# Requirements
 
  * Linux<sup>1</sup>
- * libradare (somewhat recent)
  * OTF2 (>= 2.0)
  * libbfd
  * libiberty
- * boost (1.62, older versions might also work)
+ * boost (>= 1.62)
  * CMake (>= 3.5)
-
+ 
 <sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
+ 
+# Optional dependencies
+
+ * libradare (somewhat recent)
+ * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
+
 
 # Requirements for running
 
