@@ -13,7 +13,7 @@ The trace contains the following information:
  * Several performance counter readings
  * The node-level system tree (cpus (HW-threads), cores, packages)
 
-# Requirements
+# Build Requirements
 
  * Linux<sup>1</sup>
  * OTF2 (>= 2.0)
@@ -24,17 +24,22 @@ The trace contains the following information:
  
 <sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
  
-# Optional dependencies
+# Optional Build Dependencies
 
  * libradare (somewhat recent)
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
 
 
-# Requirements for running
+# Runtime Requirements
 
- * kernel.perf_event_paranoid should be less or equal than 1. If you have any trouble, use:
+ * `kernel.perf_event_paranoid` should be less or equal than `1`. A value of `-1` will give the most features for non-root performance recording, at the cost of some security. Modify as follows:
 
    `sudo sysctl kernel.perf_event_paranoid=1`
+   
+ * Tracepoints and global monitoring requires access to debugfs. Grant permissions at your own discretion.
+ 
+   `sudo mount -t debugfs non /sys/kernel/debug`
+   
 
 # Installation
 
