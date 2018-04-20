@@ -173,7 +173,7 @@ void CounterBuffer::update_buffers()
 
 PerfCounterGroup::PerfCounterGroup(pid_t tid,
                                    const std::vector<perf::CounterDescription>& counter_descs,
-                                   struct perf_event_attr& leader_attr, bool enable_on_exec)
+                                   perf_event_attr leader_attr, bool enable_on_exec)
 : tid_(tid), buf_(counter_descs.size() + 1 /* add group leader counter */)
 {
     leader_attr.size = sizeof(leader_attr);

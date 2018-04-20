@@ -57,9 +57,9 @@ public:
     }
 
 private:
-    static struct perf_event_attr& group_leader_attributes(const CounterDescription& leader_event)
+    static perf_event_attr group_leader_attributes(const CounterDescription& leader_event)
     {
-        static struct perf_event_attr leader_attr;
+        perf_event_attr leader_attr;
         std::memset(&leader_attr, 0, sizeof(leader_attr));
 
         leader_attr.size = sizeof(leader_attr);
