@@ -41,14 +41,12 @@ namespace trace
 class Counters
 {
 public:
-    Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_class metric_class,
-             otf2::definition::location scope);
-
-    static otf2::definition::metric_class get_metric_class(Trace& trace);
+    Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::location scope);
 
     void write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point tp);
 
 private:
+    otf2::definition::metric_class get_metric_class(Trace& trace);
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!

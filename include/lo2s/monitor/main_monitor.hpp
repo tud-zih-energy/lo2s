@@ -28,8 +28,6 @@
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/definition/metric_class.hpp>
-
 namespace lo2s
 {
 namespace perf
@@ -55,15 +53,9 @@ public:
         return trace_;
     }
 
-    otf2::definition::metric_class counters_metric_class() const
-    {
-        return counters_metric_class_;
-    }
-
 protected:
     trace::Trace trace_;
 
-    otf2::definition::metric_class counters_metric_class_;
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::MetricMonitor> tracepoint_metrics_;
 #ifdef HAVE_X86_ADAPT

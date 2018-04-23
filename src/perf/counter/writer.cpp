@@ -30,11 +30,10 @@ namespace perf
 {
 namespace counter
 {
-Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace,
-               otf2::definition::metric_class metric_class, otf2::definition::location scope,
+Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::location scope,
                bool enable_on_exec)
 : Reader(tid, requested_events(), enable_on_exec),
-  counter_writer_(pid, tid, trace, metric_class, scope),
+  counter_writer_(pid, tid, trace, scope),
   time_converter_(time::Converter::instance())
 {
 }

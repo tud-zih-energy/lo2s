@@ -33,7 +33,7 @@ namespace lo2s
 namespace monitor
 {
 MainMonitor::MainMonitor()
-: trace_(), counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
+: trace_(), metrics_(trace_)
 {
     perf::time::Converter::instance();
 

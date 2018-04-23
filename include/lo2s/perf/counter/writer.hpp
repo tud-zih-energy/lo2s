@@ -35,7 +35,7 @@ namespace counter
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::metric_class metric_class,
+    Writer(pid_t pid, pid_t tid, trace::Trace& trace,
            otf2::definition::location scope, bool enable_on_exec);
 
     using Reader<Writer>::handle;

@@ -32,10 +32,9 @@ namespace lo2s
 namespace trace
 {
 // TODO This is an interdependent ball of ... please clean this up
-Counters::Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_class metric_class,
-                   otf2::definition::location scope)
+Counters::Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::location scope)
 : writer_(trace.metric_writer(pid, tid)),
-  metric_instance_(trace.metric_instance(metric_class, writer_.location(), scope)),
+  metric_instance_(trace.metric_instance(get_metric_class(trace), writer_.location(), scope)),
   proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
              "stat")
 {
