@@ -25,7 +25,6 @@
 
 #include <lo2s/perf/counter/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/trace/counters.hpp>
 
 #include <array>
 #include <chrono>

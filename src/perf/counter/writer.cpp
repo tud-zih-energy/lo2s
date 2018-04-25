@@ -33,9 +33,49 @@ namespace counter
 Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::location scope,
                bool enable_on_exec)
 : Reader(tid, requested_events(), enable_on_exec),
-  counter_writer_(pid, tid, trace, scope),
-  time_converter_(time::Converter::instance())
+  time_converter_(time::Converter::instance()),
+  writer_(trace.metric_writer(pid, tid)),
+  metric_instance_(trace.metric_instance(get_metric_class(trace), writer_.location(),
+              scope)),
+  proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
+             "stat")
 {
+    auto mc = metric_instance_.metric_class();
+
+    values_.resize(mc.size());
+    for (std::size_t i = 0; i < mc.size(); i++)
+    {
+        values_[i].metric = mc[i];
+    }
+}
+
+otf2::definition::metric_class Writer::get_metric_class(trace::Trace& trace_)
+{
+    auto c = trace_.metric_class();
+
+    const perf::EventCollection& event_collection = perf::requested_events();
+
+    c.add_member(trace_.metric_member(event_collection.leader.name, event_collection.leader.name,
+                                      otf2::common::metric_mode::accumulated_start,
+                                      otf2::common::type::Double, "#"));
+
+    for (const auto& ev : event_collection.events)
+    {
+        c.add_member(trace_.metric_member(ev.name, ev.name,
+                                          otf2::common::metric_mode::accumulated_start,
+                                          otf2::common::type::Double, "#"));
+    }
+
+    c.add_member(trace_.metric_member("CPU", "CPU executing the task",
+                                      otf2::common::metric_mode::absolute_last,
+                                      otf2::common::type::int64, "cpuid"));
+    c.add_member(trace_.metric_member("time_enabled", "time event active",
+                                      otf2::common::metric_mode::accumulated_start,
+                                      otf2::common::type::uint64, "ns"));
+    c.add_member(trace_.metric_member("time_running", "time event on CPU",
+                                      otf2::common::metric_mode::accumulated_start,
+                                      otf2::common::type::uint64, "ns"));
+    return c;
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
@@ -43,7 +83,21 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
 
     counters_.read(&sample->v);
-    counter_writer_.write(counters_, tp);
+
+    assert(counters_.size() <= values_.size());
+
+    for (std::size_t i = 0; i < counters_.size(); i++)
+    {
+        values_[i].set(counters_[i]);
+    }
+
+    auto index = counters_.size();
+    values_[index++].set(get_task_last_cpu_id(proc_stat_));
+    values_[index++].set(counters_.enabled());
+    values_[index].set(counters_.running());
+
+    // TODO optimize! (avoid copy, avoid shared pointers...)
+    writer_.write(otf2::event::metric(tp, metric_instance_, values_));
     return false;
 }
 }

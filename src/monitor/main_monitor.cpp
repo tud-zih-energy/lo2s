@@ -23,7 +23,6 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/trace/counters.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/perf/tracepoint/metric_monitor.hpp>

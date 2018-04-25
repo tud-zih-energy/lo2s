@@ -140,7 +140,7 @@ set(SOURCE_FILES
 
     src/time/time.cpp
 
-    src/trace/counters.cpp src/trace/trace.cpp
+    src/trace/trace.cpp
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp

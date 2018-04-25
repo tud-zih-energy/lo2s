@@ -23,7 +23,6 @@
 
 #include <lo2s/perf/counter/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/counters.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -42,8 +41,14 @@ public:
     bool handle(const RecordSampleType* sample);
 
 private:
-    trace::Counters counter_writer_;
+    otf2::definition::metric_class get_metric_class(trace::Trace& trace);
+
     time::Converter time_converter_;
+    otf2::writer::local& writer_;
+    otf2::definition::metric_instance metric_instance_;
+    // XXX this should depend here!
+    std::vector<otf2::event::metric::value_container> values_;
+    boost::filesystem::ifstream proc_stat_;
 };
 }
 }
