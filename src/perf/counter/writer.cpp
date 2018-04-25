@@ -32,7 +32,7 @@ namespace counter
 {
 Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::location scope,
                bool enable_on_exec)
-: Reader(tid, requested_events(), enable_on_exec),
+: Reader(tid, -1, requested_events(), enable_on_exec),
   time_converter_(time::Converter::instance()),
   writer_(trace.metric_writer(pid, tid)),
   metric_instance_(trace.metric_instance(get_metric_class(trace), writer_.location(),
