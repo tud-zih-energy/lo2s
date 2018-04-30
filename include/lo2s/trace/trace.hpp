@@ -95,6 +95,7 @@ public:
     otf2::writer::local& cpu_writer(int cpuid);
     otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
     otf2::writer::local& metric_writer(const std::string& name);
+    otf2::writer::local& cpu_metric_writer(int cpuid);
 
     otf2::definition::metric_member metric_member(const std::string& name,
                                                   const std::string& description,

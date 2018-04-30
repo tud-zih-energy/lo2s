@@ -125,6 +125,7 @@ set(SOURCE_FILES
     src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp
     src/monitor/thread_monitor.cpp
+    src/monitor/cpu_counter_monitor.cpp
     src/monitor/threaded_monitor.cpp
 
     src/process_controller.cpp

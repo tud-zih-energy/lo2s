@@ -30,15 +30,16 @@ namespace perf
 {
 namespace counter
 {
-Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::location scope,
+Writer::Writer(pid_t pid, pid_t tid, int cpuid, otf2::writer::local& writer, trace::Trace& trace, otf2::definition::location scope,
                bool enable_on_exec)
-: Reader(tid, -1, requested_events(), enable_on_exec),
+: Reader(tid, cpuid, requested_events(), enable_on_exec),
   time_converter_(time::Converter::instance()),
-  writer_(trace.metric_writer(pid, tid)),
+  writer_(writer),
   metric_instance_(trace.metric_instance(get_metric_class(trace), writer_.location(),
               scope)),
   proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
-             "stat")
+             "stat"),
+  cpuid_(cpuid)
 {
     auto mc = metric_instance_.metric_class();
 
@@ -92,7 +93,14 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     }
 
     auto index = counters_.size();
-    values_[index++].set(get_task_last_cpu_id(proc_stat_));
+    if(cpuid_ == -1)
+    {
+        values_[index++].set(get_task_last_cpu_id(proc_stat_));
+    }
+    else
+    {
+        values_[index++].set(cpuid_);
+    }
     values_[index++].set(counters_.enabled());
     values_[index].set(counters_.running());
 

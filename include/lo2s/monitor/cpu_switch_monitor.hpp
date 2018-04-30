@@ -27,6 +27,8 @@
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #include <lo2s/trace/fwd.hpp>
 
+#include <otf2xx/definition/location.hpp>
+
 namespace lo2s
 {
 namespace monitor
@@ -44,6 +46,10 @@ public:
         return "lo2s::CpuSwitchMonitor";
     }
 
+    otf2::definition::location location()
+    {
+        return switch_writer_.location();
+    }
     void merge_trace();
 
 private:

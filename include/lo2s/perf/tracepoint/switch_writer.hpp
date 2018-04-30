@@ -30,6 +30,8 @@
 #include <lo2s/trace/fwd.hpp>
 
 #include <otf2xx/definition/region.hpp>
+#include <otf2xx/definition/location.hpp>
+#include <otf2xx/writer/local.hpp>
 
 #include <unordered_map>
 
@@ -54,6 +56,10 @@ public:
 
     bool handle(const Reader::RecordSampleType* sample);
 
+    otf2::definition::location location()
+    {
+        return otf2_writer_.location();
+    }
 private:
     otf2::definition::region::reference_type thread_region_ref(pid_t tid);
 

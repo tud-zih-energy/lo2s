@@ -362,7 +362,20 @@ otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
                            otf2::definition::location::location_type::metric);
     return archive()(location);
 }
+otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
+{
+    auto name = intern((boost::format("metrics for cpu %d") % cpuid).str());
+    auto r_group = location_groups_cpu_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(cpuid),
+        std::forward_as_tuple(location_group_ref(), name,
+                              otf2::definition::location_group::location_group_type::unknown,
+                              system_tree_cpu_nodes_.at(cpuid)));
+    const auto& group = r_group.first->second;
 
+    auto location = locations_.emplace(location_ref(), name, group,
+                                       otf2::definition::location::location_type::metric);
+    return archive()(location);
+}
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     auto location =

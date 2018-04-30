@@ -34,7 +34,7 @@ namespace counter
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, trace::Trace& trace,
+    Writer(pid_t pid, pid_t tid, int cpuid, otf2::writer::local& writer, trace::Trace& trace,
            otf2::definition::location scope, bool enable_on_exec);
 
     using Reader<Writer>::handle;
@@ -49,6 +49,7 @@ private:
     // XXX this should depend here!
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
+    int cpuid_;
 };
 }
 }

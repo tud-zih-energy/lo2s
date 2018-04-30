@@ -19,34 +19,28 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <lo2s/monitor/main_monitor.hpp>
-
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
 #include <lo2s/monitor/cpu_counter_monitor.hpp>
 
-#include <vector>
+#include <lo2s/config.hpp>
+#include <lo2s/perf/counter/writer.hpp>
+
+#include <string>
 
 namespace lo2s
 {
 namespace monitor
 {
 
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+CpuCounterMonitor::CpuCounterMonitor(int cpuid, trace::Trace& trace, otf2::definition::location cpu_location)
+: IntervalMonitor(trace, std::to_string(cpuid), config().read_interval),
+  counter_writer_(-1, -1, cpuid, trace.cpu_metric_writer(cpuid), trace,
+                  cpu_location, false)
 {
-public:
-    CpuSetMonitor();
+}
 
-    void run();
-
-private:
-    std::map<int, CpuSwitchMonitor> switch_monitors_;
-    std::map<int, CpuCounterMonitor> counter_monitors_;
-};
+void CpuCounterMonitor::monitor()
+{
+    counter_writer_.read();
+}
 }
 }
