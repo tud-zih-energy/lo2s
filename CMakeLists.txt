@@ -281,8 +281,8 @@ target_compile_features(lo2s
 # define feature test macro
 target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
-# build Debug with all warnings
-target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Wall -pedantic -Wextra>)
+# build Debug with -Werror
+target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
 
 if (IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)
