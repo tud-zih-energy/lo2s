@@ -23,9 +23,13 @@
 
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
+
+#ifdef HAVE_PERF
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
+#endif
+
 #include <lo2s/time/time.hpp>
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
@@ -280,7 +284,12 @@ void parse_program_options(int argc, const char** argv)
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
+#ifdef HAVE_LINUX
                 ->default_value("monotonic-raw"),
+#endif
+#ifdef HAVE_DARWIN
+                ->default_value("realtime"),
+#endif
             "Reference clock used as timestamp source.")
         ("list-clockids",
             po::bool_switch(&list_clockids)
@@ -466,6 +475,7 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_SUCCESS);
         }
 
+#ifdef HAVE_PERF
         if (list_events)
         {
             list_arguments_sorted(std::cout, "predefined events",
@@ -474,13 +484,16 @@ void parse_program_options(int argc, const char** argv)
                                   perf::EventProvider::get_pmu_event_names());
             std::exit(EXIT_SUCCESS);
         }
+#endif
 
+#ifdef HAVE_LINUX
         if (list_tracepoints)
         {
             list_arguments_sorted(std::cout, "Kernel tracepoint events",
                                   perf::tracepoint::EventFormat::get_tracepoint_event_names());
             std::exit(EXIT_SUCCESS);
         }
+#endif
 
         if (list_knobs)
         {
@@ -506,12 +519,14 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
+#ifdef HAVE_PERF
     if (!perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";
         std::exit(EXIT_FAILURE); // hmm...
     }
+#endif
 
     // time synchronization
     config.use_clockid = false;
@@ -584,12 +599,14 @@ void parse_program_options(int argc, const char** argv)
         config.metric_frequency = metric_frequency;
     }
 
+#ifdef HAVE_PERF
     if (!perf::EventProvider::has_event(config.metric_leader))
     {
         lo2s::Log::error() << "event '" << config.metric_leader
                            << "' is not available as a metric leader!";
         std::exit(EXIT_FAILURE);
     }
+#endif
 
     config.exclude_kernel = false;
     if (kernel && no_kernel)

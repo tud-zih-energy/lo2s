@@ -23,8 +23,11 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/interval_monitor.hpp>
 
+#ifdef HAVE_PERF
 #include <lo2s/perf/counter/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
+#endif
+
 #include <lo2s/trace/counters.hpp>
 
 #include <array>
@@ -85,10 +88,14 @@ private:
     pid_t tid_;
     ProcessInfo& info_;
 
+#ifdef HAVE_LINUX
     cpu_set_t affinity_mask_;
+#endif
 
+#ifdef HAVE_PERF
     perf::sample::Writer sample_writer_;
     perf::counter::Writer counter_writer_;
+#endif
 };
 } // namespace monitor
 } // namespace lo2s

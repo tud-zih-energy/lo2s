@@ -26,7 +26,9 @@
 #include <lo2s/trace/counters.hpp>
 #include <lo2s/trace/trace.hpp>
 
+#ifdef HAVE_PERF
 #include <lo2s/perf/tracepoint/metric_monitor.hpp>
+#endif
 
 namespace lo2s
 {
@@ -35,7 +37,9 @@ namespace monitor
 MainMonitor::MainMonitor()
 : trace_(), counters_metric_class_(trace::Counters::get_metric_class(trace_)), metrics_(trace_)
 {
+#ifdef HAVE_PERF
     perf::time::Converter::instance();
+#endif
 
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
@@ -44,6 +48,7 @@ MainMonitor::MainMonitor()
     // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
+#ifdef HAVE_PERF
     if (!config().tracepoint_events.empty())
     {
         try
@@ -56,6 +61,7 @@ MainMonitor::MainMonitor()
             Log::warn() << "Failed to initialize tracepoint events: " << e.what();
         }
     }
+#endif
 
 #ifdef HAVE_X86_ADAPT
     if (!config().x86_adapt_knobs.empty())
@@ -76,10 +82,12 @@ MainMonitor::MainMonitor()
 
 MainMonitor::~MainMonitor()
 {
+#ifdef HAVE_PERF
     if (tracepoint_metrics_)
     {
         tracepoint_metrics_->stop();
     }
+#endif
 #ifdef HAVE_X86_ADAPT
     if (x86_adapt_metrics_)
     {

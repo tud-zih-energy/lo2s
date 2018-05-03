@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,23 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
+#include <chrono>
 
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
+#include <cstdint>
 
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
-
+// All the time stuff is based on the assumption that all times are nanoseconds.
+// XXX check if we need this exposed or can just move it to time/converter.hpp
 namespace lo2s
 {
-namespace monitor
+namespace dtrace
 {
-
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+struct Clock
 {
-public:
-    CpuSetMonitor();
-
-    void run();
-
-private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
+    // This is except from the type = CamelCase naming convention to be compatible
+    using duration = std::chrono::nanoseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<Clock, duration>;
 };
-} // namespace monitor
+} // namespace dtrace
 } // namespace lo2s

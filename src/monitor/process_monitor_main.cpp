@@ -42,7 +42,9 @@ extern "C"
 #include <signal.h>
 #include <unistd.h>
 
+#ifdef HAVE_LINUX
 #include <sys/prctl.h>
+#endif
 #include <sys/ptrace.h>
 }
 
@@ -53,11 +55,19 @@ namespace monitor
 
 static void run_command(const std::vector<std::string>& command_and_args)
 {
+#ifdef HAVE_LINUX
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
+#endif
 
+#ifdef HAVE_LINUX
     /* we need ptrace to get fork/clone/... */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+#endif
+#ifdef HAVE_DARWIN
+    /* we need ptrace to get fork/clone/... */
+    ptrace(PT_TRACE_ME, 0, NULL, 0);
+#endif
 
     std::vector<char*> tmp;
     std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
@@ -98,7 +108,16 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
     else
     {
         // TODO Attach to all threads in a process
-        if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1)
+        int res;
+
+#ifdef HAVE_LINUX
+        res = ptrace(PTRACE_ATTACH, pid, nullptr, nullptr);
+#endif
+#ifdef HAVE_DARWIN
+        res = ptrace(PT_ATTACHEXC, pid, nullptr, 0);
+#endif
+
+        if (res == -1)
         {
             Log::error() << "Could not attach to pid " << pid
                          << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
@@ -127,8 +146,8 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
             proc_name = get_process_exe(pid);
         }
 
-        ProcessController controller(pid, proc_name, spawn, monitor);
-        controller.run();
+        // ProcessController controller(pid, proc_name, spawn, monitor);
+        // controller.run();
     }
 }
 } // namespace monitor

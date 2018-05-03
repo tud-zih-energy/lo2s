@@ -23,8 +23,11 @@
 
 #include <lo2s/trace/trace.hpp>
 
+#ifdef HAVE_PERF
 #include <lo2s/metric/perf_counter.hpp>
 #include <lo2s/perf/counter_description.hpp>
+#endif
+
 #include <lo2s/time/time.hpp>
 
 #include <otf2xx/writer/local.hpp>
@@ -46,7 +49,9 @@ public:
 
     static otf2::definition::metric_class get_metric_class(Trace& trace);
 
+#ifdef HAVE_PERF
     void write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point tp);
+#endif
 
 private:
     otf2::writer::local& writer_;
@@ -55,5 +60,5 @@ private:
     std::vector<otf2::event::metric::value_container> values_;
     boost::filesystem::ifstream proc_stat_;
 };
-}
-}
+} // namespace trace
+} // namespace lo2s

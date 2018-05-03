@@ -39,6 +39,14 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/format.hpp>
 
+#ifdef HAVE_DARWIN
+extern "C"
+{
+#include <sys/sysctl.h>
+#include <sys/types.h>
+}
+#endif
+
 using fmt = boost::format;
 namespace fs = boost::filesystem;
 using namespace std::literals::string_literals;
@@ -78,11 +86,11 @@ inline auto parse_list(std::string list) -> std::set<uint32_t>
 
     return res;
 }
-}
+} // namespace detail
 
 class Topology
 {
-
+#ifdef HAVE_LINUX
     void read_proc()
     {
         std::string online_list;
@@ -132,7 +140,6 @@ class Topology
             auto insert_cpu =
                 cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
             auto& cpu = insert_cpu.first->second;
-            (void)cpu;
             if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id)
             {
                 throw std::runtime_error("Inconsistent cpu/package/core ids in topology.");
@@ -143,6 +150,54 @@ class Topology
             }
         }
     }
+#endif
+
+#ifdef HAVE_DARWIN
+    void read_proc()
+    {
+        // TODO this may be wrong for multisocket systems.
+        size_t size;
+        int32_t num_packages;
+        sysctlbyname("hw.packages", &num_packages, &size, nullptr, 0);
+        assert(size == 4);
+
+        int32_t num_cores;
+        sysctlbyname("hw.physicalcpu", &num_cores, &size, nullptr, 0);
+        assert(size == 4);
+
+        int32_t num_threads;
+        sysctlbyname("hw.logicalcpu", &num_threads, &size, nullptr, 0);
+        assert(size == 4);
+
+        auto num_cores_per_package = num_cores / num_packages;
+        auto num_threads_per_core = num_threads / num_cores;
+
+        int cpu_id = 0;
+
+        for (int package_id = 0; package_id < num_packages; package_id++)
+        {
+            auto insert_package = packages_.insert(std::make_pair(package_id, Package(package_id)));
+            auto& package = insert_package.first->second;
+
+            for (int core_id = 0; core_id < num_cores_per_package; core_id++)
+            {
+                package.core_ids.insert(core_id);
+                package.cpu_ids.insert(cpu_id);
+
+                auto insert_core = cores_.insert(std::make_pair(
+                    std::make_tuple(package_id, core_id), Core(core_id, package_id)));
+                auto& core = insert_core.first->second;
+
+                for (int thread_id = 0; thread_id < num_threads_per_core; thread_id++)
+                {
+                    core.cpu_ids.insert(cpu_id);
+                    cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
+                    cpu_id++;
+                }
+            }
+        }
+    }
+#endif
 
 public:
     struct Cpu
@@ -234,4 +289,4 @@ private:
 
     const static fs::path base_path;
 };
-}
+} // namespace lo2s

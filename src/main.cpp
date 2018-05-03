@@ -41,8 +41,13 @@ int main(int argc, const char** argv)
             lo2s::monitor::CpuSetMonitor().run();
             break;
         case lo2s::MonitorType::PROCESS:
+#ifdef HAVE_PERF
             lo2s::monitor::ProcessMonitor monitor;
             lo2s::monitor::process_monitor_main(monitor);
+#endif
+#ifdef HAVE_DTRACE
+            throw std::runtime_error("Process mode is not supported yet.");
+#endif
             break;
         }
     }

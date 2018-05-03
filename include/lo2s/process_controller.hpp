@@ -23,6 +23,8 @@
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 
+#include <lo2s/os/signal.hpp>
+
 #include <map>
 #include <string>
 
@@ -49,7 +51,7 @@ private:
     void handle_signal(pid_t child, int status);
 
     const pid_t first_child_;
-    sighandler_t default_signal_handler;
+    lo2s::os::signal_handler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_;
 

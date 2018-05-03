@@ -76,8 +76,13 @@ extern "C" void sig_handler(int signum)
 namespace lo2s
 {
 
+#ifdef HAVE_LINUX
 void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr,
                   void* data = nullptr)
+#endif
+#ifdef HAVE_DARWIN
+    void check_ptrace(int request, pid_t pid, void* addr = nullptr, int data = 0)
+#endif
 {
     auto retval = ptrace(request, pid, addr, data);
     if (retval == -1)
@@ -91,7 +96,14 @@ void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr
 
 void check_ptrace_setoptions(pid_t pid, long options)
 {
+#ifdef HAVE_LINUX
     check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
+#endif
+#ifdef HAVE_DARWIN
+    // TODO check this
+    (void)pid;
+    (void)options;
+#endif
 }
 
 ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn,
@@ -127,7 +139,12 @@ void ProcessController::run()
     {
         /* wait for signal */
         int status;
+#ifdef HAVE_LINUX
         pid_t child = waitpid(-1, &status, __WALL);
+#endif
+#ifdef HAVE_DARWIN
+        pid_t child = waitpid(-1, &status, P_ALL);
+#endif
 
         num_wakeups_++;
 
@@ -151,7 +168,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                          << " parent: " << child << ": " << get_process_exe(child);
 
             threads_.emplace(newpid, newpid);
-            monitor_.insert_process(newpid,child, name);
+            monitor_.insert_process(newpid, child, name);
 
             summary().add_thread();
         }

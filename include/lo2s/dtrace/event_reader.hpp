@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,40 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/dtrace/types.hpp>
 
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
-
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
+#include <memory>
 
 namespace lo2s
 {
-namespace monitor
+namespace dtrace
 {
 
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+class EventReader
 {
 public:
-    CpuSetMonitor();
+    EventReader();
+    ~EventReader();
 
-    void run();
+    void read();
+
+    virtual void handle(int cpu, const ProbeDesc& pd, nitro::lang::string_ref data,
+                        void* raw_data) = 0;
+
+    lo2s::dtrace::Handle dtrace_handle() const
+    {
+        return handle_;
+    }
+
+    void init_dtrace_program(const std::string&);
 
 private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
+    static int consume_callback(ConstProbeDataPtr data, ConstRecDescPtr rec, void* arg);
+    static int buffer_callback(ConstBufDataPtr bufdata, void* arg);
+
+private:
+    lo2s::dtrace::Handle handle_;
+    std::unique_ptr<struct dtrace_proginfo> prog_info_;
 };
-} // namespace monitor
+} // namespace dtrace
 } // namespace lo2s

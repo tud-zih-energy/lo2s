@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,32 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/fwd.hpp>
 
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
+#include <lo2s/monitor/dtrace_sleep_monitor.hpp>
 
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
+#include <lo2s/dtrace/sched/writer.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
-
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+class DtraceCpuSwitchMonitor : public DtraceSleepMonitor
 {
 public:
-    CpuSetMonitor();
+    DtraceCpuSwitchMonitor(int cpu, trace::Trace& trace);
 
-    void run();
+    std::string group() const override
+    {
+        return "lo2s::CpuSwitchMonitor";
+    }
+
+    void monitor() override;
+
+    void merge_trace();
 
 private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
+    lo2s::dtrace::sched::Writer sched_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -23,8 +23,10 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#ifdef HAVE_PERF
 #include <lo2s/perf/event_collection.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#endif
 #include <lo2s/platform.hpp>
 
 namespace lo2s
@@ -52,6 +54,7 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
 {
     auto c = trace_.metric_class();
 
+#ifdef HAVE_PERF
     const perf::EventCollection& event_collection = perf::requested_events();
 
     c.add_member(trace_.metric_member(event_collection.leader.name, event_collection.leader.name,
@@ -64,6 +67,7 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
                                           otf2::common::metric_mode::accumulated_start,
                                           otf2::common::type::Double, "#"));
     }
+#endif
 
     c.add_member(trace_.metric_member("CPU", "CPU executing the task",
                                       otf2::common::metric_mode::absolute_last,
@@ -77,6 +81,7 @@ otf2::definition::metric_class Counters::get_metric_class(Trace& trace_)
     return c;
 }
 
+#ifdef HAVE_PERF
 void Counters::write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point read_time)
 {
     assert(counters.size() <= values_.size());
@@ -93,5 +98,6 @@ void Counters::write(const metric::PerfCounterGroup& counters, otf2::chrono::tim
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(read_time, metric_instance_, values_));
 }
-}
-}
+#endif
+} // namespace trace
+} // namespace lo2s

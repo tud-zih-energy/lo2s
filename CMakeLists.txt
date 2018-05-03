@@ -50,7 +50,9 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+    endif()
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
@@ -65,14 +67,12 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
+    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+    endif()
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     set(CMAKE_LINK_SEARCH_START_STATIC 1)
     set(CMAKE_LINK_SEARCH_END_STATIC 1)
-endif()
-
-# Check if we are running Linux
-if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    message(FATAL_ERROR "You can only build and run lo2s on a Linux machine. I'm sorry.")
 endif()
 
 # configure OTF2xx submodule
@@ -90,6 +90,8 @@ include(lib/x86_adapt/x86_adapt.cmake)
 find_package(Git)
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 find_package(Binutils REQUIRED)
+# On Linux, libintl is part of libc, but not on Mac
+find_package(Intl REQUIRED)
 find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
@@ -111,41 +113,32 @@ if(NOT CLOCK_GETTIME_FOUND)
 endif()
 
 # detect version of running kernel
-string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSION})
+string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" KERNEL_VERSION ${CMAKE_SYSTEM_VERSION})
 
 # prepare list of source files
 set(SOURCE_FILES
-    src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
-    src/metric/perf_counter.cpp
+    src/metric/plugin/plugin.cpp
+    src/metric/plugin/channel.cpp
+    src/metric/plugin/metrics.cpp
 
     src/monitor/cpu_set_monitor.cpp
-    src/monitor/cpu_switch_monitor.cpp
     src/monitor/fd_monitor.cpp
     src/monitor/interval_monitor.cpp
     src/monitor/main_monitor.cpp
-    src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp
-    src/monitor/thread_monitor.cpp
     src/monitor/threaded_monitor.cpp
-
-    src/process_controller.cpp
-
-    src/perf/event_collection.cpp
-    src/perf/event_provider.cpp
-    src/perf/counter/writer.cpp
-    src/perf/sample/writer.cpp
-    src/perf/time/converter.cpp src/perf/time/reader.cpp
-    src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
-    src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
-    src/perf/tracepoint/exit_reader.cpp
 
     src/time/time.cpp
 
-    src/trace/counters.cpp src/trace/trace.cpp
+    src/trace/counters.cpp
+    src/trace/trace.cpp
 
-    src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
+    src/config.cpp
+    src/main.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
+    src/topology.cpp
+    src/bfd_resolve.cpp
+    src/pipe.cpp
     src/mmap.cpp
     src/util.cpp
     src/summary.cpp
@@ -153,6 +146,56 @@ set(SOURCE_FILES
 
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
+
+# Check if we are running on a supported os
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set(HAVE_PERF TRUE)
+    set(HAVE_LINUX TRUE)
+    message(STATUS "Building for: Linux (${KERNEL_VERSION})")
+    message(STATUS "Using for sampling: perf")
+
+    target_compile_definitions(lo2s PRIVATE HAVE_PERF HAVE_LINUX)
+    target_sources(lo2s PRIVATE
+        src/process_controller.cpp
+
+        src/monitor/process_monitor.cpp
+        src/monitor/thread_monitor.cpp
+
+        src/monitor/cpu_switch_monitor.cpp
+
+        src/metric/perf_counter.cpp
+
+        src/perf/event_collection.cpp
+        src/perf/event_provider.cpp
+        src/perf/counter/writer.cpp
+        src/perf/sample/writer.cpp
+        src/perf/time/converter.cpp
+        src/perf/time/reader.cpp
+        src/perf/tracepoint/format.cpp
+        src/perf/tracepoint/metric_monitor.cpp
+        src/perf/tracepoint/writer.cpp
+        src/perf/tracepoint/switch_writer.cpp
+        src/perf/tracepoint/exit_reader.cpp
+    )
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(HAVE_DTRACE TRUE)
+    set(HAVE_DARWIN TRUE)
+    message(STATUS "Building for: Darwin (${KERNEL_VERSION})")
+    message(STATUS "Using for sampling: dtrace")
+
+    target_compile_definitions(lo2s PRIVATE HAVE_DTRACE HAVE_DARWIN)
+    target_sources(lo2s PRIVATE
+        src/monitor/dtrace_cpu_switch_monitor.cpp
+        src/monitor/dtrace_sleep_monitor.cpp
+
+        src/dtrace/event_reader.cpp
+        src/dtrace/sched/writer.cpp
+        src/dtrace/time/convert.cpp
+    )
+    target_link_libraries(lo2s PRIVATE dtrace)
+else()
+    message(FATAL_ERROR "You can only build and run lo2s on a Linux or a Darwin machine. I'm sorry.")
+endif()
 
 # define dependencies of lo2s target
 target_link_libraries(lo2s
@@ -166,6 +209,7 @@ target_link_libraries(lo2s
         Boost::program_options
         Boost::filesystem
         Binutils::Binutils
+        ${Intl_LIBRARIES}
 )
 
 # old glibc versions require -lrt for clock_gettime()
@@ -218,13 +262,13 @@ target_include_directories(lo2s PRIVATE
 )
 
 # special quirk for old kernel versions
-if (HW_BREAKPOINT_COMPAT)
+if (HAVE_LINUX AND HW_BREAKPOINT_COMPAT)
     target_compile_definitions(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
         message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
     endif()
 else()
-    if (NOT HAVE_HW_BREAKPOINT_H)
+    if (NOT HAVE_HW_BREAKPOINT_H AND HAVE_LINUX)
         message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
     endif()
 endif()
@@ -234,7 +278,7 @@ if (USE_PERF_CLOCKID)
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
         target_compile_definitions(lo2s PRIVATE USE_PERF_CLOCKID)
     else()
-        message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
+        # message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
     endif()
 else()
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -242,8 +286,7 @@ else()
     endif()
 endif()
 
-message(STATUS "Linux kernel version: ${LINUX_VERSION}")
-if (LINUX_VERSION VERSION_LESS 3.3.0)
+if (KERNEL_VERSION VERSION_LESS 3.3.0)
     target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=bus-cycles)
     message(STATUS "  Detected Linux older than 3.3.0. Falling back to bus-cycle as metric leader.")
     message(STATUS "  The prefered ref-cycles may still be available. (See --metric-leader)")

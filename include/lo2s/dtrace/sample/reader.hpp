@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,23 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
-
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
-
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
+#include <lo2s/dtrace/types.hpp>
 
 namespace lo2s
 {
-namespace monitor
+namespace dtrace
 {
-
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+namespace sample
+{
+class Reader : EventReader
 {
 public:
-    CpuSetMonitor();
+    void init(pid_t tid, int cpu);
 
-    void run();
+    virtual void handle(int cpu, const ProbeDesc& pd, nitro::lang::string_ref data) = 0;
 
 private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
 };
-} // namespace monitor
+} // namespace sample
+} // namespace dtrace
 } // namespace lo2s

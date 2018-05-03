@@ -25,7 +25,9 @@
 #ifdef HAVE_X86_ADAPT
 #include <lo2s/metric/x86_adapt/metrics.hpp>
 #endif
+#ifdef HAVE_PERF
 #include <lo2s/perf/time/converter.hpp>
+#endif
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/definition/metric_class.hpp>
@@ -38,7 +40,7 @@ namespace tracepoint
 {
 class MetricMonitor;
 }
-}
+} // namespace perf
 
 namespace monitor
 {
@@ -65,10 +67,12 @@ protected:
 
     otf2::definition::metric_class counters_metric_class_;
     metric::plugin::Metrics metrics_;
+#ifdef HAVE_PERF
     std::unique_ptr<perf::tracepoint::MetricMonitor> tracepoint_metrics_;
+#endif
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

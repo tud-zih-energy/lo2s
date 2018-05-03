@@ -29,13 +29,21 @@ class ThreadedMonitor;
 
 class IntervalMonitor;
 class FdMonitor;
+#ifdef HAVE_DTRACE
+class DtraceSleepMonitor;
+#endif
 
 class ThreadMonitor;
 class CoreMonitor;
+#ifdef HAVE_PERF
 class CpuSwitchMonitor;
+#endif
+#ifdef HAVE_DTRACE
+class DtraceCpuSwitchMonitor;
+#endif
 
 class MainMonitor;
 class ProcessMonitor;
 class CpuSetMonitor;
-}
-}
+} // namespace monitor
+} // namespace lo2s

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,37 @@
 
 #pragma once
 
-#include <lo2s/monitor/main_monitor.hpp>
+#include <nitro/lang/string_ref.hpp>
 
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
-
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
+extern "C"
+{
+    struct dtrace_hdl;
+    struct dtrace_probedata;
+    struct dtrace_recdesc;
+    struct dtrace_bufdata;
+    struct dtrace_proginfo;
+}
 
 namespace lo2s
 {
-namespace monitor
+namespace dtrace
 {
+using Handle = struct dtrace_hdl*;
+using ProbeDataPtr = struct dtrace_probedata*;
+using RecDescPtr = struct dtrace_recdesc*;
+using BufDataPtr = struct dtrace_bufdata*;
 
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+using ConstProbeDataPtr = const struct dtrace_probedata*;
+using ConstRecDescPtr = const struct dtrace_recdesc*;
+using ConstBufDataPtr = const struct dtrace_bufdata*;
+
+struct ProbeDesc
 {
-public:
-    CpuSetMonitor();
-
-    void run();
-
-private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
+    nitro::lang::string_ref provider;
+    nitro::lang::string_ref module;
+    nitro::lang::string_ref function;
+    nitro::lang::string_ref name;
 };
-} // namespace monitor
+
+} // namespace dtrace
 } // namespace lo2s

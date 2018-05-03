@@ -4,14 +4,16 @@
 
 #include <boost/filesystem.hpp>
 
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <ratio>
-#include <array>
+#include <sstream>
 
-extern "C" {
+extern "C"
+{
 #include <sys/time.h>
 }
 
@@ -25,8 +27,8 @@ Summary& summary()
 }
 
 Summary::Summary()
-: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0),
-  thread_count_(0), exit_code_(0)
+: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0), thread_count_(0),
+  exit_code_(0)
 {
 }
 
@@ -58,13 +60,13 @@ std::string pretty_print_bytes(std::size_t trace_size)
 
     std::array<std::string, 5> units = { { "B", "KiB", "MiB", "GiB", "TiB" } };
 
-    while(result_size > 1024)
+    while (result_size > 1024)
     {
         result_size /= 1024;
         unit++;
 
-        //We can not get higher than TiB so break here
-        if(unit == units.size() - 1)
+        // We can not get higher than TiB so break here
+        if (unit == units.size() - 1)
         {
             break;
         }
@@ -97,15 +99,13 @@ void Summary::show()
     boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
     trace_size = std::accumulate(it, end, static_cast<size_t>(0),
-                [](std::size_t sum, boost::filesystem::directory_entry& entry)
-                {
-                    if (!boost::filesystem::is_directory(entry))
-                    {
-                        return sum + boost::filesystem::file_size(entry);
-                    }
-                    return sum;
-                });
-
+                                 [](std::size_t sum, boost::filesystem::directory_entry& entry) {
+                                     if (!boost::filesystem::is_directory(entry))
+                                     {
+                                         return sum + boost::filesystem::file_size(entry);
+                                     }
+                                     return sum;
+                                 });
 
     std::cout << "[ lo2s: ";
 
@@ -127,7 +127,6 @@ void Summary::show()
     std::cout << cpu_time.count() << "s CPU, ";
     std::cout << wall_time.count() << "s total ]\n";
 
-
     std::cout << "[ lo2s: ";
     std::cout << num_wakeups_ << " wakeups, ";
 
@@ -138,4 +137,4 @@ void Summary::show()
 
     std::cout << " ]\n";
 }
-}
+} // namespace lo2s

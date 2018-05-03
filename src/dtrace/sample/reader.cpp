@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,43 +19,36 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/dtrace/sample/reader.hpp>
 
-#include <lo2s/monitor/main_monitor.hpp>
+#include <sstream>
 
-#ifdef HAVE_PERF
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
-#endif
-
-#ifdef HAVE_DTRACE
-#include <lo2s/monitor/dtrace_cpu_switch_monitor.hpp>
-#endif
-
-#include <vector>
+extern "C"
+{
+#include <dtrace.h>
+}
 
 namespace lo2s
 {
-namespace monitor
+namespace dtrace
+{
+namespace sample
 {
 
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+void Reader::init(pid_t tid, int cpu)
 {
-public:
-    CpuSetMonitor();
+    std::stringstream str;
 
-    void run();
+    str << char* script2 = "sched:::on-cpu { printf(\"%d %d %d\", walltimestamp, cpu, pid); } "
+                           "sched:::off-cpu { printf(\"%d %d %d\", walltimestamp, cpu, pid); }";
 
-private:
-#ifdef HAVE_PERF
-    std::map<int, CpuSwitchMonitor> monitors_;
-#endif
-#ifdef HAVE_DTRACE
-    std::map<int, DtraceCpuSwitchMonitor> monitors_;
-#endif
-};
-} // namespace monitor
+    auto prog = "";
+}
+
+void Reader::handle(int cpu, const ProbeDesc& pd, nitro::lang::string_ref data)
+{
+}
+
+} // namespace sample
+} // namespace dtrace
 } // namespace lo2s

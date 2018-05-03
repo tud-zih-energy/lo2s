@@ -23,6 +23,12 @@ extern "C"
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
+#ifdef HAVE_DARWIN
+#include <mach/thread_act.h>
+#include <mach/thread_policy.h>
+#include <pthread.h>
+#include <sys/sysctl.h>
+#endif
 }
 
 namespace lo2s
@@ -49,7 +55,7 @@ std::chrono::duration<double> get_cpu_time()
         return std::chrono::seconds(0);
     }
 
-    //Add together the system and user CPU time of the process and all children
+    // Add together the system and user CPU time of the process and all children
     timeradd(&usage.ru_utime, &usage.ru_stime, &time);
 
     timeradd(&time, &child_usage.ru_utime, &time);
@@ -127,6 +133,8 @@ const struct ::utsname& get_uname()
 std::unordered_map<pid_t, std::string> read_all_tid_exe()
 {
     std::unordered_map<pid_t, std::string> ret;
+
+#ifdef HAVE_LINUX
     boost::filesystem::path proc("/proc");
     for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(proc), {}))
     {
@@ -169,11 +177,59 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
         {
         }
     }
+#endif
+#ifdef HAVE_DARWIN
+    int maxArgumentSize = 0;
+    size_t size = sizeof(maxArgumentSize);
+    if (sysctl((int[]){ CTL_KERN, KERN_ARGMAX }, 2, &maxArgumentSize, &size, NULL, 0) == -1)
+    {
+        Log::error() << "Cannot read max argument size, falling back to 4096.";
+        maxArgumentSize = 4096; // Default
+    }
+
+    int mib[3] = { CTL_KERN, KERN_PROC, KERN_PROC_ALL };
+    std::unique_ptr<struct kinfo_proc[]> info;
+    size_t length;
+
+    if (sysctl(mib, 3, NULL, &length, NULL, 0) < 0)
+    {
+        Log::error() << "Cannot read proc info size.";
+        return ret;
+    }
+
+    info.reset(reinterpret_cast<struct kinfo_proc*>(new char[length]));
+
+    if (sysctl(mib, 3, info.get(), &length, NULL, 0) < 0)
+    {
+        Log::error() << "Cannot read proc info.";
+        return ret;
+    }
+
+    int count = length / sizeof(struct kinfo_proc);
+    for (int i = 0; i < count; i++)
+    {
+        pid_t pid = info[i].kp_proc.p_pid;
+        if (pid == 0)
+        {
+            continue;
+        }
+        size_t size = maxArgumentSize;
+        std::vector<char> buffer(length);
+        if (sysctl((int[]){ CTL_KERN, KERN_PROCARGS2, pid }, 3, buffer.data(), &size, nullptr, 0) ==
+            0)
+        {
+            std::string process(buffer.data() + sizeof(int));
+            ret.emplace(pid, process);
+        }
+    }
+#endif
+
     return ret;
 }
 
 void try_pin_to_cpu(int cpu, pid_t pid = 0)
 {
+#ifdef HAVE_LINUX
     cpu_set_t cpumask;
     CPU_ZERO(&cpumask);
     CPU_SET(cpu, &cpumask);
@@ -182,10 +238,28 @@ void try_pin_to_cpu(int cpu, pid_t pid = 0)
     {
         Log::error() << "sched_setaffinity failed with: " << make_system_error().what();
     }
+#else
+    if (pid != 0)
+    {
+        Log::debug() << "Pinning other threads is not supported now.";
+        return;
+    }
+
+    thread_affinity_policy_data_t policy_data = { cpu };
+    thread_port_t threadport = pthread_mach_thread_np(pthread_self());
+    thread_policy_set(threadport, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy_data,
+                      THREAD_AFFINITY_POLICY_COUNT);
+
+#endif
 }
 
 pid_t gettid()
 {
+#ifdef HAVE_DARWIN
+    return syscall(SYS_thread_selfid);
+#endif
+#ifdef HAVE_LINUX
     return syscall(SYS_gettid);
+#endif
 }
-}
+} // namespace lo2s
