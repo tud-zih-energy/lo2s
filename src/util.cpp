@@ -181,7 +181,9 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
 #ifdef HAVE_DARWIN
     int maxArgumentSize = 0;
     size_t size = sizeof(maxArgumentSize);
-    if (sysctl((int[]){ CTL_KERN, KERN_ARGMAX }, 2, &maxArgumentSize, &size, NULL, 0) == -1)
+    int sysctl_name[2] = { CTL_KERN, KERN_ARGMAX };
+
+    if (sysctl(sysctl_name, 2, &maxArgumentSize, &size, NULL, 0) == -1)
     {
         Log::error() << "Cannot read max argument size, falling back to 4096.";
         maxArgumentSize = 4096; // Default
@@ -215,8 +217,8 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
         }
         size_t size = maxArgumentSize;
         std::vector<char> buffer(length);
-        if (sysctl((int[]){ CTL_KERN, KERN_PROCARGS2, pid }, 3, buffer.data(), &size, nullptr, 0) ==
-            0)
+        int sysctl_proc[3] = { CTL_KERN, KERN_PROCARGS2, pid };
+        if (sysctl(sysctl_proc, 3, buffer.data(), &size, nullptr, 0) == 0)
         {
             std::string process(buffer.data() + sizeof(int));
             ret.emplace(pid, process);
@@ -256,7 +258,9 @@ void try_pin_to_cpu(int cpu, pid_t pid = 0)
 pid_t gettid()
 {
 #ifdef HAVE_DARWIN
-    return syscall(SYS_thread_selfid);
+    std::uint64_t tid;
+    pthread_threadid_np(nullptr, &tid);
+    return tid;
 #endif
 #ifdef HAVE_LINUX
     return syscall(SYS_gettid);

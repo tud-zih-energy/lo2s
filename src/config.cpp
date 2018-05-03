@@ -85,12 +85,14 @@ void validate(boost::any& v, const std::vector<std::string>&, SwitchCounter*, lo
     }
 }
 
+#ifdef HAVE_PERF
 static inline void list_arguments_sorted(std::ostream& os, const std::string& description,
                                          std::vector<std::string> items)
 {
     std::sort(items.begin(), items.end());
     os << io::make_argument_list(description, items.begin(), items.end());
 }
+#endif
 
 static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
 {

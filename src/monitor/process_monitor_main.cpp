@@ -146,8 +146,14 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
             proc_name = get_process_exe(pid);
         }
 
-        // ProcessController controller(pid, proc_name, spawn, monitor);
-        // controller.run();
+#ifdef HAVE_LINUX
+        ProcessController controller(pid, proc_name, spawn, monitor);
+        controller.run();
+#endif
+#ifdef HAVE_DARWIN
+        // TODO implement the process mode
+        (void)monitor;
+#endif
     }
 }
 } // namespace monitor
