@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
-
 #include <otf2xx/chrono/chrono.hpp>
 
 #include <chrono>
