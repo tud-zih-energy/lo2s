@@ -87,6 +87,7 @@ add_subdirectory(lib/nitro)
 include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
+find_package(Git)
 find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
 find_package(Binutils REQUIRED)
 find_package(Radare)
@@ -200,10 +201,14 @@ if (USE_RADARE)
 endif()
 
 # generate version string used in lo2s
-execute_process(COMMAND git describe --always --tags --dirty
-    OUTPUT_VARIABLE LO2S_VERSION_STRING
-)
-string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
+if(Git_FOUND)
+    execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty
+        OUTPUT_VARIABLE LO2S_VERSION_STRING
+    )
+    string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
+else()
+    set(LO2S_VERSION_STRING "turgitle")
+endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
 # define include directory of target lo2s
