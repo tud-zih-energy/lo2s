@@ -172,7 +172,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
 
             // Parent may be a thread, get the process
-            auto pid = threads_.at(newpid);
+            auto pid = threads_.at(child);
             Log::info() << "New thread is cloned " << newpid << " parent: " << child
                         << " pid: " << pid;
 
