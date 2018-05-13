@@ -177,7 +177,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                         << " pid: " << pid;
 
             // register monitoring
-            threads_.emplace(pid, new_tid);
+            threads_.emplace(new_tid, pid);
             monitor_.insert_thread(pid, new_tid);
 
             summary().add_thread();
