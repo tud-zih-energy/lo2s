@@ -56,7 +56,7 @@ std::string pretty_print_bytes(std::size_t trace_size)
     double result_size = trace_size;
     std::size_t unit = 0;
 
-    std::array<std::string, 5> units = { "B", "KiB", "MiB", "GiB", "TiB" };
+    std::array<std::string, 5> units = { { "B", "KiB", "MiB", "GiB", "TiB" } };
 
     while(result_size > 1024)
     {

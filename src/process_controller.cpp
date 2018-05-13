@@ -151,7 +151,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                          << " parent: " << child << ": " << get_process_exe(child);
 
             threads_.emplace(newpid, newpid);
-            monitor_.insert_process(newpid,child, name);
+            monitor_.insert_process(newpid, child, name);
 
             summary().add_thread();
         }
@@ -164,31 +164,32 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
     // new Thread?
     else if (event == PTRACE_EVENT_CLONE)
     {
-        long newpid = -1;
+        long new_tid = -1;
 
         try
         {
             // we need the tid of the new process
-            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
+            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &new_tid);
 
             // Parent may be a thread, get the process
-            auto pid = threads_.at(newpid);
-            Log::info() << "New thread is cloned " << newpid << " parent: " << child
+            auto pid = threads_.at(child);
+            Log::info() << "New thread is cloned " << new_tid << " parent: " << child
                         << " pid: " << pid;
 
             // register monitoring
-            threads_.emplace(pid, newpid);
-            monitor_.insert_thread(pid, newpid);
+            threads_.emplace(pid, new_tid);
+            monitor_.insert_thread(pid, new_tid);
 
             summary().add_thread();
         }
         catch (std::out_of_range& e)
         {
-            Log::error() << "Failed to get pid of " << child;
+            Log::error() << "Failed to get pid of monitored thread " << child
+                         << ", new thread id: " << new_tid;
         }
         catch (std::system_error& e)
         {
-            Log::error() << "Failure while adding new thread " << newpid << ": " << e.what();
+            Log::error() << "Failure while adding new thread " << new_tid << ": " << e.what();
             throw;
         }
     }

@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lo2s/time/time.hpp>
+
 #include <nitro/log/log.hpp>
 
 #include <nitro/log/sink/stderr_mt.hpp>
@@ -43,9 +45,9 @@ namespace lo2s
 namespace logging
 {
 
-using Record = nitro::log::record<nitro::log::message_attribute, nitro::log::timestamp_attribute,
-                                  nitro::log::severity_attribute, nitro::log::pid_attribute,
-                                  nitro::log::pthread_id_attribute>;
+using Record = nitro::log::record<
+    nitro::log::message_attribute, nitro::log::timestamp_clock_attribute<lo2s::time::Clock>,
+    nitro::log::severity_attribute, nitro::log::pid_attribute, nitro::log::pthread_id_attribute>;
 
 template <typename R>
 class Lo2sLogFormatter

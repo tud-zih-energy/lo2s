@@ -195,8 +195,9 @@ private:
 class PerfCounterGroup
 {
 public:
+    PerfCounterGroup(pid_t tid, int cpuid, const std::vector<perf::CounterDescription>& counter_descs);
     PerfCounterGroup(pid_t tid, int cpuid, const std::vector<perf::CounterDescription>& counter_descs,
-                     struct perf_event_attr& leader_attr, bool enable_on_exec);
+                     perf_event_attr leader_attr, bool enable_on_exec);
 
     ~PerfCounterGroup()
     {
