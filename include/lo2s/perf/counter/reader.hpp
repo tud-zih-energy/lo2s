@@ -63,8 +63,13 @@ private:
         std::memset(&leader_attr, 0, sizeof(leader_attr));
 
         leader_attr.size = sizeof(leader_attr);
-
         leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
+
+#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+        leader_attr.use_clockid = config().use_clockid;
+        leader_attr.clockid = config().clockid;
+#endif
+
         leader_attr.freq = config().metric_use_frequency;
         if (leader_attr.freq)
         {
