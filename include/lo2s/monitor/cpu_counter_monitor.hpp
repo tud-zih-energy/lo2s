@@ -23,7 +23,7 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/interval_monitor.hpp>
 
-#include <lo2s/perf/counter/writer.hpp>
+#include <lo2s/perf/counter/cpu_writer.hpp>
 
 #include <lo2s/trace/trace.hpp>
 
@@ -35,7 +35,7 @@ namespace monitor
 class CpuCounterMonitor : public IntervalMonitor
 {
 public:
-    CpuCounterMonitor(int cpuid, trace::Trace& trace, otf2::definition::location cpu_location);
+    CpuCounterMonitor(int cpuid, MainMonitor& parent, otf2::definition::location cpu_location);
 public:
     void monitor() override;
 
@@ -45,7 +45,7 @@ public:
     }
 
 private:
-    perf::counter::Writer counter_writer_;
+    perf::counter::CpuWriter counter_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

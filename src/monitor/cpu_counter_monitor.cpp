@@ -22,7 +22,6 @@
 #include <lo2s/monitor/cpu_counter_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/perf/counter/writer.hpp>
 
 #include <string>
 
@@ -31,10 +30,9 @@ namespace lo2s
 namespace monitor
 {
 
-CpuCounterMonitor::CpuCounterMonitor(int cpuid, trace::Trace& trace, otf2::definition::location cpu_location)
-: IntervalMonitor(trace, std::to_string(cpuid), config().read_interval),
-  counter_writer_(-1, -1, cpuid, trace.cpu_metric_writer(cpuid), trace,
-                  cpu_location, false)
+CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent, otf2::definition::location cpu_location)
+: IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval),
+  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent, cpu_location)
 {
 }
 

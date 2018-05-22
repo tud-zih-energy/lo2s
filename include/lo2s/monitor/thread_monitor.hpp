@@ -23,7 +23,7 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/interval_monitor.hpp>
 
-#include <lo2s/perf/counter/writer.hpp>
+#include <lo2s/perf/counter/process_writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 
 #include <array>
@@ -87,7 +87,7 @@ private:
     cpu_set_t affinity_mask_;
 
     perf::sample::Writer sample_writer_;
-    perf::counter::Writer counter_writer_;
+    perf::counter::ProcessWriter counter_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

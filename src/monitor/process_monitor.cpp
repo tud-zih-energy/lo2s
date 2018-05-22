@@ -30,6 +30,9 @@ namespace monitor
 
 ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
+    metric_class_.add_member(trace_.metric_member("CPU", "CPU executing the task",
+                                      otf2::common::metric_mode::absolute_last,
+                                      otf2::common::type::int64, "cpuid"));
     trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 

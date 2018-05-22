@@ -133,7 +133,10 @@ set(SOURCE_FILES
 
     src/perf/event_collection.cpp
     src/perf/event_provider.cpp
-    src/perf/counter/writer.cpp
+
+    src/perf/counter/process_writer.cpp
+    src/perf/counter/abstract_writer.cpp
+
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp

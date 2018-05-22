@@ -31,25 +31,21 @@ namespace perf
 {
 namespace counter
 {
-class Writer : public Reader<Writer>
+class AbstractWriter : public Reader<AbstractWriter>
 {
 public:
-    Writer(pid_t pid, pid_t tid, int cpuid, otf2::writer::local& writer, trace::Trace& trace,
-           otf2::definition::location scope, bool enable_on_exec);
+    AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer, otf2::definition::metric_instance metric_instance, bool enable_on_exec);
 
-    using Reader<Writer>::handle;
+    using Reader<AbstractWriter>::handle;
     bool handle(const RecordSampleType* sample);
-
-private:
-    otf2::definition::metric_class get_metric_class(trace::Trace& trace);
+protected:
+    virtual void handle_custom_events() = 0;
 
     time::Converter time_converter_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!
     std::vector<otf2::event::metric::value_container> values_;
-    boost::filesystem::ifstream proc_stat_;
-    int cpuid_;
 };
 }
 }
