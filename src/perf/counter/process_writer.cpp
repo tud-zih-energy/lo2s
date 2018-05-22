@@ -12,10 +12,9 @@ proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std
 {
 }
 
-void ProcessWriter::handle_custom_events()
+void ProcessWriter::handle_custom_events(std::size_t position)
 {
-    auto index = counters_.size();
-    values_[index].set(get_task_last_cpu_id(proc_stat_));
+    values_[position].set(get_task_last_cpu_id(proc_stat_));
 }
 }
 }

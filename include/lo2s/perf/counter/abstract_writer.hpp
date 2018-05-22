@@ -39,7 +39,7 @@ public:
     using Reader<AbstractWriter>::handle;
     bool handle(const RecordSampleType* sample);
 protected:
-    virtual void handle_custom_events() = 0;
+    virtual void handle_custom_events(std::size_t position) = 0;
 
     time::Converter time_converter_;
     otf2::writer::local& writer_;

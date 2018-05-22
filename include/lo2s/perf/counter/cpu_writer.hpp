@@ -15,7 +15,7 @@ public:
     {
     }
 private:
-    void handle_custom_events()
+    void handle_custom_events(std::size_t /*position*/)
     {
     }
 };
