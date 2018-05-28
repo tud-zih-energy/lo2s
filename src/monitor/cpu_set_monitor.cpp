@@ -21,11 +21,12 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     {
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
         auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                     std::forward_as_tuple(cpu.id, trace_));
+                                            std::forward_as_tuple(cpu.id, trace_));
         assert(ret.second);
 
-        counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                std::forward_as_tuple(cpu.id, *this, ret.first->second.location()));
+        counter_monitors_.emplace(
+            std::piecewise_construct, std::forward_as_tuple(cpu.id),
+            std::forward_as_tuple(cpu.id, *this, ret.first->second.location()));
 
         (void)ret;
     }
@@ -100,5 +101,5 @@ void CpuSetMonitor::run()
     }
     throw std::system_error(0, std::system_category());
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

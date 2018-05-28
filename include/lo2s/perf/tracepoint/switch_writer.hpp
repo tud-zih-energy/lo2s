@@ -29,13 +29,14 @@
 
 #include <lo2s/trace/fwd.hpp>
 
-#include <otf2xx/definition/region.hpp>
 #include <otf2xx/definition/location.hpp>
+#include <otf2xx/definition/region.hpp>
 #include <otf2xx/writer/local.hpp>
 
 #include <unordered_map>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -60,6 +61,7 @@ public:
     {
         return otf2_writer_.location();
     }
+
 private:
     otf2::definition::region::reference_type thread_region_ref(pid_t tid);
 
@@ -77,6 +79,6 @@ private:
     EventField next_pid_field_;
     EventField prev_state_field_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

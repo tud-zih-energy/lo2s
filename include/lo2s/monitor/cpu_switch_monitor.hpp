@@ -58,5 +58,5 @@ private:
     perf::tracepoint::SwitchWriter switch_writer_;
     perf::tracepoint::ExitReader exit_reader_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

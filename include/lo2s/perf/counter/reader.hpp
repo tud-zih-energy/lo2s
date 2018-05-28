@@ -50,8 +50,8 @@ public:
     };
 
     Reader(pid_t tid, int cpuid, const EventCollection& event_collection, bool enable_on_exec)
-    : counters_(tid, cpuid, event_collection.events, group_leader_attributes(event_collection.leader),
-                enable_on_exec)
+    : counters_(tid, cpuid, event_collection.events,
+                group_leader_attributes(event_collection.leader), enable_on_exec)
     {
         EventReader<T>::init_mmap(counters_.group_leader_fd(), config().mmap_pages);
     }
@@ -96,6 +96,6 @@ private:
 protected:
     metric::PerfCounterGroup counters_;
 };
-}
-}
-}
+} // namespace counter
+} // namespace perf
+} // namespace lo2s

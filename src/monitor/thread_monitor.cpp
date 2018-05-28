@@ -31,7 +31,8 @@
 
 #include <cassert>
 
-extern "C" {
+extern "C"
+{
 #include <sched.h>
 }
 
@@ -82,5 +83,5 @@ void ThreadMonitor::monitor()
     sample_writer_.read();
     counter_writer_.read();
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

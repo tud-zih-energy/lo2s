@@ -22,8 +22,8 @@
 #include <lo2s/monitor/main_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/perf/tracepoint/metric_monitor.hpp>
@@ -32,8 +32,7 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor()
-: trace_(), metrics_(trace_), metric_class_(generate_metric_class())
+MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_metric_class())
 {
     perf::time::Converter::instance();
 

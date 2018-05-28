@@ -36,7 +36,7 @@ namespace tracepoint
 {
 class MetricMonitor;
 }
-}
+} // namespace perf
 
 namespace monitor
 {
@@ -56,6 +56,7 @@ public:
     {
         return metric_class_;
     }
+
 protected:
     otf2::definition::metric_class generate_metric_class();
 
@@ -68,5 +69,5 @@ protected:
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

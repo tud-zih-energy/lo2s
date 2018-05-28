@@ -30,12 +30,11 @@ namespace perf
 {
 namespace counter
 {
-AbstractWriter::AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer, otf2::definition::metric_instance metric_instance,
-               bool enable_on_exec)
+AbstractWriter::AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer,
+                               otf2::definition::metric_instance metric_instance,
+                               bool enable_on_exec)
 : Reader(tid, cpuid, requested_events(), enable_on_exec),
-  time_converter_(time::Converter::instance()),
-  writer_(writer),
-  metric_instance_(metric_instance)
+  time_converter_(time::Converter::instance()), writer_(writer), metric_instance_(metric_instance)
 {
     auto mc = metric_instance_.metric_class();
 
@@ -62,13 +61,13 @@ bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
     auto index = counters_.size();
     values_[index++].set(counters_.enabled());
     values_[index++].set(counters_.running());
-    
+
     handle_custom_events(index);
 
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(tp, metric_instance_, values_));
     return false;
 }
-}
-}
-}
+} // namespace counter
+} // namespace perf
+} // namespace lo2s

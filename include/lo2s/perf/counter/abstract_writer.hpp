@@ -34,10 +34,12 @@ namespace counter
 class AbstractWriter : public Reader<AbstractWriter>
 {
 public:
-    AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer, otf2::definition::metric_instance metric_instance, bool enable_on_exec);
+    AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer,
+                   otf2::definition::metric_instance metric_instance, bool enable_on_exec);
 
     using Reader<AbstractWriter>::handle;
     bool handle(const RecordSampleType* sample);
+
 protected:
     virtual void handle_custom_events(std::size_t position) = 0;
 
@@ -47,6 +49,6 @@ protected:
     // XXX this should depend here!
     std::vector<otf2::event::metric::value_container> values_;
 };
-}
-}
-}
+} // namespace counter
+} // namespace perf
+} // namespace lo2s

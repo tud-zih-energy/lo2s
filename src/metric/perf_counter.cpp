@@ -29,7 +29,8 @@
 #include <cstdint>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -56,20 +57,20 @@ static int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int
     }
     return fd;
 }
-}
+} // namespace
 
 namespace lo2s
 {
 namespace metric
 {
-PerfCounter::PerfCounter(pid_t tid, int cpuid,  perf_type_id type, std::uint64_t config, std::uint64_t config1,
-                         int group_fd)
+PerfCounter::PerfCounter(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
+                         std::uint64_t config1, int group_fd)
 : fd_(open(tid, cpuid, type, config, config1, group_fd))
 {
 }
 
-int PerfCounter::open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
-                      int group_fd)
+int PerfCounter::open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
+                      std::uint64_t config1, int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
@@ -232,8 +233,8 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid, int cpuid,
 
 void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)
 {
-    counters_.emplace_back(
-        PerfCounter::open(tid_, cpuid_, counter.type, counter.config, counter.config1, group_leader_fd_));
+    counters_.emplace_back(PerfCounter::open(tid_, cpuid_, counter.type, counter.config,
+                                             counter.config1, group_leader_fd_));
 }
-}
-}
+} // namespace metric
+} // namespace lo2s

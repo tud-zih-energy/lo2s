@@ -28,7 +28,8 @@
 #include <utility>
 #include <vector>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -42,8 +43,8 @@ namespace metric
 class PerfCounter
 {
 public:
-    PerfCounter(pid_t tid, int cpuid_, perf_type_id type, std::uint64_t config, std::uint64_t config1,
-                int group_fd = -1);
+    PerfCounter(pid_t tid, int cpuid_, perf_type_id type, std::uint64_t config,
+                std::uint64_t config1, int group_fd = -1);
 
     PerfCounter(const PerfCounter&) = delete;
 
@@ -66,8 +67,8 @@ public:
         }
     }
 
-    static int open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config, std::uint64_t config1,
-                    int group_fd);
+    static int open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
+                    std::uint64_t config1, int group_fd);
 
     double read();
 
@@ -195,8 +196,10 @@ private:
 class PerfCounterGroup
 {
 public:
-    PerfCounterGroup(pid_t tid, int cpuid, const std::vector<perf::CounterDescription>& counter_descs);
-    PerfCounterGroup(pid_t tid, int cpuid, const std::vector<perf::CounterDescription>& counter_descs,
+    PerfCounterGroup(pid_t tid, int cpuid,
+                     const std::vector<perf::CounterDescription>& counter_descs);
+    PerfCounterGroup(pid_t tid, int cpuid,
+                     const std::vector<perf::CounterDescription>& counter_descs,
                      perf_event_attr leader_attr, bool enable_on_exec);
 
     ~PerfCounterGroup()
@@ -254,5 +257,5 @@ private:
     std::vector<int> counters_;
     CounterBuffer buf_;
 };
-}
-}
+} // namespace metric
+} // namespace lo2s
