@@ -107,9 +107,15 @@ void Summary::show()
                 });
 
 
-    std::cout << "[ lo2s: ";
-
     if (config().monitor_type == lo2s::MonitorType::PROCESS)
+    {
+        std::cout << "[ lo2s: ";
+    }
+    else
+    {
+        std::cout << "[ lo2s (system mode): ";
+    }
+    if(!config().command.empty())
     {
         for (const auto command : config().command)
         {
@@ -119,16 +125,21 @@ void Summary::show()
         std::cout << " (" << exit_code_ << "), ";
         std::cout << thread_count_ << " threads, ";
     }
-    else
+    if(config().monitor_type == lo2s::MonitorType::CPU_SET)
     {
-        std::cout << "system mode, ";
         std::cout << "monitored processes: " << pids_.size() << ", ";
     }
     std::cout << cpu_time.count() << "s CPU, ";
     std::cout << wall_time.count() << "s total ]\n";
-
-
-    std::cout << "[ lo2s: ";
+    
+    if(config().monitor_type == lo2s::MonitorType::PROCESS)
+    {
+        std::cout << "[ lo2s: ";
+    }
+    else
+    {
+        std::cout << "[ lo2s (system mode): ";
+    }
     std::cout << num_wakeups_ << " wakeups, ";
 
     if (trace_dir_ != "")
