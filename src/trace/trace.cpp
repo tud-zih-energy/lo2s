@@ -353,41 +353,48 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(location_ref(), intern(name), location_groups_process_.at(pid),
                               otf2::definition::location::location_type::cpu_thread));
+
     process_comm_groups_.at(pid).add_member(location.first->second);
 
     return archive()(location.first->second);
 }
+
 otf2::writer::local& Trace::cpu_writer(int cpuid)
 {
-    auto name = (boost::format("cpu %d") % cpuid).str();
+    auto name = intern((boost::format("cpu %d") % cpuid).str());
 
     // As CPU IDs are unique in this context, create only one writer/location per
     // CPU ID
     auto r_group = location_groups_cpu_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_group_ref(), intern(name),
+        std::forward_as_tuple(location_group_ref(), name,
                               otf2::definition::location_group::location_group_type::unknown,
                               system_tree_cpu_nodes_.at(cpuid)));
+
     const auto& group = r_group.first->second;
 
     auto location = cpu_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_ref(), intern(name), group,
+        std::forward_as_tuple(location_ref(), name, group,
                               otf2::definition::location::location_type::cpu_thread));
+
     return archive()(location.first->second);
 }
 
 otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
+
     // As the tid is unique in this context, create only one
     // writer/location per tid
     auto location = metric_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(location_ref(), intern(name), location_groups_process_.at(pid),
                               otf2::definition::location::location_type::metric));
+
     return archive()(location.first->second);
 }
+
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     // As names may not be unique in this context, always generate a new location/writer pair
