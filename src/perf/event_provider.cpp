@@ -35,7 +35,8 @@
 #include <regex>
 #include <sstream>
 
-extern "C" {
+extern "C"
+{
 #include <linux/perf_event.h>
 #include <linux/version.h>
 #include <unistd.h>
@@ -137,7 +138,7 @@ constexpr std::uint64_t bit(int bitnumber)
 {
     return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
-}
+} // namespace
 
 namespace lo2s
 {
@@ -345,6 +346,18 @@ static void event_description_update(CounterDescription& event, std::uint64_t va
     }
 }
 
+const CounterDescription raw_read_event(const std::string& ev_desc)
+{
+    uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
+    const CounterDescription event(ev_desc, PERF_TYPE_RAW, code, 0);
+
+    if (!event_is_openable(event))
+    {
+        throw EventProvider::InvalidEvent("cannot open requested event");
+    }
+    return event;
+}
+
 const CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
     namespace fs = boost::filesystem;
@@ -475,12 +488,23 @@ EventProvider::EventProvider()
 
 const CounterDescription& EventProvider::cache_event(const std::string& name)
 {
+    // Format for raw events is rNNNN
+    static const std::regex raw_regex("r[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]");
+
+    // save event in event map; return a reference to the inserted event to
+    // the caller.
     try
     {
-        // save event in event map; return a reference to the inserted event to
-        // the caller.
-        return event_map_.emplace(name, DescriptionCache(sysfs_read_event(name)))
-            .first->second.description;
+        if (regex_match(name, raw_regex))
+        {
+            return event_map_.emplace(name, DescriptionCache(raw_read_event(name)))
+                .first->second.description;
+        }
+        else
+        {
+            return event_map_.emplace(name, DescriptionCache(sysfs_read_event(name)))
+                .first->second.description;
+        }
     }
     catch (const InvalidEvent& e)
     {
@@ -550,5 +574,5 @@ std::vector<std::string> EventProvider::get_predefined_event_names()
 
     return event_names;
 }
-}
-}
+} // namespace perf
+} // namespace lo2s
