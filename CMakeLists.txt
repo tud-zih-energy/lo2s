@@ -93,12 +93,14 @@ find_package(Binutils REQUIRED)
 find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
+find_package(Doxygen COMPONENTS dot)
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
 option(IWYU "Developer option for include what you use." OFF)
+option(UML_LOOK "Generate graphs with an UML look" OFF)
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -296,6 +298,26 @@ if (IWYU)
     set_property(TARGET lo2s PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
 endif()
 
+#option for generating graphs of the code if doxygen and graphviz are present
+if(DOXYGEN_FOUND)
+    set(DOXYGEN_EXTRACT_ALL YES)
+    set(DOXYGEN_EXTRACT_PRIVATE YES)
+    set(DOXYGEN_EXTRACT_LOCAL_CLASSES YES)
+    set(DOXYGEN_CLASS_DIAGRAMS YES)
+    set(DOXYGEN_HIDE_UNDOC_RELATIONS YES)
+    set(DOXYGEN_CLASS_GRAPH YES)
+    set(DOXYGEN_COLLABORATION_GRAPH YES)
+    if(UML_LOOK)
+        set(DOXYGEN_UML_LOOK YES)
+        set(DOXYGEN_UML_LIMIT_NUM_FIELDS 100)
+    endif()
+    set(DOXYGEN_INCLUDE_GRAPH YES)
+    set(DOXYGEN_INCLUDED_BY_GRAPH YES)
+    set(DOXYGEN_GRAPHICAL_HIERARCHY YES)
+    set(DOXYGEN_DOT_GRAPH_MAX_NODES 100)
+    set(DOXYGEN_DOT_GRAPH_DEPTH 1000)
+    doxygen_add_docs(doc src include)
+endif()
 
 # Convince clion to accept headers as part of the project by adding them to a dummy target
 # Should not interfer with normal opratation.
