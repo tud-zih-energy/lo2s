@@ -57,11 +57,6 @@ public:
 
     bool handle(const Reader::RecordSampleType* sample);
 
-    otf2::definition::location location()
-    {
-        return otf2_writer_.location();
-    }
-
 private:
     otf2::definition::region::reference_type thread_region_ref(pid_t tid);
 

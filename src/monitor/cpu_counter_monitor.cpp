@@ -30,10 +30,9 @@ namespace lo2s
 namespace monitor
 {
 
-CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent,
-                                     otf2::definition::location cpu_location)
+CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
 : IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval),
-  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent, cpu_location)
+  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent)
 {
 }
 

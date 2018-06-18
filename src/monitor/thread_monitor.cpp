@@ -48,7 +48,7 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
   sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
                  parent_monitor.trace().sample_writer(pid, tid), enable_on_exec),
   counter_writer_(pid, tid, parent_monitor.trace().metric_writer(pid, tid), parent_monitor,
-                  sample_writer_.location(), enable_on_exec)
+                  enable_on_exec)
 {
     /* setup the sampling counter(s) and start a monitoring thread */
     start();

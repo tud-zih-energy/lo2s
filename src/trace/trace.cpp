@@ -404,9 +404,11 @@ otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
                               system_tree_cpu_nodes_.at(cpuid)));
     const auto& group = r_group.first->second;
 
-    auto location = locations_.emplace(location_ref(), name, group,
-                                       otf2::definition::location::location_type::metric);
-    return archive()(location);
+    auto location = cpu_metric_locations_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(cpuid),
+        std::forward_as_tuple(location_ref(), name, group,
+                              otf2::definition::location::location_type::metric));
+    return archive()(location.first->second);
 }
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {

@@ -255,6 +255,7 @@ private:
     std::map<pid_t, otf2::definition::location> thread_locations_;
     std::map<int, otf2::definition::location> cpu_locations_;
     std::map<pid_t, otf2::definition::location> metric_locations_;
+    std::map<int, otf2::definition::location> cpu_metric_locations_;
 
     otf2::definition::container<otf2::definition::location> named_locations_;
 

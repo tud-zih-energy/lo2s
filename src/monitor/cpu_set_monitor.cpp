@@ -24,9 +24,8 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
                                             std::forward_as_tuple(cpu.id, trace_));
         assert(ret.second);
 
-        counter_monitors_.emplace(
-            std::piecewise_construct, std::forward_as_tuple(cpu.id),
-            std::forward_as_tuple(cpu.id, *this, ret.first->second.location()));
+        counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
+                                  std::forward_as_tuple(cpu.id, *this));
 
         (void)ret;
     }

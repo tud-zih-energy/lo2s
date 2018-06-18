@@ -46,10 +46,6 @@ public:
         return "lo2s::CpuSwitchMonitor";
     }
 
-    otf2::definition::location location()
-    {
-        return switch_writer_.location();
-    }
     void merge_trace();
 
 private:

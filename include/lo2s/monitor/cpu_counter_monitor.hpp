@@ -35,7 +35,7 @@ namespace monitor
 class CpuCounterMonitor : public IntervalMonitor
 {
 public:
-    CpuCounterMonitor(int cpuid, MainMonitor& parent, otf2::definition::location cpu_location);
+    CpuCounterMonitor(int cpuid, MainMonitor& parent);
 
 public:
     void monitor() override;
