@@ -138,7 +138,7 @@ constexpr std::uint64_t bit(int bitnumber)
 {
     return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
-} // namespace
+}
 
 namespace lo2s
 {
@@ -489,7 +489,7 @@ EventProvider::EventProvider()
 const CounterDescription& EventProvider::cache_event(const std::string& name)
 {
     // Format for raw events is rNNNN
-    static const std::regex raw_regex("r[[:xdigit:]][[:xdigit:]][[:xdigit:]][[:xdigit:]]");
+    static const std::regex raw_regex("r[[:xdigit:]]{4}");
 
     // save event in event map; return a reference to the inserted event to
     // the caller.
