@@ -186,6 +186,9 @@ Arguments to options:
                     <pmu>:<event>
                   Kernel PMU events can be found at
                     /sys/bus/event_source/devices/<pmu>/event/<event>.
+                - for a raw event:
+                    r<NNNN> where NNNN is the hexadecimal identifier
+                    of the event
 
                 To list all available event names, use --list-events.
 
