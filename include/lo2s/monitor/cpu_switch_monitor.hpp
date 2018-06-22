@@ -27,8 +27,6 @@
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #include <lo2s/trace/fwd.hpp>
 
-#include <otf2xx/definition/location.hpp>
-
 namespace lo2s
 {
 namespace monitor
@@ -54,5 +52,5 @@ private:
     perf::tracepoint::SwitchWriter switch_writer_;
     perf::tracepoint::ExitReader exit_reader_;
 };
-} // namespace monitor
-} // namespace lo2s
+}
+}
