@@ -89,6 +89,8 @@ public:
 
     void process(pid_t pid, pid_t parent, const std::string& name = "");
 
+    void add_cpu(int cpuid);
+
     void process_update_executable(pid_t pid, const std::string& exe_name);
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);

@@ -344,6 +344,17 @@ void Trace::add_lo2s_property(const std::string& name, const std::string& value)
                                          otf2::attribute_value{ intern(value) });
 }
 
+void Trace::add_cpu(int cpuid)
+{
+    auto name = intern((boost::format("cpu %d") % cpuid).str());
+
+    location_groups_cpu_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(cpuid),
+        std::forward_as_tuple(location_group_ref(), name,
+                              otf2::definition::location_group::location_group_type::unknown,
+                              system_tree_cpu_nodes_.at(cpuid)));
+
+}
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("thread %d") % tid).str();
@@ -361,21 +372,13 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 
 otf2::writer::local& Trace::cpu_writer(int cpuid)
 {
-    auto name = intern((boost::format("cpu %d") % cpuid).str());
-
     // As CPU IDs are unique in this context, create only one writer/location per
     // CPU ID
-    auto r_group = location_groups_cpu_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_group_ref(), name,
-                              otf2::definition::location_group::location_group_type::unknown,
-                              system_tree_cpu_nodes_.at(cpuid)));
-
-    const auto& group = r_group.first->second;
+    auto name = intern((boost::format("cpu %d") % cpuid).str());
 
     auto location = cpu_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_ref(), name, group,
+        std::forward_as_tuple(location_ref(), name, location_groups_cpu_.at(cpuid),
                               otf2::definition::location::location_type::cpu_thread));
 
     return archive()(location.first->second);
@@ -397,16 +400,10 @@ otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
 {
     auto name = intern((boost::format("metrics for cpu %d") % cpuid).str());
-    auto r_group = location_groups_cpu_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_group_ref(), name,
-                              otf2::definition::location_group::location_group_type::unknown,
-                              system_tree_cpu_nodes_.at(cpuid)));
-    const auto& group = r_group.first->second;
 
     auto location = cpu_metric_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
-        std::forward_as_tuple(location_ref(), name, group,
+        std::forward_as_tuple(location_ref(), name, location_groups_cpu_.at(cpuid),
                               otf2::definition::location::location_type::metric));
     return archive()(location.first->second);
 }
