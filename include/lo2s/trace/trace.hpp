@@ -140,9 +140,19 @@ public:
         return system_tree_cpu_nodes_.at(cpuid);
     }
 
+    const otf2::definition::system_tree_node& system_tree_core_node(int coreid, int packageid) const
+    {
+        return system_tree_core_nodes_.at(std::make_pair(coreid, packageid));
+    }
+
     const otf2::definition::system_tree_node& system_tree_package_node(int packageid) const
     {
         return system_tree_package_nodes_.at(packageid);
+    }
+
+    const otf2::definition::system_tree_node& system_tree_root_node() const
+    {
+        return system_tree_root_node_;
     }
 
     otf2::definition::regions_group regions_group_executable(const std::string& name);

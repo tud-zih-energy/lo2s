@@ -28,6 +28,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Radare_USE_STATIC_LIBS
     X86Adapt_STATIC
+    x86_energy_STATIC
 )
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
@@ -39,6 +40,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
+    set(x86_energy_STATIC        OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -50,6 +52,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
+    set(x86_energy_STATIC        ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -62,6 +65,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
+    set(x86_energy_STATIC        ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -94,6 +98,7 @@ find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
+find_package(x86_energy 2.0)
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
@@ -172,6 +177,7 @@ target_link_libraries(lo2s
         Boost::program_options
         Boost::filesystem
         Binutils::Binutils
+        x86_energy::x86_energy
 )
 
 # old glibc versions require -lrt for clock_gettime()
@@ -191,6 +197,20 @@ if(X86Adapt_FOUND)
         src/metric/x86_adapt/node_monitor.cpp
     )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
+endif()
+
+# handle x86_energy dependency
+if(x86_energy_FOUND)
+    target_compile_definitions(lo2s PRIVATE HAVE_X86_ENERGY)
+    target_sources(lo2s PRIVATE
+        src/metric/x86_energy/metrics.cpp
+        src/metric/x86_energy/monitor.cpp
+    )
+    if(x86_energy_STATIC)
+        target_link_libraries(lo2s PRIVATE x86_energy::x86_energy-static)
+    else()
+        target_link_libraries(lo2s PRIVATE x86_energy::x86_energy)
+    endif()
 endif()
 
 # handle radare dependency

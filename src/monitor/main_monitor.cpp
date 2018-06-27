@@ -71,7 +71,20 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_
         }
     }
 #endif
+#ifdef HAVE_X86_ENERGY
+    try
+    {
+        x86_energy_metrics_ =
+            std::make_unique<metric::x86_energy::Metrics>(trace_, config().read_interval);
+        x86_energy_metrics_->start();
+    }
+    catch (std::exception& e)
+    {
+        Log::warn() << "Failed to initialize x86_energy metrics: " << e.what();
+    }
+#endif
 }
+
 otf2::definition::metric_class MainMonitor::generate_metric_class()
 {
     auto c = trace_.metric_class();
@@ -96,12 +109,21 @@ otf2::definition::metric_class MainMonitor::generate_metric_class()
                                       otf2::common::type::uint64, "ns"));
     return c;
 }
+
 MainMonitor::~MainMonitor()
 {
     if (tracepoint_metrics_)
     {
         tracepoint_metrics_->stop();
     }
+
+#ifdef HAVE_X86_ENERGY
+    if (x86_energy_metrics_)
+    {
+        x86_energy_metrics_->stop();
+    }
+#endif
+
 #ifdef HAVE_X86_ADAPT
     if (x86_adapt_metrics_)
     {
