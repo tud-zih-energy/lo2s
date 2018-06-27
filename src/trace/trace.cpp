@@ -209,6 +209,10 @@ Trace::~Trace()
     {
         archive_ << location.second;
     }
+    for (const auto& location : cpu_metric_locations_)
+    {
+        archive_ << location.second;
+    }
     archive_ << named_locations_;
 
     archive_ << source_code_locations_;
