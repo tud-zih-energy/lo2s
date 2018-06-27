@@ -177,7 +177,6 @@ target_link_libraries(lo2s
         Boost::program_options
         Boost::filesystem
         Binutils::Binutils
-        x86_energy::x86_energy
 )
 
 # old glibc versions require -lrt for clock_gettime()
