@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,32 +19,26 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/monitor/cpu_counter_monitor.hpp>
 
-#include <lo2s/perf/counter/reader.hpp>
-#include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/counters.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/config.hpp>
+
+#include <string>
 
 namespace lo2s
 {
-namespace perf
+namespace monitor
 {
-namespace counter
-{
-class Writer : public Reader<Writer>
-{
-public:
-    Writer(pid_t pid, pid_t tid, trace::Trace& trace, otf2::definition::metric_class metric_class,
-           otf2::definition::location scope, bool enable_on_exec);
 
-    using Reader<Writer>::handle;
-    bool handle(const RecordSampleType* sample);
+CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
+: IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval),
+  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent)
+{
+}
 
-private:
-    trace::Counters counter_writer_;
-    time::Converter time_converter_;
-};
+void CpuCounterMonitor::monitor()
+{
+    counter_writer_.read();
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,39 +21,34 @@
 
 #pragma once
 
+#include <lo2s/perf/counter/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
-
-#include <lo2s/metric/perf_counter.hpp>
-#include <lo2s/perf/counter_description.hpp>
-#include <lo2s/time/time.hpp>
-
-#include <otf2xx/writer/local.hpp>
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include <cstdint>
 
 namespace lo2s
 {
-namespace trace
+namespace perf
 {
-class Counters
+namespace counter
+{
+class AbstractWriter : public Reader<AbstractWriter>
 {
 public:
-    Counters(pid_t pid, pid_t tid, Trace& trace, otf2::definition::metric_class metric_class,
-             otf2::definition::location scope);
+    AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer,
+                   otf2::definition::metric_instance metric_instance, bool enable_on_exec);
 
-    static otf2::definition::metric_class get_metric_class(Trace& trace);
+    using Reader<AbstractWriter>::handle;
+    bool handle(const RecordSampleType* sample);
 
-    void write(const metric::PerfCounterGroup& counters, otf2::chrono::time_point tp);
+protected:
+    virtual void handle_custom_events(std::size_t position) = 0;
 
-private:
+    time::Converter time_converter_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!
     std::vector<otf2::event::metric::value_container> values_;
-    boost::filesystem::ifstream proc_stat_;
 };
-}
-}
+} // namespace counter
+} // namespace perf
+} // namespace lo2s

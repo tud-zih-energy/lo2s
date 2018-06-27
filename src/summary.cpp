@@ -4,14 +4,15 @@
 
 #include <boost/filesystem.hpp>
 
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <ratio>
-#include <array>
 
-extern "C" {
+extern "C"
+{
 #include <sys/time.h>
 }
 
@@ -25,8 +26,8 @@ Summary& summary()
 }
 
 Summary::Summary()
-: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0),
-  thread_count_(0), exit_code_(0)
+: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0), thread_count_(0),
+  exit_code_(0)
 {
 }
 
@@ -58,13 +59,13 @@ std::string pretty_print_bytes(std::size_t trace_size)
 
     std::array<std::string, 5> units = { { "B", "KiB", "MiB", "GiB", "TiB" } };
 
-    while(result_size > 1024)
+    while (result_size > 1024)
     {
         result_size /= 1024;
         unit++;
 
-        //We can not get higher than TiB so break here
-        if(unit == units.size() - 1)
+        // We can not get higher than TiB so break here
+        if (unit == units.size() - 1)
         {
             break;
         }
@@ -97,19 +98,23 @@ void Summary::show()
     boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
     trace_size = std::accumulate(it, end, static_cast<size_t>(0),
-                [](std::size_t sum, boost::filesystem::directory_entry& entry)
-                {
-                    if (!boost::filesystem::is_directory(entry))
-                    {
-                        return sum + boost::filesystem::file_size(entry);
-                    }
-                    return sum;
-                });
-
-
-    std::cout << "[ lo2s: ";
+                                 [](std::size_t sum, boost::filesystem::directory_entry& entry) {
+                                     if (!boost::filesystem::is_directory(entry))
+                                     {
+                                         return sum + boost::filesystem::file_size(entry);
+                                     }
+                                     return sum;
+                                 });
 
     if (config().monitor_type == lo2s::MonitorType::PROCESS)
+    {
+        std::cout << "[ lo2s: ";
+    }
+    else
+    {
+        std::cout << "[ lo2s (system mode): ";
+    }
+    if (!config().command.empty())
     {
         for (const auto command : config().command)
         {
@@ -119,16 +124,21 @@ void Summary::show()
         std::cout << " (" << exit_code_ << "), ";
         std::cout << thread_count_ << " threads, ";
     }
-    else
+    if (config().monitor_type == lo2s::MonitorType::CPU_SET)
     {
-        std::cout << "system mode, ";
         std::cout << "monitored processes: " << pids_.size() << ", ";
     }
     std::cout << cpu_time.count() << "s CPU, ";
     std::cout << wall_time.count() << "s total ]\n";
 
-
-    std::cout << "[ lo2s: ";
+    if (config().monitor_type == lo2s::MonitorType::PROCESS)
+    {
+        std::cout << "[ lo2s: ";
+    }
+    else
+    {
+        std::cout << "[ lo2s (system mode): ";
+    }
     std::cout << num_wakeups_ << " wakeups, ";
 
     if (trace_dir_ != "")
@@ -138,4 +148,4 @@ void Summary::show()
 
     std::cout << " ]\n";
 }
-}
+} // namespace lo2s

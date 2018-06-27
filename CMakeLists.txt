@@ -128,13 +128,17 @@ set(SOURCE_FILES
     src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp
     src/monitor/thread_monitor.cpp
+    src/monitor/cpu_counter_monitor.cpp
     src/monitor/threaded_monitor.cpp
 
     src/process_controller.cpp
 
     src/perf/event_collection.cpp
     src/perf/event_provider.cpp
-    src/perf/counter/writer.cpp
+
+    src/perf/counter/process_writer.cpp
+    src/perf/counter/abstract_writer.cpp
+
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
@@ -143,7 +147,7 @@ set(SOURCE_FILES
 
     src/time/time.cpp
 
-    src/trace/counters.cpp src/trace/trace.cpp
+    src/trace/trace.cpp
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp

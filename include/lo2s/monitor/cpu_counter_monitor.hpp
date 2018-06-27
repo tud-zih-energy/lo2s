@@ -23,71 +23,30 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/interval_monitor.hpp>
 
-#include <lo2s/perf/counter/process_writer.hpp>
-#include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/perf/counter/cpu_writer.hpp>
 
-#include <array>
-#include <chrono>
-#include <thread>
-
-#include <cstddef>
-
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
-class ProcessInfo;
-
 namespace monitor
 {
 
-class ThreadMonitor : public IntervalMonitor
+class CpuCounterMonitor : public IntervalMonitor
 {
 public:
-    ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, ProcessInfo& info,
-                  bool enable_on_exec);
-
-private:
-    void check_affinity(bool force = false);
+    CpuCounterMonitor(int cpuid, MainMonitor& parent);
 
 public:
-    pid_t pid() const
-    {
-        return pid_;
-    }
-
-    pid_t tid() const
-    {
-        return tid_;
-    }
-
-    ProcessInfo& info()
-    {
-        return info_;
-    }
-
-    void initialize_thread() override;
-    void finalize_thread() override;
     void monitor() override;
 
     std::string group() const override
     {
-        return "lo2s::ThreadMonitor";
+        return "lo2s::CpuCounterMonitor";
     }
 
 private:
-    pid_t pid_;
-    pid_t tid_;
-    ProcessInfo& info_;
-
-    cpu_set_t affinity_mask_;
-
-    perf::sample::Writer sample_writer_;
-    perf::counter::ProcessWriter counter_writer_;
+    perf::counter::CpuWriter counter_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

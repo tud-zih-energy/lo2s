@@ -89,12 +89,15 @@ public:
 
     void process(pid_t pid, pid_t parent, const std::string& name = "");
 
+    void add_cpu(int cpuid);
+
     void process_update_executable(pid_t pid, const std::string& exe_name);
 
     otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
     otf2::writer::local& cpu_writer(int cpuid);
     otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
     otf2::writer::local& metric_writer(const std::string& name);
+    otf2::writer::local& cpu_metric_writer(int cpuid);
 
     otf2::definition::metric_member metric_member(const std::string& name,
                                                   const std::string& description,
@@ -159,7 +162,7 @@ private:
     otf2::definition::location::reference_type location_ref() const
     {
         return thread_locations_.size() + cpu_locations_.size() + metric_locations_.size() +
-               named_locations_.size();
+               named_locations_.size() + cpu_metric_locations_.size();
     }
 
     otf2::definition::location_group::reference_type location_group_ref() const
@@ -254,7 +257,7 @@ private:
     std::map<pid_t, otf2::definition::location> thread_locations_;
     std::map<int, otf2::definition::location> cpu_locations_;
     std::map<pid_t, otf2::definition::location> metric_locations_;
-
+    std::map<int, otf2::definition::location> cpu_metric_locations_;
     otf2::definition::container<otf2::definition::location> named_locations_;
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -18,11 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <lo2s/log.hpp>
-#include <lo2s/perf/counter/writer.hpp>
-#include <lo2s/perf/event_collection.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/perf/counter/abstract_writer.hpp>
 
 namespace lo2s
 {
@@ -30,23 +27,17 @@ namespace perf
 {
 namespace counter
 {
-Writer::Writer(pid_t pid, pid_t tid, trace::Trace& trace,
-               otf2::definition::metric_class metric_class, otf2::definition::location scope,
-               bool enable_on_exec)
-: Reader(tid, requested_events(), enable_on_exec),
-  counter_writer_(pid, tid, trace, metric_class, scope),
-  time_converter_(time::Converter::instance())
-{
-}
 
-bool Writer::handle(const Reader::RecordSampleType* sample)
+class ProcessWriter : public AbstractWriter
 {
-    auto tp = time_converter_(sample->time);
+public:
+    ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer, monitor::MainMonitor& parent,
+                  bool enable_on_exec);
 
-    counters_.read(&sample->v);
-    counter_writer_.write(counters_, tp);
-    return false;
-}
-}
-}
-}
+private:
+    void handle_custom_events(std::size_t position);
+    boost::filesystem::ifstream proc_stat_;
+};
+} // namespace counter
+} // namespace perf
+} // namespace lo2s
