@@ -73,7 +73,7 @@ Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval
         auto mc = trace.metric_class();
         mc.add_member(trace.metric_member(metric_name, metric_name,
                                           otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::int64, "J"));
+                                          otf2::common::type::double, "J"));
 
         // if we get here, we need to setup a source counter, a monitor thread and so on
 
