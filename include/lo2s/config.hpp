@@ -79,6 +79,8 @@ struct Config
     // time synchronization
     bool use_clockid;
     clockid_t clockid;
+    // x86_energy
+    bool use_x86_energy;
 };
 
 const Config& config();

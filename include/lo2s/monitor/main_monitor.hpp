@@ -25,6 +25,9 @@
 #ifdef HAVE_X86_ADAPT
 #include <lo2s/metric/x86_adapt/metrics.hpp>
 #endif
+#ifdef HAVE_X86_ENERGY
+#include <lo2s/metric/x86_energy/metrics.hpp>
+#endif
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
@@ -67,6 +70,9 @@ protected:
     otf2::definition::metric_class metric_class_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
+#endif
+#ifdef HAVE_X86_ENERGY
+    std::unique_ptr<metric::x86_energy::Metrics> x86_energy_metrics_;
 #endif
 };
 } // namespace monitor
