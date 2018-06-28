@@ -240,6 +240,7 @@ void parse_program_options(int argc, const char** argv)
     po::options_description kernel_tracepoint_options("Kernel tracepoint options");
     po::options_description perf_metric_options("perf metric options");
     po::options_description x86_adapt_options("x86_adapt options");
+    po::options_description x86_energy_options("x86_energy options");
     po::options_description hidden_options;
 
     lo2s::Config config;
@@ -377,6 +378,11 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("KNOB"),
             "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.");
 
+    x86_energy_options.add_options()
+        ("x86-energy,X",
+            po::bool_switch(&config.use_x86_energy),
+            "Add x86_energy recordings.");
+
     hidden_options.add_options()
         ("command",
             po::value(&config.command)
@@ -390,7 +396,8 @@ void parse_program_options(int argc, const char** argv)
         .add(sampling_options)
         .add(kernel_tracepoint_options)
         .add(perf_metric_options)
-        .add(x86_adapt_options);
+        .add(x86_adapt_options)
+        .add(x86_energy_options);
 
     po::positional_options_description p;
     p.add("command", -1);
@@ -609,11 +616,20 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_X86_ADAPT
         config.x86_adapt_knobs = std::move(x86_adapt_knobs);
 #else
-        std::cerr
+        lo2s::Log::error()
             << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.\n";
         std::exit(EXIT_FAILURE);
 #endif
     }
+
+#ifndef HAVE_X86_ENERGY
+    if (config.use_x86_energy)
+    {
+        lo2s::Log::error()
+            << "lo2s was built without support for x86_energy; cannot use x86_energy readings.\n";
+        std::exit(EXIT_FAILURE);
+    }
+#endif
 
     for (int arg = 0; arg < argc - 1; arg++)
     {

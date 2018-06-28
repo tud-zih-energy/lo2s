@@ -71,16 +71,20 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_
         }
     }
 #endif
+
 #ifdef HAVE_X86_ENERGY
-    try
+    if (config().use_x86_energy)
     {
-        x86_energy_metrics_ =
-            std::make_unique<metric::x86_energy::Metrics>(trace_, config().read_interval);
-        x86_energy_metrics_->start();
-    }
-    catch (std::exception& e)
-    {
-        Log::warn() << "Failed to initialize x86_energy metrics: " << e.what();
+        try
+        {
+            x86_energy_metrics_ =
+                std::make_unique<metric::x86_energy::Metrics>(trace_, config().read_interval);
+            x86_energy_metrics_->start();
+        }
+        catch (std::exception& e)
+        {
+            Log::warn() << "Failed to initialize x86_energy metrics: " << e.what();
+        }
     }
 #endif
 }
