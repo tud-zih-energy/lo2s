@@ -57,11 +57,9 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, t
   otf2_writer_(otf2_writer),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
-  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_,
-                      { otf2::event::metric::value_container() }),
+  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now())
 {
-    cpuid_metric_event_.values()[0].metric = trace.cpuid_metric_class()[0];
 
     CounterDescription sampling_event =
         EventProvider::get_event_by_name(config().sampling_event); // config parser has already
@@ -163,9 +161,8 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         first_event_ = false;
     }
 
-    // TODO optimize metric event writing
     cpuid_metric_event_.timestamp(tp);
-    cpuid_metric_event_.values()[0].value.signed_int = sample->cpu;
+    cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,

@@ -35,7 +35,6 @@ ProcessWriter::ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer,
                  enable_on_exec)
 {
 }
-
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

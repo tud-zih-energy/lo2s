@@ -20,31 +20,31 @@ Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
   writer_(trace_.metric_writer((boost::format("tracepoint metrics for CPU %d") % cpu).str())),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
-  time_converter_(perf::time::Converter::instance())
+  time_converter_(perf::time::Converter::instance()),
+  metric_event_(otf2::chrono::genesis(), metric_class)
 {
-    counter_values_.resize(metric_class.size());
-    for (std::size_t i = 0; i < metric_class.size(); i++)
-    {
-        counter_values_[i].metric = metric_class[i];
-    }
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
 
-    size_t index = 0;
-    for (const auto& field : event_.fields())
+    metric_event_.timestamp(tp);
+    for (const auto& index_field : nitro::lang::enumerate(event_.fields()))
     {
+        auto i = index_field.index();
+        auto field = index_field.value();
+
         if (!field.is_integer())
         {
             continue;
         }
-        counter_values_.at(index++).set(sample->raw_data.get(field));
+
+        metric_event_.raw_values()[i] = sample->raw_data.get(field);
     }
-    writer_.write(otf2::event::metric(tp, metric_instance_, counter_values_));
+    writer_.write(metric_event_);
     return false;
 }
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

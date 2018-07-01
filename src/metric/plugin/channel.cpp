@@ -34,29 +34,31 @@ namespace metric
 namespace plugin
 {
 
+static otf2::definition::metric_instance&&
+make_metric_instance(otf2::definition::metric_instance&& instance,
+                     otf2::definition::metric_member&& member)
+{
+    auto mc = otf2::definition::make_weak_ref(instance.metric_class());
+    mc->add_member(std::move(member));
+    return std::move(instance);
+}
+
+static const char* empty_if_null(const char* cstr)
+{
+    return cstr == nullptr ? "" : cstr;
+}
+
 Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
                  wrapper::ValueType value_type, trace::Trace& trace)
-: id_(-1), name_(name), description_(), unit_(), mode_(mode), value_type_(value_type),
-  writer_(trace.metric_writer(name_)),
-  metric_(trace.metric_instance(trace.metric_class(), writer_.location(),
-                                writer_.location().location_group().parent()))
+: id_(-1), name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)),
+  mode_(mode), value_type_(value_type), writer_(trace.metric_writer(name_)),
+  metric_(
+      make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
+                                                 writer_.location().location_group().parent()),
+                           trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
+                                               wrapper::convert_type(value_type_), unit_))),
+  event_(otf2::chrono::genesis(), metric_.metric_class())
 {
-    if (description != nullptr)
-    {
-        description_ = description;
-    }
-
-    if (unit != nullptr)
-    {
-        unit_ = unit;
-    }
-
-    auto mc = otf2::definition::make_weak_ref(metric_.metric_class());
-    mc->add_member(trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
-                                       wrapper::convert_type(value_type_), unit_));
-    event_.metric_instance(metric_);
-    event_.values().resize(1);
-    event_.values()[0].metric = (*mc)[0];
 }
 
 const std::string& Channel::name() const
@@ -71,10 +73,10 @@ int& Channel::id()
 
 void Channel::write_value(wrapper::TimeValuePair tv)
 {
-    event_.values()[0].value.unsigned_int = tv.value;
+    event_.raw_values()[0] = tv.value;
     event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
     writer_.write(event_);
 }
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s
