@@ -23,6 +23,7 @@
 #include <lo2s/monitor/thread_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
+#include <lo2s/perf/event_collection.hpp>
 namespace lo2s
 {
 namespace monitor
@@ -30,6 +31,11 @@ namespace monitor
 
 ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
+    if (perf::requested_events().events.size() == 0)
+    {
+        throw std::runtime_error("No valid metric events given");
+    }
+
     metric_class_.add_member(trace_.metric_member("CPU", "CPU executing the task",
                                                   otf2::common::metric_mode::absolute_last,
                                                   otf2::common::type::int64, "cpuid"));

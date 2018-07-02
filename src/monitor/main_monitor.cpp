@@ -88,12 +88,6 @@ otf2::definition::metric_class MainMonitor::generate_metric_class()
                                           otf2::common::metric_mode::accumulated_start,
                                           otf2::common::type::Double, "#"));
     }
-    c.add_member(trace_.metric_member("time_enabled", "time event active",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::uint64, "ns"));
-    c.add_member(trace_.metric_member("time_running", "time event on CPU",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::uint64, "ns"));
     return c;
 }
 MainMonitor::~MainMonitor()

@@ -57,12 +57,7 @@ bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
     {
         values_[i].set(counters_[i]);
     }
-
-    auto index = counters_.size();
-    values_[index++].set(counters_.enabled());
-    values_[index++].set(counters_.running());
-
-    handle_custom_events(index);
+    handle_custom_events(counters_.size());
 
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(tp, metric_instance_, values_));
