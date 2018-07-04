@@ -76,6 +76,8 @@ struct Config
         std::uint64_t metric_frequency;
     };
     std::string metric_leader;
+    bool default_metrics;
+
     // time synchronization
     bool use_clockid;
     clockid_t clockid;
