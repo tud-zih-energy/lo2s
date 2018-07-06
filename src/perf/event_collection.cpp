@@ -34,10 +34,9 @@ EventCollection collect_requested_events()
     const auto& mem_events = platform::get_mem_events();
     const auto& user_events = lo2s::config().perf_events;
 
-    perf::CounterDescription leader(perf::EventProvider::get_event_by_name(config().metric_leader));
     std::vector<perf::CounterDescription> used_counters;
 
-    used_counters.reserve(mem_events.size() + user_events.size());
+    used_counters.reserve(user_events.size());
     for (const auto& ev : user_events)
     {
         // skip event if it has already been declared as group leader
@@ -60,18 +59,43 @@ EventCollection collect_requested_events()
         }
     }
 
-    if (user_events.size() == 0)
+    if (config().standard_metrics)
     {
         for (const auto& description : mem_events)
         {
-            used_counters.emplace_back(description);
+            if (description.name != config().metric_leader)
+            {
+                used_counters.emplace_back(description);
+            }
         }
 
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+        if ("instructions" != config().metric_leader)
+        {
+            used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
+        }
+
+        if ("cpu-cycles" != config().metric_leader)
+        {
+            used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+        }
     }
 
-    return { leader, used_counters };
+    if (used_counters.empty())
+    {
+        // if no events will be recorded, we make an early exit with a fake leader
+        return { CounterDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
+                 std::move(used_counters) };
+    }
+
+    if (!perf::EventProvider::has_event(lo2s::config().metric_leader))
+    {
+        lo2s::Log::error() << "event '" << lo2s::config().metric_leader
+                           << "' is not available as a metric leader!";
+        throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
+    }
+
+    return { perf::EventProvider::get_event_by_name(config().metric_leader),
+             std::move(used_counters) };
 }
 
 const EventCollection& requested_events()
@@ -79,5 +103,5 @@ const EventCollection& requested_events()
     static EventCollection events{ collect_requested_events() };
     return events;
 }
-}
-}
+} // namespace perf
+} // namespace lo2s

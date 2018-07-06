@@ -6,6 +6,7 @@
 
 #include <lo2s/monitor/dummy_monitor.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
+#include <lo2s/perf/event_collection.hpp>
 
 #include <csignal>
 
@@ -24,10 +25,11 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                             std::forward_as_tuple(cpu.id, trace_));
         assert(ret.second);
-
-        counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                  std::forward_as_tuple(cpu.id, *this));
-
+        if (!perf::requested_events().events.empty())
+        {
+            counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
+                                      std::forward_as_tuple(cpu.id, *this));
+        }
         (void)ret;
     }
 }

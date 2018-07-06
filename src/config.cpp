@@ -358,6 +358,9 @@ void parse_program_options(int argc, const char** argv)
             po::value(&config.perf_events)
                 ->value_name("EVENT"),
             "Record metrics for this perf event.")
+        ("standard-metrics",
+            po::bool_switch(&config.standard_metrics),
+            "Enable a set of default metrics.")
         ("metric-leader",
             po::value(&config.metric_leader)
                 ->value_name("EVENT")
@@ -592,13 +595,6 @@ void parse_program_options(int argc, const char** argv)
     {
         config.metric_use_frequency = true;
         config.metric_frequency = metric_frequency;
-    }
-
-    if (!perf::EventProvider::has_event(config.metric_leader))
-    {
-        lo2s::Log::error() << "event '" << config.metric_leader
-                           << "' is not available as a metric leader!";
-        std::exit(EXIT_FAILURE);
     }
 
     config.exclude_kernel = false;

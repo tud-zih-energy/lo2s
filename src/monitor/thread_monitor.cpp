@@ -27,6 +27,7 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
+#include <memory>
 #include <string>
 
 #include <cassert>
@@ -46,10 +47,15 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
 : IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
   tid_(tid), info_(info),
   sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
-                 parent_monitor.trace().sample_writer(pid, tid), enable_on_exec),
-  counter_writer_(pid, tid, parent_monitor.trace().metric_writer(pid, tid), parent_monitor,
-                  enable_on_exec)
+                 parent_monitor.trace().sample_writer(pid, tid), enable_on_exec)
 {
+    if (!perf::requested_events().events.empty())
+    {
+        counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
+            pid, tid, parent_monitor.trace().metric_writer(pid, tid), parent_monitor,
+            enable_on_exec);
+    }
+
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
 }
@@ -81,7 +87,11 @@ void ThreadMonitor::monitor()
 {
     check_affinity();
     sample_writer_.read();
-    counter_writer_.read();
+
+    if (counter_writer_)
+    {
+        counter_writer_->read();
+    }
 }
 } // namespace monitor
 } // namespace lo2s
