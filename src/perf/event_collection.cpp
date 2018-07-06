@@ -34,7 +34,6 @@ EventCollection collect_requested_events()
     const auto& mem_events = platform::get_mem_events();
     const auto& user_events = lo2s::config().perf_events;
 
-    perf::CounterDescription leader(perf::EventProvider::get_event_by_name(config().metric_leader));
     std::vector<perf::CounterDescription> used_counters;
 
     used_counters.reserve(user_events.size());
@@ -78,7 +77,7 @@ EventCollection collect_requested_events()
         throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
     }
 
-    return { leader, used_counters };
+    return { perf::EventProvider::get_event_by_name(config().metric_leader), used_counters };
 }
 
 const EventCollection& requested_events()
