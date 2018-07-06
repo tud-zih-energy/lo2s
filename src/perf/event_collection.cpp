@@ -80,14 +80,22 @@ EventCollection collect_requested_events()
         }
     }
 
-    if (!used_counters.empty() && !perf::EventProvider::has_event(lo2s::config().metric_leader))
+    if (used_counters.empty())
+    {
+        // if no events will be recorded, we make an early exit with a fake leader
+        return { CounterDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
+                 std::move(used_counters) };
+    }
+
+    if (!perf::EventProvider::has_event(lo2s::config().metric_leader))
     {
         lo2s::Log::error() << "event '" << lo2s::config().metric_leader
                            << "' is not available as a metric leader!";
         throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
     }
 
-    return { perf::EventProvider::get_event_by_name(config().metric_leader), used_counters };
+    return { perf::EventProvider::get_event_by_name(config().metric_leader),
+             std::move(used_counters) };
 }
 
 const EventCollection& requested_events()

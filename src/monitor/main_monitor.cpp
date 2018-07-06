@@ -72,30 +72,37 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_
     }
 #endif
 }
+
 otf2::definition::metric_class MainMonitor::generate_metric_class()
 {
     auto c = trace_.metric_class();
 
     const perf::EventCollection& event_collection = perf::requested_events();
 
-    c.add_member(trace_.metric_member(event_collection.leader.name, event_collection.leader.name,
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::Double, "#"));
-
-    for (const auto& ev : event_collection.events)
+    if (!event_collection.events.empty())
     {
-        c.add_member(trace_.metric_member(ev.name, ev.name,
+        c.add_member(trace_.metric_member(
+            event_collection.leader.name, event_collection.leader.name,
+            otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
+
+        for (const auto& ev : event_collection.events)
+        {
+            c.add_member(trace_.metric_member(ev.name, ev.name,
+                                              otf2::common::metric_mode::accumulated_start,
+                                              otf2::common::type::Double, "#"));
+        }
+
+        c.add_member(trace_.metric_member("time_enabled", "time event active",
                                           otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::Double, "#"));
+                                          otf2::common::type::uint64, "ns"));
+        c.add_member(trace_.metric_member("time_running", "time event on CPU",
+                                          otf2::common::metric_mode::accumulated_start,
+                                          otf2::common::type::uint64, "ns"));
     }
-    c.add_member(trace_.metric_member("time_enabled", "time event active",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::uint64, "ns"));
-    c.add_member(trace_.metric_member("time_running", "time event on CPU",
-                                      otf2::common::metric_mode::accumulated_start,
-                                      otf2::common::type::uint64, "ns"));
+
     return c;
 }
+
 MainMonitor::~MainMonitor()
 {
     if (tracepoint_metrics_)
