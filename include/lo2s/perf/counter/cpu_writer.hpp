@@ -38,11 +38,6 @@ public:
                      false)
     {
     }
-
-private:
-    void handle_custom_events(std::size_t /*position*/)
-    {
-    }
 };
 } // namespace counter
 } // namespace perf

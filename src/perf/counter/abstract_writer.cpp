@@ -62,8 +62,6 @@ bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
     values_[index++].set(counters_.enabled());
     values_[index++].set(counters_.running());
 
-    handle_custom_events(index);
-
     // TODO optimize! (avoid copy, avoid shared pointers...)
     writer_.write(otf2::event::metric(tp, metric_instance_, values_));
     return false;

@@ -31,16 +31,10 @@ ProcessWriter::ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer,
 : AbstractWriter(tid, -1, writer,
                  parent.trace().metric_instance(parent.get_metric_class(), writer.location(),
                                                 parent.trace().sample_writer(pid, tid).location()),
-                 enable_on_exec),
-  proc_stat_(boost::filesystem::path("/proc") / std::to_string(pid) / "task" / std::to_string(tid) /
-             "stat")
+                 enable_on_exec)
 {
 }
 
-void ProcessWriter::handle_custom_events(std::size_t position)
-{
-    values_[position].set(get_task_last_cpu_id(proc_stat_));
-}
 } // namespace counter
 } // namespace perf
 } // namespace lo2s
