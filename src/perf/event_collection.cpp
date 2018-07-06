@@ -59,7 +59,7 @@ EventCollection collect_requested_events()
         }
     }
 
-    if (config().default_metrics)
+    if (config().standard_metrics)
     {
         for (const auto& description : mem_events)
         {

@@ -357,8 +357,8 @@ void parse_program_options(int argc, const char** argv)
             po::value(&config.perf_events)
                 ->value_name("EVENT"),
             "Record metrics for this perf event.")
-        ("default-metrics",
-            po::bool_switch(&config.default_metrics),
+        ("standard-metrics",
+            po::bool_switch(&config.standard_metrics),
             "Enable a set of default metrics.")
         ("metric-leader",
             po::value(&config.metric_leader)
