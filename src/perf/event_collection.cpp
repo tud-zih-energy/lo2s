@@ -63,11 +63,21 @@ EventCollection collect_requested_events()
     {
         for (const auto& description : mem_events)
         {
-            used_counters.emplace_back(description);
+            if (description.name != config().metric_leader)
+            {
+                used_counters.emplace_back(description);
+            }
         }
 
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
-        used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+        if ("instructions" != config().metric_leader)
+        {
+            used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
+        }
+
+        if ("cpu-cycles" != config().metric_leader)
+        {
+            used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+        }
     }
 
     if (!used_counters.empty() && !perf::EventProvider::has_event(lo2s::config().metric_leader))
