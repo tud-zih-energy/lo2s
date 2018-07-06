@@ -34,7 +34,8 @@
 #include <cstdlib>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -61,6 +62,7 @@ public:
         uint64_t ip;
         uint32_t pid, tid;
         uint64_t time;
+        uint32_t cpu, res;
         /* only relevant for has_cct_ / PERF_SAMPLE_CALLCHAIN */
         uint64_t nr;
         uint64_t ips[1]; // ISO C++ forbits zero-size array
@@ -90,7 +92,8 @@ protected:
         }
 
         // TODO see if we can remove remove tid
-        perf_attr.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME;
+        perf_attr.sample_type =
+            PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_CPU;
         if (has_cct_)
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
@@ -196,6 +199,6 @@ protected:
 private:
     int fd_ = -1;
 };
-}
-}
-}
+} // namespace sample
+} // namespace perf
+} // namespace lo2s
