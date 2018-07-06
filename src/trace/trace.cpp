@@ -449,7 +449,9 @@ otf2::definition::metric_class Trace::cpuid_metric_class()
 {
     if (!cpuid_metric_class_)
     {
-        cpuid_metric_class_ = metric_class();
+        cpuid_metric_class_ =
+            metric_classes_.emplace(metric_class_ref(), otf2::common::metric_occurence::sync,
+                                    otf2::common::recorder_kind::abstract);
 
         cpuid_metric_class_->add_member(metric_member("CPU", "CPU executing the task",
                                                       otf2::common::metric_mode::absolute_point,
