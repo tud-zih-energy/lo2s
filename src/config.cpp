@@ -590,13 +590,6 @@ void parse_program_options(int argc, const char** argv)
         config.metric_frequency = metric_frequency;
     }
 
-    if (!perf::EventProvider::has_event(config.metric_leader))
-    {
-        lo2s::Log::error() << "event '" << config.metric_leader
-                           << "' is not available as a metric leader!";
-        std::exit(EXIT_FAILURE);
-    }
-
     config.exclude_kernel = false;
     if (kernel && no_kernel)
     {

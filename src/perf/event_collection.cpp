@@ -71,6 +71,13 @@ EventCollection collect_requested_events()
         used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
     }
 
+    if (!used_counters.empty() && !perf::EventProvider::has_event(lo2s::config().metric_leader))
+    {
+        lo2s::Log::error() << "event '" << lo2s::config().metric_leader
+                           << "' is not available as a metric leader!";
+        throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
+    }
+
     return { leader, used_counters };
 }
 
@@ -79,5 +86,5 @@ const EventCollection& requested_events()
     static EventCollection events{ collect_requested_events() };
     return events;
 }
-}
-}
+} // namespace perf
+} // namespace lo2s
