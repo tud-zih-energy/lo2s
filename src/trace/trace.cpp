@@ -452,7 +452,7 @@ otf2::definition::metric_class Trace::cpuid_metric_class()
         cpuid_metric_class_ = metric_class();
 
         cpuid_metric_class_->add_member(metric_member("CPU", "CPU executing the task",
-                                                      otf2::common::metric_mode::absolute_last,
+                                                      otf2::common::metric_mode::absolute_point,
                                                       otf2::common::type::int64, "cpuid"));
     }
 

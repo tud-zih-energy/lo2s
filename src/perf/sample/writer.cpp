@@ -164,6 +164,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
 
+    // TODO optimize metric event writing
     cpuid_metric_event_.timestamp(tp);
     cpuid_metric_event_.values()[0].value.signed_int = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
