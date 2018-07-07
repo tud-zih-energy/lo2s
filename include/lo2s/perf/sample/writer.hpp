@@ -33,7 +33,8 @@
 
 #include <cstdint>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -53,8 +54,8 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor,
-           trace::Trace& trace, otf2::writer::local& otf2_writer, bool enable_on_exec);
+    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor, trace::Trace& trace,
+           otf2::writer::local& otf2_writer, bool enable_on_exec);
     ~Writer();
 
 public:
@@ -78,6 +79,11 @@ private:
     cctx_ref(const Reader::RecordSampleType* sample);
     trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
 
+    otf2::definition::calling_context::reference_type ip_ref() const
+    {
+        return local_ip_refs_.size();
+    }
+
     pid_t pid_;
     pid_t tid_;
     monitor::ThreadMonitor& monitor_;
@@ -86,13 +92,12 @@ private:
     otf2::writer::local& otf2_writer_;
 
     trace::IpRefMap local_ip_refs_;
-    std::uint64_t ip_ref_counter_ = 0;
     const time::Converter time_converter_;
 
     bool first_event_ = true;
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 };
-}
-}
-}
+} // namespace sample
+} // namespace perf
+} // namespace lo2s

@@ -521,8 +521,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
     }
 }
 
-otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_count,
-                                                 const MemoryMap& maps)
+otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, const MemoryMap& maps)
 {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -533,9 +532,9 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
     }
 
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(ip_count, -1u);
+    std::vector<uint32_t> mappings(new_ips.size(), -1u);
 #else
-    std::vector<uint32_t> mappings(ip_count);
+    std::vector<uint32_t> mappings(new_ips.size());
 #endif
 
     merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), maps);

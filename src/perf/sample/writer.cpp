@@ -39,7 +39,8 @@
 #include <cassert>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <linux/perf_event.h>
 }
 
@@ -85,8 +86,7 @@ Writer::~Writer()
     // Actually we have to merge the maps_ within one process before this step :-(
     if (!local_ip_refs_.empty())
     {
-        const auto& mapping =
-            trace_.merge_ips(local_ip_refs_, ip_ref_counter_, monitor_.info().maps());
+        const auto& mapping = trace_.merge_ips(local_ip_refs_, monitor_.info().maps());
         otf2_writer_ << mapping;
     }
 }
@@ -99,15 +99,9 @@ trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& c
         Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
         addr = -2;
     }
-    auto it = children.find(addr);
-    if (it == children.end())
-    {
-        otf2::definition::calling_context::reference_type ref(ip_ref_counter_++);
-        auto ret = children.emplace(addr, ref);
-        assert(ret.second);
-        it = ret.first;
-    }
-    return it;
+    auto ret = children.emplace(addr, ip_ref());
+
+    return ret.first;
 }
 
 otf2::definition::calling_context::reference_type
@@ -184,6 +178,6 @@ void Writer::end()
     last_time_point_ = std::max(last_time_point_, lo2s::time::now());
     otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
 }
-}
-}
-}
+} // namespace sample
+} // namespace perf
+} // namespace lo2s

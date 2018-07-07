@@ -116,8 +116,7 @@ public:
                                                       otf2::definition::location recorder,
                                                       otf2::definition::system_tree_node scope);
 
-    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, uint64_t ip_count,
-                                              const MemoryMap& maps);
+    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, const MemoryMap& maps);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
