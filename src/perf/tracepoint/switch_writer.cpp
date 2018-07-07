@@ -45,7 +45,7 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
 : Reader(cpu, get_sched_switch_event().id(), config().mmap_pages),
-  otf2_writer_(trace.cpu_writer(cpu)),
+  otf2_writer_(trace.cpu_switch_writer(cpu)),
   trace_(trace),
   time_converter_(time::Converter::instance()),
   prev_pid_field_(get_sched_switch_event().field("prev_pid")),

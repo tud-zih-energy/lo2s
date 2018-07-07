@@ -93,11 +93,12 @@ public:
 
     void process_update_executable(pid_t pid, const std::string& exe_name);
 
-    otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& cpu_writer(int cpuid);
-    otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& metric_writer(const std::string& name);
+    otf2::writer::local& thread_sample_writer(pid_t pid, pid_t tid);
+    otf2::writer::local& cpu_sample_writer(int cpuid);
+    otf2::writer::local& thread_metric_writer(pid_t pid, pid_t tid);
+    otf2::writer::local& named_metric_writer(const std::string& name);
     otf2::writer::local& cpu_metric_writer(int cpuid);
+    otf2::writer::local& cpu_switch_writer(int cpuid);
 
     otf2::definition::metric_member metric_member(const std::string& name,
                                                   const std::string& description,
@@ -171,8 +172,9 @@ private:
     // This generates a contiguous set of IDs for all locations
     otf2::definition::location::reference_type location_ref() const
     {
-        return thread_locations_.size() + cpu_locations_.size() + metric_locations_.size() +
-               named_locations_.size() + cpu_metric_locations_.size();
+        return thread_sample_locations_.size() + cpu_sample_locations_.size() +
+               cpu_switch_locations_.size() + thread_metric_locations_.size() +
+               named_metric_locations_.size() + cpu_metric_locations_.size();
     }
 
     otf2::definition::location_group::reference_type location_group_ref() const
@@ -264,11 +266,12 @@ private:
     std::map<int, otf2::definition::location_group> location_groups_cpu_;
 
     // TODO add location groups (processes), read path from /proc/self/exe symlink
-    std::map<pid_t, otf2::definition::location> thread_locations_;
-    std::map<int, otf2::definition::location> cpu_locations_;
-    std::map<pid_t, otf2::definition::location> metric_locations_;
+    std::map<pid_t, otf2::definition::location> thread_sample_locations_;
+    std::map<int, otf2::definition::location> cpu_sample_locations_;
+    std::map<pid_t, otf2::definition::location> thread_metric_locations_;
     std::map<int, otf2::definition::location> cpu_metric_locations_;
-    otf2::definition::container<otf2::definition::location> named_locations_;
+    std::map<int, otf2::definition::location> cpu_switch_locations_;
+    otf2::definition::container<otf2::definition::location> named_metric_locations_;
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
     std::map<LineInfo, otf2::definition::region> regions_line_info_;

@@ -37,7 +37,7 @@ namespace plugin
 Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
                  wrapper::ValueType value_type, trace::Trace& trace)
 : id_(-1), name_(name), description_(), unit_(), mode_(mode), value_type_(value_type),
-  writer_(trace.metric_writer(name_)),
+  writer_(trace.named_metric_writer(name_)),
   metric_(trace.metric_instance(trace.metric_class(), writer_.location(),
                                 writer_.location().location_group().parent()))
 {
@@ -75,6 +75,6 @@ void Channel::write_value(wrapper::TimeValuePair tv)
     event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
     writer_.write(event_);
 }
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s
