@@ -28,7 +28,6 @@
 #ifdef HAVE_X86_ENERGY
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
-#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -55,19 +54,12 @@ public:
     {
         return trace_;
     }
-    otf2::definition::metric_class get_metric_class()
-    {
-        return metric_class_;
-    }
 
 protected:
-    otf2::definition::metric_class generate_metric_class();
-
     trace::Trace trace_;
 
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::MetricMonitor> tracepoint_metrics_;
-    otf2::definition::metric_class metric_class_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif
