@@ -357,7 +357,6 @@ void Trace::add_cpu(int cpuid)
         std::forward_as_tuple(location_group_ref(), name,
                               otf2::definition::location_group::location_group_type::unknown,
                               system_tree_cpu_nodes_.at(cpuid)));
-
 }
 otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 {
@@ -444,6 +443,20 @@ Trace::metric_instance(otf2::definition::metric_class metric_class,
                        otf2::definition::system_tree_node scope)
 {
     return metric_instances_.emplace(metric_instance_ref(), metric_class, recorder, scope);
+}
+
+otf2::definition::metric_class Trace::cpuid_metric_class()
+{
+    if (!cpuid_metric_class_)
+    {
+        cpuid_metric_class_ = metric_class();
+
+        cpuid_metric_class_->add_member(metric_member("CPU", "CPU executing the task",
+                                                      otf2::common::metric_mode::absolute_point,
+                                                      otf2::common::type::int64, "cpuid"));
+    }
+
+    return cpuid_metric_class_;
 }
 
 otf2::definition::metric_class Trace::metric_class()

@@ -33,7 +33,8 @@
 
 #include <cstdint>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -53,8 +54,8 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor,
-           trace::Trace& trace, otf2::writer::local& otf2_writer, bool enable_on_exec);
+    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor, trace::Trace& trace,
+           otf2::writer::local& otf2_writer, bool enable_on_exec);
     ~Writer();
 
 public:
@@ -85,6 +86,9 @@ private:
     trace::Trace& trace_;
     otf2::writer::local& otf2_writer_;
 
+    otf2::definition::metric_instance cpuid_metric_instance_;
+    otf2::event::metric cpuid_metric_event_;
+
     trace::IpRefMap local_ip_refs_;
     std::uint64_t ip_ref_counter_ = 0;
     const time::Converter time_converter_;
@@ -93,6 +97,6 @@ private:
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 };
-}
-}
-}
+} // namespace sample
+} // namespace perf
+} // namespace lo2s

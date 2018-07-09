@@ -39,7 +39,8 @@
 #include <cassert>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <linux/perf_event.h>
 }
 
@@ -53,9 +54,15 @@ namespace sample
 Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
 : Reader(config().enable_cct), pid_(pid), tid_(tid), monitor_(Monitor), trace_(trace),
-  otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
-  first_time_point_(lo2s::time::now())
+  otf2_writer_(otf2_writer),
+  cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
+                                               otf2_writer.location())),
+  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_,
+                      { otf2::event::metric::value_container() }),
+  time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now())
 {
+    cpuid_metric_event_.values()[0].metric = trace.cpuid_metric_class()[0];
+
     CounterDescription sampling_event =
         EventProvider::get_event_by_name(config().sampling_event); // config parser has already
                                                                    // checked for event
@@ -156,8 +163,14 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         first_event_ = false;
     }
 
+    // TODO optimize metric event writing
+    cpuid_metric_event_.timestamp(tp);
+    cpuid_metric_event_.values()[0].value.signed_int = sample->cpu;
+    otf2_writer_ << cpuid_metric_event_;
+
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
+
     last_time_point_ = tp;
     return false;
 }
@@ -184,6 +197,6 @@ void Writer::end()
     last_time_point_ = std::max(last_time_point_, lo2s::time::now());
     otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
 }
-}
-}
-}
+} // namespace sample
+} // namespace perf
+} // namespace lo2s

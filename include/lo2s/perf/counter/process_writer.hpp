@@ -33,10 +33,6 @@ class ProcessWriter : public AbstractWriter
 public:
     ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer, monitor::MainMonitor& parent,
                   bool enable_on_exec);
-
-private:
-    void handle_custom_events(std::size_t position);
-    boost::filesystem::ifstream proc_stat_;
 };
 } // namespace counter
 } // namespace perf
