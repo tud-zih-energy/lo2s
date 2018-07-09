@@ -26,6 +26,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
@@ -400,6 +401,7 @@ otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
 
     return archive()(location.first->second);
 }
+
 otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
 {
     auto name = intern((boost::format("metrics for cpu %d") % cpuid).str());
@@ -410,6 +412,7 @@ otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
                               otf2::definition::location::location_type::metric));
     return archive()(location.first->second);
 }
+
 otf2::writer::local& Trace::metric_writer(const std::string& name)
 {
     // As names may not be unique in this context, always generate a new location/writer pair
@@ -457,6 +460,39 @@ otf2::definition::metric_class Trace::cpuid_metric_class()
     }
 
     return cpuid_metric_class_;
+}
+
+otf2::definition::metric_class Trace::perf_metric_class()
+{
+    if (!perf_metric_class_)
+    {
+        perf_metric_class_ = metric_class();
+
+        const perf::EventCollection& event_collection = perf::requested_events();
+
+        if (!event_collection.events.empty())
+        {
+            perf_metric_class_->add_member(metric_member(
+                event_collection.leader.name, event_collection.leader.name,
+                otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
+
+            for (const auto& ev : event_collection.events)
+            {
+                perf_metric_class_->add_member(
+                    metric_member(ev.name, ev.name, otf2::common::metric_mode::accumulated_start,
+                                  otf2::common::type::Double, "#"));
+            }
+
+            perf_metric_class_->add_member(metric_member(
+                "time_enabled", "time event active", otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::uint64, "ns"));
+            perf_metric_class_->add_member(metric_member(
+                "time_running", "time event on CPU", otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::uint64, "ns"));
+        }
+    }
+
+    return perf_metric_class_;
 }
 
 otf2::definition::metric_class Trace::metric_class()

@@ -116,6 +116,7 @@ public:
                                                       otf2::definition::system_tree_node scope);
 
     otf2::definition::metric_class cpuid_metric_class();
+    otf2::definition::metric_class perf_metric_class();
 
     otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, uint64_t ip_count,
                                               const MemoryMap& maps);
@@ -289,6 +290,7 @@ private:
     otf2::definition::container<otf2::definition::metric_member> metric_members_;
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
+    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_metric_class_;
     otf2::definition::container<otf2::definition::metric_instance> metric_instances_;
     otf2::definition::container<otf2::definition::system_tree_node_property>
         system_tree_node_properties_;

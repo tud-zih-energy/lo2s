@@ -29,7 +29,8 @@ namespace counter
 ProcessWriter::ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer,
                              monitor::MainMonitor& parent, bool enable_on_exec)
 : AbstractWriter(tid, -1, writer,
-                 parent.trace().metric_instance(parent.get_metric_class(), writer.location(),
+                 parent.trace().metric_instance(parent.trace().perf_metric_class(),
+                                                writer.location(),
                                                 parent.trace().sample_writer(pid, tid).location()),
                  enable_on_exec)
 {
