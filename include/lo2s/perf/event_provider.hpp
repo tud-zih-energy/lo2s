@@ -88,6 +88,8 @@ public:
     static std::vector<std::string> get_predefined_event_names();
     static std::vector<std::string> get_pmu_event_names();
 
+    static const CounterDescription& get_default_metric_leader_event();
+
     class InvalidEvent : public std::runtime_error
     {
     public:

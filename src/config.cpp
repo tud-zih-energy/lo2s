@@ -234,6 +234,8 @@ const Config& config()
 }
 void parse_program_options(int argc, const char** argv)
 {
+    lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
+
     po::options_description general_options("Options");
     po::options_description system_wide_options("System-wide monitoring");
     po::options_description sampling_options("Sampling options");
@@ -364,7 +366,7 @@ void parse_program_options(int argc, const char** argv)
         ("metric-leader",
             po::value(&config.metric_leader)
                 ->value_name("EVENT")
-                ->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
+                ->default_value(perf::EventProvider::get_default_metric_leader_event().name),
             "The leading metric event.")
         ("metric-count",
             po::value(&metric_count)
