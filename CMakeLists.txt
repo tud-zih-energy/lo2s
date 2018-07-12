@@ -269,6 +269,8 @@ else()
     endif()
 endif()
 
+message(STATUS "Linux kernel version: ${LINUX_VERSION}")
+
 # define list of C++ features needed for compilation
 target_compile_features(lo2s
     PRIVATE
