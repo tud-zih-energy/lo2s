@@ -41,7 +41,7 @@ public:
 
     std::string group() const override
     {
-        return "lo2s::CpuSwitchMonitor";
+        return "CpuSwitchMonitor";
     }
 
     void merge_trace();
@@ -52,5 +52,5 @@ private:
     perf::tracepoint::SwitchWriter switch_writer_;
     perf::tracepoint::ExitReader exit_reader_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s
