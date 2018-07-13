@@ -234,8 +234,6 @@ const Config& config()
 }
 void parse_program_options(int argc, const char** argv)
 {
-    lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
-
     po::options_description general_options("Options");
     po::options_description system_wide_options("System-wide monitoring");
     po::options_description sampling_options("Sampling options");
@@ -365,8 +363,7 @@ void parse_program_options(int argc, const char** argv)
             "Enable a set of default metrics.")
         ("metric-leader",
             po::value(&config.metric_leader)
-                ->value_name("EVENT")
-                ->default_value(perf::EventProvider::get_default_metric_leader_event().name),
+                ->value_name("EVENT"),
             "The leading metric event.")
         ("metric-count",
             po::value(&metric_count)
@@ -577,6 +574,23 @@ void parse_program_options(int argc, const char** argv)
         }
         config.disassemble = false;
 #endif
+    }
+
+    // Determine a suitable default metric leader event if none was given on the
+    // command line.
+    if (!vm.count("metric-leader"))
+    {
+        Log::debug() << "guessing metric leader event as none was given by the user...";
+        try
+        {
+            config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
+        }
+        catch (const perf::EventProvider::InvalidEvent& e)
+        {
+            Log::error() << "Failed to determine a suitable metric leader event: " << e.what();
+            Log::error() << "Try manually specifying one with --metric-leader.";
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     if (vm.count("metric-count"))
