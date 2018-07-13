@@ -49,9 +49,6 @@ extern "C"
 #include <unistd.h>
 }
 
-#define Q(x) #x
-#define QUOTE(x) Q(x)
-
 namespace po = boost::program_options;
 
 namespace lo2s
