@@ -57,7 +57,7 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
                                                  writer_.location().location_group().parent()),
                            trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
                                                wrapper::convert_type(value_type_), unit_))),
-  event_(otf2::chrono::genesis(), metric_.metric_class())
+  event_(otf2::chrono::genesis(), metric_)
 {
 }
 

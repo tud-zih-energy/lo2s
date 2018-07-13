@@ -21,7 +21,7 @@ Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
   time_converter_(perf::time::Converter::instance()),
-  metric_event_(otf2::chrono::genesis(), metric_class)
+  metric_event_(otf2::chrono::genesis(), metric_instance_)
 {
 }
 

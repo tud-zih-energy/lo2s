@@ -20,7 +20,7 @@ Monitor::Monitor(::x86_energy::SourceCounter counter, int cpu,
 : IntervalMonitor(trace, std::to_string(cpu), sampling_interval), counter_(std::move(counter)),
   cpu_(cpu), otf2_writer_(trace.metric_writer(name())),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(), stn)),
-  metric_event_(otf2::chrono::genesis(), metric_instance)
+  metric_event_(otf2::chrono::genesis(), metric_instance_)
 // (WOW this is (almost) better than LISP)
 {
 }
@@ -33,7 +33,7 @@ void Monitor::initialize_thread()
 void Monitor::monitor()
 {
     metric_event_.timestamp(time::now());
-    metric_event_.raw_values()[0] = counter_.read()
+    metric_event_.raw_values()[0] = counter_.read();
 
     otf2_writer_.write(metric_event_);
 }
