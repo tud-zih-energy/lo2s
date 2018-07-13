@@ -27,20 +27,17 @@ Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
-    auto tp = time_converter_(sample->time);
+    metric_event_.timestamp(time_converter_(sample->time));
 
-    metric_event_.timestamp(tp);
-    for (const auto& index_field : nitro::lang::enumerate(event_.fields()))
+    std::size_t index = 0;
+    for (const auto& field : event_.fields())
     {
-        auto i = index_field.index();
-        auto field = index_field.value();
-
         if (!field.is_integer())
         {
             continue;
         }
 
-        metric_event_.raw_values()[i] = sample->raw_data.get(field);
+        metric_event_.raw_values()[index++] = sample->raw_data.get(field);
     }
     writer_.write(metric_event_);
     return false;
