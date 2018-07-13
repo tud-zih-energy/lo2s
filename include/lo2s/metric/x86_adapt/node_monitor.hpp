@@ -50,12 +50,12 @@ protected:
 private:
     ::x86_adapt::device device_;
 
-    otf2::writer::local otf2_writer_;
+    otf2::writer::local& otf2_writer_;
 
     std::vector<::x86_adapt::configuration_item> configuration_items_;
 
     otf2::definition::metric_instance metric_instance_;
-    std::vector<otf2::event::metric::value_container> metric_values_;
+    otf2::event::metric event_;
 };
 } // namespace x86_adapt
 } // namespace metric

@@ -44,10 +44,10 @@ private:
 
     int cpu_;
 
-    otf2::writer::local otf2_writer_;
+    otf2::writer::local& otf2_writer_;
 
     otf2::definition::metric_instance metric_instance_;
-    otf2::event::metric::value_container metric_value_;
+    otf2::event::metric metric_event_;
 };
 } // namespace x86_energy
 } // namespace metric

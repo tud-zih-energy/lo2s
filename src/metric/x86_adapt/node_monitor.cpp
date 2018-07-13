@@ -21,16 +21,10 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device, std::chrono::nanoseconds sa
   device_(std::move(device)), otf2_writer_(trace.metric_writer(name())),
   configuration_items_(configuration_items),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(),
-                                         trace.system_tree_package_node(device_.id())))
-// (WOW this is (almost) better than LISP)
+                                         trace.system_tree_package_node(device_.id()))),
+  event_(otf2::chrono::genesis(), metric_instance_)
 {
     assert(device_.type() == X86_ADAPT_DIE);
-
-    metric_values_.resize(configuration_items.size());
-    for (std::size_t i = 0; i < configuration_items_.size(); i++)
-    {
-        metric_values_[i].metric = metric_instance_.metric_class()[i];
-    }
 }
 
 void NodeMonitor::initialize_thread()
@@ -41,14 +35,16 @@ void NodeMonitor::initialize_thread()
 
 void NodeMonitor::monitor()
 {
-    auto read_time = time::now();
+    event_.timestamp(time::now());
     for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))
     {
-        metric_values_[index_ci.index()].set(device_(index_ci.value()));
+        auto i = index_ci.index();
+        auto configuration_item = index_ci.value();
+
+        event_.raw_values()[i] = device_(configuration_item);
     }
 
-    // TODO optimize! (avoid copy, avoid shared pointers...)
-    otf2_writer_.write(otf2::event::metric(read_time, metric_instance_, metric_values_));
+    otf2_writer_.write(event_);
 }
 } // namespace x86_adapt
 } // namespace metric

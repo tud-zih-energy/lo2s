@@ -34,36 +34,33 @@ AbstractWriter::AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer
                                otf2::definition::metric_instance metric_instance,
                                bool enable_on_exec)
 : Reader(tid, cpuid, requested_events(), enable_on_exec),
-  time_converter_(time::Converter::instance()), writer_(writer), metric_instance_(metric_instance)
+  time_converter_(time::Converter::instance()), writer_(writer), metric_instance_(metric_instance),
+  metric_event_(otf2::chrono::genesis(), metric_instance)
 {
-    auto mc = metric_instance_.metric_class();
-
-    values_.resize(mc.size());
-    for (std::size_t i = 0; i < mc.size(); i++)
-    {
-        values_[i].metric = mc[i];
-    }
 }
 
 bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
 {
-    auto tp = time_converter_(sample->time);
+    // update event timestamp from sample
+    metric_event_.timestamp(time_converter_(sample->time));
 
     counters_.read(&sample->v);
 
-    assert(counters_.size() <= values_.size());
+    otf2::event::metric::values& values = metric_event_.raw_values();
 
+    assert(counters_.size() <= values.size());
+
+    // read counter values into metric event
     for (std::size_t i = 0; i < counters_.size(); i++)
     {
-        values_[i].set(counters_[i]);
+        values[i] = counters_[i];
     }
 
     auto index = counters_.size();
-    values_[index++].set(counters_.enabled());
-    values_[index++].set(counters_.running());
+    values[index++] = counters_.enabled();
+    values[index++] = counters_.running();
 
-    // TODO optimize! (avoid copy, avoid shared pointers...)
-    writer_.write(otf2::event::metric(tp, metric_instance_, values_));
+    writer_.write(metric_event_);
     return false;
 }
 } // namespace counter
