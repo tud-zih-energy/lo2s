@@ -259,6 +259,7 @@ const CounterDescription& EventProvider::get_default_metric_leader_event()
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
              "ref-cycles",
+             "cpu-cycles",
              "bus-cycles",
          })
     {
