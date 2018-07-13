@@ -270,13 +270,7 @@ else()
 endif()
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
-if (LINUX_VERSION VERSION_LESS 3.3.0)
-    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=bus-cycles)
-    message(STATUS "  Detected Linux older than 3.3.0. Falling back to bus-cycle as metric leader.")
-    message(STATUS "  The prefered ref-cycles may still be available. (See --metric-leader)")
-else()
-    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=ref-cycles)
-endif()
+
 # define list of C++ features needed for compilation
 target_compile_features(lo2s
     PRIVATE

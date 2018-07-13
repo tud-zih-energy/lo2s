@@ -49,9 +49,6 @@ extern "C"
 #include <unistd.h>
 }
 
-#define Q(x) #x
-#define QUOTE(x) Q(x)
-
 namespace po = boost::program_options;
 
 namespace lo2s
@@ -363,8 +360,7 @@ void parse_program_options(int argc, const char** argv)
             "Enable a set of default metrics.")
         ("metric-leader",
             po::value(&config.metric_leader)
-                ->value_name("EVENT")
-                ->default_value(QUOTE(DEFAULT_METRIC_LEADER)),
+                ->value_name("EVENT"),
             "The leading metric event.")
         ("metric-count",
             po::value(&metric_count)
@@ -575,6 +571,23 @@ void parse_program_options(int argc, const char** argv)
         }
         config.disassemble = false;
 #endif
+    }
+
+    // Determine a suitable default metric leader event if none was given on the
+    // command line.
+    if (!vm.count("metric-leader"))
+    {
+        Log::debug() << "guessing metric leader event as none was given by the user...";
+        try
+        {
+            config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
+        }
+        catch (const perf::EventProvider::InvalidEvent& e)
+        {
+            Log::error() << "Failed to determine a suitable metric leader event: " << e.what();
+            Log::error() << "Try manually specifying one with --metric-leader.";
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     if (vm.count("metric-count"))
