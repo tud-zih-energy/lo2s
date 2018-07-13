@@ -93,7 +93,8 @@ public:
     class InvalidEvent : public std::runtime_error
     {
     public:
-        InvalidEvent(const std::string& event_description) : std::runtime_error(event_description)
+        InvalidEvent(const std::string& event_description)
+        : std::runtime_error(std::string{ "Invalid event: " } + event_description)
         {
         }
     };
@@ -109,5 +110,5 @@ private:
 
     EventMap event_map_;
 };
-}
-}
+} // namespace perf
+} // namespace lo2s
