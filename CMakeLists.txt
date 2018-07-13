@@ -98,7 +98,7 @@ find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
-find_package(x86_energy 2.0 QUIET MODULE)
+find_package(x86_energy 2.0 CONFIG)
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
@@ -210,8 +210,6 @@ if(x86_energy_FOUND)
     else()
         target_link_libraries(lo2s PRIVATE x86_energy::x86_energy)
     endif()
-else()
-    message(STATUS "Could NOT find x86_energy 2.0 (add install path to CMAKE_PREFIX_PATH)")
 endif()
 
 # handle radare dependency
