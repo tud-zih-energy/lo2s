@@ -526,13 +526,14 @@ static LineInfo region_info(LineInfo info)
 
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context parent, const MemoryMap& maps)
+                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos)
 {
     for (auto& elem : new_children)
     {
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
+        auto& maps = infos.at(elem.second.pid).maps();
         auto line_info = maps.lookup_line_info(ip);
         Log::trace() << "resolved " << ip << ": " << line_info;
         auto cctx_it = children.find(ip);
@@ -567,11 +568,12 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         const auto& cctx = cctx_it->second.cctx;
         mapping_table.at(local_ref) = cctx.ref();
 
-        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, maps);
+        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos);
     }
 }
 
-otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, const MemoryMap& maps)
+otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips,
+                                                 std::map<pid_t, ProcessInfo>& infos)
 {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -587,7 +589,7 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, const Memory
     std::vector<uint32_t> mappings(new_ips.size());
 #endif
 
-    merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), maps);
+    merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), infos);
 
 #ifndef NDEBUG
     for (auto id : mappings)

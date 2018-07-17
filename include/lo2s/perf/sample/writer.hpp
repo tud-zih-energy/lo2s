@@ -21,10 +21,10 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-
-#include <lo2s/address.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
@@ -54,7 +54,7 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& monitor, trace::Trace& trace,
+    Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& monitor, trace::Trace& trace,
            otf2::writer::local& otf2_writer, bool enable_on_exec);
     ~Writer();
 
@@ -77,7 +77,7 @@ public:
 private:
     otf2::definition::calling_context::reference_type
     cctx_ref(const Reader::RecordSampleType* sample);
-    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
+    trace::IpRefMap::iterator find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children);
 
     otf2::definition::calling_context::reference_type ip_ref() const
     {
@@ -86,7 +86,7 @@ private:
 
     pid_t pid_;
     pid_t tid_;
-    monitor::ThreadMonitor& monitor_;
+    monitor::MainMonitor& monitor_;
 
     trace::Trace& trace_;
     otf2::writer::local& otf2_writer_;
@@ -95,6 +95,7 @@ private:
     otf2::event::metric cpuid_metric_event_;
 
     trace::IpRefMap local_ip_refs_;
+    std::deque<struct monitor::MmapCache> cached_mmap_events;
     const time::Converter time_converter_;
 
     bool first_event_ = true;

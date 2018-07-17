@@ -51,7 +51,7 @@ namespace perf
 namespace sample
 {
 
-Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, trace::Trace& trace,
+Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
 : Reader(config().enable_cct), pid_(pid), tid_(tid), monitor_(Monitor), trace_(trace),
   otf2_writer_(otf2_writer),
@@ -90,45 +90,43 @@ Writer::~Writer()
     // Actually we have to merge the maps_ within one process before this step :-(
     if (!local_ip_refs_.empty())
     {
-        const auto& mapping = trace_.merge_ips(local_ip_refs_, monitor_.info().maps());
+        const auto& mapping = trace_.merge_ips(local_ip_refs_, monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
 }
-
+trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children)
+{
+    // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
+    if (addr == -1)
+    {
+        Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
+        addr = -2;
+    }
+    auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
+                                std::forward_as_tuple(pid, ip_ref()));
+    return ret.first;
+}
 otf2::definition::calling_context::reference_type
 Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
     if (!has_cct_)
     {
-        // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
-        if (addr == -1)
-        {
-            Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
-            addr = -2;
-        }
-        auto ret = local_ip_refs_.emplace(sample->ip, ip_ref());
-
-        return ret.first->second.ref;
+        auto it = find_ip_child(sample->ip, sample->pid, local_ip_refs_);
+        return it->second.ref;
     }
     else
     {
         auto children = &local_ip_refs_;
         for (uint64_t i = sample->nr - 1;; i--)
         {
-            // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
-            if (addr == -1)
-            {
-                Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
-                addr = -2;
-            }
-            auto it = children.emplace(sample->ips[i], ip_ref());
-
+            auto it = find_ip_child(sample->ips[i], sample->pid, *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)
             {
-                return it.first->second.ref;
+                return it->second.ref;
             }
-            children = &it.first->second.children;
+
+            children = &it->second.children;
         }
     }
 }
@@ -147,7 +145,6 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     otf2::event::calling_context_sample ccs(tp, cctx, 2, trace_.interrupt_generator());
     otf2_writer_ << ccs;
     */
-
     if (first_event_)
     {
         first_time_point_ = std::min(first_time_point_, tp);
@@ -176,9 +173,9 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     Log::debug() << "encountered mmap event for " << pid_ << "," << tid_ << " "
                  << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
                  << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
-    // Firefox does that... no idea what it is
-    monitor_.info().mmap(mmap_event->addr, mmap_event->addr + mmap_event->len, mmap_event->pgoff,
-                         mmap_event->filename);
+
+    cached_mmap_events.emplace_back(mmap_event->pid, mmap_event->addr, mmap_event->len,
+                                    mmap_event->pgoff, mmap_event->filename);
     return false;
 }
 
@@ -187,6 +184,7 @@ void Writer::end()
     // time::now() can sometimes can be in the past :-(
     last_time_point_ = std::max(last_time_point_, lo2s::time::now());
     otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
+    monitor_.insert_cached_mmap_events(cached_mmap_events);
 }
 } // namespace sample
 } // namespace perf

@@ -25,6 +25,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/process_info.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -44,11 +45,12 @@ using IpMap = std::map<Address, RefMap>;
 
 struct IpRefEntry
 {
-    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
+    IpRefEntry(pid_t pid, otf2::definition::calling_context::reference_type r) : ref(r), pid(pid)
     {
     }
 
     otf2::definition::calling_context::reference_type ref;
+    pid_t pid;
     IpMap<IpRefEntry> children;
 };
 
@@ -119,12 +121,12 @@ public:
     otf2::definition::metric_class cpuid_metric_class();
     otf2::definition::metric_class perf_metric_class();
 
-    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, uint64_t ip_count,
-                                              const MemoryMap& maps);
+    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips,
+                                              std::map<pid_t, ProcessInfo>& infos);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
-                   const MemoryMap& maps);
+                   std::map<pid_t, ProcessInfo>& infos);
 
     void register_tid(pid_t tid, const std::string& exe);
     void register_tids(const std::unordered_map<pid_t, std::string>& tid_map);

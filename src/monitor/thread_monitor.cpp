@@ -43,11 +43,10 @@ namespace monitor
 {
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
-                             ProcessInfo& info, bool enable_on_exec)
+                             bool enable_on_exec)
 : IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
-  tid_(tid), info_(info),
-  sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
-                 parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec)
+  tid_(tid), sample_writer_(pid, tid, -1, parent_monitor, parent_monitor.trace(),
+                            parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec)
 {
     if (!perf::requested_events().events.empty())
     {

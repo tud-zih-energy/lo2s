@@ -8,6 +8,10 @@
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/perf/event_collection.hpp>
 
+#include <boost/filesystem.hpp>
+
+#include <regex>
+
 #include <csignal>
 
 namespace lo2s
@@ -17,6 +21,20 @@ namespace monitor
 CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 {
     trace_.register_monitoring_tid(gettid(), "CpuSetMonitor", "CpuSetMonitor");
+
+    // Prefill Memory maps
+    std::regex proc_regex("/proc/([0-9]+)");
+    std::smatch pid_match;
+    pid_t pid;
+    for (auto& p : boost::filesystem::directory_iterator("/proc"))
+    {
+        if (std::regex_match(p.path().string(), pid_match, proc_regex))
+        {
+            pid = std::stol(pid_match[1]);
+            process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+                                   std::forward_as_tuple(pid, false));
+        }
+    }
 
     for (const auto& cpu : Topology::instance().cpus())
     {
