@@ -91,39 +91,40 @@ Writer::~Writer()
     }
 }
 
-trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
-{
-    // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
-    if (addr == -1)
-    {
-        Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
-        addr = -2;
-    }
-    auto ret = children.emplace(addr, ip_ref());
-
-    return ret.first;
-}
-
 otf2::definition::calling_context::reference_type
 Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
     if (!has_cct_)
     {
-        auto it = find_ip_child(sample->ip, local_ip_refs_);
-        return it->second.ref;
+        // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
+        if (addr == -1)
+        {
+            Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
+            addr = -2;
+        }
+        auto ret = local_ip_refs_.emplace(sample->ip, ip_ref());
+
+        return ret.first->second.ref;
     }
     else
     {
         auto children = &local_ip_refs_;
         for (uint64_t i = sample->nr - 1;; i--)
         {
-            auto it = find_ip_child(sample->ips[i], *children);
+            // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
+            if (addr == -1)
+            {
+                Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
+                addr = -2;
+            }
+            auto it = children.emplace(sample->ips[i], ip_ref());
+
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)
             {
-                return it->second.ref;
+                return it.first->second.ref;
             }
-            children = &it->second.children;
+            children = &it.first->second.children;
         }
     }
 }
