@@ -41,13 +41,11 @@ public:
     bool handle(const RecordSampleType* sample);
 
 protected:
-    virtual void handle_custom_events(std::size_t position) = 0;
-
     time::Converter time_converter_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     // XXX this should depend here!
-    std::vector<otf2::event::metric::value_container> values_;
+    otf2::event::metric metric_event_;
 };
 } // namespace counter
 } // namespace perf

@@ -16,7 +16,7 @@ The trace contains the following information:
 # Build Requirements
 
  * Linux<sup>1</sup>
- * OTF2 (>= 2.0)
+ * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 2.1)
  * libbfd
  * libiberty
  * boost (>= 1.62)
@@ -28,6 +28,7 @@ The trace contains the following information:
 
  * libradare (somewhat recent)
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
+ * [x86_energy v2](https://github.com/tud-zih-energy/x86_energy/tree/v_2)
 
 
 # Runtime Requirements

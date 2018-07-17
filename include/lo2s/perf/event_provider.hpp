@@ -88,10 +88,13 @@ public:
     static std::vector<std::string> get_predefined_event_names();
     static std::vector<std::string> get_pmu_event_names();
 
+    static const CounterDescription& get_default_metric_leader_event();
+
     class InvalidEvent : public std::runtime_error
     {
     public:
-        InvalidEvent(const std::string& event_description) : std::runtime_error(event_description)
+        InvalidEvent(const std::string& event_description)
+        : std::runtime_error(std::string{ "Invalid event: " } + event_description)
         {
         }
     };
@@ -107,5 +110,5 @@ private:
 
     EventMap event_map_;
 };
-}
-}
+} // namespace perf
+} // namespace lo2s

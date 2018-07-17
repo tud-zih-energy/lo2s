@@ -63,7 +63,7 @@ private:
 
     const time::Converter time_converter_;
 
-    std::vector<otf2::event::metric::value_container> counter_values_;
+    otf2::event::metric metric_event_;
 };
 }
 }

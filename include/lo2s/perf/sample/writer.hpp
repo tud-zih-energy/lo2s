@@ -91,6 +91,9 @@ private:
     trace::Trace& trace_;
     otf2::writer::local& otf2_writer_;
 
+    otf2::definition::metric_instance cpuid_metric_instance_;
+    otf2::event::metric cpuid_metric_event_;
+
     trace::IpRefMap local_ip_refs_;
     const time::Converter time_converter_;
 

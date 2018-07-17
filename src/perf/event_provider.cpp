@@ -138,7 +138,7 @@ constexpr std::uint64_t bit(int bitnumber)
 {
     return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
-}
+} // namespace
 
 namespace lo2s
 {
@@ -252,6 +252,30 @@ std::vector<std::string> EventProvider::get_pmu_event_names()
     }
 
     return names;
+}
+
+const CounterDescription& EventProvider::get_default_metric_leader_event()
+{
+    Log::debug() << "checking for metric leader event...";
+    for (auto candidate : {
+             "ref-cycles",
+             "cpu-cycles",
+             "bus-cycles",
+         })
+    {
+        try
+        {
+            const CounterDescription& ev = get_event_by_name(candidate);
+            Log::debug() << "found suitable metric leader event: " << candidate;
+            return ev;
+        }
+        catch (const InvalidEvent& e)
+        {
+            Log::debug() << "not a suitable metric leader event: " << candidate;
+        }
+    }
+
+    throw InvalidEvent{ "no suitable metric leader event found" };
 }
 
 static std::uint64_t parse_bitmask(const std::string& format)

@@ -98,7 +98,7 @@ find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
-find_package(x86_energy 2.0)
+find_package(x86_energy 2.0 CONFIG)
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
@@ -268,13 +268,7 @@ else()
 endif()
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
-if (LINUX_VERSION VERSION_LESS 3.3.0)
-    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=bus-cycles)
-    message(STATUS "  Detected Linux older than 3.3.0. Falling back to bus-cycle as metric leader.")
-    message(STATUS "  The prefered ref-cycles may still be available. (See --metric-leader)")
-else()
-    target_compile_definitions(lo2s PRIVATE DEFAULT_METRIC_LEADER=ref-cycles)
-endif()
+
 # define list of C++ features needed for compilation
 target_compile_features(lo2s
     PRIVATE

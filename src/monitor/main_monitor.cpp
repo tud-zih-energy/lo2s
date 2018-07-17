@@ -23,7 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_collection.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/perf/tracepoint/metric_monitor.hpp>
@@ -32,7 +32,7 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_metric_class())
+MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
     perf::time::Converter::instance();
 
@@ -87,36 +87,6 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_), metric_class_(generate_
         }
     }
 #endif
-}
-
-otf2::definition::metric_class MainMonitor::generate_metric_class()
-{
-    auto c = trace_.metric_class();
-
-    const perf::EventCollection& event_collection = perf::requested_events();
-
-    if (!event_collection.events.empty())
-    {
-        c.add_member(trace_.metric_member(
-            event_collection.leader.name, event_collection.leader.name,
-            otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
-
-        for (const auto& ev : event_collection.events)
-        {
-            c.add_member(trace_.metric_member(ev.name, ev.name,
-                                              otf2::common::metric_mode::accumulated_start,
-                                              otf2::common::type::Double, "#"));
-        }
-
-        c.add_member(trace_.metric_member("time_enabled", "time event active",
-                                          otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::uint64, "ns"));
-        c.add_member(trace_.metric_member("time_running", "time event on CPU",
-                                          otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::uint64, "ns"));
-    }
-
-    return c;
 }
 
 MainMonitor::~MainMonitor()

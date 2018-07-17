@@ -42,7 +42,7 @@ public:
 
     std::string group() const override
     {
-        return "lo2s::CpuCounterMonitor";
+        return "CpuCounterMonitor";
     }
 
 private:

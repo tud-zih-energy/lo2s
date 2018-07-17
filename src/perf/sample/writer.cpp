@@ -54,9 +54,13 @@ namespace sample
 Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::ThreadMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
 : Reader(config().enable_cct), pid_(pid), tid_(tid), monitor_(Monitor), trace_(trace),
-  otf2_writer_(otf2_writer), time_converter_(perf::time::Converter::instance()),
-  first_time_point_(lo2s::time::now())
+  otf2_writer_(otf2_writer),
+  cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
+                                               otf2_writer.location())),
+  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now())
 {
+
     CounterDescription sampling_event =
         EventProvider::get_event_by_name(config().sampling_event); // config parser has already
                                                                    // checked for event
@@ -151,8 +155,13 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         first_event_ = false;
     }
 
+    cpuid_metric_event_.timestamp(tp);
+    cpuid_metric_event_.raw_values()[0] = sample->cpu;
+    otf2_writer_ << cpuid_metric_event_;
+
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
+
     last_time_point_ = tp;
     return false;
 }
