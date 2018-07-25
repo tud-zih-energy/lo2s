@@ -53,6 +53,9 @@ public:
     void close_write_fd();
 
 private:
+    constexpr static int READ_FD = 0;
+    constexpr static int WRITE_FD = 1;
+
     void fd_flags(std::size_t fd, int flags);
     void close_fd(std::size_t fd);
 

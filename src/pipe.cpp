@@ -36,9 +36,6 @@ extern "C" {
 namespace lo2s
 {
 
-constexpr int READ_FD = 0;
-constexpr int WRITE_FD = 1;
-
 Pipe::Pipe()
 {
     int res = ::pipe(fds_);
