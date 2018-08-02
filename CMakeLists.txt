@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lo2s)
+project(lo2s VERSION 1.0)
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
@@ -227,12 +227,15 @@ endif()
 
 # generate version string used in lo2s
 if(Git_FOUND)
+    _is_git(${CMAKE_SOURCE_DIR} IN_GIT)
+endif()
+if(IN_GIT)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty
         OUTPUT_VARIABLE LO2S_VERSION_STRING
     )
     string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
 else()
-    set(LO2S_VERSION_STRING "turgitle")
+    set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 

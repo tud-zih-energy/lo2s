@@ -31,7 +31,7 @@ option(Dl_USE_STATIC_LIBS "Link libdl statically." OFF)
 UnsetIfUpdated(Dl_LIBRARIES Dl_USE_STATIC_LIBS)
 
 find_path(Dl_INCLUDE_DIRS dlfcn.h
-        PATHS ENV C_INCLUDE_PATH
+        PATHS ENV C_INCLUDE_PATH ENV CPATH
         PATH_SUFFIXES include)
 
 if(Dl_USE_STATIC_LIBS)
