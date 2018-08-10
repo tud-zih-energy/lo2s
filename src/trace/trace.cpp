@@ -379,7 +379,7 @@ otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 }
 otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
 {
-    auto name = (boost::format("cpu %d") % cpuid).str();
+    auto name = (boost::format("sample cpu %d") % cpuid).str();
 
     // As the cpuid is unique in this context, create only one writer/location per tid
     auto location = thread_sample_locations_.emplace(
@@ -533,6 +533,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
+        std::cout << elem.second.pid << std::endl;
         auto& maps = infos.at(elem.second.pid).maps();
         auto line_info = maps.lookup_line_info(ip);
         Log::trace() << "resolved " << ip << ": " << line_info;

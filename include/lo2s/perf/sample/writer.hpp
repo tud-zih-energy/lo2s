@@ -86,6 +86,8 @@ private:
 
     pid_t pid_;
     pid_t tid_;
+    int cpuid_;
+
     monitor::MainMonitor& monitor_;
 
     trace::Trace& trace_;

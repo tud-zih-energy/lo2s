@@ -32,13 +32,15 @@ namespace monitor
 
 CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
 : IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval),
-  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent)
+  counter_writer_(cpuid, parent.trace().cpu_metric_writer(cpuid), parent),
+  sample_writer_(-1, -1, cpuid, parent, parent.trace(), parent.trace().cpu_sample_writer(cpuid), false)
 {
 }
 
 void CpuCounterMonitor::monitor()
 {
     counter_writer_.read();
+    sample_writer_.read();
 }
 } // namespace monitor
 } // namespace lo2s

@@ -53,7 +53,7 @@ namespace sample
 
 Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
-: Reader(config().enable_cct), pid_(pid), tid_(tid), monitor_(Monitor), trace_(trace),
+: Reader(config().enable_cct), pid_(pid), tid_(tid),cpuid_(cpu), monitor_(Monitor), trace_(trace),
   otf2_writer_(otf2_writer),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
@@ -133,6 +133,10 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
+    if(sample->pid == 0)
+    {
+        return false;
+    }
     //    log::trace() << "sample event. ip: " << sample->ip << ", time: " << sample->time
     //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
     auto tp = time_converter_(sample->time);
@@ -145,7 +149,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     otf2::event::calling_context_sample ccs(tp, cctx, 2, trace_.interrupt_generator());
     otf2_writer_ << ccs;
     */
-    if (first_event_)
+    if (first_event_ && cpuid_ == -1)
     {
         first_time_point_ = std::min(first_time_point_, tp);
         otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_), -1);
@@ -165,7 +169,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 {
-    if ((pid_t(mmap_event->pid) != pid_) || (pid_t(mmap_event->tid) != tid_))
+    if (cpuid_ == -1 && ((pid_t(mmap_event->pid) != pid_) || (pid_t(mmap_event->tid) != tid_)))
     {
         Log::warn() << "Inconsistent mmap pid/tid expected " << pid_ << "/" << tid_ << ", actual "
                     << mmap_event->pid << "/" << mmap_event->tid;
@@ -181,9 +185,12 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 
 void Writer::end()
 {
-    // time::now() can sometimes can be in the past :-(
-    last_time_point_ = std::max(last_time_point_, lo2s::time::now());
-    otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
+    if(cpuid_ == -1)
+    {
+        // time::now() can sometimes can be in the past :-(
+        last_time_point_ = std::max(last_time_point_, lo2s::time::now());
+        otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
+    }
     monitor_.insert_cached_mmap_events(cached_mmap_events);
 }
 } // namespace sample

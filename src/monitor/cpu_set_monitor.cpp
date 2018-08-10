@@ -31,6 +31,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         if (std::regex_match(p.path().string(), pid_match, proc_regex))
         {
             pid = std::stol(pid_match[1]);
+
             process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
                                    std::forward_as_tuple(pid, false));
         }
