@@ -187,7 +187,7 @@ void Lib::read_symbols()
             throw InitError("no symbols in symtab");
         }
     }
-    catch (std::execption& e)
+    catch (std::exception& e)
     {
         Log::debug() << "failed to get symtab: " << e.what();
         symbols_.reserve(0);
