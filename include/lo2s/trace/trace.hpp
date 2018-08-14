@@ -103,7 +103,7 @@ public:
                                                   const std::string& description,
                                                   otf2::common::metric_mode mode,
                                                   otf2::common::type value_type,
-                                                  const std::string& unit);
+                                                  const std::string& unit, int exponent = 0);
 
     otf2::definition::metric_class metric_class();
 
