@@ -422,15 +422,14 @@ otf2::writer::local& Trace::metric_writer(const std::string& name)
     return archive()(location);
 }
 
-otf2::definition::metric_member Trace::metric_member(const std::string& name,
-                                                     const std::string& description,
-                                                     otf2::common::metric_mode mode,
-                                                     otf2::common::type value_type,
-                                                     const std::string& unit, int exponent = 0)
+otf2::definition::metric_member
+Trace::metric_member(const std::string& name, const std::string& description,
+                     otf2::common::metric_mode mode, otf2::common::type value_type,
+                     const std::string& unit, std::int64_t exponent, otf2::common::base_type base)
 {
     return metric_members_.emplace(metric_member_ref(), intern(name), intern(description),
-                                   otf2::common::metric_type::other, mode, value_type,
-                                   otf2::common::base_type::decimal, exponent, intern(unit));
+                                   otf2::common::metric_type::other, mode, value_type, base,
+                                   exponent, intern(unit));
 }
 
 otf2::definition::metric_instance
