@@ -1,5 +1,6 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/util.hpp>
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -49,7 +50,7 @@ std::chrono::duration<double> get_cpu_time()
         return std::chrono::seconds(0);
     }
 
-    //Add together the system and user CPU time of the process and all children
+    // Add together the system and user CPU time of the process and all children
     timeradd(&usage.ru_utime, &usage.ru_stime, &time);
 
     timeradd(&time, &child_usage.ru_utime, &time);
@@ -172,7 +173,7 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
     return ret;
 }
 
-void try_pin_to_cpu(int cpu, pid_t pid = 0)
+void try_pin_to_cpu(int cpu, pid_t pid)
 {
     cpu_set_t cpumask;
     CPU_ZERO(&cpumask);
@@ -188,4 +189,4 @@ pid_t gettid()
 {
     return syscall(SYS_gettid);
 }
-}
+} // namespace lo2s
