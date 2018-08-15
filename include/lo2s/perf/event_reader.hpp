@@ -32,7 +32,8 @@
 #include <cstdint>
 #include <cstring>
 
-extern "C" {
+extern "C"
+{
 #include <linux/perf_event.h>
 #include <sys/mman.h>
 }
@@ -102,6 +103,18 @@ public:
         uint32_t tid;
         uint32_t ptid;
         uint64_t time;
+        // struct sample_id sample_id;
+    };
+
+    /**
+     * \brief structure for PERF_RECORD_COMM events
+     **/
+    struct RecordCommType
+    {
+        struct perf_event_header header;
+        uint32_t pid;
+        uint32_t tid;
+        char comm[1]; // ISO C++ forbits zero-size array
         // struct sample_id sample_id;
     };
 
@@ -215,6 +228,9 @@ public:
                     stop = crtp_this->handle((const ActualSampleType*)event_header_p);
                     break;
                 }
+                case PERF_RECORD_COMM:
+                    stop = crtp_this->handle((const RecordCommType*)event_header_p);
+                    break;
                 default:
                     stop = crtp_this->handle((const RecordUnknownType*)event_header_p);
                 }
@@ -307,5 +323,5 @@ private:
     void* base;
     char event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
-}
-}
+} // namespace perf
+} // namespace lo2s

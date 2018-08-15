@@ -80,9 +80,9 @@ if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 
 # configure OTF2xx submodule
-set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds)
+set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds CACHE INTERNAL "")
 add_subdirectory(lib/otf2xx)
-mark_as_advanced(OTF2XX_CHRONO_DURATION_TYPE OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
+mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
 # configure Nitro submodule
 add_subdirectory(lib/nitro)

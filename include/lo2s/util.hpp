@@ -96,4 +96,4 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe();
 void try_pin_to_cpu(int cpu, pid_t pid = 0);
 
 pid_t gettid();
-}
+} // namespace lo2s

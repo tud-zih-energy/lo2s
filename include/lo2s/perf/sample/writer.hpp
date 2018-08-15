@@ -61,6 +61,7 @@ public:
     using Reader<Writer>::handle;
     bool handle(const Reader::RecordSampleType* sample);
     bool handle(const Reader::RecordMmapType* mmap_event);
+    bool handle(const Reader::RecordCommType* comm);
 
     otf2::writer::local& otf2_writer()
     {

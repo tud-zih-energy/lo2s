@@ -183,6 +183,22 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     return false;
 }
 
+bool Writer::handle(const Reader::RecordCommType* comm)
+{
+    std::string new_command{ static_cast<const char*>(comm->comm) };
+
+    // update task name
+    trace_.task_update_command(comm->tid, new_command);
+
+    // only update name of process if the main thread changes its name
+    if (comm->pid == comm->tid)
+    {
+        trace_.process_update_executable(comm->pid, new_command);
+    }
+
+    return false;
+}
+
 void Writer::end()
 {
     if (cpuid_ == -1)

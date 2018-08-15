@@ -342,6 +342,26 @@ void Trace::process_update_executable(pid_t pid, const std::string& exe_name)
     process_update_executable(pid, intern(exe_name));
 }
 
+void Trace::task_update_command(pid_t tid, const otf2::definition::string& comm)
+{
+    auto loc_it = thread_sample_locations_.find(tid);
+
+    if (loc_it != thread_sample_locations_.end())
+    {
+        loc_it->second.name(comm);
+    }
+    else
+    {
+        Log::warn() << "attempting to update name of unknown task with tid=" << tid;
+    }
+}
+
+void Trace::task_update_command(pid_t tid, const std::string& comm)
+{
+    std::string n = (boost::format("%s (tid %d)") % comm % tid).str();
+    task_update_command(tid, intern(n));
+}
+
 void Trace::add_lo2s_property(const std::string& name, const std::string& value)
 {
     std::string property_name{ "LO2S::" };
