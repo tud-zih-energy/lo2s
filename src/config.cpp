@@ -311,6 +311,9 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("N")
                 ->default_value(11010113),
             "Sampling period (in number of events specified by -e).")
+        ("enable-system-sampling",
+            po::bool_switch(&config.system_mode_sampling),
+            "Enable sampling in system mode")
         ("event,e",
             po::value(&config.sampling_event)
                 ->value_name("EVENT")

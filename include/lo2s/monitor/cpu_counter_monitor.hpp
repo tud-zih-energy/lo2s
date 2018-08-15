@@ -45,9 +45,10 @@ public:
         return "CpuCounterMonitor";
     }
 
+    void finalize_thread() override;
 private:
-    perf::counter::CpuWriter counter_writer_;
-    perf::sample::Writer sample_writer_;
+    std::unique_ptr<perf::counter::CpuWriter> counter_writer_;
+    std::unique_ptr<perf::sample::Writer> sample_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

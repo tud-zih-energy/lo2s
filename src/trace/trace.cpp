@@ -183,7 +183,11 @@ Trace::~Trace()
     {
         comm_locations_group.add_member(location.second);
     }
-
+    
+    for (const auto& location : cpu_sample_locations_)
+    {
+        comm_locations_group.add_member(location.second);
+    }
     for (const auto& location : thread_sample_locations_)
     {
         comm_locations_group.add_member(location.second);
@@ -382,7 +386,7 @@ otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
     auto name = (boost::format("sample cpu %d") % cpuid).str();
 
     // As the cpuid is unique in this context, create only one writer/location per tid
-    auto location = thread_sample_locations_.emplace(
+    auto location = cpu_sample_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
         std::forward_as_tuple(location_ref(), intern(name), location_groups_cpu_.at(cpuid),
                               otf2::definition::location::location_type::cpu_thread));

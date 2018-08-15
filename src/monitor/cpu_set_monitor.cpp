@@ -26,29 +26,34 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     std::regex proc_regex("/proc/([0-9]+)");
     std::smatch pid_match;
     pid_t pid;
-    for (auto& p : boost::filesystem::directory_iterator("/proc"))
+    if(config().system_mode_sampling)
     {
-        if (std::regex_match(p.path().string(), pid_match, proc_regex))
+        for (auto& p : boost::filesystem::directory_iterator("/proc"))
         {
-            pid = std::stol(pid_match[1]);
+            if (std::regex_match(p.path().string(), pid_match, proc_regex))
+            {
+                pid = std::stol(pid_match[1]);
 
-            process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+                process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
                                    std::forward_as_tuple(pid, false));
+            }
         }
     }
 
     for (const auto& cpu : Topology::instance().cpus())
     {
         trace_.add_cpu(cpu.id);
-        Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-        auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                            std::forward_as_tuple(cpu.id, trace_));
-        assert(ret.second);
-        if (!perf::requested_events().events.empty())
+
+        if (!perf::requested_events().events.empty() || config().system_mode_sampling)
         {
             counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                       std::forward_as_tuple(cpu.id, *this));
         }
+
+        Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
+        auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
+                                            std::forward_as_tuple(cpu.id, trace_));
+        assert(ret.second);
         (void)ret;
     }
 }

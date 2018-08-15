@@ -67,6 +67,7 @@ struct Config
     bool enable_cct;
     bool suppress_ip;
     bool disassemble;
+    bool system_mode_sampling;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
     // Metrics
