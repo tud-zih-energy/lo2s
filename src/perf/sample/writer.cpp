@@ -174,9 +174,6 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
         Log::warn() << "Inconsistent mmap pid/tid expected " << pid_ << "/" << tid_ << ", actual "
                     << mmap_event->pid << "/" << mmap_event->tid;
     }
-    std::cout  << "encountered mmap event for " << mmap_event->pid << "," << mmap_event->tid << " "
-                 << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
-                 << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename << std::endl;
     Log::debug() << "encountered mmap event for " << pid_ << "," << tid_ << " "
                  << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
                  << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;

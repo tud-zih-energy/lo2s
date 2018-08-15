@@ -93,7 +93,6 @@ void MainMonitor::insert_cached_mmap_events(std::deque<struct MmapCache> cached_
 { 
     for (auto& event : cached_events)
     {
-        std::cout << "Inserting cached mmap even for " << event.pid;
         auto process_info =
             process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(event.pid),
                                    std::forward_as_tuple(event.pid, true));

@@ -537,7 +537,6 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
-        std::cout << elem.second.pid << std::endl;
         auto& maps = infos.at(elem.second.pid).maps();
         auto line_info = maps.lookup_line_info(ip);
         Log::trace() << "resolved " << ip << ": " << line_info;
