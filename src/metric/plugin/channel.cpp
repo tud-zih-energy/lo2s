@@ -75,7 +75,10 @@ int& Channel::id()
 
 void Channel::write_value(wrapper::TimeValuePair tv)
 {
-    event_.raw_values()[0] = tv.value;
+    // @tilsche look behind you, a three-headed monkey! -- This is necessary, because we forced too
+    // much type-safety in the metric event refactoring :( Need to change that. Band-aid incoming.
+    const_cast<std::vector<OTF2_MetricValue>&>(event_.raw_values().values())[0].unsigned_int =
+        tv.value;
     event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
     writer_.write(event_);
 }
