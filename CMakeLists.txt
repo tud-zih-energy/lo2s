@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lo2s)
+project(lo2s VERSION 1.0.1)
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
@@ -227,12 +227,15 @@ endif()
 
 # generate version string used in lo2s
 if(Git_FOUND)
+    _is_git(${CMAKE_SOURCE_DIR} IN_GIT)
+endif()
+if(IN_GIT)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty
         OUTPUT_VARIABLE LO2S_VERSION_STRING
     )
     string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
 else()
-    set(LO2S_VERSION_STRING "turgitle")
+    set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
@@ -339,3 +342,17 @@ FILE(GLOB_RECURSE clion_dummy_source main.cpp)
 add_executable(clion_dummy_executable EXCLUDE_FROM_ALL ${clion_dummy_source} ${clion_dummy_headers})
 
 install(TARGETS lo2s RUNTIME DESTINATION bin)
+
+find_program(GIT_ARCHIVE_ALL git-archive-all PATHS ENV PATH)
+if(GIT_ARCHIVE_ALL)
+    set(ARCHIVE_NAME ${CMAKE_PROJECT_NAME}-${LO2S_VERSION_STRING})
+    add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+        COMMAND cmake -E remove -f ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+        COMMAND git-archive-all --prefix=${ARCHIVE_NAME} ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    add_custom_target(dist DEPENDS ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2)
+else()
+    message(STATUS "Couldn't find git-archive-all. The target `make dist` will not be available. Use 'pip install git-archive-all' to install.")
+endif()

@@ -117,6 +117,19 @@ enum class ValueBase
     DECIMAL = 1
 };
 
+inline otf2::common::base_type convert_base(wrapper::ValueBase value_base)
+{
+    switch (value_base)
+    {
+    case wrapper::ValueBase::BINARY:
+        return otf2::common::base_type::binary;
+    case wrapper::ValueBase::DECIMAL:
+        return otf2::common::base_type::decimal;
+    default:
+        throw std::runtime_error("Unexpected value base given");
+    }
+}
+
 enum class Per
 {
     THREAD = 0,
@@ -202,7 +215,7 @@ struct PluginInfo
     //       problems with different sizes in different versions.
     std::uint64_t reserved[200];
 };
-}
-}
-}
-}
+} // namespace wrapper
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s

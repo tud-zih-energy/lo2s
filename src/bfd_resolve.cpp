@@ -187,23 +187,31 @@ void Lib::read_symbols()
             throw InitError("no symbols in symtab");
         }
     }
-    catch (InitError& e)
+    catch (std::exception& e)
     {
         Log::debug() << "failed to get symtab: " << e.what();
         symbols_.reserve(0);
     }
     if (symbols_.size() <= 1)
     {
-        // Use dynamic symtab only when regular symbols are not available
-        // Usually regular symtab should be a superset. There also doesn't seem to be much
-        // of a difference in how to handle them.
-        // See linux/tools/perf/util/symbol-elf.c symsrc__init
-        Log::debug() << "falling back to .dynsym";
+        try
+        {
+            // Use dynamic symtab only when regular symbols are not available
+            // Usually regular symtab should be a superset. There also doesn't seem to be much
+            // of a difference in how to handle them.
+            // See linux/tools/perf/util/symbol-elf.c symsrc__init
+            Log::debug() << "falling back to .dynsym";
 
-        symbols_.resize(check_symtab(bfd_get_dynamic_symtab_upper_bound(handle_)));
-        symbols_.resize(1 +
-                        check_symtab(bfd_canonicalize_dynamic_symtab(handle_, symbols_.data())));
-        // filter_symbols();
+            symbols_.resize(check_symtab(bfd_get_dynamic_symtab_upper_bound(handle_)));
+            symbols_.resize(
+                1 + check_symtab(bfd_canonicalize_dynamic_symtab(handle_, symbols_.data())));
+            // filter_symbols();
+        }
+        catch (std::exception& e)
+        {
+            Log::debug() << "failed to get dynsym: " << e.what();
+            symbols_.reserve(0);
+        }
     }
     if (symbols_.size() <= 1)
     {
@@ -255,5 +263,5 @@ void Lib::read_sections()
         }
     }
 }
-}
-}
+} // namespace bfdr
+} // namespace lo2s
