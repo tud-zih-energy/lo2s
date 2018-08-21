@@ -90,7 +90,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 }
 
 void MainMonitor::insert_cached_mmap_events(std::deque<struct MmapCache> cached_events)
-{ 
+{
     for (auto& event : cached_events)
     {
         auto process_info =
