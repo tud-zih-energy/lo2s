@@ -102,11 +102,11 @@ public:
     otf2::writer::local& cpu_metric_writer(int cpuid);
     otf2::writer::local& cpu_switch_writer(int cpuid);
 
-    otf2::definition::metric_member metric_member(const std::string& name,
-                                                  const std::string& description,
-                                                  otf2::common::metric_mode mode,
-                                                  otf2::common::type value_type,
-                                                  const std::string& unit);
+    otf2::definition::metric_member
+    metric_member(const std::string& name, const std::string& description,
+                  otf2::common::metric_mode mode, otf2::common::type value_type,
+                  const std::string& unit, std::int64_t exponent = 0,
+                  otf2::common::base_type base = otf2::common::base_type::decimal);
 
     otf2::definition::metric_class metric_class();
 

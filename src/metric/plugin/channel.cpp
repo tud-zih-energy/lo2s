@@ -49,14 +49,16 @@ static const char* empty_if_null(const char* cstr)
 }
 
 Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-                 wrapper::ValueType value_type, trace::Trace& trace)
+                 wrapper::ValueType value_type, wrapper::ValueBase value_base,
+                 std::int64_t exponent, trace::Trace& trace)
 : id_(-1), name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)),
   mode_(mode), value_type_(value_type), writer_(trace.named_metric_writer(name_)),
   metric_(
       make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
                                                  writer_.location().location_group().parent()),
                            trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
-                                               wrapper::convert_type(value_type_), unit_))),
+                                               wrapper::convert_type(value_type_), unit_, exponent,
+                                               wrapper::convert_base(value_base)))),
   event_(otf2::chrono::genesis(), metric_)
 {
 }
@@ -73,7 +75,10 @@ int& Channel::id()
 
 void Channel::write_value(wrapper::TimeValuePair tv)
 {
-    event_.raw_values()[0] = tv.value;
+    // @tilsche look behind you, a three-headed monkey! -- This is necessary, because we forced too
+    // much type-safety in the metric event refactoring :( Need to change that. Band-aid incoming.
+    const_cast<std::vector<OTF2_MetricValue>&>(event_.raw_values().values())[0].unsigned_int =
+        tv.value;
     event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
     writer_.write(event_);
 }

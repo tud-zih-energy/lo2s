@@ -42,7 +42,8 @@ class Channel
 {
 public:
     Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-            wrapper::ValueType value_type, trace::Trace& trace);
+            wrapper::ValueType value_type, wrapper::ValueBase value_base, std::int64_t exponent,
+            trace::Trace& trace);
 
 public:
     const std::string& name() const;
@@ -62,6 +63,6 @@ private:
     otf2::definition::metric_instance metric_;
     otf2::event::metric event_;
 };
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s

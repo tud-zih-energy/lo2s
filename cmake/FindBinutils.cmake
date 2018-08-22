@@ -34,7 +34,7 @@ IfUpdatedUnsetAll(Binutils_USE_STATIC_LIBS
 )
 
 find_path(Binutils_INCLUDE_DIRS bfd.h
-        PATHS ENV C_INCLUDE_PATH
+        PATHS ENV C_INCLUDE_PATH ENV CPATH
         PATH_SUFFIXES include)
 
 if(Binutils_USE_STATIC_LIBS)

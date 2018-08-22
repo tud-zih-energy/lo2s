@@ -20,7 +20,7 @@ else()
     find_library(Radare_LIBRARIES NAMES libr_asm.so HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
 endif()
 
-find_path(Radare_INCLUDE_DIRS NAMES r_asm.h HINTS ENV C_INCLUDE_PATH PATH_SUFFIXES libr)
+find_path(Radare_INCLUDE_DIRS NAMES r_asm.h HINTS ENV C_INCLUDE_PATH ENV CPATH PATH_SUFFIXES libr)
 
 include (FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(Radare DEFAULT_MSG

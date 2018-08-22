@@ -75,7 +75,8 @@ static void parse_properties(std::vector<Channel>& channels, wrapper::Properties
         // std::unique_ptr<char, malloc_delete<char>> unit_owner(props[index].unit);
 
         channels.emplace_back(props[index].name, props[index].description, props[index].unit,
-                              props[index].mode, props[index].value_type, trace);
+                              props[index].mode, props[index].value_type, props[index].base,
+                              props[index].exponent, trace);
     }
 }
 
@@ -196,6 +197,6 @@ void Plugin::stop_recording()
         plugin_.synchronize(true, wrapper::SynchronizationMode::END);
     }
 }
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s
