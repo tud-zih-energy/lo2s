@@ -9,6 +9,7 @@
 #include <lo2s/perf/event_collection.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <regex>
 
@@ -28,7 +29,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     pid_t pid;
     if (config().system_mode_sampling)
     {
-        for (auto& p : boost::filesystem::directory_iterator("/proc"))
+        for (const auto& p : boost::make_iterator_range(boost::filesystem::directory_iterator("/proc")))
         {
             if (std::regex_match(p.path().string(), pid_match, proc_regex))
             {
