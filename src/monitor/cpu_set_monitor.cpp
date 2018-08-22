@@ -27,9 +27,11 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     std::regex proc_regex("/proc/([0-9]+)");
     std::smatch pid_match;
     pid_t pid;
+
+    const boost::filesystem::path proc_path("/proc");
     if (config().system_mode_sampling)
     {
-        for (const auto& p : boost::make_iterator_range(boost::filesystem::directory_iterator("/proc")))
+        for (const auto& p : boost::make_iterator_range(boost::filesystem::directory_iterator{proc_path}, {}))
         {
             if (std::regex_match(p.path().string(), pid_match, proc_regex))
             {
