@@ -25,6 +25,7 @@
 
 #include <lo2s/perf/counter/cpu_writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
+
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -46,6 +47,7 @@ public:
     }
 
     void finalize_thread() override;
+
 private:
     std::unique_ptr<perf::counter::CpuWriter> counter_writer_;
     std::unique_ptr<perf::sample::Writer> sample_writer_;

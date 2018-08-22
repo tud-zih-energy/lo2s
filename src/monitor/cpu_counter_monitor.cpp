@@ -33,19 +33,21 @@ namespace monitor
 CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
 : IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval)
 {
-    if(!perf::requested_events().events.empty())
+    if (!perf::requested_events().events.empty())
     {
-        counter_writer_ = std::make_unique<perf::counter::CpuWriter>(cpuid, parent.trace().cpu_metric_writer(cpuid), parent);
+        counter_writer_ = std::make_unique<perf::counter::CpuWriter>(
+            cpuid, parent.trace().cpu_metric_writer(cpuid), parent);
     }
-    if(config().system_mode_sampling)
+    if (config().system_mode_sampling)
     {
-        sample_writer_ = std::make_unique<perf::sample::Writer>(-1, -1, cpuid, parent, parent.trace(), parent.trace().cpu_sample_writer(cpuid), false);
+        sample_writer_ = std::make_unique<perf::sample::Writer>(
+            -1, -1, cpuid, parent, parent.trace(), parent.trace().cpu_sample_writer(cpuid), false);
     }
 }
 
 void CpuCounterMonitor::finalize_thread()
 {
-    if(sample_writer_)
+    if (sample_writer_)
     {
         sample_writer_->end();
     }
@@ -53,11 +55,11 @@ void CpuCounterMonitor::finalize_thread()
 
 void CpuCounterMonitor::monitor()
 {
-    if(counter_writer_)
+    if (counter_writer_)
     {
         counter_writer_->read();
     }
-    if(sample_writer_)
+    if (sample_writer_)
     {
         sample_writer_->read();
     }

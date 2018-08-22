@@ -26,7 +26,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     std::regex proc_regex("/proc/([0-9]+)");
     std::smatch pid_match;
     pid_t pid;
-    if(config().system_mode_sampling)
+    if (config().system_mode_sampling)
     {
         for (auto& p : boost::filesystem::directory_iterator("/proc"))
         {
@@ -35,7 +35,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
                 pid = std::stol(pid_match[1]);
 
                 process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                                   std::forward_as_tuple(pid, false));
+                                       std::forward_as_tuple(pid, false));
             }
         }
     }

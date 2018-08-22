@@ -53,7 +53,7 @@ namespace sample
 
 Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
-: Reader(config().enable_cct), pid_(pid), tid_(tid),cpuid_(cpu), monitor_(Monitor), trace_(trace),
+: Reader(config().enable_cct), pid_(pid), tid_(tid), cpuid_(cpu), monitor_(Monitor), trace_(trace),
   otf2_writer_(otf2_writer),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
@@ -133,7 +133,7 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
-    if(sample->pid == 0)
+    if (sample->pid == 0)
     {
         return false;
     }
@@ -185,7 +185,7 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 
 void Writer::end()
 {
-    if(cpuid_ == -1)
+    if (cpuid_ == -1)
     {
         // time::now() can sometimes can be in the past :-(
         last_time_point_ = std::max(last_time_point_, lo2s::time::now());

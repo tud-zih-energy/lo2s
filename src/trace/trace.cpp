@@ -183,7 +183,7 @@ Trace::~Trace()
     {
         comm_locations_group.add_member(location.second);
     }
-    
+
     for (const auto& location : cpu_sample_locations_)
     {
         comm_locations_group.add_member(location.second);
@@ -537,8 +537,13 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
-        auto& maps = infos.at(elem.second.pid).maps();
-        auto line_info = maps.lookup_line_info(ip);
+        LineInfo line_info = LineInfo(ip);
+
+        if (infos.count(elem.second.pid) == 1) {
+            auto& maps = infos.at(elem.second.pid).maps();
+            line_info = maps.lookup_line_info(ip);
+        }
+
         Log::trace() << "resolved " << ip << ": " << line_info;
         auto cctx_it = children.find(ip);
         if (cctx_it == children.end())
@@ -551,13 +556,13 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            if (config().disassemble)
+            if (config().disassemble && infos.count(elem.second.pid) == 1)
             {
                 try
                 {
                     // TODO do not write properties for useless unknown stuff
                     OTF2_AttributeValue_union value;
-                    auto instruction = maps.lookup_instruction(ip);
+                    auto instruction = infos.at(elem.second.pid).maps().lookup_instruction(ip);
                     Log::trace() << "mapped " << ip << " to " << instruction;
                     value.stringRef = intern(instruction).ref();
                     calling_context_properties_.emplace(new_cctx, intern("instruction"),
