@@ -28,7 +28,7 @@ The trace contains the following information:
 
  * libradare (somewhat recent)
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
- * [x86_energy v2](https://github.com/tud-zih-energy/x86_energy/tree/v_2)
+ * [x86_energy](https://github.com/tud-zih-energy/x86_energy)
 
 
 # Runtime Requirements
