@@ -94,6 +94,7 @@ Writer::~Writer()
         otf2_writer_ << mapping;
     }
 }
+
 trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children)
 {
     // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
@@ -178,8 +179,7 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
                  << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
                  << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
 
-    cached_mmap_events.emplace_back(mmap_event->pid, mmap_event->addr, mmap_event->len,
-                                    mmap_event->pgoff, mmap_event->filename);
+    cached_mmap_events.emplace_back(*mmap_event);
     return false;
 }
 

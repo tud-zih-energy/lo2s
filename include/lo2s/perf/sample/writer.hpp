@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -42,7 +41,7 @@ namespace lo2s
 {
 namespace monitor
 {
-class ThreadMonitor;
+class MainMonitor;
 }
 
 namespace perf
@@ -97,7 +96,7 @@ private:
     otf2::event::metric cpuid_metric_event_;
 
     trace::IpRefMap local_ip_refs_;
-    std::deque<struct monitor::MmapCache> cached_mmap_events;
+    std::deque<Reader::RecordMmapType> cached_mmap_events;
     const time::Converter time_converter_;
 
     bool first_event_ = true;

@@ -89,7 +89,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-void MainMonitor::insert_cached_mmap_events(std::deque<struct MmapCache> cached_events)
+void MainMonitor::insert_cached_mmap_events(
+    const std::deque<struct perf::sample::Writer::RecordMmapType>& cached_events)
 {
     for (auto& event : cached_events)
     {

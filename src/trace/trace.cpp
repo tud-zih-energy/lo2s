@@ -538,7 +538,8 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& local_children = elem.second.children;
         LineInfo line_info = LineInfo(ip);
 
-        if (infos.count(elem.second.pid) == 1) {
+        if (infos.count(elem.second.pid) == 1)
+        {
             auto& maps = infos.at(elem.second.pid).maps();
             line_info = maps.lookup_line_info(ip);
         }

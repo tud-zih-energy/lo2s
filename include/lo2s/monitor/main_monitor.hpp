@@ -28,8 +28,11 @@
 #ifdef HAVE_X86_ENERGY
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
+#include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
+
+#include <deque>
 
 namespace lo2s
 {
@@ -43,19 +46,6 @@ class MetricMonitor;
 
 namespace monitor
 {
-struct MmapCache
-{
-    MmapCache(uint32_t pid, uint64_t addr, uint64_t len, uint64_t pgoff, std::string filename)
-    : pid(pid), addr(addr), len(len), pgoff(pgoff), filename(filename)
-    {
-    }
-
-    uint32_t pid;
-    uint64_t addr;
-    uint64_t len;
-    uint64_t pgoff;
-    std::string filename;
-};
 
 class MainMonitor
 {
@@ -69,7 +59,8 @@ public:
         return trace_;
     }
 
-    void insert_cached_mmap_events(std::deque<struct MmapCache> cached_events);
+    void insert_cached_mmap_events(
+        const std::deque<struct perf::sample::Writer::RecordMmapType>& cached_events);
 
     std::map<pid_t, ProcessInfo>& get_process_infos()
     {
