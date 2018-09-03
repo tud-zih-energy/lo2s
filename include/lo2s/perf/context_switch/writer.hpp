@@ -21,8 +21,12 @@
 
 #pragma once
 
-#include <lo2s/perf/switch/reader.hpp>
+#include <lo2s/perf/context_switch/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/trace.hpp>
 
+#include <otf2xx/definition/region.hpp>
+#include <otf2xx/writer/local.hpp>
 namespace lo2s
 {
 namespace perf
@@ -34,12 +38,16 @@ class Writer : public Reader<Writer>
 {
 public:
     Writer(int cpu, trace::Trace& trace);
-    bool handle(const Reader::RecordSwitchCpuWideType *context_switch)
+    ~Writer();
+
+    using Reader<Writer>::handle;
+    bool handle(const Reader::RecordSwitchCpuWideType *context_switch);
 private:
     otf2::writer::local& otf2_writer_;
     const time::Converter time_converter_;
-    std::map<pid_t, otf2::definition::region::reference_type> thread_region_refs;
-}
+    trace::Trace &trace_;
+    std::map<pid_t, otf2::definition::region::reference_type> thread_region_refs_;
+};
 }
 }
 }

@@ -145,6 +145,7 @@ set(SOURCE_FILES
     src/perf/counter/abstract_writer.cpp
 
     src/perf/sample/writer.cpp
+    src/perf/context_switch/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
     src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp

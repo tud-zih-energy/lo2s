@@ -24,7 +24,8 @@
 #include <lo2s/monitor/fd_monitor.hpp>
 
 #include <lo2s/perf/tracepoint/exit_reader.hpp>
-#include <lo2s/perf/tracepoint/switch_writer.hpp>
+//#include <lo2s/perf/tracepoint/switch_writer.hpp>
+#include <lo2s/perf/context_switch/writer.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 namespace lo2s
@@ -49,7 +50,8 @@ public:
 private:
     int cpu_;
 
-    perf::tracepoint::SwitchWriter switch_writer_;
+    //perf::tracepoint::SwitchWriter switch_writer_;
+    perf::context_switch::Writer switch_writer_;
     perf::tracepoint::ExitReader exit_reader_;
 };
 } // namespace monitor

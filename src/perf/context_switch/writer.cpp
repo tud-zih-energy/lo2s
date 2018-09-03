@@ -39,7 +39,7 @@ Writer::Writer(int cpu, trace::Trace& trace)
 {
 }
 
-Writer::~Wrtier()
+Writer::~Writer()
 {
     if(!thread_region_refs_.empty())
     {
@@ -51,22 +51,24 @@ Writer::~Wrtier()
 bool Writer::handle(const Reader::RecordSwitchCpuWideType *context_switch)
 {
     auto tp = time_converter_(context_switch->time);
-    
+    std::cout << tp << std::endl;
     auto elem =  thread_region_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(context_switch->next_prev_pid), std::forward_as_tuple(thread_region_refs_.size()));
 
     //Check if we left the region
-    if(context_switch->misc & PERF_RECORD_MISC_SWITCH_OUT)
+    if(context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
+        std::cout << "Left region :" << elem.first->second << std::endl;
         otf2_writer_.write_leave(tp, elem.first->second);
     }
     else
     {
+        std::cout << "Entered region :" << elem.first->second << std::endl;
         otf2_writer_.write_enter(tp, elem.first->second);
 
         summary().register_process(context_switch->next_prev_pid);
     }
 
-    return false
+    return false;
 }
 }
 }
