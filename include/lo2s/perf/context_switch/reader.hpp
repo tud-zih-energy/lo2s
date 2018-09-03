@@ -56,12 +56,17 @@ public:
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif
+        perf_attr.sample_id_all = 1;
         perf_attr.context_switch = 1;
-        
+
+        perf_attr.watermark = 1;
+        perf_attr.wakeup_watermark = static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
+
         fd_ = perf_event_open(&perf_attr, -1, cpuid, -1, 0);
         if(fd_ < 0)
         {
             Log::error() << "perf_event_open for context switches failed.";
+            throw_errno();
         }
         Log::debug() << "Opened perf_context_switch_reader for cpu " << cpuid;
 

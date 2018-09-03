@@ -47,6 +47,7 @@ private:
     const time::Converter time_converter_;
     trace::Trace &trace_;
     std::map<pid_t, otf2::definition::region::reference_type> thread_region_refs_;
+    bool first_enter_ = false;
 };
 }
 }
