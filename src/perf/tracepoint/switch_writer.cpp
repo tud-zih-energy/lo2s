@@ -28,6 +28,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -64,6 +65,13 @@ catch (const EventFormat::ParseError& e)
 
 SwitchWriter::~SwitchWriter()
 {
+    //Always close the last event
+    if(!current_region_.is_undefined())
+    {
+        // time::now() can apparently lie in the past sometimes
+        otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), current_region_);
+    }
+
     if (!thread_region_refs_.empty())
     {
         const auto& mapping = trace_.merge_tids(thread_region_refs_);
@@ -97,8 +105,9 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
         current_region_ = current_region_.undefined();
     }
 
-    summary().register_process(next_pid);
+    last_time_point_ = tp;
 
+    summary().register_process(next_pid);
     return false;
 }
 

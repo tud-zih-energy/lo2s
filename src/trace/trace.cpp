@@ -364,7 +364,7 @@ void Trace::add_cpu(int cpuid)
     location_groups_cpu_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
         std::forward_as_tuple(location_group_ref(), name,
-                              otf2::definition::location_group::location_group_type::unknown,
+                              otf2::definition::location_group::location_group_type::process,
                               system_tree_cpu_nodes_.at(cpuid)));
 }
 otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)

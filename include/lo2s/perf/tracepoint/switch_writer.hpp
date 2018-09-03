@@ -73,6 +73,8 @@ private:
     EventField prev_pid_field_;
     EventField next_pid_field_;
     EventField prev_state_field_;
+
+    otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 };
 } // namespace tracepoint
 } // namespace perf
