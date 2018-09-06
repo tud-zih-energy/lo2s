@@ -26,17 +26,20 @@
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
 
-extern "C" {
+extern "C"
+{
 #include <fcntl.h>
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
 }
+
 namespace lo2s
 {
 namespace perf
 {
 namespace context_switch
 {
+
 template <class T>
 class Reader : public EventReader<T>
 {
@@ -46,9 +49,12 @@ public:
     {
         struct perf_event_attr perf_attr;
         memset(&perf_attr, 0, sizeof(struct perf_event_attr));
+
+        //We only want the Context Switch samples, so set up a dummy sampling event
         perf_attr.type = PERF_TYPE_SOFTWARE;
         perf_attr.size = sizeof(struct perf_event_attr);
         perf_attr.config = PERF_COUNT_SW_DUMMY;
+
         perf_attr.disabled = 1;
         perf_attr.sample_period = 1;
         perf_attr.sample_type = PERF_SAMPLE_TIME;
@@ -56,14 +62,17 @@ public:
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif
+        //the perf_attr.sample_type information should also show up in context switches
         perf_attr.sample_id_all = 1;
         perf_attr.context_switch = 1;
 
         perf_attr.watermark = 1;
-        perf_attr.wakeup_watermark = static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
+        perf_attr.wakeup_watermark =
+            static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
+
 
         fd_ = perf_event_open(&perf_attr, -1, cpuid, -1, 0);
-        if(fd_ < 0)
+        if (fd_ < 0)
         {
             Log::error() << "perf_event_open for context switches failed.";
             throw_errno();
@@ -72,8 +81,8 @@ public:
 
         try
         {
-            //asynchronous delivery
-            if(fcntl(fd_, F_SETFL, O_NONBLOCK))
+            // asynchronous delivery
+            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
             {
                 throw_errno();
             }
@@ -81,7 +90,7 @@ public:
             init_mmap(fd_, config().mmap_pages);
             Log::debug() << "perf_context_switch_reader mmap initialized";
 
-            if(ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
+            if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
             {
                 throw_errno();
             }
@@ -95,7 +104,7 @@ public:
 
     ~Reader()
     {
-        if(fd_ != -1)
+        if (fd_ != -1)
         {
             close(fd_);
         }
@@ -109,15 +118,16 @@ public:
     void stop()
     {
         auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
-        if(ret == -1)
+        if (ret == -1)
         {
             throw_errno();
         }
         this->read();
     }
+
 private:
     int fd_;
 };
-}
-}
-}
+} // namespace context_switch
+} // namespace perf
+} // namespace lo2s

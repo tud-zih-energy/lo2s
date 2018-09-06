@@ -110,6 +110,7 @@ option(UML_LOOK "Generate graphs with an UML look" OFF)
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
+CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
@@ -145,10 +146,9 @@ set(SOURCE_FILES
     src/perf/counter/abstract_writer.cpp
 
     src/perf/sample/writer.cpp
-    src/perf/context_switch/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
-    src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
+    src/perf/tracepoint/writer.cpp
     src/perf/tracepoint/exit_reader.cpp
 
     src/time/time.cpp
@@ -270,6 +270,13 @@ else()
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
         message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
     endif()
+endif()
+
+if(HAVE_PERF_RECORD_SWITCH)
+    target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
+    target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
+else()
+    target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
 endif()
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
