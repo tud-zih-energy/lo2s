@@ -275,6 +275,7 @@ otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
     }
     else
     {
+        Log::warn() << "Could not find system tree node for pid " << pid;
         return system_tree_root_node_;
     }
 }

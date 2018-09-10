@@ -76,10 +76,10 @@ extern "C" void sig_handler(int signum)
 namespace lo2s
 {
 
-void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr,
-                  void* data = nullptr)
+static void ptrace_checked_call(enum __ptrace_request request, pid_t pid, void* addr = nullptr,
+                                void* data = nullptr)
 {
-    auto retval = ptrace(request, pid, addr, data);
+    long retval = ptrace(request, pid, addr, data);
     if (retval == -1)
     {
         auto ex = make_system_error();
@@ -89,9 +89,22 @@ void check_ptrace(enum __ptrace_request request, pid_t pid, void* addr = nullptr
     }
 }
 
-void check_ptrace_setoptions(pid_t pid, long options)
+static void ptrace_setoptions(pid_t pid, long options)
 {
-    check_ptrace(PTRACE_SETOPTIONS, pid, NULL, (void*)options);
+    ptrace_checked_call(PTRACE_SETOPTIONS, pid, nullptr, (void*)options);
+}
+
+static unsigned long ptrace_geteventmsg(pid_t pid)
+{
+    unsigned long msgval;
+    ptrace_checked_call(PTRACE_GETEVENTMSG, pid, nullptr, &msgval);
+    return msgval;
+}
+
+static void ptrace_cont(pid_t pid, long signum = 0)
+{
+    // ptrace(2) mandates passing the signal number in the data parameter.
+    ptrace_checked_call(PTRACE_CONT, pid, nullptr, reinterpret_cast<void*>(signum));
 }
 
 ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn,
@@ -109,7 +122,7 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
     }
     running = true;
 
-    threads_.emplace(child, child);
+    watched_threads_.add_main_thread_for_process(child);
 
     monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, name, spawn);
 
@@ -138,86 +151,101 @@ void ProcessController::run()
 void ProcessController::handle_ptrace_event(pid_t child, int event)
 {
     Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
-    if ((event == PTRACE_EVENT_FORK) || (event == PTRACE_EVENT_VFORK))
+    switch (event)
     {
-        pid_t newpid = -1;
-
+    case PTRACE_EVENT_FORK:
+    case PTRACE_EVENT_VFORK:
+    {
+        // (v)fork was called in child, register the forked process.
         try
         {
             // we need the pid of the new process
-            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
-            auto command = get_process_comm(newpid);
-            Log::debug() << "New process is forked " << newpid << ": " << command
-                         << " parent: " << child << ": " << get_process_comm(child);
+            pid_t new_pid = ptrace_geteventmsg(child);
 
-            threads_.emplace(newpid, newpid);
-            monitor_.insert_process(newpid, child, command);
+            std::string command = get_process_comm(new_pid);
+            Log::debug() << "New process " << new_pid << " (" << command << "): forked from "
+                         << child;
 
+            // Register the newly created process for monitoring:
+            // (1) Associate a main thread with this process.
+            watched_threads_.add_main_thread_for_process(new_pid);
+            // (2) Tell the process monitor to watch a new process.
+            monitor_.insert_process(new_pid, child, command);
+            // (3) Update our summary information.
             summary().add_thread();
         }
         catch (std::system_error& e)
         {
-            Log::error() << "Failure while adding new process " << newpid << ": " << e.what();
+            Log::error() << "Failure while adding new process forked from " << child << ": "
+                         << e.what();
             throw;
         }
     }
-    // new Thread?
-    else if (event == PTRACE_EVENT_CLONE)
+    break;
+    case PTRACE_EVENT_CLONE:
     {
-        long new_tid = -1;
+        // Child was cloned, figure out the process in which the clone happened
+        // and register the newly created thread.
 
         try
         {
             // we need the tid of the new process
-            check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &new_tid);
+            pid_t new_tid = ptrace_geteventmsg(child);
 
-            // Parent may be a thread, get the process
-            auto pid = threads_.at(child);
+            // Thread may have been clone from another thread, figure out which
+            // process they both belong too.
+            pid_t pid = watched_threads_.get_process_for_thread(child);
             std::string command = get_task_comm(pid, new_tid);
-            Log::info() << "New thread is cloned " << new_tid << " parent: " << child
-                        << " pid: " << pid;
+            Log::info() << "New thread " << new_tid << " (" << command << "): cloned from " << child
+                        << " in process " << pid;
 
-            // register monitoring
-            threads_.emplace(new_tid, pid);
+            // Register the newly created thread for monitoring:
+            // (1) Keep track of the process the new thread was spawned in.
+            watched_threads_.add_thread_to_process(new_tid, pid);
+            // (2) Tell the process monitor to watch the new thread.
             monitor_.insert_thread(pid, new_tid, command);
-
+            // (3) Update our summary information.
             summary().add_thread();
         }
         catch (std::out_of_range& e)
         {
-            Log::error() << "Failed to get pid of monitored thread " << child
-                         << ", new thread id: " << new_tid;
+            Log::error() << "Failed to get process containing monitored thread " << child;
         }
         catch (std::system_error& e)
         {
-            Log::error() << "Failure while adding new thread " << new_tid << ": " << e.what();
+            Log::error() << "Failure while adding new thread cloned from " << child << ": "
+                         << e.what();
             throw;
         }
     }
-    // process or thread exited?
-    else if (event == PTRACE_EVENT_EXIT)
+    break;
+    case PTRACE_EVENT_EXIT:
     {
+        // Child is about to exit. Signal its monitor to stop, then clean up.
+
         try
         {
-            auto pid = threads_.at(child);
-            std::string comm = get_task_comm(pid, child);
+            pid_t pid = watched_threads_.get_process_for_thread(child);
             if (pid == child)
             {
-                Log::info() << "Process " << child << " / " << comm << " about to exit";
+                Log::info() << "Process " << child << " is about to exit";
                 monitor_.exit_process(child);
             }
             else
             {
-                Log::info() << "Thread  " << child << " / " << comm << " in process " << pid
-                            << " / " << get_process_comm(pid) << " is about to exit";
+                Log::info() << "Thread  " << child << " in process " << pid << " is about to exit";
                 monitor_.exit_thread(child);
             }
-            threads_.erase(child);
+            watched_threads_.remove_thread(child);
         }
         catch (std::out_of_range&)
         {
             Log::warn() << "Thread " << child << " is about to exit, but was never seen before.";
         }
+    }
+    break;
+    default:
+        Log::warn() << "Unhandled ptrace event for child " << child << ": " << event;
     }
 }
 
@@ -251,8 +279,8 @@ void ProcessController::handle_signal(pid_t child, int status)
             Log::debug() << "Set ptrace options for process: " << child;
 
             // we are only interested in fork/join events
-            check_ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                                               PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT);
+            ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
+                                         PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT);
             // FIXME TODO continue this new thread/process ONLY if already registered in the
             // thread map.
             break;
@@ -262,15 +290,14 @@ void ProcessController::handle_signal(pid_t child, int status)
             auto event = status >> 16;
             if (event != 0)
             {
-                handle_ptrace_event(child, status >> 16);
+                handle_ptrace_event(child, event);
             }
             break;
         }
 
         default:
             Log::debug() << "Forwarding signal for child " << child << ": " << WSTOPSIG(status);
-            // Stupid double cast to prevent warning -Wint-to-void-pointer-cast
-            check_ptrace(PTRACE_CONT, child, nullptr, (void*)((long)WSTOPSIG(status)));
+            ptrace_cont(child, WSTOPSIG(status));
             return;
         }
     }
@@ -303,7 +330,7 @@ void ProcessController::handle_signal(pid_t child, int status)
     // wait for next fork/exit/...
     try
     {
-        check_ptrace(PTRACE_CONT, child);
+        ptrace_cont(child);
     }
     catch (const std::system_error& e)
     {
