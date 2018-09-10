@@ -70,6 +70,8 @@ private:
 
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
+std::string get_process_comm(pid_t pid);
+std::string get_task_comm(pid_t pid, pid_t task);
 
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
@@ -91,7 +93,7 @@ T get_sysctl(const std::string& group, const std::string& name)
 
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 
-std::unordered_map<pid_t, std::string> read_all_tid_exe();
+std::unordered_map<pid_t, std::string> get_comms_for_running_processes();
 
 void try_pin_to_cpu(int cpu, pid_t pid = 0);
 

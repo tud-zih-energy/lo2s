@@ -64,25 +64,63 @@ std::string get_process_exe(pid_t pid)
     auto proc_exe_filename = (boost::format("/proc/%d/exe") % pid).str();
     char exe_cstr[PATH_MAX + 1];
     auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
-    if (ret != -1)
+
+    if (ret == -1)
     {
-        exe_cstr[ret] = '\0';
-        return exe_cstr;
+        Log::error() << "Failed to retrieve exe name for pid=" << pid << "!";
+        throw std::runtime_error{ "Failed to retrive process exe from procfs" };
     }
-    auto proc_comm_filename = (boost::format("/proc/%d/comm") % pid).str();
-    std::ifstream proc_comm_stream;
-    proc_comm_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+
+    exe_cstr[ret] = '\0';
+    return exe_cstr;
+}
+
+static std::string read_file(const boost::filesystem::path& path)
+{
+    boost::filesystem::ifstream s;
+    s.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    s.open(path);
+
     try
     {
-        proc_comm_stream.open(proc_comm_filename);
-        std::string comm;
-        proc_comm_stream >> comm;
-        return (boost::format("[%s]") % comm).str();
+        std::string result;
+        s >> result;
+        return result;
     }
     catch (const std::ios::failure&)
     {
+        Log::error() << "Failed to read file: " << path;
+        throw;
     }
-    return "<unknown>";
+}
+
+std::string get_process_comm(pid_t pid)
+{
+    auto proc_comm = boost::filesystem::path{ "/proc" } / std::to_string(pid) / "comm";
+    try
+    {
+        return read_file(proc_comm);
+    }
+    catch (const std::ios::failure&)
+    {
+        Log::warn() << "Failed to get name for process " << pid;
+        return (boost::format{ "[process %d]" } % pid).str();
+    }
+}
+
+std::string get_task_comm(pid_t pid, pid_t task)
+{
+    auto task_comm = boost::filesystem::path{ "/proc" } / std::to_string(pid) / "task" /
+                     std::to_string(task) / "comm";
+    try
+    {
+        return read_file(task_comm);
+    }
+    catch (const std::ios::failure&)
+    {
+        Log::warn() << "Failed to get name for task " << task << " in process " << pid;
+        return (boost::format{ "[thread %d]" } % task).str();
+    }
 }
 
 std::string get_datetime()
@@ -125,7 +163,7 @@ const struct ::utsname& get_uname()
     return instance.uname;
 }
 
-std::unordered_map<pid_t, std::string> read_all_tid_exe()
+std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
 {
     std::unordered_map<pid_t, std::string> ret;
     boost::filesystem::path proc("/proc");
@@ -140,7 +178,7 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
         {
             continue;
         }
-        std::string name = get_process_exe(pid);
+        std::string name = get_process_comm(pid);
         Log::trace() << "mapping from /proc/" << pid << ": " << name;
         ret.emplace(pid, name);
         try
@@ -162,6 +200,7 @@ std::unordered_map<pid_t, std::string> read_all_tid_exe()
                 {
                     continue;
                 }
+                name = get_task_comm(pid, tid);
                 Log::trace() << "mapping from /proc/" << pid << "/" << tid << ": " << name;
                 ret.emplace(tid, name);
             }

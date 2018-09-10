@@ -36,10 +36,10 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
 void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn)
 {
     trace_.process(pid, ppid, proc_name);
-    insert_thread(pid, pid, spawn);
+    insert_thread(pid, pid, proc_name, spawn);
 }
 
-void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, bool spawn)
+void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn)
 {
     if (config().sampling)
     {
@@ -52,10 +52,12 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, bool spawn)
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                          std::forward_as_tuple(pid, tid, *this, spawn));
     }
+
+    trace_.task_update_command(tid, name);
 }
-void ProcessMonitor::exit_process(pid_t pid, std::string name)
+
+void ProcessMonitor::exit_process(pid_t pid)
 {
-    trace_.process_update_executable(pid, name);
     exit_thread(pid);
 }
 

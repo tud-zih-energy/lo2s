@@ -124,7 +124,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         }
         else
         {
-            proc_name = get_process_exe(pid);
+            proc_name = get_process_comm(pid);
         }
 
         ProcessController controller(pid, proc_name, spawn, monitor);

@@ -86,7 +86,7 @@ void CpuSetMonitor::run()
     {
         monitor_elem.second.start();
     }
-    trace_.register_tids(read_all_tid_exe());
+    trace_.register_tids(get_comms_for_running_processes());
 
     if (config().command.empty() && config().pid == -1)
     {
@@ -113,7 +113,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.register_tids(read_all_tid_exe());
+    trace_.register_tids(get_comms_for_running_processes());
 
     for (auto& monitor_elem : switch_monitors_)
     {

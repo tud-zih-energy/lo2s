@@ -42,18 +42,24 @@ public:
     {
     }
 
-    virtual void insert_process(pid_t /*pid*/,pid_t /*ppid*/, std::string /*proc_name*/, bool = false)
+    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn) override
     {
-    }
-    virtual void insert_thread(pid_t /*pid*/, pid_t /*tid*/, bool = false)
-    {
+        (void)pid, (void)ppid, (void)proc_name, (void)spawn;
     }
 
-    virtual void exit_process(pid_t /*pid*/, std::string /*name*/)
+    virtual void insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn) override
     {
+        (void)pid, (void)tid, (void)name, (void)spawn;
     }
-    virtual void exit_thread(pid_t /*tid*/)
+
+    virtual void exit_process(pid_t pid) override
     {
+        (void)pid;
+    }
+
+    virtual void exit_thread(pid_t tid) override
+    {
+        (void)tid;
     }
 };
 } // namespace monitor
