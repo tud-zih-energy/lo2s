@@ -44,9 +44,9 @@ public:
     ProcessMonitor();
     ~ProcessMonitor();
     void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn = false) override;
-    void insert_thread(pid_t pid, pid_t tid, bool spawn = false) override;
+    void insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn = false) override;
 
-    void exit_process(pid_t pid, std::string name) override;
+    void exit_process(pid_t pid) override;
     void exit_thread(pid_t tid) override;
 
 private:

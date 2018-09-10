@@ -146,12 +146,12 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
         {
             // we need the pid of the new process
             check_ptrace(PTRACE_GETEVENTMSG, child, NULL, &newpid);
-            auto name = get_process_exe(newpid);
-            Log::debug() << "New process is forked " << newpid << ": " << name
-                         << " parent: " << child << ": " << get_process_exe(child);
+            auto command = get_process_comm(newpid);
+            Log::debug() << "New process is forked " << newpid << ": " << command
+                         << " parent: " << child << ": " << get_process_comm(child);
 
             threads_.emplace(newpid, newpid);
-            monitor_.insert_process(newpid, child, name);
+            monitor_.insert_process(newpid, child, command);
 
             summary().add_thread();
         }
@@ -173,12 +173,13 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
 
             // Parent may be a thread, get the process
             auto pid = threads_.at(child);
+            std::string command = get_task_comm(pid, new_tid);
             Log::info() << "New thread is cloned " << new_tid << " parent: " << child
                         << " pid: " << pid;
 
             // register monitoring
             threads_.emplace(new_tid, pid);
-            monitor_.insert_thread(pid, new_tid);
+            monitor_.insert_thread(pid, new_tid, command);
 
             summary().add_thread();
         }
@@ -199,23 +200,23 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
         try
         {
             auto pid = threads_.at(child);
+            std::string comm = get_task_comm(pid, child);
             if (pid == child)
             {
-                auto name = get_process_exe(child);
-                Log::info() << "Process " << child << " / " << name << " about to exit";
-                monitor_.exit_process(child, name);
+                Log::info() << "Process " << child << " / " << comm << " about to exit";
+                monitor_.exit_process(child);
             }
             else
             {
-                Log::info() << "Thread " << child << " in process " << pid << " / "
-                            << get_process_exe(pid) << " is about to exit";
+                Log::info() << "Thread  " << child << " / " << comm << " in process " << pid
+                            << " / " << get_process_comm(pid) << " is about to exit";
                 monitor_.exit_thread(child);
             }
             threads_.erase(child);
         }
         catch (std::out_of_range&)
         {
-            Log::warn() << "Thread " << child << " is about to exit, but has never seen before.";
+            Log::warn() << "Thread " << child << " is about to exit, but was never seen before.";
         }
     }
 }
