@@ -21,7 +21,7 @@ namespace monitor
 {
 CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 {
-    trace_.register_monitoring_tid(gettid(), "CpuSetMonitor", "CpuSetMonitor");
+    trace_.add_monitoring_thread(gettid(), "CpuSetMonitor", "CpuSetMonitor");
 
     // Prefill Memory maps
     std::regex proc_regex("/proc/([0-9]+)");
@@ -86,7 +86,7 @@ void CpuSetMonitor::run()
     {
         monitor_elem.second.start();
     }
-    trace_.register_tids(get_comms_for_running_processes());
+    trace_.add_threads(get_comms_for_running_processes());
 
     if (config().command.empty() && config().pid == -1)
     {
@@ -113,7 +113,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.register_tids(get_comms_for_running_processes());
+    trace_.add_threads(get_comms_for_running_processes());
 
     for (auto& monitor_elem : switch_monitors_)
     {

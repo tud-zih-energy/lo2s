@@ -89,12 +89,30 @@ public:
         return archive_;
     }
 
-    void process(pid_t pid, pid_t parent, const std::string& name = "");
+private:
+    /** Add a thread with the required lock (#mutex_) held.
+     *
+     *  This is a helper needed to avoid constant re-locking when adding
+     *  multiple threads via #add_threads.
+     **/
+    void add_thread_exclusive(pid_t tid, const std::string& name,
+                              const std::lock_guard<std::mutex>&);
 
+    void update_process_name(pid_t pid, const otf2::definition::string& name);
+    void update_thread_name(pid_t tid, const otf2::definition::string& name);
+
+public:
     void add_cpu(int cpuid);
 
-    void process_update_executable(pid_t pid, const std::string& exe_name);
-    void task_update_command(pid_t tid, const std::string& comm);
+    void add_process(pid_t pid, pid_t parent, const std::string& name = "");
+
+    void add_thread(pid_t tid, const std::string& name);
+    void add_threads(const std::unordered_map<pid_t, std::string>& tid_map);
+
+    void add_monitoring_thread(pid_t tid, const std::string& name, const std::string& group);
+
+    void update_process_name(pid_t pid, const std::string& name);
+    void update_thread_name(pid_t tid, const std::string& name);
 
     otf2::writer::local& thread_sample_writer(pid_t pid, pid_t tid);
     otf2::writer::local& cpu_sample_writer(int cpuid);
@@ -129,13 +147,8 @@ public:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    std::map<pid_t, ProcessInfo>& infos);
 
-    void register_tid(pid_t tid, const std::string& exe);
-    void register_tids(const std::unordered_map<pid_t, std::string>& tid_map);
-
-    otf2::definition::mapping_table merge_tids(
+    otf2::definition::mapping_table merge_thread_regions(
         const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs);
-
-    void register_monitoring_tid(pid_t tid, const std::string& name, const std::string& grou);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -203,6 +216,7 @@ private:
     otf2::definition::regions_group::reference_type group_ref() const
     {
         // + 1 for locations_group_
+        // use static_cast because we are narrowing from std::size_t
         return static_cast<otf2::definition::regions_group::reference_type>(
             1 + regions_groups_executable_.size() + regions_groups_monitoring_.size() +
             process_comm_groups_.size());
@@ -245,9 +259,6 @@ private:
 
     void attach_process_location_group(const otf2::definition::system_tree_node& parent, pid_t id,
                                        const otf2::definition::string& iname);
-
-    void process_update_executable(pid_t pid, const otf2::definition::string& exe_name);
-    void task_update_command(pid_t tid, const otf2::definition::string& comm);
 
     void add_lo2s_property(const std::string& name, const std::string& value);
 

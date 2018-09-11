@@ -280,7 +280,7 @@ otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
     }
 }
 
-void Trace::process(pid_t pid, pid_t parent, const std::string& name)
+void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
 {
     auto iname = intern(name);
     const auto& parent_node =
@@ -293,7 +293,7 @@ void Trace::process(pid_t pid, pid_t parent, const std::string& name)
     if (!emplace_result.second) /* emplace failed */
     {
         // process already exists process tree; update its name.
-        process_update_executable(pid, iname);
+        update_process_name(pid, iname);
         return;
     }
 
@@ -329,38 +329,46 @@ void Trace::attach_process_location_group(const otf2::definition::system_tree_no
     (void)(r_c.second);
 }
 
-void Trace::process_update_executable(pid_t pid, const otf2::definition::string& exe_name)
+void Trace::update_process_name(pid_t pid, const otf2::definition::string& name)
 {
-    system_tree_process_nodes_.at(pid).name(exe_name);
-    location_groups_process_.at(pid).name(exe_name);
+    try
+    {
+        system_tree_process_nodes_.at(pid).name(name);
+        location_groups_process_.at(pid).name(name);
 
-    process_comm_groups_.at(pid).name(exe_name);
-    process_comms_.at(pid).name(exe_name);
+        process_comm_groups_.at(pid).name(name);
+        process_comms_.at(pid).name(name);
+    }
+    catch (const std::out_of_range&)
+    {
+        Log::warn() << "Attempting to update name of unknown process " << pid << " (" << name
+                    << ")";
+    }
 }
 
-void Trace::process_update_executable(pid_t pid, const std::string& exe_name)
+void Trace::update_process_name(pid_t pid, const std::string& name)
 {
-    process_update_executable(pid, intern(exe_name));
+    update_process_name(pid, intern(name));
 }
 
-void Trace::task_update_command(pid_t tid, const otf2::definition::string& comm)
+void Trace::update_thread_name(pid_t tid, const otf2::definition::string& name)
 {
     auto loc_it = thread_sample_locations_.find(tid);
 
     if (loc_it != thread_sample_locations_.end())
     {
-        loc_it->second.name(comm);
+        loc_it->second.name(name);
     }
     else
     {
-        Log::warn() << "attempting to update name of unknown task with tid=" << tid;
+        Log::warn() << "Attempting to update name of unknown thread " << tid << " (" << name << ")";
     }
 }
 
-void Trace::task_update_command(pid_t tid, const std::string& comm)
+void Trace::update_thread_name(pid_t tid, const std::string& name)
 {
-    std::string n = (boost::format("%s (tid %d)") % comm % tid).str();
-    task_update_command(tid, intern(n));
+    std::string n = (boost::format("%s (tid %d)") % name % tid).str();
+    update_thread_name(tid, intern(n));
 }
 
 void Trace::add_lo2s_property(const std::string& name, const std::string& value)
@@ -632,31 +640,39 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips,
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
-void Trace::register_tid(pid_t tid, const std::string& exe)
+void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
+                                 const std::lock_guard<std::mutex>&)
 {
-    // Lock this to avoid conflict on regions_thread_ with register_monitoring_tid
-    std::lock_guard<std::mutex> guard(mutex_);
-
-    auto iname = intern((boost::format("%s (%d)") % exe % tid).str());
+    auto iname = intern((boost::format("%s (%d)") % name % tid).str());
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(region_ref(), iname, iname, iname, otf2::common::role_type::function,
                               otf2::common::paradigm_type::user, otf2::common::flags_type::none,
                               iname, 0, 0));
+
+    // Check that emplacement succeeded. If not, the thread has already been
+    // registered.
     if (ret.second)
     {
-        regions_group_executable(exe).add_member(ret.first->second);
+        regions_group_executable(name).add_member(ret.first->second);
     }
     // TODO update iname if not newly inserted
 }
 
-void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const std::string& group)
+void Trace::add_thread(pid_t tid, const std::string& name)
+{
+    // Lock this to avoid conflict on regions_thread_ with add_monitoring_thread
+    std::lock_guard<std::mutex> guard(mutex_);
+    add_thread_exclusive(tid, name, guard);
+}
+
+void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std::string& group)
 {
     // We must guard this here because this is called by monitoring threads itself rather than
     // the usual call from the single monitoring process
     std::lock_guard<std::mutex> guard(mutex_);
 
-    Log::debug() << "register_monitoring_tid(" << tid << "," << name << "," << group << ");";
+    Log::debug() << "Adding monitoring thread " << tid << " (" << name << "): group " << group;
     auto iname = intern((boost::format("lo2s::%s") % name).str());
 
     // TODO, should be paradigm_type::measurement_system, but that's a bug in Vampir
@@ -673,16 +689,19 @@ void Trace::register_monitoring_tid(pid_t tid, const std::string& name, const st
     }
 }
 
-void Trace::register_tids(const std::unordered_map<pid_t, std::string>& tid_map)
+void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
 {
-    Log::debug() << "register_tid size " << tid_map.size();
+    Log::debug() << "Adding " << tid_map.size() << " monitored thread(s) to the trace";
+
+    // Lock here to avoid conflicts when writing to regions_thread_
+    std::lock_guard<std::mutex> guard(mutex_);
     for (const auto& elem : tid_map)
     {
-        register_tid(elem.first, elem.second);
+        add_thread_exclusive(elem.first, elem.second, guard);
     }
 }
 
-otf2::definition::mapping_table Trace::merge_tids(
+otf2::definition::mapping_table Trace::merge_thread_regions(
     const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs)
 {
 #ifndef NDEBUG
@@ -696,7 +715,7 @@ otf2::definition::mapping_table Trace::merge_tids(
         auto local_ref = elem.second;
         if (regions_thread_.count(pid) == 0)
         {
-            register_tid(pid, "<unknown>");
+            add_thread(pid, "<unknown>");
         }
         auto global_ref = regions_thread_.at(pid).ref();
         mappings.at(local_ref) = global_ref;
