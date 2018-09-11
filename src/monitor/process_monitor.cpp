@@ -30,12 +30,12 @@ namespace monitor
 
 ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
-    trace_.register_monitoring_tid(gettid(), "ProcessMonitor", "ProcessMonitor");
+    trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
 void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn)
 {
-    trace_.process(pid, ppid, proc_name);
+    trace_.add_process(pid, ppid, proc_name);
     insert_thread(pid, pid, proc_name, spawn);
 }
 
@@ -53,7 +53,7 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool 
                          std::forward_as_tuple(pid, tid, *this, spawn));
     }
 
-    trace_.task_update_command(tid, name);
+    trace_.update_thread_name(tid, name);
 }
 
 void ProcessMonitor::exit_process(pid_t pid)

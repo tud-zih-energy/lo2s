@@ -74,7 +74,7 @@ SwitchWriter::~SwitchWriter()
 
     if (!thread_region_refs_.empty())
     {
-        const auto& mapping = trace_.merge_tids(thread_region_refs_);
+        const auto& mapping = trace_.merge_thread_regions(thread_region_refs_);
         otf2_writer_ << mapping;
     }
 }

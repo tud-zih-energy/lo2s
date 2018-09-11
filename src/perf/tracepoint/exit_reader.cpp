@@ -71,7 +71,7 @@ bool ExitReader::handle(const Reader::RecordSampleType* sample)
 
 void ExitReader::merge_trace()
 {
-    trace_.register_tids(comms_);
+    trace_.add_threads(comms_);
 }
 } // namespace tracepoint
 } // namespace perf

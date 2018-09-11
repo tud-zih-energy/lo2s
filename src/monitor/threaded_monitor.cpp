@@ -67,7 +67,7 @@ void ThreadedMonitor::thread_main()
 
 void ThreadedMonitor::register_thread()
 {
-    trace_.register_monitoring_tid(gettid(), name(), group());
+    trace_.add_monitoring_thread(gettid(), name(), group());
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

@@ -188,13 +188,16 @@ bool Writer::handle(const Reader::RecordCommType* comm)
 {
     std::string new_command{ static_cast<const char*>(comm->comm) };
 
+    Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
+                 << new_command << "\"";
+
     // update task name
-    trace_.task_update_command(comm->tid, new_command);
+    trace_.update_thread_name(comm->tid, new_command);
 
     // only update name of process if the main thread changes its name
     if (comm->pid == comm->tid)
     {
-        trace_.process_update_executable(comm->pid, new_command);
+        trace_.update_process_name(comm->pid, new_command);
     }
 
     return false;
