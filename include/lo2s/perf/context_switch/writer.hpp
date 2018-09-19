@@ -49,9 +49,15 @@ private:
     trace::Trace& trace_;
     std::map<pid_t, otf2::definition::region::reference_type> thread_region_refs_;
 
-    bool last_enter_closed_ = true;
     pid_t last_pid_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
+
+    enum LAST_EVENT_TYPE
+    {
+        ENTER,
+        LEAVE
+    };
+    int last_event_type = LEAVE;
 };
 } // namespace context_switch
 } // namespace perf
