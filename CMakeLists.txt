@@ -10,6 +10,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
+include(cmake/CheckStructHasBitField.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -100,17 +101,19 @@ find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 
+CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
+
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+option(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ${HAVE_PERF_RECORD_SWITCH})
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
-CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
@@ -272,7 +275,7 @@ else()
     endif()
 endif()
 
-if(HAVE_PERF_RECORD_SWITCH)
+if( USE_PERF_RECORD_SWITCH)
     target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
     target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
 else()
