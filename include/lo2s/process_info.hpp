@@ -45,28 +45,19 @@ public:
     void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (finalized_)
-        {
-            // FIXME happens with vampir
-            Log::warn() << "Cannot insert new mappings into finalized process info";
-            //throw std::runtime_error("Cannot insert new mappings into finalized process info");
-        }
         maps_.mmap(begin, end, pgoff, dso_name);
     }
 
-    const MemoryMap& maps()
+    MemoryMap maps()
     {
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            finalized_ = true;
-        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        // Yes, this is correct as per 6.6.3 The Return Statement
         return maps_;
     }
 
 private:
     const pid_t pid_;
     std::mutex mutex_;
-    bool finalized_ = false;
     MemoryMap maps_;
 };
 }
