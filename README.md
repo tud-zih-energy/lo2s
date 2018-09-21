@@ -28,7 +28,7 @@ The trace contains the following information:
 
  * libradare (somewhat recent)
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
- * [x86_energy v2](https://github.com/tud-zih-energy/x86_energy/tree/v_2)
+ * [x86_energy](https://github.com/tud-zih-energy/x86_energy)
 
 
 # Runtime Requirements
@@ -69,8 +69,14 @@ In the effort to keep compatible with older kernels, several quirks have been ad
 2. The used clock source for the kernel-space time measurments can be changed, however if you kernel doesn't support that, you can disable it with the CMake option `USE_PERF_CLOCKID`.
 3. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
 
-# Reference
+# Primary Reference
 
 A description and use cases can be found in the following paper. Please cite this if you use `lo2s` for scientific work.
 
-Thomas Ilsche, Robert Schöne, Mario Bielert, Andreas Gocht and Daniel Hackenberg. ["lo2s – Multi-Core System and Application Performance Analysis for Linux" 📕](https://tu-dresden.de/zih/forschung/ressourcen/dateien/projekte/haec/lo2s.pdf) In: Workshop on Monitoring and Analysis for High Performance Computing Systems Plus Applications (HPCMASPA). 2017. DOI: [10.1109/CLUSTER.2017.116](https://doi.org/10.1109/CLUSTER.2017.116)
+Thomas Ilsche, Robert Schöne, Mario Bielert, Andreas Gocht and Daniel Hackenberg. [lo2s – Multi-Core System and Application Performance Analysis for Linux 📕](https://tu-dresden.de/zih/forschung/ressourcen/dateien/projekte/haec/lo2s.pdf) In: Workshop on Monitoring and Analysis for High Performance Computing Systems Plus Applications (HPCMASPA). 2017. DOI: [10.1109/CLUSTER.2017.116](https://doi.org/10.1109/CLUSTER.2017.116)
+
+# Additional References
+
+Thomas Ilsche, Marcus Hähnel, Robert Schöne, Mario Bielert and Daniel Hackenberg: Powernightmares: [The Challenge of Efficiently Using Sleep States on Multi-Core Systems 📕](https://tu-dresden.de/zih/forschung/ressourcen/dateien/projekte/haec/powernightmares.pdf) In: 5th Workshop on Runtime and Operating Systems for the Many-core Era (ROME). 2017, DOI: [10.1007/978-3-319-75178-8_50](https://doi.org/10.1007/978-3-319-75178-8_50)
+
+Thomas Illsche, Robert Schöne, Phillip Joram, Mario Bielert and Andreas Gocht: "System Monitoring with lo2s: Power and Runtime Impact of C-State Transitions" In: 2018 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW), DOI: [10.1109/IPDPSW.2018.00114](https://doi.org/10.1109/IPDPSW.2018.00114)
