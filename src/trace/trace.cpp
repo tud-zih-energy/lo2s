@@ -318,13 +318,13 @@ void Trace::attach_process_location_group(const otf2::definition::system_tree_no
 
     auto r_cg = process_comm_groups_.emplace(
         std::piecewise_construct, std::forward_as_tuple(id),
-        std::forward_as_tuple(group_ref(), iname, otf2::common::paradigm_type::pthread,
+        std::forward_as_tuple(otf2::definition::comm_group::reference_type(group_ref()), iname,
+                              otf2::common::paradigm_type::pthread,
                               otf2::common::group_flag_type::none));
     assert(r_cg.second);
     const auto& group = r_cg.first->second;
-    auto r_c = process_comms_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(id),
-        std::forward_as_tuple(comm_ref(), iname, group, otf2::definition::comm::undefined()));
+    auto r_c = process_comms_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                                      std::forward_as_tuple(comm_ref(), iname, group));
     assert(r_c.second);
     (void)(r_c.second);
 }
