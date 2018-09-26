@@ -540,7 +540,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
 
         if (infos.count(elem.second.pid) == 1)
         {
-            auto& maps = infos.at(elem.second.pid).maps();
+            MemoryMap maps = infos.at(elem.second.pid).maps();
             line_info = maps.lookup_line_info(ip);
         }
 

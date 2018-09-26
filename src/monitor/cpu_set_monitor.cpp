@@ -29,7 +29,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     pid_t pid;
 
     const boost::filesystem::path proc_path("/proc");
-    if (config().system_mode_sampling)
+    if (config().sampling)
     {
         for (const auto& p :
              boost::make_iterator_range(boost::filesystem::directory_iterator{ proc_path }, {}))
@@ -48,7 +48,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     {
         trace_.add_cpu(cpu.id);
 
-        if (!perf::requested_events().events.empty() || config().system_mode_sampling)
+        if (!perf::requested_events().events.empty() || config().sampling)
         {
             counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                       std::forward_as_tuple(cpu.id, *this));

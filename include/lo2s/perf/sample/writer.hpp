@@ -78,7 +78,7 @@ private:
     cctx_ref(const Reader::RecordSampleType* sample);
     trace::IpRefMap::iterator find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children);
 
-    otf2::definition::calling_context::reference_type ip_ref() const
+    otf2::definition::calling_context::reference_type next_ip_ref() const
     {
         return local_ip_refs_.size();
     }

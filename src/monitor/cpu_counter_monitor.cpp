@@ -38,7 +38,7 @@ CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
         counter_writer_ = std::make_unique<perf::counter::CpuWriter>(
             cpuid, parent.trace().cpu_metric_writer(cpuid), parent);
     }
-    if (config().system_mode_sampling)
+    if (config().sampling)
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(
             -1, -1, cpuid, parent, parent.trace(), parent.trace().cpu_sample_writer(cpuid), false);

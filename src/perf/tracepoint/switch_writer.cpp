@@ -65,8 +65,8 @@ catch (const EventFormat::ParseError& e)
 
 SwitchWriter::~SwitchWriter()
 {
-    //Always close the last event
-    if(!current_region_.is_undefined())
+    // Always close the last event
+    if (!current_region_.is_undefined())
     {
         // time::now() can apparently lie in the past sometimes
         otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), current_region_);

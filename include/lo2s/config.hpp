@@ -62,12 +62,12 @@ struct Config
     std::size_t mmap_pages;
     bool exclude_kernel;
     // Instruction sampling
+    bool sampling;
     std::uint64_t sampling_period;
     std::string sampling_event;
     bool enable_cct;
     bool suppress_ip;
     bool disassemble;
-    bool system_mode_sampling;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
     // Metrics

@@ -104,7 +104,7 @@ trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::
         addr = -2;
     }
     auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                                std::forward_as_tuple(pid, ip_ref()));
+                                std::forward_as_tuple(pid, next_ip_ref()));
     return ret.first;
 }
 otf2::definition::calling_context::reference_type

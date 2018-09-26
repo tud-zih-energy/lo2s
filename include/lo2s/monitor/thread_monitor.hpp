@@ -79,7 +79,7 @@ private:
 
     cpu_set_t affinity_mask_;
 
-    perf::sample::Writer sample_writer_;
+    std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::ProcessWriter> counter_writer_;
 };
 } // namespace monitor
