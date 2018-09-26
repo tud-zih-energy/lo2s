@@ -66,15 +66,16 @@ catch (const EventFormat::ParseError& e)
 SwitchWriter::~SwitchWriter()
 {
     // Always close the last event
-    if (!current_region_.is_undefined())
+    if (!current_calling_context_.is_undefined())
     {
         // time::now() can apparently lie in the past sometimes
-        otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), current_region_);
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
+                                                 current_calling_context_);
     }
 
-    if (!thread_region_refs_.empty())
+    if (!thread_calling_context_refs_.empty())
     {
-        const auto& mapping = trace_.merge_thread_regions(thread_region_refs_);
+        const auto& mapping = trace_.merge_thread_calling_contexts(thread_calling_context_refs_);
         otf2_writer_ << mapping;
     }
 }
@@ -84,25 +85,25 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     pid_t prev_pid = sample->raw_data.get(prev_pid_field_);
     pid_t next_pid = sample->raw_data.get(next_pid_field_);
-    if (!current_region_.is_undefined())
+    if (!current_calling_context_.is_undefined())
     {
         if (prev_pid != current_pid_)
         {
             Log::warn() << "Conflicting pids: prev_pid: " << prev_pid
                         << " != current_pid: " << current_pid_
-                        << " current_region: " << current_region_;
+                        << " current_region: " << current_calling_context_;
         }
-        otf2_writer_.write_leave(tp, current_region_);
+        otf2_writer_.write_calling_context_leave(tp, current_calling_context_);
     }
     current_pid_ = next_pid;
     if (current_pid_ != 0)
     {
-        current_region_ = thread_region_ref(current_pid_);
-        otf2_writer_.write_enter(tp, current_region_);
+        current_calling_context_ = thread_calling_context_ref(current_pid_);
+        otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
     }
     else
     {
-        current_region_ = current_region_.undefined();
+        current_calling_context_ = current_calling_context_.undefined();
     }
 
     last_time_point_ = tp;
@@ -111,14 +112,15 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     return false;
 }
 
-otf2::definition::region::reference_type SwitchWriter::thread_region_ref(pid_t tid)
+otf2::definition::calling_context::reference_type
+SwitchWriter::thread_calling_context_ref(pid_t tid)
 {
-    auto it = thread_region_refs_.find(tid);
-    if (it == thread_region_refs_.end())
+    auto it = thread_calling_context_refs_.find(tid);
+    if (it == thread_calling_context_refs_.end())
     {
         // If we ever merge interrupt samples and switch events we must use a common counter here!
-        otf2::definition::region::reference_type ref(thread_region_refs_.size());
-        auto ret = thread_region_refs_.emplace(tid, ref);
+        otf2::definition::calling_context::reference_type ref(thread_calling_context_refs_.size());
+        auto ret = thread_calling_context_refs_.emplace(tid, ref);
         assert(ret.second);
         it = ret.first;
     }

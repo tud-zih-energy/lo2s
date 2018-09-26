@@ -147,8 +147,9 @@ public:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    std::map<pid_t, ProcessInfo>& infos);
 
-    otf2::definition::mapping_table merge_thread_regions(
-        const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs);
+    otf2::definition::mapping_table merge_thread_calling_contexts(
+        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
+            local_refs);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -255,6 +256,11 @@ private:
         return strings_.size();
     }
 
+    otf2::definition::calling_context::reference_type calling_context_ref() const
+    {
+        return calling_contexts_.size() + calling_contexts_thread_.size();
+    }
+
     otf2::definition::system_tree_node& intern_process_node(pid_t pid);
 
     void attach_process_location_group(const otf2::definition::system_tree_node& parent, pid_t id,
@@ -306,6 +312,7 @@ private:
 
     IpCctxMap calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
+    std::map<int, otf2::definition::calling_context> calling_contexts_thread_;
     otf2::definition::container<otf2::definition::calling_context_property>
         calling_context_properties_;
     otf2::definition::container<otf2::definition::metric_member> metric_members_;

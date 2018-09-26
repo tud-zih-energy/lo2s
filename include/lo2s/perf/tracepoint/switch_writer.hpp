@@ -29,8 +29,8 @@
 
 #include <lo2s/trace/fwd.hpp>
 
+#include <otf2xx/definition/calling_context.hpp>
 #include <otf2xx/definition/location.hpp>
-#include <otf2xx/definition/region.hpp>
 #include <otf2xx/writer/local.hpp>
 
 #include <unordered_map>
@@ -58,17 +58,17 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    otf2::definition::region::reference_type thread_region_ref(pid_t tid);
+    otf2::definition::calling_context::reference_type thread_calling_context_ref(pid_t tid);
 
 private:
     otf2::writer::local& otf2_writer_;
     trace::Trace& trace_;
     const time::Converter time_converter_;
 
-    using region_ref = otf2::definition::region::reference_type;
-    std::unordered_map<pid_t, region_ref> thread_region_refs_;
+    using calling_context_ref = otf2::definition::calling_context::reference_type;
+    std::unordered_map<pid_t, calling_context_ref> thread_calling_context_refs_;
     pid_t current_pid_ = -1;
-    region_ref current_region_ = region_ref::undefined();
+    calling_context_ref current_calling_context_ = calling_context_ref::undefined();
 
     EventField prev_pid_field_;
     EventField next_pid_field_;
