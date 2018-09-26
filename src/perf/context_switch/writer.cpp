@@ -33,7 +33,7 @@ namespace context_switch
 {
 
 Writer::Writer(int cpu, trace::Trace& trace)
-: Reader(cpu), otf2_writer_(trace.cpu_writer(cpu)), time_converter_(time::Converter::instance()),
+: Reader(cpu), otf2_writer_(trace.cpu_sample_writer(cpu)), time_converter_(time::Converter::instance()),
   trace_(trace)
 {
 }
