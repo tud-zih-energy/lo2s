@@ -43,16 +43,20 @@ namespace monitor
 {
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
-                             ProcessInfo& info, bool enable_on_exec)
+                             bool enable_on_exec)
 : IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
-  tid_(tid), info_(info),
-  sample_writer_(pid, tid, -1, *this, parent_monitor.trace(),
-                 parent_monitor.trace().sample_writer(pid, tid), enable_on_exec)
+  tid_(tid)
 {
+    if (config().sampling)
+    {
+        sample_writer_ = std::make_unique<perf::sample::Writer>(
+            pid, tid, -1, parent_monitor, parent_monitor.trace(),
+            parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec);
+    }
     if (!perf::requested_events().events.empty())
     {
         counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
-            pid, tid, parent_monitor.trace().metric_writer(pid, tid), parent_monitor,
+            pid, tid, parent_monitor.trace().thread_metric_writer(pid, tid), parent_monitor,
             enable_on_exec);
     }
 
@@ -80,13 +84,20 @@ void ThreadMonitor::initialize_thread()
 
 void ThreadMonitor::finalize_thread()
 {
-    sample_writer_.end();
+    if (sample_writer_)
+    {
+        sample_writer_->end();
+    }
 }
 
 void ThreadMonitor::monitor()
 {
     check_affinity();
-    sample_writer_.read();
+
+    if (sample_writer_)
+    {
+        sample_writer_->read();
+    }
 
     if (counter_writer_)
     {

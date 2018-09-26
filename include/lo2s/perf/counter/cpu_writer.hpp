@@ -32,11 +32,11 @@ class CpuWriter : public AbstractWriter
 {
 public:
     CpuWriter(int cpuid, otf2::writer::local& writer, monitor::MainMonitor& parent)
-    : AbstractWriter(-1, cpuid, writer,
-                     parent.trace().metric_instance(parent.trace().perf_metric_class(),
-                                                    writer.location(),
-                                                    parent.trace().cpu_writer(cpuid).location()),
-                     false)
+    : AbstractWriter(
+          -1, cpuid, writer,
+          parent.trace().metric_instance(parent.trace().perf_metric_class(), writer.location(),
+                                         parent.trace().cpu_switch_writer(cpuid).location()),
+          false)
     {
     }
 };

@@ -179,12 +179,16 @@ Trace::~Trace()
     otf2::definition::comm_locations_group comm_locations_group(
         0, intern("All pthread locations"), otf2::common::paradigm_type::pthread,
         otf2::common::group_flag_type::none);
-    for (const auto& location : cpu_locations_)
+    for (const auto& location : cpu_switch_locations_)
     {
         comm_locations_group.add_member(location.second);
     }
 
-    for (const auto& location : thread_locations_)
+    for (const auto& location : cpu_sample_locations_)
+    {
+        comm_locations_group.add_member(location.second);
+    }
+    for (const auto& location : thread_sample_locations_)
     {
         comm_locations_group.add_member(location.second);
     }
@@ -198,15 +202,19 @@ Trace::~Trace()
     archive_ << location_groups_process_;
     archive_ << location_groups_cpu_;
 
-    for (const auto& location : thread_locations_)
+    for (const auto& location : thread_sample_locations_)
     {
         archive_ << location.second;
     }
-    for (const auto& location : cpu_locations_)
+    for (const auto& location : cpu_sample_locations_)
     {
         archive_ << location.second;
     }
-    for (const auto& location : metric_locations_)
+    for (const auto& location : cpu_switch_locations_)
+    {
+        archive_ << location.second;
+    }
+    for (const auto& location : thread_metric_locations_)
     {
         archive_ << location.second;
     }
@@ -214,7 +222,7 @@ Trace::~Trace()
     {
         archive_ << location.second;
     }
-    archive_ << named_locations_;
+    archive_ << named_metric_locations_;
 
     archive_ << source_code_locations_;
     archive_ << regions_line_info_;
@@ -356,15 +364,15 @@ void Trace::add_cpu(int cpuid)
     location_groups_cpu_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
         std::forward_as_tuple(location_group_ref(), name,
-                              otf2::definition::location_group::location_group_type::unknown,
+                              otf2::definition::location_group::location_group_type::process,
                               system_tree_cpu_nodes_.at(cpuid)));
 }
-otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
+otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("thread %d") % tid).str();
 
     // As the tid is unique in this context, create only one writer/location per tid
-    auto location = thread_locations_.emplace(
+    auto location = thread_sample_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(location_ref(), intern(name), location_groups_process_.at(pid),
                               otf2::definition::location::location_type::cpu_thread));
@@ -373,14 +381,26 @@ otf2::writer::local& Trace::sample_writer(pid_t pid, pid_t tid)
 
     return archive()(location.first->second);
 }
+otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
+{
+    auto name = (boost::format("sample cpu %d") % cpuid).str();
 
-otf2::writer::local& Trace::cpu_writer(int cpuid)
+    // As the cpuid is unique in this context, create only one writer/location per tid
+    auto location = cpu_sample_locations_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(cpuid),
+        std::forward_as_tuple(location_ref(), intern(name), location_groups_cpu_.at(cpuid),
+                              otf2::definition::location::location_type::cpu_thread));
+
+    return archive()(location.first->second);
+}
+
+otf2::writer::local& Trace::cpu_switch_writer(int cpuid)
 {
     // As CPU IDs are unique in this context, create only one writer/location per
     // CPU ID
     auto name = intern((boost::format("cpu %d") % cpuid).str());
 
-    auto location = cpu_locations_.emplace(
+    auto location = cpu_switch_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(cpuid),
         std::forward_as_tuple(location_ref(), name, location_groups_cpu_.at(cpuid),
                               otf2::definition::location::location_type::cpu_thread));
@@ -388,13 +408,13 @@ otf2::writer::local& Trace::cpu_writer(int cpuid)
     return archive()(location.first->second);
 }
 
-otf2::writer::local& Trace::metric_writer(pid_t pid, pid_t tid)
+otf2::writer::local& Trace::thread_metric_writer(pid_t pid, pid_t tid)
 {
     auto name = (boost::format("metrics for thread %d") % tid).str();
 
     // As the tid is unique in this context, create only one
     // writer/location per tid
-    auto location = metric_locations_.emplace(
+    auto location = thread_metric_locations_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(location_ref(), intern(name), location_groups_process_.at(pid),
                               otf2::definition::location::location_type::metric));
@@ -413,12 +433,12 @@ otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
     return archive()(location.first->second);
 }
 
-otf2::writer::local& Trace::metric_writer(const std::string& name)
+otf2::writer::local& Trace::named_metric_writer(const std::string& name)
 {
     // As names may not be unique in this context, always generate a new location/writer pair
-    auto location = named_locations_.emplace(location_ref(), intern(name),
-                                             location_groups_process_.at(METRIC_PID),
-                                             otf2::definition::location::location_type::metric);
+    auto location = named_metric_locations_.emplace(
+        location_ref(), intern(name), location_groups_process_.at(METRIC_PID),
+        otf2::definition::location::location_type::metric);
     return archive()(location);
 }
 
@@ -509,14 +529,21 @@ static LineInfo region_info(LineInfo info)
 
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context parent, const MemoryMap& maps)
+                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos)
 {
     for (auto& elem : new_children)
     {
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
-        auto line_info = maps.lookup_line_info(ip);
+        LineInfo line_info = LineInfo(ip);
+
+        if (infos.count(elem.second.pid) == 1)
+        {
+            MemoryMap maps = infos.at(elem.second.pid).maps();
+            line_info = maps.lookup_line_info(ip);
+        }
+
         Log::trace() << "resolved " << ip << ": " << line_info;
         auto cctx_it = children.find(ip);
         if (cctx_it == children.end())
@@ -529,13 +556,13 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            if (config().disassemble)
+            if (config().disassemble && infos.count(elem.second.pid) == 1)
             {
                 try
                 {
                     // TODO do not write properties for useless unknown stuff
                     OTF2_AttributeValue_union value;
-                    auto instruction = maps.lookup_instruction(ip);
+                    auto instruction = infos.at(elem.second.pid).maps().lookup_instruction(ip);
                     Log::trace() << "mapped " << ip << " to " << instruction;
                     value.stringRef = intern(instruction).ref();
                     calling_context_properties_.emplace(new_cctx, intern("instruction"),
@@ -550,12 +577,12 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         const auto& cctx = cctx_it->second.cctx;
         mapping_table.at(local_ref) = cctx.ref();
 
-        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, maps);
+        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos);
     }
 }
 
-otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_count,
-                                                 const MemoryMap& maps)
+otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips,
+                                                 std::map<pid_t, ProcessInfo>& infos)
 {
     std::lock_guard<std::mutex> guard(mutex_);
 
@@ -566,12 +593,12 @@ otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips, uint64_t ip_
     }
 
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(ip_count, -1u);
+    std::vector<uint32_t> mappings(new_ips.size(), -1u);
 #else
-    std::vector<uint32_t> mappings(ip_count);
+    std::vector<uint32_t> mappings(new_ips.size());
 #endif
 
-    merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), maps);
+    merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), infos);
 
 #ifndef NDEBUG
     for (auto id : mappings)

@@ -48,8 +48,7 @@ namespace monitor
 class ThreadMonitor : public IntervalMonitor
 {
 public:
-    ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, ProcessInfo& info,
-                  bool enable_on_exec);
+    ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, bool enable_on_exec);
 
 private:
     void check_affinity(bool force = false);
@@ -65,11 +64,6 @@ public:
         return tid_;
     }
 
-    ProcessInfo& info()
-    {
-        return info_;
-    }
-
     void initialize_thread() override;
     void finalize_thread() override;
     void monitor() override;
@@ -82,11 +76,10 @@ public:
 private:
     pid_t pid_;
     pid_t tid_;
-    ProcessInfo& info_;
 
     cpu_set_t affinity_mask_;
 
-    perf::sample::Writer sample_writer_;
+    std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::ProcessWriter> counter_writer_;
 };
 } // namespace monitor

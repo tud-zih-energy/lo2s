@@ -243,6 +243,9 @@ void parse_program_options(int argc, const char** argv)
     lo2s::Config config;
     SwitchCounter verbosity;
     bool all_cpus;
+    bool instruction_sampling;
+    bool no_instruction_sampling;
+    bool system_mode_sampling;
     bool disassemble, no_disassemble;
     bool kernel, no_kernel;
     bool list_clockids, list_events, list_tracepoints, list_knobs;
@@ -303,7 +306,10 @@ void parse_program_options(int argc, const char** argv)
     system_wide_options.add_options()
         ("all-cpus,a",
             po::bool_switch(&all_cpus),
-            "System-wide monitoring of all CPUs. If the name of an executable or a pid is given, monitor as long as it is running");
+            "System-wide monitoring of all CPUs. If the name of an executable or a pid is given, monitor as long as it is running")
+        ("all-cpus-sampling,A",
+            po::bool_switch(&system_mode_sampling),
+            "System-wide monitoring with instruction sampling (Same as \"-a --instruction_sampling\")");
 
     sampling_options.add_options()
         ("count,c",
@@ -311,6 +317,12 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("N")
                 ->default_value(11010113),
             "Sampling period (in number of events specified by -e).")
+        ("instruction-sampling",
+            po::bool_switch(&instruction_sampling),
+            "Enable instruction sampling")
+        ("no-instruction-sampling",
+            po::bool_switch(&no_instruction_sampling),
+            "Disable instruction sampling")
         ("event,e",
             po::value(&config.sampling_event)
                 ->value_name("EVENT")
@@ -499,13 +511,29 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (all_cpus)
+    if(instruction_sampling && no_instruction_sampling)
+    {
+        lo2s::Log::warn() << "Can not enable and disable instruction sampling at the same time";
+    }
+    if (all_cpus || system_mode_sampling)
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
+        config.sampling = false;
+
+        if (system_mode_sampling || instruction_sampling)
+        {
+            config.sampling = true;
+        }
     }
     else
     {
         config.monitor_type = lo2s::MonitorType::PROCESS;
+        config.sampling = true;
+
+        if (no_instruction_sampling)
+        {
+            config.sampling = false;
+        }
     }
 
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&

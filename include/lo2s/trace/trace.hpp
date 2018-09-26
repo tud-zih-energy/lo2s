@@ -25,6 +25,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/process_info.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -44,11 +45,12 @@ using IpMap = std::map<Address, RefMap>;
 
 struct IpRefEntry
 {
-    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
+    IpRefEntry(pid_t pid, otf2::definition::calling_context::reference_type r) : ref(r), pid(pid)
     {
     }
 
     otf2::definition::calling_context::reference_type ref;
+    pid_t pid;
     IpMap<IpRefEntry> children;
 };
 
@@ -93,11 +95,12 @@ public:
 
     void process_update_executable(pid_t pid, const std::string& exe_name);
 
-    otf2::writer::local& sample_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& cpu_writer(int cpuid);
-    otf2::writer::local& metric_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& metric_writer(const std::string& name);
+    otf2::writer::local& thread_sample_writer(pid_t pid, pid_t tid);
+    otf2::writer::local& cpu_sample_writer(int cpuid);
+    otf2::writer::local& thread_metric_writer(pid_t pid, pid_t tid);
+    otf2::writer::local& named_metric_writer(const std::string& name);
     otf2::writer::local& cpu_metric_writer(int cpuid);
+    otf2::writer::local& cpu_switch_writer(int cpuid);
 
     otf2::definition::metric_member
     metric_member(const std::string& name, const std::string& description,
@@ -118,12 +121,12 @@ public:
     otf2::definition::metric_class cpuid_metric_class();
     otf2::definition::metric_class perf_metric_class();
 
-    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips, uint64_t ip_count,
-                                              const MemoryMap& maps);
+    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips,
+                                              std::map<pid_t, ProcessInfo>& infos);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
-                   const MemoryMap& maps);
+                   std::map<pid_t, ProcessInfo>& infos);
 
     void register_tid(pid_t tid, const std::string& exe);
     void register_tids(const std::unordered_map<pid_t, std::string>& tid_map);
@@ -174,8 +177,9 @@ private:
     // This generates a contiguous set of IDs for all locations
     otf2::definition::location::reference_type location_ref() const
     {
-        return thread_locations_.size() + cpu_locations_.size() + metric_locations_.size() +
-               named_locations_.size() + cpu_metric_locations_.size();
+        return thread_sample_locations_.size() + cpu_sample_locations_.size() +
+               cpu_switch_locations_.size() + thread_metric_locations_.size() +
+               named_metric_locations_.size() + cpu_metric_locations_.size();
     }
 
     otf2::definition::location_group::reference_type location_group_ref() const
@@ -267,11 +271,12 @@ private:
     std::map<int, otf2::definition::location_group> location_groups_cpu_;
 
     // TODO add location groups (processes), read path from /proc/self/exe symlink
-    std::map<pid_t, otf2::definition::location> thread_locations_;
-    std::map<int, otf2::definition::location> cpu_locations_;
-    std::map<pid_t, otf2::definition::location> metric_locations_;
+    std::map<pid_t, otf2::definition::location> thread_sample_locations_;
+    std::map<int, otf2::definition::location> cpu_sample_locations_;
+    std::map<pid_t, otf2::definition::location> thread_metric_locations_;
     std::map<int, otf2::definition::location> cpu_metric_locations_;
-    otf2::definition::container<otf2::definition::location> named_locations_;
+    std::map<int, otf2::definition::location> cpu_switch_locations_;
+    otf2::definition::container<otf2::definition::location> named_metric_locations_;
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
     std::map<LineInfo, otf2::definition::region> regions_line_info_;

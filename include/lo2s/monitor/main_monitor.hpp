@@ -28,7 +28,11 @@
 #ifdef HAVE_X86_ENERGY
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
+#include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
+
+#include <deque>
 
 namespace lo2s
 {
@@ -55,9 +59,18 @@ public:
         return trace_;
     }
 
+    void insert_cached_mmap_events(
+        const std::deque<struct perf::sample::Writer::RecordMmapType>& cached_events);
+
+    std::map<pid_t, ProcessInfo>& get_process_infos()
+    {
+        return process_infos_;
+    }
+
 protected:
     trace::Trace trace_;
 
+    std::map<pid_t, ProcessInfo> process_infos_;
     metric::plugin::Metrics metrics_;
     std::unique_ptr<perf::tracepoint::MetricMonitor> tracepoint_metrics_;
 #ifdef HAVE_X86_ADAPT

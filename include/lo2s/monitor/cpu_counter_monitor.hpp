@@ -24,6 +24,7 @@
 #include <lo2s/monitor/interval_monitor.hpp>
 
 #include <lo2s/perf/counter/cpu_writer.hpp>
+#include <lo2s/perf/sample/writer.hpp>
 
 #include <lo2s/trace/trace.hpp>
 
@@ -45,8 +46,11 @@ public:
         return "CpuCounterMonitor";
     }
 
+    void finalize_thread() override;
+
 private:
-    perf::counter::CpuWriter counter_writer_;
+    std::unique_ptr<perf::counter::CpuWriter> counter_writer_;
+    std::unique_ptr<perf::sample::Writer> sample_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

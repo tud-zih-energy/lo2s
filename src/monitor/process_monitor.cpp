@@ -41,18 +41,18 @@ void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name
 
 void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, bool spawn)
 {
-    if (processes_.count(pid) == 0)
+    if (config().sampling)
     {
-        processes_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                           std::forward_as_tuple(pid, spawn));
+        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+                               std::forward_as_tuple(pid, spawn));
     }
-    if (threads_.count(tid) == 0)
+
+    if (config().sampling || !perf::requested_events().events.empty())
     {
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                         std::forward_as_tuple(pid, tid, *this, processes_.at(pid), spawn));
+                         std::forward_as_tuple(pid, tid, *this, spawn));
     }
 }
-
 void ProcessMonitor::exit_process(pid_t pid, std::string name)
 {
     trace_.process_update_executable(pid, name);
@@ -64,7 +64,6 @@ void ProcessMonitor::exit_thread(pid_t tid)
     if (threads_.count(tid) != 0)
     {
         threads_.at(tid).stop();
-        threads_.erase(tid);
     }
 }
 

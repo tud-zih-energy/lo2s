@@ -5,7 +5,8 @@
 
 #include <cassert>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 #include <unistd.h>
 }
@@ -38,7 +39,10 @@ void IntervalMonitor::stop()
 {
     {
         std::unique_lock<std::mutex> lock(control_mutex_);
-        assert(!stop_requested_);
+        if (stop_requested_ == true)
+        {
+            return;
+        }
         stop_requested_ = true;
         control_condition_.notify_all();
     }
@@ -78,5 +82,5 @@ void IntervalMonitor::run()
 
     Log::debug() << "Monitoring thread finished";
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

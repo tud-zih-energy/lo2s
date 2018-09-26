@@ -28,6 +28,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -45,7 +46,7 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
 : Reader(cpu, get_sched_switch_event().id(), config().mmap_pages),
-  otf2_writer_(trace.cpu_writer(cpu)),
+  otf2_writer_(trace.cpu_switch_writer(cpu)),
   trace_(trace),
   time_converter_(time::Converter::instance()),
   prev_pid_field_(get_sched_switch_event().field("prev_pid")),
@@ -64,6 +65,13 @@ catch (const EventFormat::ParseError& e)
 
 SwitchWriter::~SwitchWriter()
 {
+    // Always close the last event
+    if (!current_region_.is_undefined())
+    {
+        // time::now() can apparently lie in the past sometimes
+        otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), current_region_);
+    }
+
     if (!thread_region_refs_.empty())
     {
         const auto& mapping = trace_.merge_tids(thread_region_refs_);
@@ -97,8 +105,9 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
         current_region_ = current_region_.undefined();
     }
 
-    summary().register_process(next_pid);
+    last_time_point_ = tp;
 
+    summary().register_process(next_pid);
     return false;
 }
 
