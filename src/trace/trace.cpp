@@ -238,6 +238,7 @@ Trace::~Trace()
 
     archive_ << interrupt_generator();
     archive_ << calling_contexts_;
+    archive_ << calling_contexts_thread_;
     archive_ << calling_context_properties_;
     archive_ << metric_members_;
     archive_ << metric_classes_;
@@ -577,7 +578,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto cctx_it = children.find(ip);
         if (cctx_it == children.end())
         {
-            auto ref = calling_contexts_.size();
+            auto ref = calling_context_ref();
             auto region = intern_region(region_info(line_info));
             auto scl = intern_scl(line_info);
             auto new_cctx = calling_contexts_.emplace(ref, region, scl, parent);
@@ -657,6 +658,12 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
         regions_group_executable(name).add_member(ret.first->second);
     }
     // TODO update iname if not newly inserted
+
+    // create calling context
+    calling_contexts_thread_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(tid),
+        std::forward_as_tuple(calling_context_ref(), ret.first->second,
+                              otf2::definition::source_code_location()));
 }
 
 void Trace::add_thread(pid_t tid, const std::string& name)
@@ -687,6 +694,12 @@ void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std:
         // Put all lo2s stuff in one single group, ignore the group within lo2s
         regions_group_monitoring("lo2s").add_member(ret.first->second);
     }
+
+    // create calling context
+    calling_contexts_thread_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(tid),
+        std::forward_as_tuple(calling_context_ref(), ret.first->second,
+                              otf2::definition::source_code_location()));
 }
 
 void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
@@ -701,8 +714,8 @@ void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
     }
 }
 
-otf2::definition::mapping_table Trace::merge_thread_regions(
-    const std::unordered_map<pid_t, otf2::definition::region::reference_type>& local_refs)
+otf2::definition::mapping_table Trace::merge_thread_calling_contexts(
+    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& local_refs)
 {
 #ifndef NDEBUG
     std::vector<uint32_t> mappings(local_refs.size(), -1u);
@@ -713,11 +726,11 @@ otf2::definition::mapping_table Trace::merge_thread_regions(
     {
         auto pid = elem.first;
         auto local_ref = elem.second;
-        if (regions_thread_.count(pid) == 0)
+        if (calling_contexts_thread_.count(pid) == 0)
         {
             add_thread(pid, "<unknown>");
         }
-        auto global_ref = regions_thread_.at(pid).ref();
+        auto global_ref = calling_contexts_thread_.at(pid).ref();
         mappings.at(local_ref) = global_ref;
     }
 
@@ -729,7 +742,7 @@ otf2::definition::mapping_table Trace::merge_thread_regions(
 #endif
 
     return otf2::definition::mapping_table(
-        otf2::definition::mapping_table::mapping_type_type::region, mappings);
+        otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
 otf2::definition::regions_group Trace::regions_group_executable(const std::string& name)
