@@ -42,10 +42,10 @@ public:
         return pid_;
     }
 
-    void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name)
+    void mmap(const RawMemoryMapEntry& entry)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        maps_.mmap(begin, end, pgoff, dso_name);
+        maps_.mmap(entry);
     }
 
     MemoryMap maps()

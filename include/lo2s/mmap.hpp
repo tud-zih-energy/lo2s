@@ -28,10 +28,16 @@
 #endif
 #include <lo2s/util.hpp>
 
+#include <deque>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
+
+extern "C"
+{
+#include <linux/perf_event.h>
+}
 
 namespace lo2s
 {
@@ -131,13 +137,54 @@ private:
 #endif // HAVE_RADARE
 };
 
+struct RecordMmapType
+{
+    // BAD things happen if you try this
+    RecordMmapType() = delete;
+    RecordMmapType(const RecordMmapType&) = delete;
+    RecordMmapType& operator=(const RecordMmapType&) = delete;
+    RecordMmapType(RecordMmapType&&) = delete;
+    RecordMmapType& operator=(RecordMmapType&&) = delete;
+
+    struct perf_event_header header;
+    uint32_t pid, tid;
+    uint64_t addr;
+    uint64_t len;
+    uint64_t pgoff;
+    // Note ISO C++ forbids zero-size array, but this struct is exclusively used as pointer
+    char filename[1];
+    // struct sample_id sample_id;
+};
+
+struct RawMemoryMapEntry
+{
+    RawMemoryMapEntry(Address addr, Address end, Address pgoff, const std::string& filename)
+    : pid(0), tid(0), addr(addr), end(end), pgoff(pgoff), filename(filename)
+    {
+    }
+
+    RawMemoryMapEntry(const RecordMmapType* record)
+    : pid(record->pid), tid(record->tid), addr(record->addr), end(record->addr + record->len),
+      pgoff(record->pgoff), filename(record->filename)
+    {
+    }
+
+    pid_t pid, tid;
+    Address addr;
+    Address end;
+    Address pgoff;
+    std::string filename;
+};
+
+using RawMemoryMapCache = std::deque<RawMemoryMapEntry>;
+
 class MemoryMap
 {
 public:
     MemoryMap();
     MemoryMap(pid_t pid, bool read_initial);
 
-    void mmap(Address begin, Address end, Address pgoff, const std::string& dso_name);
+    void mmap(const RawMemoryMapEntry& entry);
 
     LineInfo lookup_line_info(Address ip) const;
 
@@ -159,4 +206,4 @@ private:
 
     std::map<Range, Mapping> map_;
 };
-}
+} // namespace lo2s

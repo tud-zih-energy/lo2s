@@ -28,6 +28,7 @@
 #ifdef HAVE_X86_ENERGY
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
+#include <lo2s/mmap.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -59,8 +60,7 @@ public:
         return trace_;
     }
 
-    void insert_cached_mmap_events(
-        const std::deque<struct perf::sample::Writer::RecordMmapType>& cached_events);
+    void insert_cached_mmap_events(const RawMemoryMapCache& cached_events);
 
     std::map<pid_t, ProcessInfo>& get_process_infos()
     {

@@ -180,7 +180,7 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
                  << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
                  << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
 
-    cached_mmap_events.emplace_back(*mmap_event);
+    cached_mmap_events_.emplace_back(mmap_event);
     return false;
 }
 
@@ -192,7 +192,7 @@ void Writer::end()
         last_time_point_ = std::max(last_time_point_, lo2s::time::now());
         otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
     }
-    monitor_.insert_cached_mmap_events(cached_mmap_events);
+    monitor_.insert_cached_mmap_events(cached_mmap_events_);
 }
 } // namespace sample
 } // namespace perf

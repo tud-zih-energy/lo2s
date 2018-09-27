@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/mmap.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -96,7 +97,7 @@ private:
     otf2::event::metric cpuid_metric_event_;
 
     trace::IpRefMap local_ip_refs_;
-    std::deque<Reader::RecordMmapType> cached_mmap_events;
+    RawMemoryMapCache cached_mmap_events_;
     const time::Converter time_converter_;
 
     bool first_event_ = true;

@@ -89,16 +89,14 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-void MainMonitor::insert_cached_mmap_events(
-    const std::deque<struct perf::sample::Writer::RecordMmapType>& cached_events)
+void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
 {
     for (auto& event : cached_events)
     {
         auto process_info =
             process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(event.pid),
                                    std::forward_as_tuple(event.pid, true));
-        process_info.first->second.mmap(event.addr, event.addr + event.len, event.pgoff,
-                                        event.filename);
+        process_info.first->second.mmap(event);
     }
 }
 

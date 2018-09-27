@@ -25,6 +25,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/platform.hpp>
 #include <lo2s/util.hpp>
+#include <lo2s/mmap.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -58,19 +59,17 @@ public:
     // We don't need the type of the subclass here, because these types are static
     using RecordUnknownType = perf_event_header;
 
-    struct RecordMmapType
-    {
-        struct perf_event_header header;
-        uint32_t pid, tid;
-        uint64_t addr;
-        uint64_t len;
-        uint64_t pgoff;
-        // Note ISO C++ forbids zero-size array, but this struct is exclusively used as pointer
-        char filename[1];
-        // struct sample_id sample_id;
-    };
+    using RecordMmapType = lo2s::RecordMmapType;
+
     struct RecordMmap2Type
     {
+        // BAD things happen if you try this
+        RecordMmap2Type() = delete;
+        RecordMmap2Type(const RecordMmap2Type&) = delete;
+        RecordMmap2Type& operator=(const RecordMmap2Type&) = delete;
+        RecordMmap2Type(RecordMmap2Type&&) = delete;
+        RecordMmap2Type& operator=(RecordMmap2Type&&) = delete;
+
         struct perf_event_header header;
         uint32_t pid;
         uint32_t tid;

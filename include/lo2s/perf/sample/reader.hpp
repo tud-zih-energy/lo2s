@@ -58,6 +58,13 @@ class Reader : public EventReader<T>
 public:
     struct RecordSampleType
     {
+        // BAD things happen if you try this
+        RecordSampleType() = delete;
+        RecordSampleType(const RecordSampleType&) = delete;
+        RecordSampleType& operator=(const RecordSampleType&) = delete;
+        RecordSampleType(RecordSampleType&&) = delete;
+        RecordSampleType& operator=(RecordSampleType&&) = delete;
+
         struct perf_event_header header;
         uint64_t ip;
         uint32_t pid, tid;
