@@ -170,6 +170,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 {
+    // Since this is an mmap record (as opposed to mmap2), it will only be generated for executable
     if (cpuid_ == -1 && ((pid_t(mmap_event->pid) != pid_) || (pid_t(mmap_event->tid) != tid_)))
     {
         Log::warn() << "Inconsistent mmap pid/tid expected " << pid_ << "/" << tid_ << ", actual "

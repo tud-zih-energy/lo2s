@@ -58,6 +58,7 @@ MemoryMap::MemoryMap(pid_t pid, bool read_initial)
 
     //                 start       -    end          prot           offset
     //                 device  inode   dso
+    // NOTE: we only look at executable entries       here ↓
     std::regex regex("([0-9a-f]+)\\-([0-9a-f]+)\\s+[r-][w-]x.?\\s+([0-9a-z]+)"
                      "\\s+\\S+\\s+\\d+\\s+(.*)");
     Log::debug() << "opening " << filename;

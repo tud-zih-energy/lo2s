@@ -53,12 +53,6 @@ static boost::filesystem::path check_path(const std::string& name)
         throw InvalidFileError("not a regular file", name);
     }
 
-    auto perms = status.permissions();
-    if (!(perms & (boost::filesystem::perms::owner_exe | boost::filesystem::perms::group_exe |
-                   boost::filesystem::perms::others_exe)))
-    {
-        throw InvalidFileError("non-executable", name);
-    }
     return path;
 }
 
