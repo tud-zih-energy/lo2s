@@ -82,17 +82,27 @@ matrix:
           sources:
             - llvm-toolchain-trusty-4.0
             - ubuntu-toolchain-r-test
+
+cache:
+  directories:
+    - ${TRAVIS_BUILD_DIR}/deps/otf2-2.1
+
+install:
+  - OTF2_VERSION=2.1 # Update cache too when changing this!
+  - OTF2_DIR=${TRAVIS_BUILD_DIR}/deps/otf2-${OTF2_VERSION}
+  - |
+    if [ -z "$(ls -A ${OTF2_DIR})" ]; then
+      wget http://www.vi-hps.org/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+      tar -xf otf2-${OTF2_VERSION}.tar.gz
+      (cd otf2-${OTF2_VERSION} && ./configure --prefix=${OTF2_DIR} && make -j2 install)
+    fi
+  - export CMAKE_PREFIX_PATH=${OTF2_DIR}:${CMAKE_PREFIX_PATH}
+
 before_script:
-  - wget http://www.vi-hps.org/upload/packages/otf2/otf2-2.1.tar.gz
-  - tar -xf otf2-2.1.tar.gz
-  - cd otf2-2.1
-  - ./configure --prefix=/usr/local
-  - make
-  - sudo make install
-  - cd ..
   - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
+
+script:
   - cmake --version
   - cmake . -DUSE_RADARE=OFF -DUSE_PERF_CLOCKID=OFF
-script:
   - make
   - ctest -V .
