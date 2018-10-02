@@ -10,6 +10,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
+include(cmake/CheckEnumValueExists.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -270,6 +271,11 @@ else()
     endif()
 endif()
 
+CHECK_ENUM_VALUE_EXISTS(PERF_COUNT_SW_ALIGNMENT_FAULTS linux/perf_event.h HAVE_ALIGNMENT_FAULTS)
+
+if(HAVE_ALIGNMENT_FAULTS)
+    target_compile_definitions(lo2s PRIVATE HAVE_ALIGNMENT_FAULTS)
+endif()
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
 
 # define list of C++ features needed for compilation
