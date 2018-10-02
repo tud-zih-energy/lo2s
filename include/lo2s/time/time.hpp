@@ -94,43 +94,47 @@ private:
         {
             "realtime", CLOCK_REALTIME,
         },
-#ifdef _POSIX_MONOTONIC_CLOCK
+#ifdef CLOCK_MONOTONIC
         {
             "monotonic", CLOCK_MONOTONIC,
         },
 #endif
-#ifdef _POSIX_CPUTIME
+#ifdef CLOCK_PROCESS_CPUTIME_ID
         {
             "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
         },
 #endif
-#ifdef _POSIX_THREAD_CPUTIME
+#ifdef CLOCK_THREAD_CPUTIME_ID
         {
             "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
+#ifdef CLOCK_MONOTONIC_RAW
         {
             "monotonic-raw", CLOCK_MONOTONIC_RAW,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
+#ifdef CLOCK_REALTIME_COARSE
         {
             "realtime-coarse", CLOCK_REALTIME_COARSE,
         },
+#endif
+#ifdef CLOCK_MONOTONIC_COARSE
         {
             "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
+#ifdef CLOCK_BOOTTTIME
         {
             "boottime", CLOCK_BOOTTIME,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
+#ifdef CLOCK_REALTIME_ALARM
         {
             "realtime-alarm", CLOCK_REALTIME_ALARM,
         },
+#endif
+#ifdef CLOCK_BOOTTIME_ALARM
         {
             "boottime-alarm", CLOCK_BOOTTIME_ALARM,
         },
