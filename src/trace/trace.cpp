@@ -202,26 +202,11 @@ Trace::~Trace()
     archive_ << location_groups_process_;
     archive_ << location_groups_cpu_;
 
-    for (const auto& location : thread_sample_locations_)
-    {
-        archive_ << location.second;
-    }
-    for (const auto& location : cpu_sample_locations_)
-    {
-        archive_ << location.second;
-    }
-    for (const auto& location : cpu_switch_locations_)
-    {
-        archive_ << location.second;
-    }
-    for (const auto& location : thread_metric_locations_)
-    {
-        archive_ << location.second;
-    }
-    for (const auto& location : cpu_metric_locations_)
-    {
-        archive_ << location.second;
-    }
+    archive_ << thread_sample_locations_;
+    archive_ << cpu_sample_locations_;
+    archive_ << cpu_switch_locations_;
+    archive_ << thread_metric_locations_;
+    archive_ << cpu_metric_locations_;
     archive_ << named_metric_locations_;
 
     archive_ << source_code_locations_;
