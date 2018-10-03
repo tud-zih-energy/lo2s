@@ -21,6 +21,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 extern "C"
 {
@@ -36,11 +37,11 @@ namespace monitor
 class AbstractProcessMonitor
 {
 public:
-    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name,
+    virtual void insert_process(pid_t pid, pid_t ppid, const std::vector<std::string>& command_line,
                                 bool spawn = false) = 0;
     virtual void insert_thread(pid_t pid, pid_t tid, std::string name = "", bool spawn = false) = 0;
 
-    virtual void exit_process(pid_t pid) = 0;
+    virtual void exit_process(pid_t pid, int exit_status) = 0;
     virtual void exit_thread(pid_t tid) = 0;
 };
 } // namespace monitor

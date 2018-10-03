@@ -208,9 +208,26 @@ void Writer::end()
     if (cpuid_ == -1)
     {
         // time::now() can sometimes can be in the past :-(
-        last_time_point_ = std::max(last_time_point_, lo2s::time::now());
+        auto now = lo2s::time::now();
+        last_time_point_ = std::max(last_time_point_, now);
+
+        // If we have never written any samples on this location, we also never
+        // got to write the thread_begin event.  Make sure we do that now.
+        if (first_event_)
+        {
+            first_time_point_ = std::min(first_time_point_, now);
+            otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_),
+                                                      -1);
+
+            // Make sure that our last time point is before the first time
+            // point.  This way samples on this location span a non-negative
+            // ammount of time.
+            last_time_point_ = std::max(last_time_point_, first_time_point_);
+        }
+
         otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
     }
+
     monitor_.insert_cached_mmap_events(cached_mmap_events_);
 }
 } // namespace sample

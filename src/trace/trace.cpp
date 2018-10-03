@@ -36,6 +36,9 @@
 #include <nitro/env/get.hpp>
 #include <nitro/env/hostname.hpp>
 
+#include <otf2xx/event/program_begin.hpp>
+#include <otf2xx/event/program_end.hpp>
+
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/format.hpp>
 
@@ -159,7 +162,16 @@ void Trace::begin_record()
 
 void Trace::end_record()
 {
-    stopping_time_ = time::now();
+    // write missing program_end events
+    auto now = lo2s::time::now();
+    for (pid_t pid : missing_program_end_event_cache_)
+    {
+        Log::debug() << "Missed program_begin event for process " << pid
+                     << ", assuming it exited successfully";
+        archive_(thread_sample_locations_.at(pid)) << otf2::event::program_end{ now, EXIT_SUCCESS };
+    }
+
+    stopping_time_ = now;
     Log::info() << "Recording done. Start finalization...";
 }
 
@@ -266,25 +278,80 @@ otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
     }
 }
 
-void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
+void Trace::add_process(pid_t pid, pid_t parent, const std::vector<std::string>& command_line)
 {
-    auto iname = intern(name);
+    assert(command_line.size() > 0);
+
+    otf2::definition::string prog_name = intern(command_line[0]);
     const auto& parent_node =
         (parent == NO_PARENT_PROCESS_PID) ? system_tree_root_node_ : intern_process_node(parent);
 
     auto emplace_result = system_tree_process_nodes_.emplace(
         std::piecewise_construct, std::forward_as_tuple(pid),
-        std::forward_as_tuple(system_tree_ref(), iname, intern("process"), parent_node));
+        std::forward_as_tuple(system_tree_ref(), prog_name, intern("process"), parent_node));
 
     if (!emplace_result.second) /* emplace failed */
     {
         // process already exists process tree; update its name.
-        update_process_name(pid, iname);
+        update_process_name(pid, prog_name);
         return;
     }
 
     const auto& emplaced_node = emplace_result.first->second;
-    attach_process_location_group(emplaced_node, pid, iname);
+    attach_process_location_group(emplaced_node, pid, prog_name);
+
+    mark_process_begin(pid, prog_name, command_line);
+}
+
+void Trace::mark_process_begin(pid_t pid, const otf2::definition::string& prog_name,
+                               const std::vector<std::string>& command_line)
+{
+    auto now = lo2s::time::now();
+
+    Log::debug() << "Marking begin of process " << pid << " (" << prog_name << ")";
+
+    auto it_proc_loc = thread_sample_locations_.find(pid);
+    if (it_proc_loc == thread_sample_locations_.end())
+    {
+        Log::warn() << "Cannot mark begin of unknown process " << pid << " (" << prog_name << ")";
+        return;
+    }
+    const otf2::definition::location& thread_location = it_proc_loc->second;
+
+    std::vector<otf2::definition::detail::weak_ref<otf2::definition::string>> arguments;
+    arguments.reserve(command_line.size() - 1);
+
+    for (std::size_t i = 1 /* NOTE: skip argument 0 */; i < command_line.size(); ++i)
+    {
+        arguments.emplace_back(intern(command_line[i]));
+    }
+
+    archive_(thread_location) << otf2::event::program_begin{ now, prog_name, arguments };
+    missing_program_end_event_cache_.insert(pid);
+}
+
+void Trace::mark_process_end(pid_t pid, int status_code)
+{
+    auto now = lo2s::time::now();
+
+    Log::debug() << "Marking end of process " << pid << " (status: " << status_code << ")";
+
+    auto it_proc_loc = thread_sample_locations_.find(pid);
+    if (it_proc_loc == thread_sample_locations_.end())
+    {
+        Log::warn() << "Cannot mark end of unknown process " << pid;
+        return;
+    }
+    const otf2::definition::location& process_location = it_proc_loc->second;
+
+    if (missing_program_end_event_cache_.count(pid) == 0)
+    {
+        Log::warn() << "Missing process_begin event for pid " << pid;
+        return;
+    }
+
+    archive_(process_location) << otf2::event::program_end{ now, status_code };
+    missing_program_end_event_cache_.erase(pid);
 }
 
 void Trace::attach_process_location_group(const otf2::definition::system_tree_node& parent,

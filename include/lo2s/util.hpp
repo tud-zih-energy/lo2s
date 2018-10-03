@@ -71,6 +71,8 @@ private:
 std::size_t get_page_size();
 std::string get_process_exe(pid_t pid);
 std::string get_process_comm(pid_t pid);
+std::vector<std::string> get_process_cmdline(pid_t pid);
+
 std::string get_task_comm(pid_t pid, pid_t task);
 
 std::chrono::duration<double> get_cpu_time();

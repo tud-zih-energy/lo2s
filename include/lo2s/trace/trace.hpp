@@ -34,6 +34,7 @@
 #include <map>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace lo2s
 {
@@ -98,13 +99,16 @@ private:
     void add_thread_exclusive(pid_t tid, const std::string& name,
                               const std::lock_guard<std::mutex>&);
 
+    void mark_process_begin(pid_t pid, const otf2::definition::string& prog_name,
+                            const std::vector<std::string>& command_line);
+
     void update_process_name(pid_t pid, const otf2::definition::string& name);
     void update_thread_name(pid_t tid, const otf2::definition::string& name);
 
 public:
     void add_cpu(int cpuid);
 
-    void add_process(pid_t pid, pid_t parent, const std::string& name = "");
+    void add_process(pid_t pid, pid_t parent, const std::vector<std::string>& command_line);
 
     void add_thread(pid_t tid, const std::string& name);
     void add_threads(const std::unordered_map<pid_t, std::string>& tid_map);
@@ -113,6 +117,8 @@ public:
 
     void update_process_name(pid_t pid, const std::string& name);
     void update_thread_name(pid_t tid, const std::string& name);
+
+    void mark_process_end(pid_t pid, int status_code);
 
     otf2::writer::local& thread_sample_writer(pid_t pid, pid_t tid);
     otf2::writer::local& cpu_sample_writer(int cpuid);
@@ -299,6 +305,14 @@ private:
     std::map<int, otf2::definition::location> cpu_metric_locations_;
     std::map<int, otf2::definition::location> cpu_switch_locations_;
     otf2::definition::container<otf2::definition::location> named_metric_locations_;
+
+    // For each program_begin event written to the thread_location belonging to
+    // <pid>, we store <pid> in the set below.  When the corresponding
+    // program_end event is written, we delete <pid> from the set.  This way, at
+    // lo2s' exit, we know for which processes we are still missing program_end
+    // events.  We then write those missing events, assuming the processes
+    // exited successfully and we simply missed that.
+    std::unordered_set<pid_t> missing_program_end_event_cache_;
 
     std::map<LineInfo, otf2::definition::source_code_location> source_code_locations_;
     std::map<LineInfo, otf2::definition::region> regions_line_info_;

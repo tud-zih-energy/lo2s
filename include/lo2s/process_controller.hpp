@@ -82,7 +82,7 @@ private:
 class ProcessController
 {
 public:
-    ProcessController(pid_t child, const std::string& name, bool spawn,
+    ProcessController(pid_t child, const std::vector<std::string>& command_line, bool spawn,
                       monitor::AbstractProcessMonitor& monitor);
 
     ~ProcessController();

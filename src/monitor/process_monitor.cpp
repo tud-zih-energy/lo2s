@@ -33,10 +33,11 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn)
+void ProcessMonitor::insert_process(pid_t pid, pid_t ppid,
+                                    const std::vector<std::string>& command_line, bool spawn)
 {
-    trace_.add_process(pid, ppid, proc_name);
-    insert_thread(pid, pid, proc_name, spawn);
+    trace_.add_process(pid, ppid, command_line);
+    insert_thread(pid, pid, command_line.front(), spawn);
 }
 
 void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn)
@@ -56,9 +57,18 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool 
     trace_.update_thread_name(tid, name);
 }
 
-void ProcessMonitor::exit_process(pid_t pid)
+void ProcessMonitor::exit_process(pid_t pid, int exit_status)
 {
     exit_thread(pid);
+    // NOTE: it's important that we mark the process end after exiting the
+    // associated thread.  Only this way events will end up in the following
+    // order:
+    //  (1)   program_begin
+    //  (2)   thread_begin
+    //  ...   ...
+    //  (n-1) thread_end
+    //  (n)   program_end
+    trace_.mark_process_end(pid, exit_status);
 }
 
 void ProcessMonitor::exit_thread(pid_t tid)

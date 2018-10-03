@@ -108,6 +108,33 @@ std::string get_process_comm(pid_t pid)
     }
 }
 
+std::vector<std::string> get_process_cmdline(pid_t pid)
+{
+    try
+    {
+        std::vector<std::string> cmdline;
+        boost::filesystem::ifstream s{ boost::filesystem::path{ "/proc" } / std::to_string(pid) /
+                                       "cmdline" };
+
+        // /proc/<pid>/cmdline is a NUL-delimited list of arguments
+        for (std::string arg; std::getline(s, arg, '\0');)
+        {
+            Log::debug() << "get_process_cmdline: arg=" << arg;
+            cmdline.emplace_back(std::move(arg));
+        }
+
+        Log::debug() << "get_process_cmdline(pid=" << pid << "): " << cmdline.size()
+                     << " cmdline arg(s)";
+
+        return cmdline;
+    }
+    catch (const std::ios::failure&)
+    {
+        Log::warn() << "Failed to get cmdline for process " << pid;
+        return {};
+    }
+}
+
 std::string get_task_comm(pid_t pid, pid_t task)
 {
     auto task_comm = boost::filesystem::path{ "/proc" } / std::to_string(pid) / "task" /

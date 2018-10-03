@@ -117,17 +117,17 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
     }
     else
     {
-        std::string proc_name;
+        std::vector<std::string> command_line;
         if (spawn)
         {
-            proc_name = config().command.at(0);
+            command_line = config().command;
         }
         else
         {
-            proc_name = get_process_comm(pid);
+            command_line = get_process_cmdline(pid);
         }
 
-        ProcessController controller(pid, proc_name, spawn, monitor);
+        ProcessController controller(pid, command_line, spawn, monitor);
         controller.run();
     }
 }

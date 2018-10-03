@@ -42,9 +42,10 @@ public:
     {
     }
 
-    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn) override
+    virtual void insert_process(pid_t pid, pid_t ppid, const std::vector<std::string>& command_line,
+                                bool spawn) override
     {
-        (void)pid, (void)ppid, (void)proc_name, (void)spawn;
+        (void)pid, (void)ppid, (void)command_line, (void)spawn;
     }
 
     virtual void insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn) override
@@ -52,9 +53,9 @@ public:
         (void)pid, (void)tid, (void)name, (void)spawn;
     }
 
-    virtual void exit_process(pid_t pid) override
+    virtual void exit_process(pid_t pid, int exit_status) override
     {
-        (void)pid;
+        (void)pid, (void)exit_status;
     }
 
     virtual void exit_thread(pid_t tid) override

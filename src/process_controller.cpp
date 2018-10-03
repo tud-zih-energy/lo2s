@@ -107,8 +107,8 @@ static void ptrace_cont(pid_t pid, long signum = 0)
     ptrace_checked_call(PTRACE_CONT, pid, nullptr, reinterpret_cast<void*>(signum));
 }
 
-ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn,
-                                     monitor::AbstractProcessMonitor& monitor)
+ProcessController::ProcessController(pid_t child, const std::vector<std::string>& command_line,
+                                     bool spawn, monitor::AbstractProcessMonitor& monitor)
 : first_child_(child), default_signal_handler(signal(SIGINT, sig_handler)), monitor_(monitor),
   num_wakeups_(0)
 {
@@ -124,7 +124,7 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
 
     watched_threads_.add_main_thread_for_process(child);
 
-    monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, name, spawn);
+    monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, command_line, spawn);
 
     summary().add_thread();
 }
@@ -163,6 +163,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             pid_t new_pid = ptrace_geteventmsg(child);
 
             std::string command = get_process_comm(new_pid);
+            std::vector<std::string> cmdline = get_process_cmdline(new_pid);
             Log::debug() << "New process " << new_pid << " (" << command << "): forked from "
                          << child;
 
@@ -170,7 +171,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             // (1) Associate a main thread with this process.
             watched_threads_.add_main_thread_for_process(new_pid);
             // (2) Tell the process monitor to watch a new process.
-            monitor_.insert_process(new_pid, child, command);
+            monitor_.insert_process(new_pid, child, cmdline);
             // (3) Update our summary information.
             summary().add_thread();
         }
@@ -228,8 +229,10 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
             pid_t pid = watched_threads_.get_process_for_thread(child);
             if (pid == child)
             {
-                Log::info() << "Process " << child << " is about to exit";
-                monitor_.exit_process(child);
+                int exit_status = ptrace_geteventmsg(pid);
+                Log::info() << "Process " << child << " is about to exit with status "
+                            << exit_status;
+                monitor_.exit_process(child, exit_status);
             }
             else
             {
