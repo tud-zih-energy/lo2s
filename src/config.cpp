@@ -215,11 +215,11 @@ Arguments to options:
 
     // clang-format off
     os << "Usage:\n"
-          "  " << name << " [options] ./a.out\n"
-          "  " << name << " [options] -- ./a.out --option-to-a-out\n"
-          "  " << name << " [options] --pid $(pidof some-process)\n"
-          "  " << name << " [options] --all-cpus [./a.out]\n"
-          "\n" << desc << argument_detail;
+          "  " << name << " [options] [-a | -A] COMMAND\n"
+          "  " << name << " [options] [-a | -A] -- COMMAND [args to command...]\n"
+          "  " << name << " [options] [-a | -A] -p PID\n"
+               << desc
+               << argument_detail;
     // clang-format on
 }
 
@@ -286,6 +286,10 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("CLOCKID")
                 ->default_value("monotonic-raw"),
             "Reference clock used as timestamp source.")
+        ("pid,p",
+            po::value(&config.pid)
+                ->value_name("PID"),
+            "Attach to process of given PID.")
         ("list-clockids",
             po::bool_switch(&list_clockids)
                 ->default_value(false),
@@ -306,38 +310,36 @@ void parse_program_options(int argc, const char** argv)
     system_wide_options.add_options()
         ("all-cpus,a",
             po::bool_switch(&all_cpus),
-            "System-wide monitoring of all CPUs. If the name of an executable or a pid is given, monitor as long as it is running")
+            "System-wide monitoring of all CPUs. "
+            "Monitor as long as COMMAND is running or until PID exits.")
         ("all-cpus-sampling,A",
             po::bool_switch(&system_mode_sampling),
-            "System-wide monitoring with instruction sampling (Same as \"-a --instruction_sampling\")");
+            "System-wide monitoring with instruction sampling. "
+            "Shorthand for \"-a --instruction-sampling\".");
 
     sampling_options.add_options()
-        ("count,c",
-            po::value(&config.sampling_period)
-                ->value_name("N")
-                ->default_value(11010113),
-            "Sampling period (in number of events specified by -e).")
         ("instruction-sampling",
             po::bool_switch(&instruction_sampling),
-            "Enable instruction sampling")
+            "Enable instruction sampling.")
         ("no-instruction-sampling",
             po::bool_switch(&no_instruction_sampling),
-            "Disable instruction sampling")
+            "Disable instruction sampling.")
         ("event,e",
             po::value(&config.sampling_event)
                 ->value_name("EVENT")
                 ->default_value("instructions"),
             "Interrupt source event for sampling.")
+        ("count,c",
+            po::value(&config.sampling_period)
+                ->value_name("N")
+                ->default_value(11010113),
+            "Sampling period (in number of events specified by -e).")
         ("call-graph,g",
             po::bool_switch(&config.enable_cct),
             "Record call stack of instruction samples.")
         ("no-ip,n",
             po::bool_switch(&config.suppress_ip),
             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-        ("pid,p",
-            po::value(&config.pid)
-                ->value_name("PID"),
-            "Attach to process of given PID.")
         ("readout-interval,i",
             po::value(&read_interval_ms)
                 ->value_name("MSEC")
@@ -511,7 +513,7 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if(instruction_sampling && no_instruction_sampling)
+    if (instruction_sampling && no_instruction_sampling)
     {
         lo2s::Log::warn() << "Can not enable and disable instruction sampling at the same time";
     }
