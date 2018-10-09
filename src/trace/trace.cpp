@@ -344,14 +344,15 @@ void Trace::mark_process_end(pid_t pid, int status_code)
     }
     const otf2::definition::location& process_location = it_proc_loc->second;
 
-    if (missing_program_end_event_cache_.count(pid) == 0)
+    auto it_pid = missing_program_end_event_cache_.find(pid);
+    if (it_pid == missing_program_end_event_cache_.end())
     {
         Log::warn() << "Missing process_begin event for pid " << pid;
         return;
     }
 
     archive_(process_location) << otf2::event::program_end{ now, status_code };
-    missing_program_end_event_cache_.erase(pid);
+    missing_program_end_event_cache_.erase(it_pid);
 }
 
 void Trace::attach_process_location_group(const otf2::definition::system_tree_node& parent,
