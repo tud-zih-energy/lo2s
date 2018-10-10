@@ -221,7 +221,7 @@ void Writer::end()
 
             // Make sure that our last time point is before the first time
             // point.  This way samples on this location span a non-negative
-            // ammount of time.
+            // amount of time.
             last_time_point_ = std::max(last_time_point_, first_time_point_);
         }
 
