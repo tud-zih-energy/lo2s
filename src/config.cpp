@@ -612,9 +612,8 @@ void parse_program_options(int argc, const char** argv)
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
-            Log::error() << "Failed to determine a suitable metric leader event: " << e.what();
-            Log::error() << "Try manually specifying one with --metric-leader.";
-            std::exit(EXIT_FAILURE);
+            // Will be handled later in collect_requested_events
+            config.metric_leader.clear();
         }
     }
 
