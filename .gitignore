@@ -30,3 +30,4 @@
 
 # CMake-generated files
 include/lo2s/version.hpp
+man/lo2s.1

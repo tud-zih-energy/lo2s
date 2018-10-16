@@ -154,72 +154,12 @@ static inline void print_version(std::ostream& os)
 static inline void print_usage(std::ostream& os, const char* name,
                                const po::options_description& desc)
 {
-    static constexpr char argument_detail[] =
-        R"(
-Arguments to options:
-    PATH        A filesystem path.  If the pathname given in PATH is
-                relative, then  it is  interpreted  relative  to the
-                current working  directory of  lo2s, otherwise it is
-                interpreted as an absolute path.
-
-                NOTE: PATH arguments given to --output-trace support
-                simple variable substitution, where any occurence of
-                {<var>} will be replaced before being interpreted.
-
-                For substitution, <var> is one of the following:
-                - DATE:       current date (format %Y-%m-%dT%H-%M-%S)
-                - HOSTNAME:   current system host name
-                - ENV=<VAR>:  contents of environment variable <VAR>
-
-                Example:
-                    $ FOO=bar lo2s -o lo2s_{ENV=FOO}_{HOSTNAME} ...
-                    > Using trace directory: lo2s_bar_HAL-9000
-
-    EVENT       Name of a perf event.  Format is either
-                - for a predefined event:
-                    <name>
-                - for a kernel PMU event one of:
-                    <pmu>/<event>/
-                    <pmu>:<event>
-                  Kernel PMU events can be found at
-                    /sys/bus/event_source/devices/<pmu>/event/<event>.
-                - for a raw event:
-                    r<NNNN> where NNNN is the hexadecimal identifier
-                    of the event
-
-                To list all available event names, use --list-events.
-
-    TRACEPOINT  Name of a kernel tracepoint event.  Format is either
-                    <group>:<name>
-                or
-                    <group>/<name>.
-                Tracepoint events can be found at
-                    /sys/kernel/debug/tracing/events/<group>/<name>.
-
-                Use --list-tracepoints to get the names of available
-                tracepoints events.
-
-                NOTE:  Accessing tracepoint  events usually requires
-                read+execute permissions on /sys/kernel/debug.
-
-    CLOCKID     Name of a system clock.  To show a list of available
-                clock names, use --list-clockids.
-
-                NOTE: Clock names are determined at compile time and
-                might not be available when running on a system that
-                is not the build system.
-
-    KNOB        Name of a  x86_adapt  configuration item.  To show a
-                list of available knobs, use --list-knobs.
-)";
-
     // clang-format off
     os << "Usage:\n"
           "  " << name << " [options] [-a | -A] COMMAND\n"
           "  " << name << " [options] [-a | -A] -- COMMAND [args to command...]\n"
           "  " << name << " [options] [-a | -A] -p PID\n"
-               << desc
-               << argument_detail;
+       << desc;
     // clang-format on
 }
 

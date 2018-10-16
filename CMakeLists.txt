@@ -245,6 +245,8 @@ target_include_directories(lo2s PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
+add_subdirectory(man)
+
 # special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)
     target_compile_definitions(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
