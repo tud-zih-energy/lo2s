@@ -189,6 +189,8 @@ private:
 
     otf2::definition::string intern(const std::string&);
 
+    void create_symlink_to_latest();
+
     // This generates a contiguous set of IDs for all locations
     otf2::definition::location::reference_type location_ref() const
     {
