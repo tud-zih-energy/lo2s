@@ -172,7 +172,7 @@ const Config& config()
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description general_options("Options");
-    po::options_description system_wide_options("System-wide monitoring");
+    po::options_description system_mode_options("System-monitoring mode options");
     po::options_description sampling_options("Sampling options");
     po::options_description kernel_tracepoint_options("Kernel tracepoint options");
     po::options_description perf_metric_options("perf metric options");
@@ -247,14 +247,14 @@ void parse_program_options(int argc, const char** argv)
                 ->default_value(false),
             "List available x86_adapt CPU knobs.");
 
-    system_wide_options.add_options()
+    system_mode_options.add_options()
         ("all-cpus,a",
             po::bool_switch(&all_cpus),
-            "System-wide monitoring of all CPUs. "
+            "Start in system-monitoring mode for all CPUs. "
             "Monitor as long as COMMAND is running or until PID exits.")
         ("all-cpus-sampling,A",
             po::bool_switch(&system_mode_sampling),
-            "System-wide monitoring with instruction sampling. "
+            "System-monitoring mode with instruction sampling. "
             "Shorthand for \"-a --instruction-sampling\".");
 
     sampling_options.add_options()
@@ -345,7 +345,7 @@ void parse_program_options(int argc, const char** argv)
 
     po::options_description visible_options;
     visible_options.add(general_options)
-        .add(system_wide_options)
+        .add(system_mode_options)
         .add(sampling_options)
         .add(kernel_tracepoint_options)
         .add(perf_metric_options)

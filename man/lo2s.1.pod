@@ -35,9 +35,9 @@ B<lo2s> creates B<OTF2>-traces of uninstrumented processes and systems using the
 Linux L<perf(1)> infrastructure, in particular the L<perf_event_open(2)> system
 call.
 
-It offers two modes of operation: I<process monitoring mode> and
-I<system monitoring mode>.
-In I<process monitoring mode>, B<lo2s> will record information about a single
+It offers two modes of operation: I<process-monitoring mode> and
+I<system-monitoring mode>.
+In I<process-monitoring mode>, B<lo2s> will record information about a single
 process and its descendants.
 If I<COMMAND> is given, B<lo2s> acts as a prefix command, launching I<COMMAND>
 and monitoring it until it exits.
@@ -47,7 +47,7 @@ In case you want to monitor a process which is already running, specify B<-p>
 I<PID> instead, where I<PID> is the process identifier of interest.
 Monitoring will last until I<PID> exits.
 
-I<System monitoring mode> is enabled by passing the option B<-a>.
+I<System-monitoring mode> is enabled by passing the option B<-a>.
 In this mode, B<lo2s> will monitor processes on all available CPUs indefinitely.
 Optionally, if either I<COMMAND> or I<PID> is given, system monitoring will stop
 when the respective processes exit.
@@ -175,7 +175,7 @@ I<COMMAND>.
 
 =item B<-a>, B<--all-cpus>
 
-Start B<lo2s> in I<system-wide mode>.
+Start B<lo2s> in I<system-monitoring mode>.
 
 =item B<-A>, B<--all-cpus-sampling>
 
