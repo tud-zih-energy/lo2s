@@ -47,7 +47,7 @@ Writer::~Writer()
             thread_calling_context_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(last_pid_),
                                         std::forward_as_tuple(thread_calling_context_refs_.size()));
 
-        otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), elem.first->second);
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()), elem.first->second);
     }
 
     if (!thread_calling_context_refs_.empty())
@@ -74,18 +74,18 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     {
         if(last_event_type == LEAVE)
         {
-            otf2_writer_.write_enter(tp, elem.first->second);
+            otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
         }
-        otf2_writer_.write_leave(tp, elem.first->second);
+        otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         last_event_type = LEAVE;
     }
     else
     {
         if(last_event_type == ENTER)
         {
-            otf2_writer_.write_leave(tp, last_pid_);
+            otf2_writer_.write_calling_context_leave(tp, last_pid_);
         }
-        otf2_writer_.write_enter(tp, elem.first->second);
+        otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
 
         summary().register_process(context_switch->next_prev_pid);
         last_event_type = ENTER;
