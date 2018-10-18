@@ -253,22 +253,22 @@ void Trace::create_symlink_to_latest()
 {
     boost::filesystem::path symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
 
-    if (!symlink_path.empty())
+    if(symlink_path.empty())
     {
-        if (boost::filesystem::is_symlink(symlink_path) || !boost::filesystem::exists(symlink_path))
-        {
-            if (boost::filesystem::exists(symlink_path))
-            {
-                boost::filesystem::remove(symlink_path);
-            }
-            boost::filesystem::create_symlink(trace_name_, symlink_path);
-        }
-        else
-        {
-            Log::warn() << "The path " << symlink_path
-                        << " exists and isn't a symlink, refusing to create link to latest trace";
-        }
+        return;
     }
+
+    if (boost::filesystem::is_symlink(symlink_path))
+    {
+        boost::filesystem::remove(symlink_path);
+    }
+    else if(boost::filesystem::exists(symlink_path))
+    {
+        Log::warn() << "The path " << symlink_path
+                    << " exists and isn't a symlink, refusing to create link to latest trace";
+        return;
+    }
+    boost::filesystem::create_symlink(trace_name_, symlink_path);
 }
 
 std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sampling_dso()
