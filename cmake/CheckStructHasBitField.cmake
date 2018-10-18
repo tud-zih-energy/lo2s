@@ -1,6 +1,6 @@
 include(CheckCSourceCompiles)
 
-macro(CHECK_STRUCT_HAS_BITFIELD _STRUCT _MEMBER _HEADER _RESULT)
+function(CHECK_STRUCT_HAS_BITFIELD _STRUCT _MEMBER _HEADER _RESULT)
     set(_INCLUDE_FILES)
     foreach(it ${_HEADER})
         string(APPEND _INCLUDE_FILES "#include <${it}>\n")
@@ -17,4 +17,4 @@ macro(CHECK_STRUCT_HAS_BITFIELD _STRUCT _MEMBER _HEADER _RESULT)
     ")
 
     CHECK_C_SOURCE_COMPILES("${_CHECK_STRUCT_MEMBER_SOURCE_CODE}" ${_RESULT})
-endmacro()
+endfunction()
