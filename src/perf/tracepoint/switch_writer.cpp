@@ -109,7 +109,6 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     last_time_point_ = tp;
 
     summary().register_process(next_pid);
-
     return false;
 }
 

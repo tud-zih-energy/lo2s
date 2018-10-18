@@ -44,15 +44,15 @@ Writer::~Writer()
     if (last_event_type == ENTER)
     {
         auto elem =
-            thread_region_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(last_pid_),
-                                        std::forward_as_tuple(thread_region_refs_.size()));
+            thread_calling_context_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(last_pid_),
+                                        std::forward_as_tuple(thread_calling_context_refs_.size()));
 
         otf2_writer_.write_leave(std::max(last_time_point_, lo2s::time::now()), elem.first->second);
     }
 
-    if (!thread_region_refs_.empty())
+    if (!thread_calling_context_refs_.empty())
     {
-        const auto& mapping = trace_.merge_tids(thread_region_refs_);
+        const auto& mapping = trace_.merge_thread_calling_contexts(thread_calling_context_refs_);
         otf2_writer_ << mapping;
     }
 }
@@ -65,9 +65,9 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     }
 
     auto tp = time_converter_(context_switch->time);
-    auto elem = thread_region_refs_.emplace(std::piecewise_construct,
+    auto elem = thread_calling_context_refs_.emplace(std::piecewise_construct,
                                             std::forward_as_tuple(context_switch->next_prev_pid),
-                                            std::forward_as_tuple(thread_region_refs_.size()));
+                                            std::forward_as_tuple(thread_calling_context_refs_.size()));
 
     // Check if we left the region
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)

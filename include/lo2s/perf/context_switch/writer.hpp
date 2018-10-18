@@ -25,7 +25,7 @@
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/definition/region.hpp>
+#include <otf2xx/definition/calling_context.hpp>
 #include <otf2xx/writer/local.hpp>
 namespace lo2s
 {
@@ -47,7 +47,7 @@ private:
     otf2::writer::local& otf2_writer_;
     const time::Converter time_converter_;
     trace::Trace& trace_;
-    std::map<pid_t, otf2::definition::region::reference_type> thread_region_refs_;
+    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type> thread_calling_context_refs_;
 
     pid_t last_pid_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
