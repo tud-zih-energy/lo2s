@@ -231,6 +231,7 @@ if(Git_FOUND)
 endif()
 if(IN_GIT)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE LO2S_VERSION_STRING
     )
     string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
