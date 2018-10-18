@@ -52,12 +52,12 @@ private:
     pid_t last_pid_;
     otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
 
-    enum LAST_EVENT_TYPE
+    enum class LastEventType
     {
-        ENTER,
-        LEAVE
+        enter,
+        leave
     };
-    int last_event_type = LEAVE;
+    LastEventType last_event_type = LastEventType::leave;
 };
 } // namespace context_switch
 } // namespace perf
