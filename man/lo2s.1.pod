@@ -239,6 +239,8 @@ Set instruction sampling interrupt source event.
 
 Record an instruction sample each time I<N> instruction sampling interrupt
 source events have occurred (as specified by B<--event>).
+The default value is chosen to be a prime number to avoid aliasing effects on
+repetetive instruction execution in tight loops.
 
 =item B<-g>, B<--call-graph>
 
