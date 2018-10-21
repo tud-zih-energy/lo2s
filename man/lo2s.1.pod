@@ -162,6 +162,16 @@ frequencies.
 The maximum amount of mappable memory per system is configured by
 F</proc/sys/kernel/perf_event_mlock_kb>.
 
+=item B<-i>, B<--readout-interval> I<MSEC> (default: C<100>)
+
+Wake up B<lo2s> every I<MSEC> milliseconds to read both metric event and
+sampling event buffers.
+Increasing this values reduces the perturbation of measurements introduced by
+B<lo2s> waking up to read buffers, but increases the risk of losing samples
+because of overflowing buffers.
+Use in conjunction with B<--mmap-pages>, B<--count> and B<--metric-count> to
+minimize B<lo2s>'s overhead for your measurements.
+
 =item B<-k>, B<--clockid> I<CLOCKID>
 
 Set the internal reference clock used as a source of timestamps.
@@ -233,11 +243,6 @@ source events have occurred (as specified by B<--event>).
 =item B<-g>, B<--call-graph>
 
 Record call stack of instruction samples.
-
-=item B<-i>, B<--readout-interval> I<MSEC> (default: C<100>)
-
-Wake up B<lo2s> every I<MSEC> milliseconds to read both metric event and
-sampling event buffers.
 
 =item B<-->[B<no->]B<disassemble>
 

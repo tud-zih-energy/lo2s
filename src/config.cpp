@@ -221,6 +221,11 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("PAGES")
                 ->default_value(16),
             "Number of pages to be used by internal buffers.")
+        ("readout-interval,i",
+            po::value(&read_interval_ms)
+                ->value_name("MSEC")
+                ->default_value(100),
+            "Time interval between metric and sampling buffer readouts in milliseconds.")
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
@@ -280,11 +285,6 @@ void parse_program_options(int argc, const char** argv)
         ("no-ip,n",
             po::bool_switch(&config.suppress_ip),
             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-        ("readout-interval,i",
-            po::value(&read_interval_ms)
-                ->value_name("MSEC")
-                ->default_value(100),
-            "Time interval between metric and sampling buffer readouts in milliseconds.")
         ("disassemble",
             po::bool_switch(&disassemble),
             "Enable augmentation of samples with instructions (default if supported).")
