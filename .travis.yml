@@ -120,14 +120,13 @@ before_script:
   - sudo apt-get --no-install-suggests --no-install-recommends --force-yes install libiberty-dev
 
 script:
+  - sudo pip install git-archive-all
   - cmake --version
   - cmake . -DUSE_RADARE=OFF -DUSE_PERF_CLOCKID=OFF
   - make
   - ctest -V .
 
 before_deploy:
-  - sudo pip install git-archive-all
-  - cmake .
   - make dist
 
 deploy:
