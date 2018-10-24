@@ -246,6 +246,8 @@ target_include_directories(lo2s PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
+add_subdirectory(man)
+
 # special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)
     target_compile_definitions(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
@@ -350,7 +352,7 @@ if(GIT_ARCHIVE_ALL)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
         COMMAND cmake -E remove -f ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
-        COMMAND git-archive-all --prefix=${ARCHIVE_NAME} ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+        COMMAND git-archive-all --prefix ${ARCHIVE_NAME}/ ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
     add_custom_target(dist DEPENDS ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2)
