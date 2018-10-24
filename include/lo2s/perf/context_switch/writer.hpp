@@ -57,7 +57,7 @@ private:
         enter,
         leave
     };
-    LastEventType last_event_type = LastEventType::leave;
+    LastEventType last_event_type_ = LastEventType::leave;
 };
 } // namespace context_switch
 } // namespace perf

@@ -41,7 +41,7 @@ Writer::Writer(int cpu, trace::Trace& trace)
 Writer::~Writer()
 {
     // Always close the last entered region
-    if (last_event_type == LastEventType::enter)
+    if (last_event_type_ == LastEventType::enter)
     {
         auto elem =
             thread_calling_context_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(last_pid_),
@@ -72,23 +72,23 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     // Check if we left the region
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        if(last_event_type == LastEventType::leave)
+        if(last_event_type_ == LastEventType::leave)
         {
             otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
         }
         otf2_writer_.write_calling_context_leave(tp, elem.first->second);
-        last_event_type = LastEventType::leave;
+        last_event_type_ = LastEventType::leave;
     }
     else
     {
-        if(last_event_type == LastEventType::enter)
+        if(last_event_type_ == LastEventType::enter)
         {
             otf2_writer_.write_calling_context_leave(tp, last_pid_);
         }
         otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
 
         summary().register_process(context_switch->next_prev_pid);
-        last_event_type = LastEventType::enter;
+        last_event_type_ = LastEventType::enter;
     }
 
     last_time_point_ = tp;
