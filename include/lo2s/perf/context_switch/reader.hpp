@@ -44,7 +44,6 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    using EventReader<T>::init_mmap;
     Reader(int cpuid)
     {
         struct perf_event_attr perf_attr;
@@ -124,6 +123,9 @@ public:
         }
         this->read();
     }
+
+protected:
+    using EventReader<T>::init_mmap;
 
 private:
     int fd_;

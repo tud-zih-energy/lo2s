@@ -43,11 +43,7 @@ Writer::~Writer()
     // Always close the last entered region
     if (last_event_type_ == LastEventType::enter)
     {
-        auto elem =
-            thread_calling_context_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(last_pid_),
-                                        std::forward_as_tuple(thread_calling_context_refs_.size()));
-
-        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()), elem.first->second);
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()), last_calling_context_);
     }
 
     if (!thread_calling_context_refs_.empty())
@@ -83,7 +79,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     {
         if(last_event_type_ == LastEventType::enter)
         {
-            otf2_writer_.write_calling_context_leave(tp, last_pid_);
+            otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         }
         otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
 
@@ -92,7 +88,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     }
 
     last_time_point_ = tp;
-    last_pid_ = context_switch->next_prev_pid;
+    last_calling_context_ = elem.first->second;
     return false;
 }
 } // namespace context_switch

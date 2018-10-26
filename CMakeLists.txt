@@ -275,7 +275,7 @@ else()
     endif()
 endif()
 
-if( USE_PERF_RECORD_SWITCH)
+if(USE_PERF_RECORD_SWITCH)
     target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
     target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
 else()
