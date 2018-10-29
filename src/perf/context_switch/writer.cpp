@@ -64,13 +64,12 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     auto elem = thread_calling_context_refs_.emplace(std::piecewise_construct,
                                             std::forward_as_tuple(context_switch->next_prev_pid),
                                             std::forward_as_tuple(thread_calling_context_refs_.size()));
-
-    // Check if we left the region
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
         if(last_event_type_ == LastEventType::leave)
         {
-            otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
+            Log::trace() << "Writing missing calling context enter event for current calling context leave event.";
+            otf2_writer_.write_calling_context_enter(last_time_point_, elem.first->second, 2);
         }
         otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         last_event_type_ = LastEventType::leave;
@@ -79,6 +78,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     {
         if(last_event_type_ == LastEventType::enter)
         {
+            Log::trace() << "Writing missing calling context leave event for the last calling context enter event.";
             otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         }
         otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
@@ -86,7 +86,6 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
         summary().register_process(context_switch->next_prev_pid);
         last_event_type_ = LastEventType::enter;
     }
-
     last_time_point_ = tp;
     last_calling_context_ = elem.first->second;
     return false;
