@@ -113,8 +113,6 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    using EventReader<T>::init_mmap;
-
     Reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
     {
         struct perf_event_attr attr;
@@ -198,6 +196,9 @@ public:
         }
         this->read();
     }
+
+protected:
+    using EventReader<T>::init_mmap;
 
 private:
     int cpu_;

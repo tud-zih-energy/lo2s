@@ -10,6 +10,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
+include(cmake/CheckStructHasBitField.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -100,10 +101,13 @@ find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 
+CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
+
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 
@@ -147,7 +151,7 @@ set(SOURCE_FILES
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
-    src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
+    src/perf/tracepoint/writer.cpp
     src/perf/tracepoint/exit_reader.cpp
 
     src/time/time.cpp
@@ -271,6 +275,13 @@ else()
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
         message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
     endif()
+endif()
+
+if(USE_PERF_RECORD_SWITCH)
+    target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
+    target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
+else()
+    target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
 endif()
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")

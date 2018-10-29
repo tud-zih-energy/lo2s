@@ -104,6 +104,14 @@ public:
         uint64_t time;
         // struct sample_id sample_id;
     };
+    struct RecordSwitchCpuWideType
+    {
+        struct perf_event_header header;
+        uint32_t next_prev_pid;
+        uint32_t next_prev_tid;
+        uint64_t time;
+        // struct sample_id sample_id;
+    };
 
     /**
      * \brief structure for PERF_RECORD_COMM events
@@ -203,6 +211,11 @@ public:
                 case PERF_RECORD_MMAP2:
                     stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                     break;
+#ifdef USE_PERF_RECORD_SWITCH
+                case PERF_RECORD_SWITCH_CPU_WIDE:
+                    stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
+                    break;
+#endif
                 case PERF_RECORD_THROTTLE: /* fall-through */
                 case PERF_RECORD_UNTHROTTLE:
                     throttle_samples++;
