@@ -47,9 +47,11 @@ private:
     otf2::writer::local& otf2_writer_;
     const time::Converter time_converter_;
     trace::Trace& trace_;
-    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type> thread_calling_context_refs_;
+    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
+        thread_calling_context_refs_;
 
-    otf2::definition::calling_context::reference_type last_calling_context_ = otf2::definition::calling_context::reference_type::undefined();
+    otf2::definition::calling_context::reference_type last_calling_context_ =
+        otf2::definition::calling_context::reference_type::undefined();
     otf2::chrono::time_point last_time_point_;
 
     enum class LastEventType

@@ -49,7 +49,7 @@ public:
         struct perf_event_attr perf_attr;
         memset(&perf_attr, 0, sizeof(struct perf_event_attr));
 
-        //We only want the Context Switch samples, so set up a dummy sampling event
+        // We only want the Context Switch samples, so set up a dummy sampling event
         perf_attr.type = PERF_TYPE_SOFTWARE;
         perf_attr.size = sizeof(struct perf_event_attr);
         perf_attr.config = PERF_COUNT_SW_DUMMY;
@@ -61,14 +61,13 @@ public:
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif
-        //the perf_attr.sample_type information should also show up in context switches
+        // the perf_attr.sample_type information should also show up in context switches
         perf_attr.sample_id_all = 1;
         perf_attr.context_switch = 1;
 
         perf_attr.watermark = 1;
         perf_attr.wakeup_watermark =
             static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
-
 
         fd_ = perf_event_open(&perf_attr, -1, cpuid, -1, 0);
         if (fd_ < 0)

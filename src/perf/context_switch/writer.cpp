@@ -33,8 +33,8 @@ namespace context_switch
 {
 
 Writer::Writer(int cpu, trace::Trace& trace)
-: Reader(cpu), otf2_writer_(trace.cpu_switch_writer(cpu)), time_converter_(time::Converter::instance()),
-  trace_(trace)
+: Reader(cpu), otf2_writer_(trace.cpu_switch_writer(cpu)),
+  time_converter_(time::Converter::instance()), trace_(trace), last_time_point_(lo2s::time::now())
 {
 }
 
@@ -43,7 +43,8 @@ Writer::~Writer()
     // Always close the last entered region
     if (last_event_type_ == LastEventType::enter)
     {
-        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()), last_calling_context_);
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
+                                                 last_calling_context_);
     }
 
     if (!thread_calling_context_refs_.empty())
@@ -61,24 +62,27 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     }
 
     auto tp = time_converter_(context_switch->time);
-    auto elem = thread_calling_context_refs_.emplace(std::piecewise_construct,
-                                            std::forward_as_tuple(context_switch->next_prev_pid),
-                                            std::forward_as_tuple(thread_calling_context_refs_.size()));
+    auto elem = thread_calling_context_refs_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(context_switch->next_prev_pid),
+        std::forward_as_tuple(thread_calling_context_refs_.size()));
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        if(last_event_type_ == LastEventType::leave)
+        if (last_event_type_ == LastEventType::leave)
         {
-            Log::trace() << "Writing missing calling context enter event for current calling context leave event.";
-            otf2_writer_.write_calling_context_enter(last_time_point_, elem.first->second, 2);
+            Log::trace() << "Writing missing calling context enter event for current calling "
+                            "context leave event.";
+            otf2_writer_.write_calling_context_enter(std::min(last_time_point_, tp),
+                                                     elem.first->second, 2);
         }
         otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         last_event_type_ = LastEventType::leave;
     }
     else
     {
-        if(last_event_type_ == LastEventType::enter)
+        if (last_event_type_ == LastEventType::enter)
         {
-            Log::trace() << "Writing missing calling context leave event for the last calling context enter event.";
+            Log::trace() << "Writing missing calling context leave event for the last calling "
+                            "context enter event.";
             otf2_writer_.write_calling_context_leave(tp, elem.first->second);
         }
         otf2_writer_.write_calling_context_enter(tp, elem.first->second, 2);
