@@ -28,4 +28,4 @@ namespace monitor
 {
 void process_monitor_main(monitor::AbstractProcessMonitor& monitor);
 }
-}
+} // namespace lo2s

@@ -78,5 +78,5 @@ protected:
 
     std::size_t num_wakeups_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

@@ -31,9 +31,10 @@
 #include <stdexcept> // for use by ClockProvider::InvalidClock
 #include <string>    // for use by ClockProvider::get_clock_by_name
 
-extern "C" {
-#include <unistd.h>
+extern "C"
+{
 #include <linux/version.h>
+#include <unistd.h>
 }
 
 // All the time stuff is based on the assumption that all times are nanoseconds.
@@ -85,54 +86,65 @@ public:
 
     static const ClockDescription& get_clock_by_name(const std::string& name);
 
-    static auto& get_descriptions() {
+    static auto& get_descriptions()
+    {
         return clocks_;
     }
 
 private:
     static constexpr ClockDescription clocks_[] = {
         {
-            "realtime", CLOCK_REALTIME,
+            "realtime",
+            CLOCK_REALTIME,
         },
 #ifdef _POSIX_MONOTONIC_CLOCK
         {
-            "monotonic", CLOCK_MONOTONIC,
+            "monotonic",
+            CLOCK_MONOTONIC,
         },
 #endif
 #ifdef _POSIX_CPUTIME
         {
-            "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
+            "process-cputime-id",
+            CLOCK_PROCESS_CPUTIME_ID,
         },
 #endif
 #ifdef _POSIX_THREAD_CPUTIME
         {
-            "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
+            "process-thread-id",
+            CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
         {
-            "monotonic-raw", CLOCK_MONOTONIC_RAW,
+            "monotonic-raw",
+            CLOCK_MONOTONIC_RAW,
         },
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
         {
-            "realtime-coarse", CLOCK_REALTIME_COARSE,
+            "realtime-coarse",
+            CLOCK_REALTIME_COARSE,
         },
         {
-            "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
+            "monotonic-coarse",
+            CLOCK_MONOTONIC_COARSE,
         },
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
         {
-            "boottime", CLOCK_BOOTTIME,
+            "boottime",
+            CLOCK_BOOTTIME,
         },
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
         {
-            "realtime-alarm", CLOCK_REALTIME_ALARM,
+            "realtime-alarm",
+            CLOCK_REALTIME_ALARM,
         },
         {
-            "boottime-alarm", CLOCK_BOOTTIME_ALARM,
+            "boottime-alarm",
+            CLOCK_BOOTTIME_ALARM,
         },
 #endif
     };
@@ -142,5 +154,5 @@ inline otf2::chrono::time_point now()
 {
     return otf2::chrono::convert_time_point(Clock::now());
 }
-}
-}
+} // namespace time
+} // namespace lo2s

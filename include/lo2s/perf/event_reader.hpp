@@ -23,9 +23,9 @@
 
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/mmap.hpp>
 #include <lo2s/platform.hpp>
 #include <lo2s/util.hpp>
-#include <lo2s/mmap.hpp>
 
 #include <algorithm>
 #include <cassert>

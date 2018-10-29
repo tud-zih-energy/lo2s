@@ -27,11 +27,13 @@
 #include <otf2xx/chrono/chrono.hpp>
 
 #ifndef HW_BREAKPOINT_COMPAT
-extern "C" {
+extern "C"
+{
 #include <linux/hw_breakpoint.h>
 }
 #else
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 #include <sys/wait.h>
 }
@@ -70,7 +72,6 @@ Reader::Reader()
     attr.clockid = config().clockid;
 #endif
 
-
     init(attr, 0, -1, false, 1);
 
 #ifdef HW_BREAKPOINT_COMPAT
@@ -90,6 +91,6 @@ bool Reader::handle(const RecordSyncType* sync_event)
     perf_time = convert_time_point(sync_event->time);
     return true;
 }
-}
-}
-}
+} // namespace time
+} // namespace perf
+} // namespace lo2s

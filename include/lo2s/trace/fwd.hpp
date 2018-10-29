@@ -28,5 +28,5 @@ namespace trace
 class Trace;
 
 class Counters;
-}
-}
+} // namespace trace
+} // namespace lo2s

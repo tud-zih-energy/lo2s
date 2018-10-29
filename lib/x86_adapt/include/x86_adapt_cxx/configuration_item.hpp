@@ -91,4 +91,4 @@ inline bool operator<(const configuration_item& a, const configuration_item& b)
 {
     return a.id() < b.id();
 }
-}
+} // namespace x86_adapt

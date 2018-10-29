@@ -113,5 +113,5 @@ void FdMonitor::run()
         }
     } while (!stop_requested);
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

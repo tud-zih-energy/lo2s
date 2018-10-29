@@ -69,6 +69,6 @@ private:
     wrapper::PluginInfo plugin_;
     std::vector<Channel> channels_;
 };
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s

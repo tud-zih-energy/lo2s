@@ -102,4 +102,4 @@ private:
     int handle_;
     int dev_;
 };
-}
+} // namespace x86_adapt

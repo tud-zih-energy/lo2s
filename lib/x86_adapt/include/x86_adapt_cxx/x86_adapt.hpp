@@ -88,4 +88,4 @@ public:
         return configuration_items(X86_ADAPT_DIE);
     }
 };
-}
+} // namespace x86_adapt

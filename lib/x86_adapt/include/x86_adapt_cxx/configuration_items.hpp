@@ -109,4 +109,4 @@ private:
     x86_adapt_device_type type_;
     int num_items_;
 };
-}
+} // namespace x86_adapt

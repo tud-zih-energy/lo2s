@@ -42,5 +42,5 @@ const ClockDescription& ClockProvider::get_clock_by_name(const std::string& name
     using namespace std::literals::string_literals;
     throw InvalidClock("clock \'"s + name + "\' is not available"s);
 }
-}
-}
+} // namespace time
+} // namespace lo2s

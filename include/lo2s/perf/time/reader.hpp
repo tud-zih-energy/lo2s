@@ -59,6 +59,6 @@ public:
     otf2::chrono::time_point local_time = otf2::chrono::genesis();
     perf::Clock::time_point perf_time;
 };
-}
-}
-}
+} // namespace time
+} // namespace perf
+} // namespace lo2s

@@ -23,7 +23,8 @@
 
 #include <string>
 
-extern "C" {
+extern "C"
+{
 #include <linux/perf_event.h>
 }
 
@@ -44,5 +45,5 @@ struct CounterDescription
     std::uint64_t config;
     std::uint64_t config1;
 };
-}
-}
+} // namespace perf
+} // namespace lo2s

@@ -78,7 +78,7 @@ inline auto parse_list(std::string list) -> std::set<uint32_t>
 
     return res;
 }
-}
+} // namespace detail
 
 class Topology
 {
@@ -234,4 +234,4 @@ private:
 
     const static fs::path base_path;
 };
-}
+} // namespace lo2s
