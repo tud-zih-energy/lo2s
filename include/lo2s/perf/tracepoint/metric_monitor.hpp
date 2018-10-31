@@ -60,6 +60,6 @@ private:
 private:
     std::vector<Writer> perf_writers_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

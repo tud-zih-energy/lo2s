@@ -153,7 +153,7 @@ static bool event_is_openable(const CounterDescription& ev)
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = 0;
+    attr.exclude_kernel = 1;
 
     int fd = perf_event_open(&attr, 0, -1, -1, 0);
     if (fd == -1)
@@ -261,6 +261,7 @@ const CounterDescription& EventProvider::get_default_metric_leader_event()
              "ref-cycles",
              "cpu-cycles",
              "bus-cycles",
+             "cpu-clock",
          })
     {
         try

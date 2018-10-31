@@ -35,7 +35,8 @@
 
 #include <ios>
 
-extern "C" {
+extern "C"
+{
 #include <fcntl.h>
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>
@@ -111,8 +112,6 @@ public:
         // char data[size];
         RecordDynamicFormat raw_data;
     };
-
-    using EventReader<T>::init_mmap;
 
     Reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
     {
@@ -198,6 +197,9 @@ public:
         this->read();
     }
 
+protected:
+    using EventReader<T>::init_mmap;
+
 private:
     int cpu_;
     int fd_ = -1;
@@ -206,6 +208,6 @@ private:
 
 template <typename T>
 const fs::path Reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

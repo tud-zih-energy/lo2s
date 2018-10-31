@@ -9,6 +9,6 @@ class CpuMonitor
     CpuMonitor(int cpu, ProcessMonitor& parent_monitor);
     ~CpuMonitor();
 
-void
+    void
 };
-}
+} // namespace lo2s

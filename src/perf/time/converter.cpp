@@ -63,6 +63,6 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
                  << reader.local_time.time_since_epoch().count() << "ns - "
                  << reader.perf_time.time_since_epoch().count() << "ns).";
 }
-}
-}
-}
+} // namespace time
+} // namespace perf
+} // namespace lo2s

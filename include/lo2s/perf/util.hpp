@@ -2,7 +2,8 @@
 
 #include <lo2s/util.hpp>
 
-extern "C" {
+extern "C"
+{
 #include <syscall.h>
 }
 
@@ -28,5 +29,5 @@ static inline int perf_event_open(struct perf_event_attr* perf_attr, pid_t tid, 
 {
     return syscall(__NR_perf_event_open, perf_attr, tid, cpu, group_fd, flags);
 }
-}
-}
+} // namespace perf
+} // namespace lo2s

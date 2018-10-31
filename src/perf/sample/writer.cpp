@@ -207,10 +207,32 @@ void Writer::end()
 {
     if (cpuid_ == -1)
     {
-        // time::now() can sometimes can be in the past :-(
-        last_time_point_ = std::max(last_time_point_, lo2s::time::now());
+        // Relative to the timestamps on samples (which stem from a kernel
+        // clock), time::now() can sometimes can be in the past :-(
+        // Therefore, ensure that last_time_point_ >= now.
+        auto now = lo2s::time::now();
+        last_time_point_ = std::max(last_time_point_, now);
+
+        // If we have never written any samples on this location, we also never
+        // got to write the thread_begin event.  Make sure we do that now.
+        if (first_event_)
+        {
+            // first_time_point_ will always be before any other timestamp on
+            // this location.  If no samples were written, it is initialized by
+            // time::now(), which is a monotone clock, therefore it is before
+            // the call to time::now() from above.  If any samples were written,
+            // the required check has occured in handle() above.
+            otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_),
+                                                      -1);
+        }
+
+        // At this point, transitivity and monotonicity (of lo2s::time::now())
+        // ensure that first_time_point_ <= last_time_point_, therefore samples
+        // on this location span a non-negative amount of time between the
+        // thread_begin and thread_end event.
         otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
     }
+
     monitor_.insert_cached_mmap_events(cached_mmap_events_);
 }
 } // namespace sample

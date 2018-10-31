@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,50 +21,46 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/tracepoint/reader.hpp>
-
+#include <lo2s/perf/context_switch/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-
 #include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/definition/metric_instance.hpp>
-#include <otf2xx/event/metric.hpp>
+#include <otf2xx/definition/calling_context.hpp>
 #include <otf2xx/writer/local.hpp>
-
-#include <vector>
-
 namespace lo2s
 {
 namespace perf
 {
-namespace tracepoint
+namespace context_switch
 {
-// Note, this cannot be protected for CRTP reasons...
+
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(int cpu, const EventFormat& event, trace::Trace& trace,
-           const otf2::definition::metric_class& metric_class);
+    Writer(int cpu, trace::Trace& trace);
+    ~Writer();
 
-    Writer(const Writer& other) = delete;
-
-    Writer(Writer&& other) = default;
-
-public:
     using Reader<Writer>::handle;
-
-    bool handle(const Reader::RecordSampleType* sample);
+    bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
 
 private:
-    EventFormat event_;
-    otf2::writer::local& writer_;
-    otf2::definition::metric_instance metric_instance_;
-
+    otf2::writer::local& otf2_writer_;
     const time::Converter time_converter_;
+    trace::Trace& trace_;
+    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
+        thread_calling_context_refs_;
 
-    otf2::event::metric metric_event_;
+    otf2::definition::calling_context::reference_type last_calling_context_ =
+        otf2::definition::calling_context::reference_type::undefined();
+    otf2::chrono::time_point last_time_point_;
+
+    enum class LastEventType
+    {
+        enter,
+        leave
+    };
+    LastEventType last_event_type_ = LastEventType::leave;
 };
-} // namespace tracepoint
+} // namespace context_switch
 } // namespace perf
 } // namespace lo2s

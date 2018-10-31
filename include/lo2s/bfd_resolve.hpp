@@ -40,7 +40,8 @@ using std::hex;
 
 #include <cassert>
 
-extern "C" {
+extern "C"
+{
 // https://sourceware.org/bugzilla/show_bug.cgi?id=14243
 #define PACKAGE 1
 #define PACKAGE_VERSION 1
@@ -153,5 +154,5 @@ private:
 
     static Initializer dummy_;
 };
-}
-}
+} // namespace bfdr
+} // namespace lo2s

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lo2s VERSION 1.0.1)
+project(lo2s VERSION 1.1.1)
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
@@ -11,6 +11,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
+include(cmake/CheckStructHasBitField.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -101,10 +102,13 @@ find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 
+CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
+
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 
@@ -148,7 +152,7 @@ set(SOURCE_FILES
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
-    src/perf/tracepoint/writer.cpp src/perf/tracepoint/switch_writer.cpp
+    src/perf/tracepoint/writer.cpp
     src/perf/tracepoint/exit_reader.cpp
 
     src/time/time.cpp
@@ -232,6 +236,7 @@ if(Git_FOUND)
 endif()
 if(IN_GIT)
     execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --tags --dirty
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE LO2S_VERSION_STRING
     )
     string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
@@ -245,6 +250,8 @@ target_include_directories(lo2s PRIVATE
     include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
+
+add_subdirectory(man)
 
 # special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)
@@ -271,6 +278,12 @@ else()
     endif()
 endif()
 
+if(USE_PERF_RECORD_SWITCH)
+    target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
+    target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
+else()
+    target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
+endif()
 CHECK_NAME_EXISTS(PERF_COUNT_SW_ALIGNMENT_FAULTS linux/perf_event.h HAVE_ALIGNMENT_FAULTS)
 
 if(HAVE_ALIGNMENT_FAULTS)
@@ -355,7 +368,7 @@ if(GIT_ARCHIVE_ALL)
     add_custom_command(
         OUTPUT ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
         COMMAND cmake -E remove -f ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
-        COMMAND git-archive-all --prefix=${ARCHIVE_NAME} ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
+        COMMAND git-archive-all --prefix ${ARCHIVE_NAME}/ ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
     add_custom_target(dist DEPENDS ${CMAKE_BINARY_DIR}/${ARCHIVE_NAME}.tar.bz2)

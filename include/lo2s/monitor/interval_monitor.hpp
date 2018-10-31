@@ -79,5 +79,5 @@ private:
 
     std::chrono::nanoseconds interval_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

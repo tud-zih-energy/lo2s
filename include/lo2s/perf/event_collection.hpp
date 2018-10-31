@@ -36,5 +36,5 @@ struct EventCollection
 };
 
 const EventCollection& requested_events();
-}
-}
+} // namespace perf
+} // namespace lo2s

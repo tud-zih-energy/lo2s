@@ -31,9 +31,10 @@
 #include <stdexcept> // for use by ClockProvider::InvalidClock
 #include <string>    // for use by ClockProvider::get_clock_by_name
 
-extern "C" {
-#include <unistd.h>
+extern "C"
+{
 #include <linux/version.h>
+#include <unistd.h>
 }
 
 // All the time stuff is based on the assumption that all times are nanoseconds.
@@ -85,58 +86,69 @@ public:
 
     static const ClockDescription& get_clock_by_name(const std::string& name);
 
-    static auto& get_descriptions() {
+    static auto& get_descriptions()
+    {
         return clocks_;
     }
 
 private:
     static constexpr ClockDescription clocks_[] = {
         {
-            "realtime", CLOCK_REALTIME,
+            "realtime",
+            CLOCK_REALTIME,
         },
 #ifdef CLOCK_MONOTONIC
         {
-            "monotonic", CLOCK_MONOTONIC,
+            "monotonic",
+            CLOCK_MONOTONIC,
         },
 #endif
 #ifdef CLOCK_PROCESS_CPUTIME_ID
         {
-            "process-cputime-id", CLOCK_PROCESS_CPUTIME_ID,
+            "process-cputime-id",
+            CLOCK_PROCESS_CPUTIME_ID,
         },
 #endif
 #ifdef CLOCK_THREAD_CPUTIME_ID
         {
-            "process-thread-id", CLOCK_THREAD_CPUTIME_ID,
+            "process-thread-id",
+            CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
 #ifdef CLOCK_MONOTONIC_RAW
         {
-            "monotonic-raw", CLOCK_MONOTONIC_RAW,
+            "monotonic-raw",
+            CLOCK_MONOTONIC_RAW,
         },
 #endif
 #ifdef CLOCK_REALTIME_COARSE
         {
-            "realtime-coarse", CLOCK_REALTIME_COARSE,
+            "realtime-coarse",
+            CLOCK_REALTIME_COARSE,
         },
 #endif
 #ifdef CLOCK_MONOTONIC_COARSE
         {
-            "monotonic-coarse", CLOCK_MONOTONIC_COARSE,
+            "monotonic-coarse",
+            CLOCK_MONOTONIC_COARSE,
         },
 #endif
 #ifdef CLOCK_BOOTTTIME
         {
-            "boottime", CLOCK_BOOTTIME,
+            "boottime",
+            CLOCK_BOOTTIME,
         },
 #endif
 #ifdef CLOCK_REALTIME_ALARM
         {
-            "realtime-alarm", CLOCK_REALTIME_ALARM,
+            "realtime-alarm",
+            CLOCK_REALTIME_ALARM,
         },
 #endif
 #ifdef CLOCK_BOOTTIME_ALARM
         {
-            "boottime-alarm", CLOCK_BOOTTIME_ALARM,
+            "boottime-alarm",
+            CLOCK_BOOTTIME_ALARM,
         },
 #endif
     };
@@ -146,5 +158,5 @@ inline otf2::chrono::time_point now()
 {
     return otf2::chrono::convert_time_point(Clock::now());
 }
-}
-}
+} // namespace time
+} // namespace lo2s

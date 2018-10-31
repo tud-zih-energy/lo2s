@@ -86,6 +86,12 @@ EventCollection collect_requested_events()
         return { CounterDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
                  std::move(used_counters) };
     }
+    if (config().metric_leader.empty())
+    {
+        Log::error() << "Failed to determine a suitable metric leader event";
+        Log::error() << "Try manually specifying one with --metric-leader.";
+        throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
+    }
 
     if (!perf::EventProvider::has_event(lo2s::config().metric_leader))
     {

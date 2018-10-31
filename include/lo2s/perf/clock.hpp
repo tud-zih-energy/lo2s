@@ -44,5 +44,5 @@ struct Clock
     using period = duration::period;
     using time_point = std::chrono::time_point<Clock, duration>;
 };
-}
-}
+} // namespace perf
+} // namespace lo2s

@@ -28,7 +28,8 @@
 
 #include <unordered_map>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -58,6 +59,6 @@ private:
     EventField pid_field_;
     EventField comm_field_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s
