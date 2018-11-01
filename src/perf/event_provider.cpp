@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/counter_description.hpp>
@@ -59,11 +60,13 @@ static const lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("branch-instructions", BRANCH_INSTRUCTIONS),
     PERF_EVENT_HW("branch-misses", BRANCH_MISSES),
     PERF_EVENT_HW("bus-cycles", BUS_CYCLES),
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
+#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
     PERF_EVENT_HW("stalled-cycles-frontend", STALLED_CYCLES_FRONTEND),
+#endif
+#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_BACKEND
     PERF_EVENT_HW("stalled-cycles-backend", STALLED_CYCLES_BACKEND),
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 3, 0)
+#ifdef HAVE_PERF_EVENT_REF_CYCLES
     PERF_EVENT_HW("ref-cycles", REF_CPU_CYCLES),
 #endif
 };
@@ -76,8 +79,10 @@ static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
     PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
     PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
-#ifdef HAVE_ALIGNMENT_FAULTS
+#ifdef HAVE_PERF_EVENT_ALIGNMENT_FAULTS
     PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
+#endif
+#ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
 };
@@ -97,7 +102,7 @@ static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "L1-dcache", PERF_COUNT_HW_CACHE_L1D }, { "L1-icache", PERF_COUNT_HW_CACHE_L1I },
     { "LLC", PERF_COUNT_HW_CACHE_LL },        { "dTLB", PERF_COUNT_HW_CACHE_DTLB },
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
+#ifdef HAVE_PERF_EVENT_CACHE_NODE
     { "node", PERF_COUNT_HW_CACHE_NODE },
 #endif
 };

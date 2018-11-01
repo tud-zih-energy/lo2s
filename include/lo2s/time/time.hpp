@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lo2s/build_config.hpp>
+
 #include <otf2xx/chrono/chrono.hpp>
 
 #include <chrono>
@@ -97,55 +99,55 @@ private:
             "realtime",
             CLOCK_REALTIME,
         },
-#ifdef CLOCK_MONOTONIC
+#ifdef _POSIX_MONOTONIC_CLOCK
         {
             "monotonic",
             CLOCK_MONOTONIC,
         },
 #endif
-#ifdef CLOCK_PROCESS_CPUTIME_ID
+#ifdef _POSIX_CPUTIME
         {
             "process-cputime-id",
             CLOCK_PROCESS_CPUTIME_ID,
         },
 #endif
-#ifdef CLOCK_THREAD_CPUTIME_ID
+#ifdef _POSIX_THREAD_CPUTIME
         {
             "process-thread-id",
             CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
-#ifdef CLOCK_MONOTONIC_RAW
+#ifdef HAVE_CLOCK_MONOTONIC_RAW
         {
             "monotonic-raw",
             CLOCK_MONOTONIC_RAW,
         },
 #endif
-#ifdef CLOCK_REALTIME_COARSE
+#ifdef HAVE_CLOCK_REALTIME_COARSE
         {
             "realtime-coarse",
             CLOCK_REALTIME_COARSE,
         },
 #endif
-#ifdef CLOCK_MONOTONIC_COARSE
+#ifdef HAVE_CLOCK_MONOTONIC_COARSE
         {
             "monotonic-coarse",
             CLOCK_MONOTONIC_COARSE,
         },
 #endif
-#ifdef CLOCK_BOOTTTIME
+#ifdef HAVE_CLOCK_BOOTTIME
         {
             "boottime",
             CLOCK_BOOTTIME,
         },
 #endif
-#ifdef CLOCK_REALTIME_ALARM
+#ifdef HAVE_CLOCK_REALTIME_ALARM
         {
             "realtime-alarm",
             CLOCK_REALTIME_ALARM,
         },
 #endif
-#ifdef CLOCK_BOOTTIME_ALARM
+#ifdef HAVE_CLOCK_BOOTTIME_ALARM
         {
             "boottime-alarm",
             CLOCK_BOOTTIME_ALARM,
