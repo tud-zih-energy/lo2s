@@ -71,6 +71,6 @@ public:
 private:
     otf2::chrono::duration offset;
 };
-}
-}
-}
+} // namespace time
+} // namespace perf
+} // namespace lo2s

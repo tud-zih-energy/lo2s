@@ -29,7 +29,8 @@
 
 #include <vector>
 
-extern "C" {
+extern "C"
+{
 #include <poll.h>
 }
 
@@ -68,5 +69,5 @@ private:
     Pipe stop_pipe_;
     std::vector<pollfd> pfds_;
 };
-}
-}
+} // namespace monitor
+} // namespace lo2s

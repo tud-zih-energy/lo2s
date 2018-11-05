@@ -44,7 +44,7 @@ inline std::ostream& operator<<(std::ostream& os, const ClockDescription& desc)
 {
     return os << desc.name;
 }
-}
+} // namespace time
 
 namespace io
 {
@@ -108,5 +108,5 @@ inline std::ostream& operator<<(std::ostream& os, const ArgumentList<InputIterat
     os << '\n';
     return os;
 }
-}
-}
+} // namespace io
+} // namespace lo2s

@@ -65,6 +65,6 @@ private:
 
     otf2::event::metric metric_event_;
 };
-}
-}
-}
+} // namespace tracepoint
+} // namespace perf
+} // namespace lo2s

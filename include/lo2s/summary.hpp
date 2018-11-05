@@ -1,9 +1,10 @@
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <unordered_set>
-#include <atomic>
 
-extern "C" {
+extern "C"
+{
 #include <sys/types.h>
 }
 
@@ -42,4 +43,4 @@ private:
 };
 
 Summary& summary();
-}
+} // namespace lo2s

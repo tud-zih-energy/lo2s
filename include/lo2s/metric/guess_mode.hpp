@@ -42,5 +42,5 @@ guess_mode(std::string& name,
     Log::warn() << "Unknown metric mode modifier: " << suffix;
     return default_;
 }
-}
-}
+} // namespace metric
+} // namespace lo2s

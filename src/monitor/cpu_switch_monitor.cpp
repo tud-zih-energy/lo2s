@@ -25,7 +25,8 @@
 
 #include <string>
 
-extern "C" {
+extern "C"
+{
 #include <sched.h>
 }
 
@@ -69,5 +70,5 @@ void CpuSwitchMonitor::monitor(size_t index)
         assert(false);
     }
 }
-}
-}
+} // namespace monitor
+} // namespace lo2s

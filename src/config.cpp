@@ -154,72 +154,12 @@ static inline void print_version(std::ostream& os)
 static inline void print_usage(std::ostream& os, const char* name,
                                const po::options_description& desc)
 {
-    static constexpr char argument_detail[] =
-        R"(
-Arguments to options:
-    PATH        A filesystem path.  If the pathname given in PATH is
-                relative, then  it is  interpreted  relative  to the
-                current working  directory of  lo2s, otherwise it is
-                interpreted as an absolute path.
-
-                NOTE: PATH arguments given to --output-trace support
-                simple variable substitution, where any occurence of
-                {<var>} will be replaced before being interpreted.
-
-                For substitution, <var> is one of the following:
-                - DATE:       current date (format %Y-%m-%dT%H-%M-%S)
-                - HOSTNAME:   current system host name
-                - ENV=<VAR>:  contents of environment variable <VAR>
-
-                Example:
-                    $ FOO=bar lo2s -o lo2s_{ENV=FOO}_{HOSTNAME} ...
-                    > Using trace directory: lo2s_bar_HAL-9000
-
-    EVENT       Name of a perf event.  Format is either
-                - for a predefined event:
-                    <name>
-                - for a kernel PMU event one of:
-                    <pmu>/<event>/
-                    <pmu>:<event>
-                  Kernel PMU events can be found at
-                    /sys/bus/event_source/devices/<pmu>/event/<event>.
-                - for a raw event:
-                    r<NNNN> where NNNN is the hexadecimal identifier
-                    of the event
-
-                To list all available event names, use --list-events.
-
-    TRACEPOINT  Name of a kernel tracepoint event.  Format is either
-                    <group>:<name>
-                or
-                    <group>/<name>.
-                Tracepoint events can be found at
-                    /sys/kernel/debug/tracing/events/<group>/<name>.
-
-                Use --list-tracepoints to get the names of available
-                tracepoints events.
-
-                NOTE:  Accessing tracepoint  events usually requires
-                read+execute permissions on /sys/kernel/debug.
-
-    CLOCKID     Name of a system clock.  To show a list of available
-                clock names, use --list-clockids.
-
-                NOTE: Clock names are determined at compile time and
-                might not be available when running on a system that
-                is not the build system.
-
-    KNOB        Name of a  x86_adapt  configuration item.  To show a
-                list of available knobs, use --list-knobs.
-)";
-
     // clang-format off
     os << "Usage:\n"
-          "  " << name << " [options] ./a.out\n"
-          "  " << name << " [options] -- ./a.out --option-to-a-out\n"
-          "  " << name << " [options] --pid $(pidof some-process)\n"
-          "  " << name << " [options] --all-cpus [./a.out]\n"
-          "\n" << desc << argument_detail;
+          "  " << name << " [options] [-a | -A] COMMAND\n"
+          "  " << name << " [options] [-a | -A] -- COMMAND [args to command...]\n"
+          "  " << name << " [options] [-a | -A] -p PID\n"
+       << desc;
     // clang-format on
 }
 
@@ -232,7 +172,7 @@ const Config& config()
 void parse_program_options(int argc, const char** argv)
 {
     po::options_description general_options("Options");
-    po::options_description system_wide_options("System-wide monitoring");
+    po::options_description system_mode_options("System-monitoring mode options");
     po::options_description sampling_options("Sampling options");
     po::options_description kernel_tracepoint_options("Kernel tracepoint options");
     po::options_description perf_metric_options("perf metric options");
@@ -281,11 +221,20 @@ void parse_program_options(int argc, const char** argv)
                 ->value_name("PAGES")
                 ->default_value(16),
             "Number of pages to be used by internal buffers.")
+        ("readout-interval,i",
+            po::value(&read_interval_ms)
+                ->value_name("MSEC")
+                ->default_value(100),
+            "Time interval between metric and sampling buffer readouts in milliseconds.")
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
                 ->default_value("monotonic-raw"),
             "Reference clock used as timestamp source.")
+        ("pid,p",
+            po::value(&config.pid)
+                ->value_name("PID"),
+            "Attach to process of given PID.")
         ("list-clockids",
             po::bool_switch(&list_clockids)
                 ->default_value(false),
@@ -303,46 +252,39 @@ void parse_program_options(int argc, const char** argv)
                 ->default_value(false),
             "List available x86_adapt CPU knobs.");
 
-    system_wide_options.add_options()
+    system_mode_options.add_options()
         ("all-cpus,a",
             po::bool_switch(&all_cpus),
-            "System-wide monitoring of all CPUs. If the name of an executable or a pid is given, monitor as long as it is running")
+            "Start in system-monitoring mode for all CPUs. "
+            "Monitor as long as COMMAND is running or until PID exits.")
         ("all-cpus-sampling,A",
             po::bool_switch(&system_mode_sampling),
-            "System-wide monitoring with instruction sampling (Same as \"-a --instruction_sampling\")");
+            "System-monitoring mode with instruction sampling. "
+            "Shorthand for \"-a --instruction-sampling\".");
 
     sampling_options.add_options()
-        ("count,c",
-            po::value(&config.sampling_period)
-                ->value_name("N")
-                ->default_value(11010113),
-            "Sampling period (in number of events specified by -e).")
         ("instruction-sampling",
             po::bool_switch(&instruction_sampling),
-            "Enable instruction sampling")
+            "Enable instruction sampling.")
         ("no-instruction-sampling",
             po::bool_switch(&no_instruction_sampling),
-            "Disable instruction sampling")
+            "Disable instruction sampling.")
         ("event,e",
             po::value(&config.sampling_event)
                 ->value_name("EVENT")
                 ->default_value("instructions"),
             "Interrupt source event for sampling.")
+        ("count,c",
+            po::value(&config.sampling_period)
+                ->value_name("N")
+                ->default_value(11010113),
+            "Sampling period (in number of events specified by -e).")
         ("call-graph,g",
             po::bool_switch(&config.enable_cct),
             "Record call stack of instruction samples.")
         ("no-ip,n",
             po::bool_switch(&config.suppress_ip),
             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]")
-        ("pid,p",
-            po::value(&config.pid)
-                ->value_name("PID"),
-            "Attach to process of given PID.")
-        ("readout-interval,i",
-            po::value(&read_interval_ms)
-                ->value_name("MSEC")
-                ->default_value(100),
-            "Time interval between metric and sampling buffer readouts in milliseconds.")
         ("disassemble",
             po::bool_switch(&disassemble),
             "Enable augmentation of samples with instructions (default if supported).")
@@ -403,7 +345,7 @@ void parse_program_options(int argc, const char** argv)
 
     po::options_description visible_options;
     visible_options.add(general_options)
-        .add(system_wide_options)
+        .add(system_mode_options)
         .add(sampling_options)
         .add(kernel_tracepoint_options)
         .add(perf_metric_options)
@@ -511,7 +453,7 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if(instruction_sampling && no_instruction_sampling)
+    if (instruction_sampling && no_instruction_sampling)
     {
         lo2s::Log::warn() << "Can not enable and disable instruction sampling at the same time";
     }

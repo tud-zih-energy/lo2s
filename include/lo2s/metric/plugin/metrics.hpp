@@ -46,6 +46,6 @@ private:
     trace::Trace& trace_;
     std::vector<std::unique_ptr<Plugin>> metric_plugins_;
 };
-}
-}
-}
+} // namespace plugin
+} // namespace metric
+} // namespace lo2s
