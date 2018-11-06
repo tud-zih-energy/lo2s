@@ -96,19 +96,16 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
         otf2_writer_.write_calling_context_leave(tp, current_calling_context_);
     }
     current_pid_ = next_pid;
-    if (current_pid_ != 0)
-    {
-        current_calling_context_ = thread_calling_context_ref(current_pid_);
-        otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
-    }
-    else
-    {
-        current_calling_context_ = current_calling_context_.undefined();
-    }
+
+    current_calling_context_ = thread_calling_context_ref(current_pid_);
+    otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
 
     last_time_point_ = tp;
 
-    summary().register_process(next_pid);
+    if (next_pid != 0)
+    {
+        summary().register_process(next_pid);
+    }
     return false;
 }
 

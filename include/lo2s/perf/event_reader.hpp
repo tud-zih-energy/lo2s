@@ -109,6 +109,7 @@ public:
         struct perf_event_header header;
         uint32_t next_prev_pid;
         uint32_t next_prev_tid;
+        uint32_t pid, tid;
         uint64_t time;
         // struct sample_id sample_id;
     };
