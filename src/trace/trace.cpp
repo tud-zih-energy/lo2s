@@ -753,7 +753,14 @@ otf2::definition::mapping_table Trace::merge_thread_calling_contexts(
         auto local_ref = elem.second;
         if (calling_contexts_thread_.count(pid) == 0)
         {
-            add_thread(pid, "<unknown>");
+            if (pid != 0)
+            {
+                add_thread(pid, "<unknown>");
+            }
+            else
+            {
+                add_thread(pid, "<idle>");
+            }
         }
         auto global_ref = calling_contexts_thread_.at(pid).ref();
         mappings.at(local_ref) = global_ref;
