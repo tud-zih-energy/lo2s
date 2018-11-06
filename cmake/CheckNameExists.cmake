@@ -8,7 +8,7 @@ macro(CHECK_NAME_EXISTS _NAME _HEADER _RESULT)
 
     set(_CHECK_NAME_SOURCE_CODE "
     ${_INCLUDE_FILES}
-    int main()
+    int main(void)
     {
     #ifdef ${_NAME}
         return 0;

@@ -21,6 +21,7 @@
 
 #include <lo2s/config.hpp>
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>

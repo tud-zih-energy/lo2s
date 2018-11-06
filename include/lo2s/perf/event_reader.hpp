@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/mmap.hpp>

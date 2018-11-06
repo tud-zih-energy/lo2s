@@ -13,6 +13,7 @@
 #cmakedefine HAVE_PERF_EVENT_CACHE_NODE
 
 //Clocks which might only be available in more modern kernels
+
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW
 
 #cmakedefine HAVE_CLOCK_MONOTONIC_COARSE
@@ -24,3 +25,11 @@
 #cmakedefine HAVE_CLOCK_REALTIME_ALARM
 
 #cmakedefine HAVE_CLOCK_BOOTTIME_ALARM
+
+//Features which might not be present in older kernels and workarounds for older kernels
+
+#cmakedefine HW_BREAKPOINT_COMPAT
+
+#cmakedefine USE_PERF_CLOCKID
+
+#cmakedefine USE_PERF_RECORD_SWITCH

@@ -21,6 +21,7 @@
 
 #include <lo2s/metric/perf_counter.hpp>
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
