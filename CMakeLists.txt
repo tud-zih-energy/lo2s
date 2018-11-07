@@ -265,18 +265,9 @@ CHECK_NAME_EXISTS(CLOCK_BOOTTIME linux/time.h HAVE_CLOCK_BOOTTIME)
 CHECK_NAME_EXISTS(CLOCK_REALTIME_ALARM linux/time.h HAVE_CLOCK_REALTIME_ALARM)
 CHECK_NAME_EXISTS(CLOCK_BOOTTIME_ALARM linux/time.h HAVE_CLOCK_BOOTTIME_ALARM)
 
-configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
-# define include directory of target lo2s
-target_include_directories(lo2s PRIVATE
-    include
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-)
-
-add_subdirectory(man)
-
 # special quirk for old kernel versions
 if (HW_BREAKPOINT_COMPAT)
-    set(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
+    set(HAVE_HW_BREAKPOINT_COMPAT ON)
     if (HAVE_HW_BREAKPOINT_H)
         message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
     endif()
@@ -289,7 +280,7 @@ endif()
 # extra feature for newer kernel version
 if (USE_PERF_CLOCKID)
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        set(lo2s PRIVATE USE_PERF_CLOCKID)
+        set(HAVE_PERF_CLOCKID ON)
     else()
         message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
     endif()
@@ -300,11 +291,20 @@ else()
 endif()
 
 if(USE_PERF_RECORD_SWITCH)
-    set(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
     target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
 else()
     target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
 endif()
+
+configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
+
+# define include directory of target lo2s
+target_include_directories(lo2s PRIVATE
+    include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+add_subdirectory(man)
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
 

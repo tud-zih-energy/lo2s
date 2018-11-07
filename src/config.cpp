@@ -500,7 +500,7 @@ void parse_program_options(int argc, const char** argv)
         const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
 
         lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
-#if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
+#if defined(HAVE_PERF_CLOCKID) && !defined(HAVE_HW_BREAKPOINT_COMPAT)
         config.use_clockid = true;
         config.clockid = clock.id;
 #else

@@ -28,8 +28,8 @@
 
 //Features which might not be present in older kernels and workarounds for older kernels
 
-#cmakedefine HW_BREAKPOINT_COMPAT
+#cmakedefine HAVE_HW_BREAKPOINT_COMPAT
 
-#cmakedefine USE_PERF_CLOCKID
+#cmakedefine HAVE_PERF_CLOCKID
 
 #cmakedefine USE_PERF_RECORD_SWITCH
