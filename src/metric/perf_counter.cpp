@@ -84,7 +84,7 @@ int PerfCounter::open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t con
     // Needed when scaling multiplexed events, and recognize activation phases
     perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-#if !defined(HAVE_HW_BREAKPOINT_COMPAT) && defined(HAVE_PERF_CLOCKID)
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
     perf_attr.use_clockid = lo2s::config().use_clockid;
     perf_attr.clockid = lo2s::config().clockid;
 #endif

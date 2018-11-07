@@ -106,7 +106,7 @@ CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_eve
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
-option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
 CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
 option(IWYU "Developer option for include what you use." OFF)
@@ -265,22 +265,19 @@ CHECK_NAME_EXISTS(CLOCK_REALTIME_ALARM linux/time.h HAVE_CLOCK_REALTIME_ALARM)
 CHECK_NAME_EXISTS(CLOCK_BOOTTIME_ALARM linux/time.h HAVE_CLOCK_BOOTTIME_ALARM)
 
 # special quirk for old kernel versions
-if (HW_BREAKPOINT_COMPAT)
-    set(HAVE_HW_BREAKPOINT_COMPAT ON)
+if (USE_HW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
-        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
+        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating USE_HW_BREAKPOINT_COMPAT")
     endif()
 else()
     if (NOT HAVE_HW_BREAKPOINT_H)
-        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
+        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating USE_HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
     endif()
 endif()
 
 # extra feature for newer kernel version
 if (USE_PERF_CLOCKID)
-    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        set(HAVE_PERF_CLOCKID ON)
-    else()
+    if(NOT HAVE_PERF_EVENT_ATTR_CLOCKID)
         message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
     endif()
 else()

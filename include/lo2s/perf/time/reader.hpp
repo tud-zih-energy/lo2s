@@ -47,7 +47,7 @@ public:
 
 public:
     using sample::Reader<Reader>::handle;
-#ifndef HAVE_HW_BREAKPOINT_COMPAT
+#ifndef USE_HW_BREAKPOINT_COMPAT
     using RecordSyncType = sample::Reader<Reader>::RecordSampleType;
 #else
     using RecordSyncType = sample::Reader<Reader>::RecordForkType;
