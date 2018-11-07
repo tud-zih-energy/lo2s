@@ -86,8 +86,6 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
 
 Writer::~Writer()
 {
-    // TODO FIXME
-    // Actually we have to merge the maps_ within one process before this step :-(
     if (!local_ip_refs_.empty())
     {
         const auto& mapping = trace_.merge_ips(local_ip_refs_, monitor_.get_process_infos());
