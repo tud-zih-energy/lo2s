@@ -33,9 +33,16 @@ namespace context_switch
 {
 
 Writer::Writer(int cpu, trace::Trace& trace)
-: Reader(cpu), otf2_writer_(trace.cpu_switch_writer(cpu)),
-  time_converter_(time::Converter::instance()), trace_(trace), last_time_point_(lo2s::time::now())
+: otf2_writer_(trace.cpu_switch_writer(cpu)), time_converter_(time::Converter::instance()),
+  trace_(trace), last_time_point_(lo2s::time::now())
 {
+    struct perf_event_attr perf_attr;
+    memset(&perf_attr, 0, sizeof(perf_event_attr));
+
+    perf_attr.context_switch = 1;
+    perf_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_TID;
+
+    init(perf_attr, cpu);
 }
 
 Writer::~Writer()
