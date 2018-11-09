@@ -37,10 +37,10 @@ namespace monitor
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, trace::Trace& trace)
 : FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), switch_writer_(cpu, trace),
-  exit_reader_(cpu, trace)
+  comm_reader_(cpu, trace)
 {
     add_fd(switch_writer_.fd());
-    add_fd(exit_reader_.fd());
+    add_fd(comm_reader_.fd());
 }
 
 void CpuSwitchMonitor::initialize_thread()
@@ -50,7 +50,7 @@ void CpuSwitchMonitor::initialize_thread()
 
 void CpuSwitchMonitor::merge_trace()
 {
-    exit_reader_.merge_trace();
+    comm_reader_.merge_trace();
 }
 
 void CpuSwitchMonitor::monitor(size_t index)
@@ -63,7 +63,7 @@ void CpuSwitchMonitor::monitor(size_t index)
     else if (index == 1)
     {
         Log::debug() << "reading ExitReader";
-        exit_reader_.read();
+        comm_reader_.read();
     }
     else
     {

@@ -44,6 +44,8 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         }
     }
 
+    trace_.add_threads(get_comms_for_running_processes());
+
     for (const auto& cpu : Topology::instance().cpus())
     {
         trace_.add_cpu(cpu.id);
@@ -86,7 +88,6 @@ void CpuSetMonitor::run()
     {
         monitor_elem.second.start();
     }
-    trace_.add_threads(get_comms_for_running_processes());
 
     if (config().command.empty() && config().pid == -1)
     {

@@ -33,11 +33,11 @@ The trace contains the following information:
 
 # Runtime Requirements
 
- * `kernel.perf_event_paranoid` should be less or equal than `1`. A value of `-1` will give the most features for non-root performance recording, at the cost of some security. Modify as follows:
+ * `kernel.perf_event_paranoid` should be less than or equal to `1` for process monitoring mode and less than or equal to `0` in system monitoring mode. A value of `-1` will give the most features for non-root performance recording, at the cost of some security. Modify as follows:
 
    `sudo sysctl kernel.perf_event_paranoid=1`
    
- * Tracepoints and global monitoring requires access to debugfs. Grant permissions at your own discretion.
+ * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs. Grant permissions at your own discretion.
  
    `sudo mount -t debugfs non /sys/kernel/debug`
    
