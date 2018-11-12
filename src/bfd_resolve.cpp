@@ -28,7 +28,10 @@
 
 namespace lo2s
 {
-const std::string LineInfo::unknown_str = "(unknown)";
+const std::string LineInfo::unknown_file_str = "<unknown file>";
+const std::string LineInfo::unknown_binary_str = "<unknown binary>";
+const std::string LineInfo::unmapped_function_str = "<unmapped function>";
+const std::string LineInfo::unknown_function_str = "<unknown function>";
 
 namespace bfdr
 {
@@ -151,12 +154,12 @@ LineInfo Lib::lookup(Address addr) const
             auto demangled = bfd_demangle(handle_, func, DMGL_PARAMS | DMGL_ANSI);
             if (demangled != nullptr)
             {
-                std::string demangled_str(demangled);
+                LineInfo line_info = LineInfo::for_function(file, demangled, line, name_);
                 free(demangled);
-                return LineInfo(file, demangled_str.c_str(), line, name_);
+                return line_info;
             }
         }
-        return LineInfo(file, func, line, name_);
+        return LineInfo::for_function(file, func, line, name_);
     }
     catch (std::out_of_range&)
     {

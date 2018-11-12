@@ -32,32 +32,61 @@ namespace lo2s
 {
 struct LineInfo
 {
+private:
+    static const std::string unknown_file_str;
+    static const std::string unknown_binary_str;
+    static const std::string unmapped_function_str;
+    static const std::string unknown_function_str;
+
+    static constexpr unsigned int UNKNOWN_LINE = 0;
+
     // Note: If line is not known, we write 1 anyway so the rest is shown in vampir
-    LineInfo(const std::string& fi, const std::string& fu, unsigned int l, const std::string& d)
-    : file(fi), function(fu), line(l ? l : 1), dso(boost::filesystem::path(d).filename().string())
+    // phijor 2018-11-08: I think this workaround is not needed anymore? vampir
+    // shows source code locations with line == 0 just fine.
+    LineInfo(const std::string& file, const std::string& function, unsigned int line,
+             const std::string& dso)
+    : file(file), function(function), line((line != UNKNOWN_LINE) ? line : 1), dso(dso)
     {
     }
 
-    LineInfo(const char* fi, const char* fu, unsigned int l, const std::string& d)
-    : LineInfo(fi ? std::string(fi) : unknown_str, fu ? std::string(fu) : unknown_str, l, d)
+public:
+    LineInfo() : LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE, unknown_binary_str)
     {
     }
 
-    LineInfo(Address addr) : LineInfo(addr, unknown_str)
+    static LineInfo for_function(const char* file, const char* function, unsigned int line,
+                                 const std::string& dso)
     {
+        return LineInfo((file != nullptr) ? std::string{ file } : unknown_file_str,
+                        (function != nullptr) ? std::string{ function } : unknown_function_str,
+                        line, boost::filesystem::path(dso).filename().string());
     }
 
-    LineInfo(Address addr, const std::string& d)
-    : LineInfo(unknown_str, str(fmt("?@%dx") % addr), 0, d)
+    static LineInfo for_unmapped_function()
     {
+        return LineInfo(unknown_file_str, unmapped_function_str, UNKNOWN_LINE, unknown_binary_str);
+    }
+
+    static LineInfo for_unknown_function()
+    {
+        return LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE, unknown_binary_str);
+    }
+
+    static LineInfo for_unknown_function_in_dso(const std::string& dso)
+    {
+        return LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE,
+                        boost::filesystem::path(dso).filename().string());
+    }
+
+    static LineInfo for_binary(const std::string& binary)
+    {
+        return LineInfo(binary, binary, UNKNOWN_LINE, binary);
     }
 
     std::string file;
     std::string function;
     unsigned int line;
     std::string dso;
-
-    static const std::string unknown_str;
 
     // For std::map
     bool operator<(const LineInfo& other) const

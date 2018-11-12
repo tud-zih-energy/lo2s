@@ -169,7 +169,7 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
         // This will just happen a lot in practice
         Log::trace() << "no mapping found for address " << ip;
         // Graceful fallback
-        return LineInfo(ip.truncate_bits(48));
+        return LineInfo::for_unmapped_function();
     }
 }
 
