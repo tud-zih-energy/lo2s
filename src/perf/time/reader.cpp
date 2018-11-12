@@ -26,7 +26,7 @@
 
 #include <otf2xx/chrono/chrono.hpp>
 
-#ifndef HW_BREAKPOINT_COMPAT
+#ifndef USE_HW_BREAKPOINT_COMPAT
 extern "C"
 {
 #include <linux/hw_breakpoint.h>
@@ -53,7 +53,7 @@ Reader::Reader()
     memset(&attr, 0, sizeof(struct perf_event_attr));
     attr.size = sizeof(struct perf_event_attr);
 
-#ifndef HW_BREAKPOINT_COMPAT
+#ifndef USE_HW_BREAKPOINT_COMPAT
     attr.type = PERF_TYPE_BREAKPOINT;
     attr.bp_type = HW_BREAKPOINT_W;
     attr.bp_addr = (uint64_t)(&local_time);
@@ -67,14 +67,14 @@ Reader::Reader()
     attr.sample_period = 100000000;
     attr.task = 1;
 #endif
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
     attr.use_clockid = config().use_clockid;
     attr.clockid = config().clockid;
 #endif
 
     init(attr, 0, -1, false, 1);
 
-#ifdef HW_BREAKPOINT_COMPAT
+#ifdef USE_HW_BREAKPOINT_COMPAT
     auto pid = fork();
     if (pid == 0)
     {

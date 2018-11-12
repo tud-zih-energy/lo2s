@@ -21,6 +21,7 @@
 
 #include <lo2s/config.hpp>
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
@@ -499,7 +500,7 @@ void parse_program_options(int argc, const char** argv)
         const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
 
         lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
-#if defined(USE_PERF_CLOCKID) && !defined(HW_BREAKPOINT_COMPAT)
+#if defined(USE_PERF_CLOCKID) && !defined(USE_HW_BREAKPOINT_COMPAT)
         config.use_clockid = true;
         config.clockid = clock.id;
 #else

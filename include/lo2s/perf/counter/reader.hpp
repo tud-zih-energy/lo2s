@@ -65,7 +65,7 @@ private:
         leader_attr.size = sizeof(leader_attr);
         leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
 
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         leader_attr.use_clockid = config().use_clockid;
         leader_attr.clockid = config().clockid;
 #endif

@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lo2s/build_config.hpp>
+
 #include <otf2xx/chrono/chrono.hpp>
 
 #include <chrono>
@@ -115,33 +117,37 @@ private:
             CLOCK_THREAD_CPUTIME_ID,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28)
+#ifdef HAVE_CLOCK_MONOTONIC_RAW
         {
             "monotonic-raw",
             CLOCK_MONOTONIC_RAW,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
+#ifdef HAVE_CLOCK_REALTIME_COARSE
         {
             "realtime-coarse",
             CLOCK_REALTIME_COARSE,
         },
+#endif
+#ifdef HAVE_CLOCK_MONOTONIC_COARSE
         {
             "monotonic-coarse",
             CLOCK_MONOTONIC_COARSE,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)
+#ifdef HAVE_CLOCK_BOOTTIME
         {
             "boottime",
             CLOCK_BOOTTIME,
         },
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 0, 0)
+#ifdef HAVE_CLOCK_REALTIME_ALARM
         {
             "realtime-alarm",
             CLOCK_REALTIME_ALARM,
         },
+#endif
+#ifdef HAVE_CLOCK_BOOTTIME_ALARM
         {
             "boottime-alarm",
             CLOCK_BOOTTIME_ALARM,

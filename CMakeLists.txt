@@ -10,6 +10,7 @@ SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
 include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
+include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
 
 # Intialize git submodules if not done already
@@ -105,7 +106,7 @@ CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_eve
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
-option(HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
 CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
 option(IWYU "Developer option for include what you use." OFF)
@@ -244,31 +245,39 @@ else()
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
-# define include directory of target lo2s
-target_include_directories(lo2s PRIVATE
-    include
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-)
+# check for version dependent features and generate a build config
 
-add_subdirectory(man)
+# check if specific perf events are available
+CHECK_NAME_EXISTS(PERF_COUNT_SW_ALIGNMENT_FAULTS linux/perf_event.h HAVE_PERF_EVENT_ALIGNMENT_FAULTS)
+CHECK_NAME_EXISTS(PERF_COUNT_SW_EMULATION_FAULTS linux/perf_event.h HAVE_PERF_EVENT_EMULATION_FAULTS)
+CHECK_NAME_EXISTS(PERF_COUNT_HW_REF_CPU_CYCLES linux/perf_event.h HAVE_PERF_EVENT_REF_CYCLES)
+CHECK_NAME_EXISTS(PERF_COUNT_HW_STALLED_CYCLES_FRONTEND linux/perf_event.h HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND)
+CHECK_NAME_EXISTS(PERF_COUNT_HW_STALLED_CYCLES_BACKEND linux/perf_event.h HAVE_PERF_EVENT_STALLED_CYCLES_BACKEND)
+CHECK_NAME_EXISTS(PERF_COUNT_HW_CACHE_NODE linux/perf_event.h HAVE_PERF_EVENT_CACHE_NODE)
+
+#check if certain clock sources are available
+
+CHECK_NAME_EXISTS(CLOCK_MONOTONIC_RAW linux/time.h HAVE_CLOCK_MONOTONIC_RAW)
+CHECK_NAME_EXISTS(CLOCK_MONOTONIC_COARSE linux/time.h HAVE_CLOCK_MONOTONIC_COARSE)
+CHECK_NAME_EXISTS(CLOCK_REALTIME_COARSE linux/time.h HAVE_CLOCK_REALTIME_COARSE)
+CHECK_NAME_EXISTS(CLOCK_BOOTTIME linux/time.h HAVE_CLOCK_BOOTTIME)
+CHECK_NAME_EXISTS(CLOCK_REALTIME_ALARM linux/time.h HAVE_CLOCK_REALTIME_ALARM)
+CHECK_NAME_EXISTS(CLOCK_BOOTTIME_ALARM linux/time.h HAVE_CLOCK_BOOTTIME_ALARM)
 
 # special quirk for old kernel versions
-if (HW_BREAKPOINT_COMPAT)
-    target_compile_definitions(lo2s PRIVATE HW_BREAKPOINT_COMPAT)
+if (USE_HW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
-        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating HW_BREAKPOINT_COMPAT")
+        message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating USE_HW_BREAKPOINT_COMPAT")
     endif()
 else()
     if (NOT HAVE_HW_BREAKPOINT_H)
-        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
+        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating USE_HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
     endif()
 endif()
 
 # extra feature for newer kernel version
 if (USE_PERF_CLOCKID)
-    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        target_compile_definitions(lo2s PRIVATE USE_PERF_CLOCKID)
-    else()
+    if(NOT HAVE_PERF_EVENT_ATTR_CLOCKID)
         message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
     endif()
 else()
@@ -278,11 +287,20 @@ else()
 endif()
 
 if(USE_PERF_RECORD_SWITCH)
-    target_compile_definitions(lo2s PRIVATE USE_PERF_RECORD_SWITCH)
     target_sources(lo2s PRIVATE src/perf/context_switch/writer.cpp)
 else()
     target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
 endif()
+
+configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
+
+# define include directory of target lo2s
+target_include_directories(lo2s PRIVATE
+    include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
+
+add_subdirectory(man)
 
 message(STATUS "Linux kernel version: ${LINUX_VERSION}")
 

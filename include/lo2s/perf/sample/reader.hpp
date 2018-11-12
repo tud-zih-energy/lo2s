@@ -87,7 +87,7 @@ protected:
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
 
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif

@@ -57,7 +57,7 @@ public:
         perf_attr.disabled = 1;
         perf_attr.sample_period = 1;
         perf_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_TID;
-#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif

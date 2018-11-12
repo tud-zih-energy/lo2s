@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/monitor/fd_monitor.hpp>
 
 #include <lo2s/perf/tracepoint/exit_reader.hpp>
