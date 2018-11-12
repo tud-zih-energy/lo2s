@@ -37,34 +37,28 @@ namespace lo2s
 {
 namespace perf
 {
-namespace context_switch
+namespace record
 {
 
 template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(int cpuid)
+    void init(struct perf_event_attr& perf_attr, int cpuid)
     {
-        struct perf_event_attr perf_attr;
-        memset(&perf_attr, 0, sizeof(struct perf_event_attr));
-
-        // We only want the Context Switch samples, so set up a dummy sampling event
+        // We only want the specified PERF_RECORD_* event, so set up a dummy sampling event
         perf_attr.type = PERF_TYPE_SOFTWARE;
         perf_attr.size = sizeof(struct perf_event_attr);
         perf_attr.config = PERF_COUNT_SW_DUMMY;
 
         perf_attr.disabled = 1;
         perf_attr.sample_period = 1;
-        perf_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_TID;
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#if !defined(HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif
-        // the perf_attr.sample_type information should also show up in context switches
+        // the perf_attr.sample_type information should show up outside of samples
         perf_attr.sample_id_all = 1;
-        perf_attr.context_switch = 1;
-
         perf_attr.watermark = 1;
         perf_attr.wakeup_watermark =
             static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
@@ -129,6 +123,6 @@ protected:
 private:
     int fd_;
 };
-} // namespace context_switch
+} // namespace record
 } // namespace perf
 } // namespace lo2s

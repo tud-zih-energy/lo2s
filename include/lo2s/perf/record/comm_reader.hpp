@@ -21,44 +21,53 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/tracepoint/reader.hpp>
-
-#include <lo2s/trace/fwd.hpp>
+#include <lo2s/perf/record/reader.hpp>
+#include <lo2s/summary.hpp>
+#include <lo2s/trace/trace.hpp>
 
 #include <unordered_map>
-
-extern "C"
-{
-#include <sys/types.h>
-}
 
 namespace lo2s
 {
 namespace perf
 {
-namespace tracepoint
+namespace record
 {
-class ExitReader : public Reader<ExitReader>
+class CommReader : public Reader<CommReader>
 {
 public:
-    ExitReader(int cpu, trace::Trace& trace);
-    ~ExitReader();
+    CommReader(int cpu, trace::Trace& trace) : trace_(trace)
+    {
+        perf_event_attr perf_attr;
+        memset(&perf_attr, 0, sizeof(perf_event_attr));
+
+        perf_attr.comm = 1;
+        perf_attr.sample_type = PERF_SAMPLE_TID;
+
+        init(perf_attr, cpu);
+    }
 
 public:
-    using Reader<ExitReader>::handle;
+    using Reader<CommReader>::handle;
 
-    bool handle(const Reader::RecordSampleType* sample);
-    void merge_trace();
+    bool handle(const Reader::RecordCommType* comm_event)
+    {
+        summary().register_process(comm_event->pid);
+
+        comms_[comm_event->pid] = comm_event->comm;
+
+        return false;
+    }
+    void merge_trace()
+    {
+        trace_.add_threads(comms_);
+    }
 
 private:
     trace::Trace& trace_;
 
     std::unordered_map<pid_t, std::string> comms_;
-
-    EventField pid_field_;
-    EventField comm_field_;
 };
-} // namespace tracepoint
+} // namespace record
 } // namespace perf
 } // namespace lo2s

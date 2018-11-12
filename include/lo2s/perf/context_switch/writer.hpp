@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/context_switch/reader.hpp>
+#include <lo2s/perf/record/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
@@ -34,7 +34,7 @@ namespace perf
 namespace context_switch
 {
 
-class Writer : public Reader<Writer>
+class Writer : public record::Reader<Writer>
 {
 public:
     Writer(int cpu, trace::Trace& trace);
