@@ -50,10 +50,6 @@ private:
     }
 
 public:
-    LineInfo() : LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE, unknown_binary_str)
-    {
-    }
-
     static LineInfo for_function(const char* file, const char* function, unsigned int line,
                                  const std::string& dso)
     {
