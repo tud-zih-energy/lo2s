@@ -28,11 +28,6 @@
 
 namespace lo2s
 {
-const std::string LineInfo::unknown_file_str = "<unknown file>";
-const std::string LineInfo::unknown_binary_str = "<unknown binary>";
-const std::string LineInfo::unmapped_function_str = "<unmapped function>";
-const std::string LineInfo::unknown_function_str = "<unknown function>";
-
 namespace bfdr
 {
 

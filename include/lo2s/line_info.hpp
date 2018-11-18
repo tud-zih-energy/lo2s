@@ -21,23 +21,13 @@
 
 #pragma once
 
-#include <lo2s/address.hpp>
-
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
-
-using fmt = boost::format;
 
 namespace lo2s
 {
 struct LineInfo
 {
 private:
-    static const std::string unknown_file_str;
-    static const std::string unknown_binary_str;
-    static const std::string unmapped_function_str;
-    static const std::string unknown_function_str;
-
     static constexpr unsigned int UNKNOWN_LINE = 0;
 
     // Note: If line is not known, we write 1 anyway so the rest is shown in vampir
@@ -49,28 +39,28 @@ private:
     {
     }
 
+    LineInfo(const char* file, const char* function, unsigned int line, const std::string& dso)
+    : file(file), function(function), line((line != UNKNOWN_LINE) ? line : 1), dso(dso)
+    {
+    }
+
 public:
     static LineInfo for_function(const char* file, const char* function, unsigned int line,
                                  const std::string& dso)
     {
-        return LineInfo((file != nullptr) ? std::string{ file } : unknown_file_str,
-                        (function != nullptr) ? std::string{ function } : unknown_function_str,
-                        line, boost::filesystem::path(dso).filename().string());
-    }
-
-    static LineInfo for_unmapped_function()
-    {
-        return LineInfo(unknown_file_str, unmapped_function_str, UNKNOWN_LINE, unknown_binary_str);
+        return LineInfo((file != nullptr) ? file : "<unknown file>",
+                        (function != nullptr) ? function : "<unknown function>", line,
+                        boost::filesystem::path(dso).filename().string());
     }
 
     static LineInfo for_unknown_function()
     {
-        return LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE, unknown_binary_str);
+        return LineInfo("<unknown file>", "<unknown function>", UNKNOWN_LINE, "<unknown binary>");
     }
 
     static LineInfo for_unknown_function_in_dso(const std::string& dso)
     {
-        return LineInfo(unknown_file_str, unknown_function_str, UNKNOWN_LINE,
+        return LineInfo("<unknown file>", "<unknown function>", UNKNOWN_LINE,
                         boost::filesystem::path(dso).filename().string());
     }
 
