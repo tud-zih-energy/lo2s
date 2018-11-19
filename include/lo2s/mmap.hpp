@@ -87,7 +87,7 @@ public:
 
     virtual LineInfo lookup_line_info(Address) override
     {
-        return LineInfo(name(), name(), 0, name());
+        return LineInfo::for_binary(name());
     }
 };
 
@@ -126,7 +126,7 @@ public:
         }
         catch (bfdr::LookupError&)
         {
-            return LineInfo(ip, name());
+            return LineInfo::for_unknown_function_in_dso(name());
         }
     }
 

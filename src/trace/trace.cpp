@@ -591,11 +591,12 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
         auto& local_children = elem.second.children;
-        LineInfo line_info = LineInfo(ip);
+        LineInfo line_info = LineInfo::for_unknown_function();
 
-        if (infos.count(elem.second.pid) == 1)
+        auto info_it = infos.find(elem.second.pid);
+        if (info_it != infos.end())
         {
-            MemoryMap maps = infos.at(elem.second.pid).maps();
+            MemoryMap maps = info_it->second.maps();
             line_info = maps.lookup_line_info(ip);
         }
 
