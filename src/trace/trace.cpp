@@ -637,25 +637,26 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
     }
 }
 
-otf2::definition::mapping_table Trace::merge_ips(IpRefMap& new_ips,
-                                                 std::map<pid_t, ProcessInfo>& infos)
+otf2::definition::mapping_table Trace::merge_calling_contexts(
+    IpRefMap& new_ips,
+    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs,
+    std::map<pid_t, ProcessInfo>& infos)
 {
-    std::lock_guard<std::mutex> guard(mutex_);
-
-    if (new_ips.empty())
-    {
-        // Otherwise the mapping table is empty and OTF2 cries like a little girl
-        throw std::runtime_error("no ips");
-    }
-
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(new_ips.size(), -1u);
+    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size(), -1u);
 #else
-    std::vector<uint32_t> mappings(new_ips.size());
+    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size());
 #endif
 
-    merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(), infos);
-
+    if (!new_ips.empty())
+    {
+        merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(),
+                  infos);
+    }
+    if (!thread_refs.empty())
+    {
+        merge_thread_calling_contexts(thread_refs, mappings);
+    }
 #ifndef NDEBUG
     for (auto id : mappings)
     {
@@ -741,14 +742,31 @@ void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
 }
 
 otf2::definition::mapping_table Trace::merge_thread_calling_contexts(
-    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& local_refs)
+    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs)
 {
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(local_refs.size(), -1u);
+    std::vector<uint32_t> mappings(thread_refs.size(), -1u);
 #else
-    std::vector<uint32_t> mappings(local_refs.size());
+    std::vector<uint32_t> mappings(thread_refs.size());
 #endif
-    for (const auto& elem : local_refs)
+
+    merge_thread_calling_contexts(thread_refs, mappings);
+#ifndef NDEBUG
+    for (auto id : mappings)
+    {
+        assert(id != -1u);
+    }
+#endif
+
+    return otf2::definition::mapping_table(
+        otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
+}
+
+void Trace::merge_thread_calling_contexts(
+    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs,
+    std::vector<uint32_t>& mapping_table)
+{
+    for (const auto& elem : thread_refs)
     {
         auto pid = elem.first;
         auto local_ref = elem.second;
@@ -764,18 +782,8 @@ otf2::definition::mapping_table Trace::merge_thread_calling_contexts(
             }
         }
         auto global_ref = calling_contexts_thread_.at(pid).ref();
-        mappings.at(local_ref) = global_ref;
+        mapping_table.at(local_ref) = global_ref;
     }
-
-#ifndef NDEBUG
-    for (auto id : mappings)
-    {
-        assert(id != -1u);
-    }
-#endif
-
-    return otf2::definition::mapping_table(
-        otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
 otf2::definition::regions_group Trace::regions_group_executable(const std::string& name)

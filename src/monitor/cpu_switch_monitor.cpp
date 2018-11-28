@@ -36,11 +36,16 @@ namespace monitor
 {
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, trace::Trace& trace)
-: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), switch_writer_(cpu, trace),
-  comm_reader_(cpu, trace)
+: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), comm_reader_(cpu, trace)
+#ifndef USE_PERF_RECORD_SWITCH
+  ,
+  switch_writer_(cpu, trace)
+#endif
 {
-    add_fd(switch_writer_.fd());
     add_fd(comm_reader_.fd());
+#ifndef USE_PERF_RECORD_SWITCH
+    add_fd(switch_writer_.fd());
+#endif
 }
 
 void CpuSwitchMonitor::initialize_thread()
@@ -57,14 +62,16 @@ void CpuSwitchMonitor::monitor(size_t index)
 {
     if (index == 0)
     {
-        Log::debug() << "reading SwitchWriter";
-        switch_writer_.read();
-    }
-    else if (index == 1)
-    {
         Log::debug() << "reading ExitReader";
         comm_reader_.read();
     }
+#ifndef USE_PERF_RECORD_SWITCH
+    if (index == 1)
+    {
+        Log::debug() << "reading SwitchWriter";
+        switch_writer_.read();
+    }
+#endif
     else
     {
         assert(false);

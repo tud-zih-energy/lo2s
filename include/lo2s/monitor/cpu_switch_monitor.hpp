@@ -25,11 +25,11 @@
 #include <lo2s/monitor/fd_monitor.hpp>
 
 #include <lo2s/perf/record/comm_reader.hpp>
-#ifdef USE_PERF_RECORD_SWITCH
-#include <lo2s/perf/context_switch/writer.hpp>
-#else
+
+#ifndef USE_PERF_RECORD_SWITCH
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #endif
+
 #include <lo2s/trace/fwd.hpp>
 
 namespace lo2s
@@ -53,13 +53,10 @@ public:
 
 private:
     int cpu_;
-
-#ifdef USE_PERF_RECORD_SWITCH
-    perf::context_switch::Writer switch_writer_;
-#else
+    perf::record::CommReader comm_reader_;
+#ifndef USE_PERF_RECORD_SWITCH
     perf::tracepoint::SwitchWriter switch_writer_;
 #endif
-    perf::record::CommReader comm_reader_;
 };
 } // namespace monitor
 } // namespace lo2s

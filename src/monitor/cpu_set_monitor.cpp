@@ -50,12 +50,15 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     {
         trace_.add_cpu(cpu.id);
 
+#ifndef USE_PERF_RECORD_SWITCH
         if (!perf::requested_events().events.empty() || config().sampling)
         {
+#endif
             counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                       std::forward_as_tuple(cpu.id, *this));
+#ifndef USE_PERF_RECORD_SWITCH
         }
-
+#endif
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
         auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
                                             std::forward_as_tuple(cpu.id, trace_));
