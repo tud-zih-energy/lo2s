@@ -153,6 +153,14 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
+    // As they are sometimes out of order, we can not trust timestamps to be strictly in order all
+    // of the time
+    if (last_time_point_ > tp)
+    {
+        Log::debug() << "perf_event_open timestamps not in order for sampling event: "
+                     << last_time_point_ << ">" << tp;
+    }
+
     if (sample->pid == 0)
     {
         last_time_point_ = tp;
@@ -181,7 +189,8 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
-    //Timepoints for Sample and Cpu Switch events are out of order sometimes, so we have to fix that
+    // Timepoints for Sample and Cpu Switch events are out of order sometimes, so we have to fix
+    // that
     otf2_writer_.write_calling_context_sample(std::max(last_time_point_, tp), cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
 
@@ -208,6 +217,12 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
     auto tp = time_converter_(context_switch->time);
+    if (last_time_point_ > tp)
+    {
+        Log::debug() << "perf_event_open timestamps not in order for CpuSwitch event: "
+                     << last_time_point_ << ">" << tp;
+    }
+
     auto elem = thread_calling_context_refs_.emplace(
         std::piecewise_construct, std::forward_as_tuple(context_switch->pid),
         std::forward_as_tuple(thread_calling_context_refs_.size()));
