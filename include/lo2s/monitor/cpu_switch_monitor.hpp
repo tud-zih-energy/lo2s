@@ -53,6 +53,7 @@ public:
 
 private:
     int cpu_;
+
     perf::record::CommReader comm_reader_;
 #ifndef USE_PERF_RECORD_SWITCH
     perf::tracepoint::SwitchWriter switch_writer_;

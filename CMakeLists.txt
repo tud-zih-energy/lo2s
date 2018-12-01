@@ -242,7 +242,6 @@ if(IN_GIT)
 else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
-
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
 # check for version dependent features and generate a build config
