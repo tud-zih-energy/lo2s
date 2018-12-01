@@ -214,6 +214,7 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     return false;
 }
 
+#ifdef USE_PERF_RECORD_SWITCH
 bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
     auto tp = time_converter_(context_switch->time);
@@ -262,6 +263,8 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     last_calling_context_ = elem.first->second;
     return false;
 }
+#endif
+
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
     std::string new_command{ static_cast<const char*>(comm->comm) };
