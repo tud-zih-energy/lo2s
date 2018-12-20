@@ -54,7 +54,7 @@ public:
     {
         summary().register_process(comm_event->pid);
 
-        comms_[comm_event->pid] = comm_event->comm;
+        comms_[comm_event->tid] = comm_event->comm;
 
         return false;
     }
