@@ -272,6 +272,7 @@ private:
 
 private:
     std::mutex mutex_;
+    std::mutex thread_mutex_;
 
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;

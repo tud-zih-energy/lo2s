@@ -379,6 +379,9 @@ void Trace::update_process_name(pid_t pid, const std::string& name)
 
 void Trace::update_thread_name(pid_t tid, const otf2::definition::string& name)
 {
+    // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
+    std::lock_guard<std::mutex> guard(thread_mutex_);
+
     auto loc_it = thread_sample_locations_.find(tid);
 
     if (loc_it != thread_sample_locations_.end())
@@ -422,8 +425,12 @@ void Trace::add_cpu(int cpuid)
                               otf2::definition::location_group::location_group_type::process,
                               system_tree_cpu_nodes_.at(cpuid)));
 }
+
 otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 {
+    // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
+    std::lock_guard<std::mutex> guard(thread_mutex_);
+
     auto name = (boost::format("thread %d") % tid).str();
 
     // As the tid is unique in this context, create only one writer/location per tid
@@ -436,6 +443,7 @@ otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 
     return archive()(location.first->second);
 }
+
 otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
 {
     auto name = (boost::format("sample cpu %d") % cpuid).str();
