@@ -24,7 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
 
-#include <lo2s/monitor/fd_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/pipe.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -43,13 +43,13 @@ namespace tracepoint
  *
  * TODO Split up in one Monitor per core and pin it!
  */
-class MetricMonitor : public monitor::FdMonitor
+class MetricMonitor : public monitor::PollMonitor
 {
 public:
     MetricMonitor(trace::Trace& trace);
 
 private:
-    void monitor(size_t index) override;
+    void monitor(int fd) override;
     void finalize_thread() override;
 
     std::string group() const override

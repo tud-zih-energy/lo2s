@@ -27,8 +27,7 @@ namespace x86_adapt
 class Metrics
 {
 public:
-    Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval,
-            const std::vector<std::string>& items);
+    Metrics(trace::Trace& trace, const std::vector<std::string>& items);
 
 public:
     void start();

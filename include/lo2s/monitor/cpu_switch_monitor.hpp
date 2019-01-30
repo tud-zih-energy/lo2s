@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lo2s/build_config.hpp>
-#include <lo2s/monitor/fd_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/perf/record/comm_reader.hpp>
 
@@ -36,13 +36,13 @@ namespace lo2s
 {
 namespace monitor
 {
-class CpuSwitchMonitor : public FdMonitor
+class CpuSwitchMonitor : public PollMonitor
 {
 public:
     CpuSwitchMonitor(int cpu, trace::Trace& trace);
 
     void initialize_thread() override;
-    void monitor(size_t index) override;
+    void monitor(int fd) override;
 
     std::string group() const override
     {

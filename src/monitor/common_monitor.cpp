@@ -44,8 +44,7 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
                              bool enable_on_exec)
-: IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
-  tid_(tid)
+: PollMonitor(parent_monitor.trace(), std::to_string(tid)), pid_(pid), tid_(tid)
 {
     if (config().sampling)
     {
@@ -90,7 +89,7 @@ void ThreadMonitor::finalize_thread()
     }
 }
 
-void ThreadMonitor::monitor()
+void ThreadMonitor::monitor(int fd)
 {
     check_affinity();
 

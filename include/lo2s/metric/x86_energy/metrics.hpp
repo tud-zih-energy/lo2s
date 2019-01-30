@@ -24,7 +24,7 @@ namespace x86_energy
 class Metrics
 {
 public:
-    Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval);
+    Metrics(trace::Trace& trace);
 
 public:
     void start();

@@ -45,7 +45,7 @@ namespace perf
 namespace tracepoint
 {
 
-MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::FdMonitor(trace, "")
+MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::PollMonitor(trace, "")
 {
     perf_writers_.reserve(Topology::instance().cpus().size() * config().tracepoint_events.size());
     // Note any of those setups might fail.
@@ -70,9 +70,7 @@ MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::FdMonitor(trace, ""
             {
                 Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
                 perf_writers_.emplace_back(cpu.id, event, trace, mc);
-                auto index = add_fd(perf_writers_.back().fd());
-                assert(index == perf_writers_.size() - 1);
-                (void)index;
+                add_fd(perf_writers_.back().fd());
             }
         }
         catch (const std::exception& e)
@@ -87,9 +85,23 @@ MetricMonitor::MetricMonitor(trace::Trace& trace) : monitor::FdMonitor(trace, ""
     }
 }
 
-void MetricMonitor::monitor(size_t index)
+void MetricMonitor::monitor(int fd)
 {
-    perf_writers_[index].read();
+    // Ignore timerfd wakeups
+    if (fd == -1)
+    {
+        return;
+    }
+    // TODO: Optimize, ideally this would be a fd -> writer map but this is kind of a
+    // chicken egg problem
+    for (auto& writer : perf_writers_)
+    {
+        if (writer.fd() == fd)
+        {
+            writer.read();
+            break;
+        }
+    }
 }
 
 void MetricMonitor::finalize_thread()

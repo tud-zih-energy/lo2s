@@ -132,8 +132,7 @@ set(SOURCE_FILES
 
     src/monitor/cpu_set_monitor.cpp
     src/monitor/cpu_switch_monitor.cpp
-    src/monitor/fd_monitor.cpp
-    src/monitor/interval_monitor.cpp
+    src/monitor/poll_monitor.cpp
     src/monitor/main_monitor.cpp
     src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp

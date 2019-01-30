@@ -16,7 +16,7 @@ namespace metric
 namespace x86_energy
 {
 
-Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval)
+Metrics::Metrics(trace::Trace& trace)
 {
     xe::Mechanism mechanism;
 
@@ -126,8 +126,8 @@ Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval
                 stn = trace.system_tree_root_node();
             }
 
-            recorders_.emplace_back(std::make_unique<Monitor>(
-                active_source->get(counter, index), cpuid, sampling_interval, trace, mc, stn));
+            recorders_.emplace_back(std::make_unique<Monitor>(active_source->get(counter, index),
+                                                              cpuid, trace, mc, stn));
         }
     }
 }

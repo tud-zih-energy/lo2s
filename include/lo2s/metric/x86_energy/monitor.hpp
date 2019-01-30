@@ -6,7 +6,7 @@
 
 #include <lo2s/time/time.hpp>
 
-#include <lo2s/monitor/interval_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <x86_energy.hpp>
@@ -22,16 +22,15 @@ namespace metric
 {
 namespace x86_energy
 {
-class Monitor : public monitor::IntervalMonitor
+class Monitor : public monitor::PollMonitor
 {
 public:
-    Monitor(::x86_energy::SourceCounter counter, int cpu,
-            std::chrono::nanoseconds sampling_interval, trace::Trace& trace,
+    Monitor(::x86_energy::SourceCounter counter, int cpu, trace::Trace& trace,
             const otf2::definition::metric_class& metric_class,
             const otf2::definition::system_tree_node& stn);
 
 protected:
-    void monitor() override;
+    void monitor(int fd) override;
     void initialize_thread() override;
 
     std::string group() const override

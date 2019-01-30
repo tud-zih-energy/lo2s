@@ -6,7 +6,7 @@
 
 #include <lo2s/time/time.hpp>
 
-#include <lo2s/monitor/interval_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <x86_adapt_cxx/x86_adapt.hpp>
@@ -31,15 +31,15 @@ namespace metric
 {
 namespace x86_adapt
 {
-class NodeMonitor : public monitor::IntervalMonitor
+class NodeMonitor : public monitor::PollMonitor
 {
 public:
-    NodeMonitor(::x86_adapt::device device, std::chrono::nanoseconds sampling_interval,
+    NodeMonitor(::x86_adapt::device device,
                 const std::vector<::x86_adapt::configuration_item>& configuration_items,
                 trace::Trace& trace, const otf2::definition::metric_class& metric_class);
 
 protected:
-    void monitor() override;
+    void monitor(int fd) override;
     void initialize_thread() override;
 
     std::string group() const override

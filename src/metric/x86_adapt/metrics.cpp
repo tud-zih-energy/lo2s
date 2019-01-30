@@ -10,8 +10,7 @@ namespace metric
 namespace x86_adapt
 {
 
-Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval,
-                 const std::vector<std::string>& item_names)
+Metrics::Metrics(trace::Trace& trace, const std::vector<std::string>& item_names)
 {
     auto mc = trace.metric_class();
     auto node_mc = trace.metric_class();
@@ -60,15 +59,14 @@ Metrics::Metrics(trace::Trace& trace, std::chrono::nanoseconds sampling_interval
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        recorders_.emplace_back(std::make_unique<Monitor>(x86_adapt_.cpu(cpu.id), sampling_interval,
-                                                          cpu_configuration_items, trace, mc));
+        recorders_.emplace_back(
+            std::make_unique<Monitor>(x86_adapt_.cpu(cpu.id), cpu_configuration_items, trace, mc));
     }
 
     for (const auto& package : Topology::instance().packages())
     {
-        node_recorders_.emplace_back(
-            std::make_unique<NodeMonitor>(x86_adapt_.node(package.id), sampling_interval,
-                                          node_configuration_items, trace, node_mc));
+        node_recorders_.emplace_back(std::make_unique<NodeMonitor>(
+            x86_adapt_.node(package.id), node_configuration_items, trace, node_mc));
     }
 }
 

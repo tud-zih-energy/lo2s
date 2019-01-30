@@ -61,8 +61,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config().read_interval, config().x86_adapt_knobs);
+            x86_adapt_metrics_ =
+                std::make_unique<metric::x86_adapt::Metrics>(trace_, config().x86_adapt_knobs);
             x86_adapt_metrics_->start();
         }
         catch (std::exception& e)
@@ -77,8 +77,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            x86_energy_metrics_ =
-                std::make_unique<metric::x86_energy::Metrics>(trace_, config().read_interval);
+            x86_energy_metrics_ = std::make_unique<metric::x86_energy::Metrics>(trace_);
             x86_energy_metrics_->start();
         }
         catch (std::exception& e)

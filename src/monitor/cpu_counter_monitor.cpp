@@ -33,7 +33,7 @@ namespace monitor
 {
 
 CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
-: IntervalMonitor(parent.trace(), std::to_string(cpuid), config().read_interval)
+: PollMonitor(parent.trace(), std::to_string(cpuid))
 {
     if (!perf::requested_events().events.empty())
     {
@@ -57,7 +57,7 @@ void CpuCounterMonitor::finalize_thread()
     }
 }
 
-void CpuCounterMonitor::monitor()
+void CpuCounterMonitor::monitor(int fd)
 {
     if (counter_writer_)
     {

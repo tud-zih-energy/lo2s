@@ -36,7 +36,7 @@ namespace monitor
 {
 
 CpuSwitchMonitor::CpuSwitchMonitor(int cpu, trace::Trace& trace)
-: FdMonitor(trace, std::to_string(cpu)), cpu_(cpu), comm_reader_(cpu, trace)
+: PollMonitor(trace, std::to_string(cpu)), cpu_(cpu), comm_reader_(cpu, trace)
 #ifndef USE_PERF_RECORD_SWITCH
   ,
   switch_writer_(cpu, trace)
@@ -58,24 +58,20 @@ void CpuSwitchMonitor::merge_trace()
     comm_reader_.merge_trace();
 }
 
-void CpuSwitchMonitor::monitor(size_t index)
+void CpuSwitchMonitor::monitor(int fd)
 {
-    if (index == 0)
+    if (comm_reader_.fd() == fd || fd == -1)
     {
         Log::debug() << "reading ExitReader";
         comm_reader_.read();
     }
 #ifndef USE_PERF_RECORD_SWITCH
-    if (index == 1)
+    if (switch_writer_.fd() == fd || fd == -1)
     {
         Log::debug() << "reading SwitchWriter";
         switch_writer_.read();
     }
 #endif
-    else
-    {
-        assert(false);
-    }
 }
 } // namespace monitor
 } // namespace lo2s

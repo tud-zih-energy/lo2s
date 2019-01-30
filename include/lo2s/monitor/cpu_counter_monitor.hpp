@@ -21,7 +21,7 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/interval_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/perf/counter/cpu_writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
@@ -33,13 +33,13 @@ namespace lo2s
 namespace monitor
 {
 
-class CpuCounterMonitor : public IntervalMonitor
+class CpuCounterMonitor : public PollMonitor
 {
 public:
     CpuCounterMonitor(int cpuid, MainMonitor& parent);
 
 public:
-    void monitor() override;
+    void monitor(int fd) override;
 
     std::string group() const override
     {
