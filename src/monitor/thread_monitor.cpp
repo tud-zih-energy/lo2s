@@ -91,6 +91,7 @@ void ThreadMonitor::finalize_thread()
 
 void ThreadMonitor::monitor(int fd)
 {
+    void(fd);
     check_affinity();
 
     if (sample_writer_)

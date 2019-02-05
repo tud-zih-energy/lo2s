@@ -20,12 +20,14 @@
  */
 
 #include <lo2s/config.hpp>
+#include <lo2s/error.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 
 extern "C"
 {
 #include <sys/timerfd.h>
 }
+
 namespace lo2s
 {
 namespace monitor
@@ -130,7 +132,11 @@ void PollMonitor::run()
         if (timer_pfd().revents & POLLIN)
         {
             uint64_t expirations;
-            read(timer_pfd().fd, &expirations, sizeof(expirations));
+            if(read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1);
+            {
+                Log::error() << "Flushing timer fd failed";
+                throw_errno();
+            }
             (void)expirations;
         }
         if (stop_pfd().revents & POLLIN)

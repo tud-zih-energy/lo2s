@@ -59,6 +59,7 @@ void CpuCounterMonitor::finalize_thread()
 
 void CpuCounterMonitor::monitor(int fd)
 {
+    void(fd);
     if (counter_writer_)
     {
         counter_writer_->read();
