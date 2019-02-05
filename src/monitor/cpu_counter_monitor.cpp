@@ -19,6 +19,8 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/build_config.hpp>
+
 #include <lo2s/monitor/cpu_counter_monitor.hpp>
 
 #include <lo2s/config.hpp>
@@ -38,7 +40,9 @@ CpuCounterMonitor::CpuCounterMonitor(int cpuid, MainMonitor& parent)
         counter_writer_ = std::make_unique<perf::counter::CpuWriter>(
             cpuid, parent.trace().cpu_metric_writer(cpuid), parent);
     }
+#ifndef USE_PERF_RECORD_SWITCH
     if (config().sampling)
+#endif
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(
             -1, -1, cpuid, parent, parent.trace(), parent.trace().cpu_sample_writer(cpuid), false);

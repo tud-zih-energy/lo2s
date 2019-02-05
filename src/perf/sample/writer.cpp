@@ -19,10 +19,13 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/summary.hpp>
+
 #include <lo2s/perf/sample/writer.hpp>
 
 #include <lo2s/perf/sample/reader.hpp>
 
+#include <lo2s/perf/event_collection.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/time/converter.hpp>
 
@@ -58,37 +61,54 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now())
+  time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
+  last_time_point_(first_time_point_)
 {
-
-    CounterDescription sampling_event =
-        EventProvider::get_event_by_name(config().sampling_event); // config parser has already
-                                                                   // checked for event
-                                                                   // availability, should not throw
-
-    Log::debug() << "using sampling event \'" << config().sampling_event
-                 << "\', period: " << config().sampling_period;
-
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(struct perf_event_attr));
     attr.size = sizeof(struct perf_event_attr);
-    attr.type = sampling_event.type;
-    attr.config = sampling_event.config;
-    attr.config1 = sampling_event.config1;
-    attr.sample_period = config().sampling_period;
     attr.exclude_kernel = config().exclude_kernel;
+    attr.sample_period = config().sampling_period;
 
-    // map events to buffer (don't need the fancy mmap2)
-    attr.mmap = 1;
+    if (config().sampling)
+    {
+        CounterDescription sampling_event = EventProvider::get_event_by_name(
+            config().sampling_event); // config parser has already
+                                      // checked for event
+                                      // availability, should not throw
+
+        Log::debug() << "using sampling event \'" << config().sampling_event
+                     << "\', period: " << config().sampling_period;
+
+        attr.type = sampling_event.type;
+        attr.config = sampling_event.config;
+        attr.config1 = sampling_event.config1;
+
+        // mmap events to buffer (don't need the fancy mmap2)
+        attr.mmap = 1;
+    }
+    else
+    {
+        // Set up a dummy event for recording calling context enter/leaves only
+        attr.type = PERF_TYPE_SOFTWARE;
+        attr.config = PERF_COUNT_SW_DUMMY;
+    }
 
     init(attr, tid, cpu, enable_on_exec, config().mmap_pages);
 }
 
 Writer::~Writer()
 {
-    if (!local_ip_refs_.empty())
+
+    if (last_event_type_ == LastEventType::enter)
     {
-        const auto& mapping = trace_.merge_ips(local_ip_refs_, monitor_.get_process_infos());
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
+                                                 last_calling_context_);
+    }
+    if (!local_ip_refs_.empty() || !thread_calling_context_refs_.empty())
+    {
+        const auto& mapping = trace_.merge_calling_contexts(
+            local_ip_refs_, thread_calling_context_refs_, monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
 }
@@ -132,13 +152,24 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
+    auto tp = time_converter_(sample->time);
+    // As they are sometimes out of order, we can not trust timestamps to be strictly in order all
+    // of the time
+    if (last_time_point_ > tp)
+    {
+        Log::debug() << "perf_event_open timestamps not in order for sampling event: "
+                     << last_time_point_ << ">" << tp;
+        tp = last_time_point_;
+    }
+
     if (sample->pid == 0)
     {
+        last_time_point_ = tp;
         return false;
     }
     //    log::trace() << "sample event. ip: " << sample->ip << ", time: " << sample->time
     //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
-    auto tp = time_converter_(sample->time);
+
     /*
     Note: This is the inefficient version with a fake calling context that we don't use
     otf2::definition::calling_context cctx(cctx_ref(sample),
@@ -159,6 +190,8 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
+    // Timepoints for Sample and Cpu Switch events are out of order sometimes, so we have to fix
+    // that
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
 
@@ -181,6 +214,57 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     cached_mmap_events_.emplace_back(mmap_event);
     return false;
 }
+
+#ifdef USE_PERF_RECORD_SWITCH
+bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
+{
+    auto tp = time_converter_(context_switch->time);
+    if (last_time_point_ > tp)
+    {
+        Log::debug() << "perf_event_open timestamps not in order for CpuSwitch event: "
+                     << last_time_point_ << ">" << tp;
+    }
+
+    auto elem = thread_calling_context_refs_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(context_switch->pid),
+        std::forward_as_tuple(thread_calling_context_refs_.size()));
+    if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
+    {
+        if (last_event_type_ == LastEventType::leave)
+        {
+            Log::trace() << "Writing missing calling context enter event for current calling "
+                            "context leave event.";
+            otf2_writer_.write_calling_context_enter(std::min(last_time_point_, tp),
+                                                     elem.first->second, 2);
+        }
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, tp),
+                                                 elem.first->second);
+        last_event_type_ = LastEventType::leave;
+    }
+    else
+    {
+        if (last_event_type_ == LastEventType::enter)
+        {
+            Log::trace() << "Writing missing calling context leave event for the last calling "
+                            "context enter event.";
+            otf2_writer_.write_calling_context_leave(std::max(last_time_point_, tp),
+                                                     last_calling_context_);
+        }
+        otf2_writer_.write_calling_context_enter(std::max(last_time_point_, tp), elem.first->second,
+                                                 2);
+
+        if (context_switch->pid != 0)
+        {
+            summary().register_process(context_switch->pid);
+        }
+
+        last_event_type_ = LastEventType::enter;
+    }
+    last_time_point_ = tp;
+    last_calling_context_ = elem.first->second;
+    return false;
+}
+#endif
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {

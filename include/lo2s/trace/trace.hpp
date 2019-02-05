@@ -140,16 +140,24 @@ public:
     otf2::definition::metric_class cpuid_metric_class();
     otf2::definition::metric_class perf_metric_class();
 
-    otf2::definition::mapping_table merge_ips(IpRefMap& new_ips,
-                                              std::map<pid_t, ProcessInfo>& infos);
+    otf2::definition::mapping_table merge_calling_contexts(
+        IpRefMap& new_ips,
+        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
+            thread_refs,
+        std::map<pid_t, ProcessInfo>& infos);
+
+    otf2::definition::mapping_table merge_thread_calling_contexts(
+        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
+            thread_refs);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
                    std::map<pid_t, ProcessInfo>& infos);
 
-    otf2::definition::mapping_table merge_thread_calling_contexts(
+    void merge_thread_calling_contexts(
         const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
-            local_refs);
+            thread_refs,
+        std::vector<uint32_t>& mapping_table);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {

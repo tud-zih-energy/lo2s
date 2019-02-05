@@ -92,11 +92,15 @@ protected:
         perf_attr.clockid = config().clockid;
 #endif
 
+        perf_attr.sample_id_all = 1;
         // Generate PERF_RECORD_COMM events to trace changes to the command
         // name of a task.  This is used to write a meaningful name for any
         // traced thread to the archive.
         perf_attr.comm = 1;
 
+#ifdef USE_PERF_RECORD_SWITCH
+        perf_attr.context_switch = 1;
+#endif
         // We need this to get all mmap_events
         if (enable_on_exec)
         {

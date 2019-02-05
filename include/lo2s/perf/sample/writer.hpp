@@ -63,6 +63,9 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
     bool handle(const Reader::RecordMmapType* mmap_event);
     bool handle(const Reader::RecordCommType* comm);
+#ifdef USE_PERF_RECORD_SWITCH
+    bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
+#endif
 
     otf2::writer::local& otf2_writer()
     {
@@ -82,7 +85,7 @@ private:
 
     otf2::definition::calling_context::reference_type next_ip_ref() const
     {
-        return local_ip_refs_.size();
+        return local_ip_refs_.size() + thread_calling_context_refs_.size();
     }
 
     pid_t pid_;
@@ -97,13 +100,25 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
+    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
+        thread_calling_context_refs_;
     trace::IpRefMap local_ip_refs_;
     RawMemoryMapCache cached_mmap_events_;
     const time::Converter time_converter_;
 
     bool first_event_ = true;
     otf2::chrono::time_point first_time_point_;
-    otf2::chrono::time_point last_time_point_ = otf2::chrono::genesis();
+    otf2::chrono::time_point last_time_point_;
+
+    otf2::definition::calling_context::reference_type last_calling_context_ =
+        otf2::definition::calling_context::reference_type::undefined();
+
+    enum class LastEventType
+    {
+        enter,
+        leave
+    };
+    LastEventType last_event_type_ = LastEventType::leave;
 };
 } // namespace sample
 } // namespace perf
