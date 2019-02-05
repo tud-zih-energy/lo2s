@@ -62,7 +62,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
-  last_time_point_(lo2s::time::now())
+  last_time_point_(first_time_point_)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(struct perf_event_attr));
@@ -84,7 +84,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
         attr.config = sampling_event.config;
         attr.config1 = sampling_event.config1;
 
-        // map events to buffer (don't need the fancy mmap2)
+        // mmap events to buffer (don't need the fancy mmap2)
         attr.mmap = 1;
     }
     else
@@ -159,6 +159,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     {
         Log::debug() << "perf_event_open timestamps not in order for sampling event: "
                      << last_time_point_ << ">" << tp;
+        tp = last_time_point_;
     }
 
     if (sample->pid == 0)
@@ -191,7 +192,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
     // Timepoints for Sample and Cpu Switch events are out of order sometimes, so we have to fix
     // that
-    otf2_writer_.write_calling_context_sample(std::max(last_time_point_, tp), cctx_ref(sample), 2,
+    otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
 
     last_time_point_ = tp;
