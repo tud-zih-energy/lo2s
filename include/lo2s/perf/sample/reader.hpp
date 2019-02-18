@@ -99,7 +99,10 @@ protected:
         perf_attr.comm = 1;
 
 #ifdef USE_PERF_RECORD_SWITCH
-        perf_attr.context_switch = 1;
+        if(cpu != -1)
+        {
+            perf_attr.context_switch = 1;
+        }
 #endif
         // We need this to get all mmap_events
         if (enable_on_exec)
