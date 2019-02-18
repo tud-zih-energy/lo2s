@@ -214,10 +214,6 @@ public:
                     stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                     break;
 #ifdef USE_PERF_RECORD_SWITCH
-                //Simply ignore PERF_RECORD_SWITCH events, as they do not carry any extra information in respect to the PERF_RECORD_SWITCH_CPU_WIDE we are also receiving in our use case
-                case PERF_RECORD_SWITCH:
-                    break;
-
                 case PERF_RECORD_SWITCH_CPU_WIDE:
                     stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
                     break;
