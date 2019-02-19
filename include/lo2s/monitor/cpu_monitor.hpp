@@ -27,7 +27,7 @@
 #include <lo2s/perf/sample/writer.hpp>
 
 #ifndef USE_PERF_RECORD_SWITCH
-#include <l2os/perf/tracepoint/switch_writer.hpp>
+#include <lo2s/perf/tracepoint/switch_writer.hpp>
 #endif
 
 #include <lo2s/trace/trace.hpp>

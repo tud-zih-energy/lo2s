@@ -37,7 +37,7 @@ CpuMonitor::CpuMonitor(int cpuid, MainMonitor& parent)
 : PollMonitor(parent.trace(), std::to_string(cpuid)), cpu_(cpuid)
 #ifndef USE_PERF_RECORD_SWITCH
   ,
-  switch_writer(cpu, parent.trace())
+  switch_writer_(cpuid, parent.trace())
 #endif
 {
     if (!perf::requested_events().events.empty())
