@@ -50,20 +50,10 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     {
         trace_.add_cpu(cpu.id);
 
-#ifndef USE_PERF_RECORD_SWITCH
-        if (!perf::requested_events().events.empty() || config().sampling)
-        {
-#endif
-            counter_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                      std::forward_as_tuple(cpu.id, *this));
-#ifndef USE_PERF_RECORD_SWITCH
-        }
-#endif
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
-        auto ret = switch_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                            std::forward_as_tuple(cpu.id, trace_));
-        assert(ret.second);
-        (void)ret;
+
+        monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
+                          std::forward_as_tuple(cpu.id, *this));
     }
 }
 
@@ -82,12 +72,8 @@ void CpuSetMonitor::run()
             throw std::runtime_error("Failed to set pthread_sigmask");
         }
     }
-    for (auto& monitor_elem : switch_monitors_)
-    {
-        monitor_elem.second.start();
-    }
 
-    for (auto& monitor_elem : counter_monitors_)
+    for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.start();
     }
@@ -119,20 +105,11 @@ void CpuSetMonitor::run()
 
     trace_.add_threads(get_comms_for_running_processes());
 
-    for (auto& monitor_elem : switch_monitors_)
+    for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.stop();
     }
 
-    for (auto& monitor_elem : counter_monitors_)
-    {
-        monitor_elem.second.stop();
-    }
-
-    for (auto& monitor_elem : switch_monitors_)
-    {
-        monitor_elem.second.merge_trace();
-    }
     throw std::system_error(0, std::system_category());
 }
 } // namespace monitor

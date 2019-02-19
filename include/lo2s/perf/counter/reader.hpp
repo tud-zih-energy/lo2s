@@ -50,47 +50,9 @@ public:
     };
 
     Reader(pid_t tid, int cpuid, const EventCollection& event_collection, bool enable_on_exec)
-    : counters_(tid, cpuid, event_collection.events,
-                group_leader_attributes(event_collection.leader), enable_on_exec)
+    : counters_(tid, cpuid, event_collection, enable_on_exec)
     {
-        EventReader<T>::init_mmap(counters_.group_leader_fd(), config().mmap_pages);
-    }
-
-private:
-    static perf_event_attr group_leader_attributes(const CounterDescription& leader_event)
-    {
-        perf_event_attr leader_attr;
-        std::memset(&leader_attr, 0, sizeof(leader_attr));
-
-        leader_attr.size = sizeof(leader_attr);
-        leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
-
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-        leader_attr.use_clockid = config().use_clockid;
-        leader_attr.clockid = config().clockid;
-#endif
-
-        leader_attr.freq = config().metric_use_frequency;
-        if (leader_attr.freq)
-        {
-            Log::debug() << "perf::counter::Reader: sample_freq: " << config().metric_frequency
-                         << "Hz";
-            leader_attr.sample_freq = config().metric_frequency;
-        }
-        else
-        {
-            Log::debug() << "perf::counter::Reader: sample_period: " << config().metric_count
-                         << " events";
-            leader_attr.sample_period = config().metric_count;
-        }
-
-        Log::debug() << "perf::counter::Reader: leader event: '" << config().metric_leader << "'";
-
-        leader_attr.type = leader_event.type;
-        leader_attr.config = leader_event.config;
-        leader_attr.config1 = leader_event.config1;
-
-        return leader_attr;
+        EventReader<T>::init_mmap(counters_.group_leader_fd());
     }
 
 protected:

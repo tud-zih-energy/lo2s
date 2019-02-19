@@ -24,9 +24,8 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
-
-#include <lo2s/perf/tracepoint/metric_monitor.hpp>
 
 namespace lo2s
 {
@@ -47,8 +46,11 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            tracepoint_metrics_ = std::make_unique<perf::tracepoint::MetricMonitor>(trace_);
-            tracepoint_metrics_->start();
+            for (const auto& cpu : Topology::instance().cpus())
+            {
+                tracepoint_metrics_.emplace_back(trace_, cpu.id);
+                tracepoint_metrics_.back().start();
+            }
         }
         catch (std::exception& e)
         {
@@ -101,9 +103,12 @@ void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_even
 
 MainMonitor::~MainMonitor()
 {
-    if (tracepoint_metrics_)
+    if (!tracepoint_metrics_.empty())
     {
-        tracepoint_metrics_->stop();
+        for (auto& metric_monitor : tracepoint_metrics_)
+        {
+            metric_monitor.stop();
+        }
     }
 
 #ifdef HAVE_X86_ENERGY

@@ -26,6 +26,10 @@
 #include <lo2s/perf/counter/cpu_writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 
+#ifndef USE_PERF_RECORD_SWITCH
+#include <l2os/perf/tracepoint/switch_writer.hpp>
+#endif
+
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s
@@ -33,10 +37,10 @@ namespace lo2s
 namespace monitor
 {
 
-class CpuCounterMonitor : public PollMonitor
+class CpuMonitor : public PollMonitor
 {
 public:
-    CpuCounterMonitor(int cpuid, MainMonitor& parent);
+    CpuMonitor(int cpuid, MainMonitor& parent);
 
 public:
     void monitor(int fd) override;
@@ -46,11 +50,17 @@ public:
         return "CpuCounterMonitor";
     }
 
+    void initialize_thread() override;
     void finalize_thread() override;
 
 private:
+    int cpu_;
+
     std::unique_ptr<perf::counter::CpuWriter> counter_writer_;
     std::unique_ptr<perf::sample::Writer> sample_writer_;
+#ifndef USE_PERF_RECORD_SWITCH
+    perf::tracepoint::SwitchWriter switch_writer_;
+#endif
 };
 } // namespace monitor
 } // namespace lo2s

@@ -132,7 +132,7 @@ void PollMonitor::run()
         if (timer_pfd().revents & POLLIN)
         {
             uint64_t expirations;
-            if(read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1);
+            if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
             {
                 Log::error() << "Flushing timer fd failed";
                 throw_errno();

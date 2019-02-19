@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -76,21 +77,39 @@ public:
     };
 
 protected:
-    Reader(bool has_cct = false) : has_cct_(has_cct)
-    {
-    }
-
     using EventReader<T>::init_mmap;
-    void init(struct perf_event_attr& perf_attr, pid_t tid, int cpu, bool enable_on_exec,
-              size_t mmap_pages)
+
+    Reader(pid_t tid, int cpu, bool enable_on_exec) : has_cct_(config().enable_cct)
     {
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
+        struct perf_event_attr perf_attr = common_perf_event_attrs();
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-        perf_attr.use_clockid = config().use_clockid;
-        perf_attr.clockid = config().clockid;
-#endif
+        perf_attr.exclude_kernel = config().exclude_kernel;
+        perf_attr.sample_period = config().sampling_period;
+
+        if (config().sampling)
+        {
+            CounterDescription sampling_event = EventProvider::get_event_by_name(
+                config().sampling_event); // config parser has already
+                                          // checked for event
+                                          // availability, should not throw
+
+            Log::debug() << "using sampling event \'" << config().sampling_event
+                         << "\', period: " << config().sampling_period;
+
+            perf_attr.type = sampling_event.type;
+            perf_attr.config = sampling_event.config;
+            perf_attr.config1 = sampling_event.config1;
+
+            perf_attr.mmap = 1;
+        }
+        else
+        {
+            // Set up a dummy event for recording calling context enter/leaves only
+            perf_attr.type = PERF_TYPE_SOFTWARE;
+            perf_attr.config = PERF_COUNT_SW_DUMMY;
+        }
 
         perf_attr.sample_id_all = 1;
         // Generate PERF_RECORD_COMM events to trace changes to the command
@@ -113,15 +132,11 @@ protected:
         // TODO see if we can remove remove tid
         perf_attr.sample_type =
             PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_CPU;
-        if (has_cct_)
+        if (config().enable_cct)
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
         }
 
-        // we'll enable it later otherwise mmap would not work
-        perf_attr.disabled = 1;
-
-        perf_attr.precise_ip = 3; // request exact address
         /* precise_ip is an unsigned integer therefore we have to check if we get an underflow
          * and the value of it is greater than the initial value */
         do
@@ -171,7 +186,7 @@ protected:
                 throw_errno();
             }
 
-            init_mmap(fd_, mmap_pages);
+            init_mmap(fd_);
             Log::debug() << "mmap initialized";
 
             if (!enable_on_exec)

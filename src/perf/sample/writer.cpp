@@ -25,14 +25,12 @@
 
 #include <lo2s/perf/sample/reader.hpp>
 
-#include <lo2s/perf/event_collection.hpp>
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/address.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -56,45 +54,14 @@ namespace sample
 
 Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, trace::Trace& trace,
                otf2::writer::local& otf2_writer, bool enable_on_exec)
-: Reader(config().enable_cct), pid_(pid), tid_(tid), cpuid_(cpu), monitor_(Monitor), trace_(trace),
-  otf2_writer_(otf2_writer),
+: Reader(tid, cpu, enable_on_exec), pid_(pid), tid_(tid), cpuid_(cpu), monitor_(Monitor),
+  trace_(trace), otf2_writer_(otf2_writer),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
-    struct perf_event_attr attr;
-    memset(&attr, 0, sizeof(struct perf_event_attr));
-    attr.size = sizeof(struct perf_event_attr);
-    attr.exclude_kernel = config().exclude_kernel;
-    attr.sample_period = config().sampling_period;
-
-    if (config().sampling)
-    {
-        CounterDescription sampling_event = EventProvider::get_event_by_name(
-            config().sampling_event); // config parser has already
-                                      // checked for event
-                                      // availability, should not throw
-
-        Log::debug() << "using sampling event \'" << config().sampling_event
-                     << "\', period: " << config().sampling_period;
-
-        attr.type = sampling_event.type;
-        attr.config = sampling_event.config;
-        attr.config1 = sampling_event.config1;
-
-        // mmap events to buffer (don't need the fancy mmap2)
-        attr.mmap = 1;
-    }
-    else
-    {
-        // Set up a dummy event for recording calling context enter/leaves only
-        attr.type = PERF_TYPE_SOFTWARE;
-        attr.config = PERF_COUNT_SW_DUMMY;
-    }
-
-    init(attr, tid, cpu, enable_on_exec, config().mmap_pages);
 }
 
 Writer::~Writer()
@@ -268,18 +235,27 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
-    std::string new_command{ static_cast<const char*>(comm->comm) };
-
-    Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
-                 << new_command << "\"";
-
-    // update task name
-    trace_.update_thread_name(comm->tid, new_command);
-
-    // only update name of process if the main thread changes its name
-    if (comm->pid == comm->tid)
+    if (cpuid_ == -1)
     {
-        trace_.update_process_name(comm->pid, new_command);
+        std::string new_command{ static_cast<const char*>(comm->comm) };
+
+        Log::debug() << "Thread " << comm->tid << " in process " << comm->pid
+                     << " changed name to \"" << new_command << "\"";
+
+        // update task name
+        trace_.update_thread_name(comm->tid, new_command);
+
+        // only update name of process if the main thread changes its name
+        if (comm->pid == comm->tid)
+        {
+            trace_.update_process_name(comm->pid, new_command);
+        }
+    }
+    else
+    {
+        summary().register_process(comm->pid);
+
+        comms_[comm->pid] = comm->comm;
     }
 
     return false;
@@ -314,6 +290,8 @@ void Writer::end()
         // thread_begin and thread_end event.
         otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(pid_), -1);
     }
+
+    trace_.add_threads(comms_);
 
     monitor_.insert_cached_mmap_events(cached_mmap_events_);
 }

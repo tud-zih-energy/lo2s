@@ -29,22 +29,15 @@
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
 #include <lo2s/mmap.hpp>
-#include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/monitor/metric_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <deque>
+#include <memory>
 
 namespace lo2s
 {
-namespace perf
-{
-namespace tracepoint
-{
-class MetricMonitor;
-}
-} // namespace perf
-
 namespace monitor
 {
 
@@ -72,7 +65,7 @@ protected:
 
     std::map<pid_t, ProcessInfo> process_infos_;
     metric::plugin::Metrics metrics_;
-    std::unique_ptr<perf::tracepoint::MetricMonitor> tracepoint_metrics_;
+    std::deque<MetricMonitor> tracepoint_metrics_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif

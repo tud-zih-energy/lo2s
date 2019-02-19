@@ -140,6 +140,7 @@ public:
     otf2::definition::metric_class cpuid_metric_class();
     otf2::definition::metric_class perf_metric_class();
 
+    otf2::definition::metric_class tracepoint_metric_class(const std::string& event_name);
     otf2::definition::mapping_table merge_calling_contexts(
         IpRefMap& new_ips,
         const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
@@ -247,13 +248,13 @@ private:
     otf2::definition::metric_class::reference_type metric_class_ref() const
     {
         return static_cast<otf2::definition::metric_class::reference_type>(
-            metric_instances_.size() + metric_classes_.size());
+            metric_instances_.size() + metric_classes_.size() + tracepoint_metric_classes_.size());
     }
 
     otf2::definition::metric_instance::reference_type metric_instance_ref() const
     {
         return static_cast<otf2::definition::metric_instance::reference_type>(
-            metric_instances_.size() + metric_classes_.size());
+            metric_instances_.size() + metric_classes_.size() + tracepoint_metric_classes_.size());
     }
 
     otf2::definition::source_code_location::reference_type scl_ref() const
@@ -327,6 +328,7 @@ private:
     otf2::definition::container<otf2::definition::calling_context_property>
         calling_context_properties_;
     otf2::definition::container<otf2::definition::metric_member> metric_members_;
+    std::map<std::string, otf2::definition::metric_class> tracepoint_metric_classes_;
     otf2::definition::container<otf2::definition::metric_class> metric_classes_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_metric_class_;

@@ -113,24 +113,13 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(int cpu, int event_id, size_t mmap_pages) : cpu_(cpu)
+    Reader(int cpu, int event_id) : cpu_(cpu)
     {
-        struct perf_event_attr attr;
-        memset(&attr, 0, sizeof(attr));
+        struct perf_event_attr attr = common_perf_event_attrs();
         attr.type = PERF_TYPE_TRACEPOINT;
-        attr.size = sizeof(attr);
         attr.config = event_id;
-        attr.disabled = 1;
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
-
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-        attr.use_clockid = config().use_clockid;
-        attr.clockid = config().clockid;
-#endif
-
-        attr.watermark = 1;
-        attr.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * get_page_size());
 
         fd_ = perf_event_open(&attr, -1, cpu_, -1, 0);
         if (fd_ < 0)
@@ -150,7 +139,7 @@ public:
                 throw_errno();
             }
 
-            init_mmap(fd_, mmap_pages);
+            init_mmap(fd_);
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
             auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
@@ -179,11 +168,6 @@ public:
         {
             close(fd_);
         }
-    }
-
-    int fd() const
-    {
-        return fd_;
     }
 
     void stop()

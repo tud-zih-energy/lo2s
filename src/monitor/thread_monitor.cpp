@@ -51,12 +51,14 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
         sample_writer_ = std::make_unique<perf::sample::Writer>(
             pid, tid, -1, parent_monitor, parent_monitor.trace(),
             parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec);
+        add_fd(sample_writer_->fd());
     }
     if (!perf::requested_events().events.empty())
     {
         counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
             pid, tid, parent_monitor.trace().thread_metric_writer(pid, tid), parent_monitor,
             enable_on_exec);
+        add_fd(counter_writer_->fd());
     }
 
     /* setup the sampling counter(s) and start a monitoring thread */
@@ -91,15 +93,14 @@ void ThreadMonitor::finalize_thread()
 
 void ThreadMonitor::monitor(int fd)
 {
-    void(fd);
     check_affinity();
 
-    if (sample_writer_)
+    if (sample_writer_ && (fd == -1 || sample_writer_->fd() == fd))
     {
         sample_writer_->read();
     }
 
-    if (counter_writer_)
+    if (counter_writer_ && (fd == -1 || counter_writer_->fd() == fd))
     {
         counter_writer_->read();
     }

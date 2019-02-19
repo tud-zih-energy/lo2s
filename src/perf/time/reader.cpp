@@ -22,6 +22,7 @@
 #include <lo2s/perf/time/reader.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <otf2xx/chrono/chrono.hpp>
@@ -39,6 +40,11 @@ extern "C"
 }
 #endif
 
+extern "C"
+{
+#include <sys/ioctl.h>
+}
+
 namespace lo2s
 {
 namespace perf
@@ -49,9 +55,9 @@ Reader::Reader()
 {
     static_assert(sizeof(local_time) == 8, "The local time object must not be a big fat "
                                            "object, or the hardware breakpoint won't work.");
-    struct perf_event_attr attr;
-    memset(&attr, 0, sizeof(struct perf_event_attr));
-    attr.size = sizeof(struct perf_event_attr);
+    struct perf_event_attr attr = common_perf_event_attrs();
+
+    attr.sample_type = PERF_SAMPLE_TIME;
 
 #ifndef USE_HW_BREAKPOINT_COMPAT
     attr.type = PERF_TYPE_BREAKPOINT;
@@ -67,12 +73,22 @@ Reader::Reader()
     attr.sample_period = 100000000;
     attr.task = 1;
 #endif
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-    attr.use_clockid = config().use_clockid;
-    attr.clockid = config().clockid;
-#endif
 
-    init(attr, 0, -1, false, 1);
+    try
+    {
+        fd_ = perf_event_open(&attr, 0, -1, -1, 0);
+        init_mmap(fd_);
+
+        if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
+        {
+            throw_errno();
+        }
+    }
+    catch (...)
+    {
+        close(fd_);
+        throw;
+    }
 
 #ifdef USE_HW_BREAKPOINT_COMPAT
     auto pid = fork();
@@ -91,6 +107,11 @@ bool Reader::handle(const RecordSyncType* sync_event)
     perf_time = convert_time_point(sync_event->time);
     return true;
 }
+Reader::~Reader()
+{
+    close(fd_);
+}
+
 } // namespace time
 } // namespace perf
 } // namespace lo2s
