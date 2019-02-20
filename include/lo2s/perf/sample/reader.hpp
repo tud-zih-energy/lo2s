@@ -137,6 +137,7 @@ protected:
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
         }
 
+        perf_attr.precise_ip = 3;
         /* precise_ip is an unsigned integer therefore we have to check if we get an underflow
          * and the value of it is greater than the initial value */
         do
