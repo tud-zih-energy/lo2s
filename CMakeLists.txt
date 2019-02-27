@@ -138,7 +138,7 @@ set(SOURCE_FILES
     src/monitor/thread_monitor.cpp
     src/monitor/cpu_monitor.cpp
     src/monitor/threaded_monitor.cpp
-    src/monitor/metric_monitor.cpp
+    src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
 
     src/perf/event_collection.cpp
