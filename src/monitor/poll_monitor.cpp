@@ -85,10 +85,10 @@ void PollMonitor::monitor()
     for (const auto& pfd : pfds_)
     {
         if (pfd.fd != timer_pfd().fd && pfd.fd != stop_pfd().fd && pfd.revents & POLLIN)
-            if (pfd.revents & POLLIN)
-            {
+        {
                 monitor(pfd.fd);
-            }
+
+        }
     }
 }
 

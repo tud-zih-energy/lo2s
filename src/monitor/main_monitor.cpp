@@ -48,8 +48,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         {
             for (const auto& cpu : Topology::instance().cpus())
             {
-                tracepoint_metrics_.emplace_back(trace_, cpu.id);
-                tracepoint_metrics_.back().start();
+                tracepoint_monitors_.emplace_back(std::make_unique<TracepointMonitor>(trace_, cpu.id));
+                tracepoint_monitors_.back()->start();
             }
         }
         catch (std::exception& e)
@@ -103,11 +103,11 @@ void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_even
 
 MainMonitor::~MainMonitor()
 {
-    if (!tracepoint_metrics_.empty())
+    if (!tracepoint_monitors_.empty())
     {
-        for (auto& metric_monitor : tracepoint_metrics_)
+        for (auto& tracepoint_monitor : tracepoint_monitors_)
         {
-            metric_monitor.stop();
+            tracepoint_monitor->stop();
         }
     }
 

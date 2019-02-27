@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor/metric_monitor.hpp>
+#include <lo2s/monitor/tracepoint_monitor.hpp>
 
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
@@ -32,7 +32,7 @@ namespace lo2s
 namespace monitor
 {
 
-MetricMonitor::MetricMonitor(trace::Trace& trace, int cpuid)
+TracepointMonitor::TracepointMonitor(trace::Trace& trace, int cpuid)
 : monitor::PollMonitor(trace, ""), cpu_(cpuid)
 {
     for (const auto& event_name : config().tracepoint_events)
@@ -47,11 +47,11 @@ MetricMonitor::MetricMonitor(trace::Trace& trace, int cpuid)
                               std::forward_as_tuple(std::move(writer)));
     }
 }
-void MetricMonitor::initialize_thread()
+void TracepointMonitor::initialize_thread()
 {
     try_pin_to_cpu(cpu_);
 }
-void MetricMonitor::monitor(int fd)
+void TracepointMonitor::monitor(int fd)
 {
     // Ignore timerfd wakeups
     if (fd == -1)
@@ -61,7 +61,7 @@ void MetricMonitor::monitor(int fd)
     perf_writers_.at(fd)->read();
 }
 
-void MetricMonitor::finalize_thread()
+void TracepointMonitor::finalize_thread()
 {
     perf_writers_.clear();
 }

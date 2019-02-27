@@ -34,11 +34,10 @@ namespace lo2s
 namespace monitor
 {
 
-// NOTE: Encapsulates counters for ALL cpus, totally different than counters!
-class MetricMonitor : public PollMonitor
+class TracepointMonitor : public PollMonitor
 {
 public:
-    MetricMonitor(trace::Trace& trace, int cpuid);
+    TracepointMonitor(trace::Trace& trace, int cpuid);
 
 private:
     void monitor(int fd) override;
@@ -47,7 +46,7 @@ private:
 
     std::string group() const override
     {
-        return "tracepoint::MetricMonitor";
+        return "tracepoint::TracepointMonitor";
     }
 
 private:

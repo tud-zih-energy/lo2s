@@ -132,7 +132,7 @@ protected:
         // TODO see if we can remove remove tid
         perf_attr.sample_type =
             PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_CPU;
-        if (config().enable_cct)
+        if (has_cct_)
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
         }
