@@ -31,6 +31,7 @@ void Monitor::initialize_thread()
 
 void Monitor::monitor(int fd)
 {
+    (void)fd;
     metric_event_.timestamp(time::now());
     metric_event_.raw_values()[0] = counter_.read();
 

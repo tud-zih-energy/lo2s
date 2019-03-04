@@ -53,9 +53,16 @@ void TracepointMonitor::initialize_thread()
 }
 void TracepointMonitor::monitor(int fd)
 {
-    // Ignore timerfd wakeups
-    if (fd == -1)
+    if (fd == timer_pfd().fd)
     {
+        return;
+    }
+    else if (fd == stop_pfd().fd)
+    {
+        for (auto& perf_writer : perf_writers_)
+        {
+            perf_writer.second->read();
+        }
         return;
     }
     perf_writers_.at(fd)->read();

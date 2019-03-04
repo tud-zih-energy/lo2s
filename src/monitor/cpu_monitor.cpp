@@ -72,16 +72,18 @@ void CpuMonitor::finalize_thread()
 
 void CpuMonitor::monitor(int fd)
 {
-    if (counter_writer_ && (fd == -1 || counter_writer_->fd() == fd))
+    if (counter_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || counter_writer_->fd() == fd))
     {
         counter_writer_->read();
     }
-    if (sample_writer_ && (fd == -1 || sample_writer_->fd() == fd))
+    if (sample_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
     {
         sample_writer_->read();
     }
 #ifndef USE_PERF_RECORD_SWITCH
-    if (switch_writer_.fd() == fd || fd == -1)
+    if (switch_writer_.fd() == fd || fd == timer_pfd().fd || fd == stop_pfd().fd)
     {
         switch_writer_.read();
     }

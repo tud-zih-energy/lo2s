@@ -34,6 +34,7 @@ void NodeMonitor::initialize_thread()
 
 void NodeMonitor::monitor(int fd)
 {
+    (void)fd;
     event_.timestamp(time::now());
     for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))
     {

@@ -65,6 +65,17 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
     start();
 }
 
+void ThreadMonitor::stop()
+{
+    if (!thread_.joinable())
+    {
+        return;
+    }
+
+    stop_pipe_.write();
+    thread_.join();
+}
+
 void ThreadMonitor::check_affinity(bool force)
 {
     // Pin the monitoring thread on the same cores as the monitored thread
@@ -95,12 +106,14 @@ void ThreadMonitor::monitor(int fd)
 {
     check_affinity();
 
-    if (sample_writer_ && (fd == -1 || sample_writer_->fd() == fd))
+    if (sample_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
     {
         sample_writer_->read();
     }
 
-    if (counter_writer_ && (fd == -1 || counter_writer_->fd() == fd))
+    if (counter_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || counter_writer_->fd() == fd))
     {
         counter_writer_->read();
     }

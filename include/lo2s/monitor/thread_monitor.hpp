@@ -50,6 +50,8 @@ class ThreadMonitor : public PollMonitor
 public:
     ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, bool enable_on_exec);
 
+    void stop() override;
+
 private:
     void check_affinity(bool force = false);
 

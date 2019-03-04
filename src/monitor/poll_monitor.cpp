@@ -49,7 +49,7 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
     tspec.it_value.tv_nsec = 1;
     tspec.it_interval.tv_nsec = config().read_interval.count();
 
-    timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, 0);
+    timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
     timer_pfd().events = POLLIN;
     timer_pfd().revents = 0;
 
@@ -67,10 +67,7 @@ void PollMonitor::add_fd(int fd)
 
 void PollMonitor::stop()
 {
-    if (!thread_.joinable())
-    {
-        return;
-    }
+    Log::warn() << "Cannot stop/join PollMonitor thread not running.";
 
     stop_pipe_.write();
     thread_.join();
@@ -78,16 +75,11 @@ void PollMonitor::stop()
 
 void PollMonitor::monitor()
 {
-    if (timer_pfd().revents & POLLIN || stop_pfd().revents & POLLIN)
-    {
-        monitor(-1);
-    }
     for (const auto& pfd : pfds_)
     {
-        if (pfd.fd != timer_pfd().fd && pfd.fd != stop_pfd().fd && pfd.revents & POLLIN)
+        if (pfd.revents & POLLIN)
         {
-                monitor(pfd.fd);
-
+            monitor(pfd.fd);
         }
     }
 }

@@ -56,7 +56,6 @@ protected:
         (void)fd;
     };
 
-private:
     struct pollfd& stop_pfd()
     {
         return pfds_[0];
@@ -67,8 +66,9 @@ private:
         return pfds_[1];
     }
 
-private:
     Pipe stop_pipe_;
+
+private:
     std::vector<pollfd> pfds_;
 };
 } // namespace monitor
