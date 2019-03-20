@@ -110,7 +110,7 @@ install:
   - OTF2_DIR=${TRAVIS_BUILD_DIR}/deps/otf2-${OTF2_VERSION}
   - |
     if [ -z "$(ls -A ${OTF2_DIR})" ]; then
-      wget http://www.vi-hps.org/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+      wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
       tar -xf otf2-${OTF2_VERSION}.tar.gz
       (cd otf2-${OTF2_VERSION} && ./configure --prefix=${OTF2_DIR} && make -j2 install)
     fi
