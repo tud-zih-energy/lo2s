@@ -32,7 +32,8 @@ void Monitor::initialize_thread()
 
 void Monitor::monitor(int fd)
 {
-    void(fd);
+    (void)fd;
+
     // update timestamp
     event_.timestamp(time::now());
 
