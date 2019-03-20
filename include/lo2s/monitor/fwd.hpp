@@ -27,8 +27,7 @@ namespace monitor
 {
 class ThreadedMonitor;
 
-class IntervalMonitor;
-class FdMonitor;
+class PollMonitor;
 
 class ThreadMonitor;
 class CoreMonitor;

@@ -23,8 +23,7 @@
 
 #include <lo2s/monitor/main_monitor.hpp>
 
-#include <lo2s/monitor/cpu_counter_monitor.hpp>
-#include <lo2s/monitor/cpu_switch_monitor.hpp>
+#include <lo2s/monitor/cpu_monitor.hpp>
 
 #include <vector>
 
@@ -45,8 +44,7 @@ public:
     void run();
 
 private:
-    std::map<int, CpuSwitchMonitor> switch_monitors_;
-    std::map<int, CpuCounterMonitor> counter_monitors_;
+    std::map<int, CpuMonitor> monitors_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -19,58 +19,72 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor/fd_monitor.hpp>
+#include <lo2s/config.hpp>
+#include <lo2s/error.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
-#include <nitro/lang/enumerate.hpp>
+extern "C"
+{
+#include <sys/timerfd.h>
+}
 
 namespace lo2s
 {
 namespace monitor
 {
-FdMonitor::FdMonitor(trace::Trace& trace, const std::string& name) : ThreadedMonitor(trace, name)
+PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
+: ThreadedMonitor(trace, name)
 {
-    pfds_.resize(1);
+    pfds_.resize(2);
     stop_pfd().fd = stop_pipe_.read_fd();
     stop_pfd().events = POLLIN;
     stop_pfd().revents = 0;
+
+    // Create and initialize timer_fd
+    struct itimerspec tspec;
+    memset(&tspec, 0, sizeof(struct itimerspec));
+
+    // Set initial expiration to lowest possible value, this together with TFD_TIMER_ABSTIME should
+    // synchronize our timers
+    tspec.it_value.tv_nsec = 1;
+    tspec.it_interval.tv_nsec = config().read_interval.count();
+
+    timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    timer_pfd().events = POLLIN;
+    timer_pfd().revents = 0;
+
+    timerfd_settime(timer_pfd().fd, TFD_TIMER_ABSTIME, &tspec, NULL);
 }
 
-size_t FdMonitor::add_fd(int fd)
+void PollMonitor::add_fd(int fd)
 {
     struct pollfd pfd;
     pfd.fd = fd;
     pfd.events = POLLIN;
     pfd.revents = 0;
     pfds_.push_back(pfd);
-    return pfds_.size() - 2;
 }
 
-void FdMonitor::stop()
+void PollMonitor::stop()
 {
+    Log::warn() << "Cannot stop/join PollMonitor thread not running.";
+
     stop_pipe_.write();
-    if (!thread_.joinable())
-    {
-        Log::error() << "Cannot stop/join FdMonitor thread not running.";
-    }
     thread_.join();
 }
 
-void FdMonitor::monitor()
+void PollMonitor::monitor()
 {
-    for (const auto& index_pfd : nitro::lang::enumerate(pfds_))
+    for (const auto& pfd : pfds_)
     {
-        if (index_pfd.index() == 0)
+        if (pfd.revents & POLLIN)
         {
-            continue;
-        }
-        if (index_pfd.value().revents & POLLIN || stop_pfd().revents & POLLIN)
-        {
-            monitor(index_pfd.index() - 1);
+            monitor(pfd.fd);
         }
     }
 }
 
-void FdMonitor::run()
+void PollMonitor::run()
 {
     bool stop_requested = false;
     do
@@ -87,7 +101,7 @@ void FdMonitor::run()
             Log::error() << "poll failed";
             throw_errno();
         }
-        Log::debug() << "FdMonitor poll returned " << ret;
+        Log::debug() << "PollMonitor poll returned " << ret;
 
         bool panic = false;
         for (const auto& pfd : pfds_)
@@ -106,9 +120,20 @@ void FdMonitor::run()
 
         monitor();
 
+        // Flush timer
+        if (timer_pfd().revents & POLLIN)
+        {
+            uint64_t expirations;
+            if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
+            {
+                Log::error() << "Flushing timer fd failed";
+                throw_errno();
+            }
+            (void)expirations;
+        }
         if (stop_pfd().revents & POLLIN)
         {
-            Log::debug() << "Requested stop of FdMonitor";
+            Log::debug() << "Requested stop of PollMonitor";
             stop_requested = true;
         }
     } while (!stop_requested);

@@ -44,24 +44,36 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
                              bool enable_on_exec)
-: IntervalMonitor(parent_monitor.trace(), std::to_string(tid), config().read_interval), pid_(pid),
-  tid_(tid)
+: PollMonitor(parent_monitor.trace(), std::to_string(tid)), pid_(pid), tid_(tid)
 {
     if (config().sampling)
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(
             pid, tid, -1, parent_monitor, parent_monitor.trace(),
             parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec);
+        add_fd(sample_writer_->fd());
     }
     if (!perf::requested_events().events.empty())
     {
         counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
             pid, tid, parent_monitor.trace().thread_metric_writer(pid, tid), parent_monitor,
             enable_on_exec);
+        add_fd(counter_writer_->fd());
     }
 
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
+}
+
+void ThreadMonitor::stop()
+{
+    if (!thread_.joinable())
+    {
+        return;
+    }
+
+    stop_pipe_.write();
+    thread_.join();
 }
 
 void ThreadMonitor::check_affinity(bool force)
@@ -90,16 +102,18 @@ void ThreadMonitor::finalize_thread()
     }
 }
 
-void ThreadMonitor::monitor()
+void ThreadMonitor::monitor(int fd)
 {
     check_affinity();
 
-    if (sample_writer_)
+    if (sample_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
     {
         sample_writer_->read();
     }
 
-    if (counter_writer_)
+    if (counter_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || counter_writer_->fd() == fd))
     {
         counter_writer_->read();
     }

@@ -24,9 +24,8 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
-
-#include <lo2s/perf/tracepoint/metric_monitor.hpp>
 
 namespace lo2s
 {
@@ -47,8 +46,11 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            tracepoint_metrics_ = std::make_unique<perf::tracepoint::MetricMonitor>(trace_);
-            tracepoint_metrics_->start();
+            for (const auto& cpu : Topology::instance().cpus())
+            {
+                tracepoint_monitors_.emplace_back(std::make_unique<TracepointMonitor>(trace_, cpu.id));
+                tracepoint_monitors_.back()->start();
+            }
         }
         catch (std::exception& e)
         {
@@ -61,8 +63,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            x86_adapt_metrics_ = std::make_unique<metric::x86_adapt::Metrics>(
-                trace_, config().read_interval, config().x86_adapt_knobs);
+            x86_adapt_metrics_ =
+                std::make_unique<metric::x86_adapt::Metrics>(trace_, config().x86_adapt_knobs);
             x86_adapt_metrics_->start();
         }
         catch (std::exception& e)
@@ -77,8 +79,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            x86_energy_metrics_ =
-                std::make_unique<metric::x86_energy::Metrics>(trace_, config().read_interval);
+            x86_energy_metrics_ = std::make_unique<metric::x86_energy::Metrics>(trace_);
             x86_energy_metrics_->start();
         }
         catch (std::exception& e)
@@ -102,9 +103,12 @@ void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_even
 
 MainMonitor::~MainMonitor()
 {
-    if (tracepoint_metrics_)
+    if (!tracepoint_monitors_.empty())
     {
-        tracepoint_metrics_->stop();
+        for (auto& tracepoint_monitor : tracepoint_monitors_)
+        {
+            tracepoint_monitor->stop();
+        }
     }
 
 #ifdef HAVE_X86_ENERGY

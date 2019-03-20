@@ -103,7 +103,10 @@ private:
     std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
         thread_calling_context_refs_;
     trace::IpRefMap local_ip_refs_;
+
     RawMemoryMapCache cached_mmap_events_;
+    std::unordered_map<pid_t, std::string> comms_;
+
     const time::Converter time_converter_;
 
     bool first_event_ = true;

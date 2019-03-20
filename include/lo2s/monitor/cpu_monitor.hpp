@@ -2,8 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
- *    Technische Universitaet Dresden, Germany
+ * Copyright (c) 2016-2018, Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,40 +20,44 @@
 
 #pragma once
 
-#include <lo2s/build_config.hpp>
-#include <lo2s/monitor/fd_monitor.hpp>
+#include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
-#include <lo2s/perf/record/comm_reader.hpp>
+#include <lo2s/perf/counter/cpu_writer.hpp>
+#include <lo2s/perf/sample/writer.hpp>
 
 #ifndef USE_PERF_RECORD_SWITCH
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
 #endif
 
-#include <lo2s/trace/fwd.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
-class CpuSwitchMonitor : public FdMonitor
+
+class CpuMonitor : public PollMonitor
 {
 public:
-    CpuSwitchMonitor(int cpu, trace::Trace& trace);
+    CpuMonitor(int cpuid, MainMonitor& parent);
 
-    void initialize_thread() override;
-    void monitor(size_t index) override;
+public:
+    void monitor(int fd) override;
 
     std::string group() const override
     {
-        return "CpuSwitchMonitor";
+        return "CpuCounterMonitor";
     }
 
-    void merge_trace();
+    void initialize_thread() override;
+    void finalize_thread() override;
 
 private:
     int cpu_;
 
-    perf::record::CommReader comm_reader_;
+    std::unique_ptr<perf::counter::CpuWriter> counter_writer_;
+    std::unique_ptr<perf::sample::Writer> sample_writer_;
 #ifndef USE_PERF_RECORD_SWITCH
     perf::tracepoint::SwitchWriter switch_writer_;
 #endif

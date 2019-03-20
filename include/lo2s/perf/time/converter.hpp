@@ -21,9 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/time/reader.hpp>
-
 #include <lo2s/perf/clock.hpp>
+#include <lo2s/perf/time/reader.hpp>
 
 #include <otf2xx/chrono/chrono.hpp>
 

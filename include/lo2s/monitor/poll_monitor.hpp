@@ -21,63 +21,55 @@
 
 #pragma once
 
-#include <lo2s/monitor/fwd.hpp>
-
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
-
+#include <lo2s/pipe.hpp>
 #include <lo2s/trace/fwd.hpp>
 
-#include <atomic>
-#include <chrono>
-#include <condition_variable>
-#include <mutex>
-#include <string>
-#include <thread>
+#include <vector>
+
+extern "C"
+{
+#include <poll.h>
+}
 
 namespace lo2s
 {
 namespace monitor
 {
-
-/**
- * Lifetime of an IntervalMonitor
- *
- * [created]
- *
- * start()
- *
- * [running]
- *
- * stop()
- *
- * If the thread was just waiting, the condition variable will instantly stop it.
- * If the thread is just doing its monitoring, it will break out of the the loop afterwards
- * The thread will then be joined and the IntervalMonitor will be finished()
- *
- * ~IntervalMonitor()
- *
- * The destructor won't do anything. Calling it before stop(), will stop it but is considered an
- * error.
- */
-class IntervalMonitor : public ThreadedMonitor
+class PollMonitor : public ThreadedMonitor
 {
 public:
-    IntervalMonitor(trace::Trace& trace, const std::string& name,
-                    std::chrono::nanoseconds interval);
-    virtual ~IntervalMonitor();
+    PollMonitor(trace::Trace& trace, const std::string& name);
 
     void stop() override;
 
 protected:
     void run() override;
+    void monitor() override;
+
+    void add_fd(int fd);
+
+    virtual void monitor(int fd)
+    {
+        (void)fd;
+    };
+
+    struct pollfd& stop_pfd()
+    {
+        return pfds_[0];
+    }
+
+    struct pollfd& timer_pfd()
+    {
+        return pfds_[1];
+    }
+
+    Pipe stop_pipe_;
 
 private:
-    bool stop_requested_ = false;
-
-    std::mutex control_mutex_;
-    std::condition_variable control_condition_;
-
-    std::chrono::nanoseconds interval_;
+    std::vector<pollfd> pfds_;
 };
 } // namespace monitor
 } // namespace lo2s

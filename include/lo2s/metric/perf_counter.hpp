@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_collection.hpp>
 
 #include <cstdint>
 #include <memory>
@@ -43,8 +44,7 @@ namespace metric
 class PerfCounter
 {
 public:
-    PerfCounter(pid_t tid, int cpuid_, perf_type_id type, std::uint64_t config,
-                std::uint64_t config1, int group_fd = -1);
+    PerfCounter(pid_t tid, int cpuid_, const perf::CounterDescription& desc, int group_fd = -1);
 
     PerfCounter(const PerfCounter&) = delete;
 
@@ -67,8 +67,7 @@ public:
         }
     }
 
-    static int open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
-                    std::uint64_t config1, int group_fd);
+    static int open(pid_t tid, int cpuid, const perf::CounterDescription& desc, int group_fd);
 
     double read();
 
@@ -196,11 +195,8 @@ private:
 class PerfCounterGroup
 {
 public:
-    PerfCounterGroup(pid_t tid, int cpuid,
-                     const std::vector<perf::CounterDescription>& counter_descs);
-    PerfCounterGroup(pid_t tid, int cpuid,
-                     const std::vector<perf::CounterDescription>& counter_descs,
-                     perf_event_attr leader_attr, bool enable_on_exec);
+    PerfCounterGroup(pid_t tid, int cpuid, const perf::EventCollection& event_collection,
+                     bool enable_on_exec);
 
     ~PerfCounterGroup()
     {

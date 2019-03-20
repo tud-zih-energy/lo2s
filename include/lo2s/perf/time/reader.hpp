@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lo2s/perf/clock.hpp>
-#include <lo2s/perf/sample/reader.hpp>
+#include <lo2s/perf/event_reader.hpp>
 
 #include <lo2s/log.hpp>
 
@@ -40,17 +40,24 @@ inline perf::Clock::time_point convert_time_point(std::uint64_t raw_time)
     return perf::Clock::time_point(otf2::chrono::nanoseconds(raw_time));
 }
 
-class Reader : public sample::Reader<Reader>
+class Reader : public EventReader<Reader>
 {
 public:
     Reader();
+    ~Reader();
 
 public:
-    using sample::Reader<Reader>::handle;
+    using EventReader<Reader>::handle;
 #ifndef USE_HW_BREAKPOINT_COMPAT
-    using RecordSyncType = sample::Reader<Reader>::RecordSampleType;
+    struct RecordSampleType
+    {
+        struct perf_event_header header;
+        uint64_t time;
+    };
+
+    using RecordSyncType = RecordSampleType;
 #else
-    using RecordSyncType = sample::Reader<Reader>::RecordForkType;
+    using RecordSyncType = EventReader<Reader>::RecordForkType;
 #endif
 
     bool handle(const RecordSyncType* sync_event);
@@ -58,6 +65,9 @@ public:
 public:
     otf2::chrono::time_point local_time = otf2::chrono::genesis();
     perf::Clock::time_point perf_time;
+
+private:
+    int fd_;
 };
 } // namespace time
 } // namespace perf

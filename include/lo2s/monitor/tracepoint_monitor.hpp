@@ -21,53 +21,37 @@
 
 #pragma once
 
-#include <lo2s/perf/record/reader.hpp>
-#include <lo2s/summary.hpp>
+#include <lo2s/perf/tracepoint/writer.hpp>
+
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <unordered_map>
+#include <map>
+#include <memory>
 
 namespace lo2s
 {
-namespace perf
+namespace monitor
 {
-namespace record
-{
-class CommReader : public Reader<CommReader>
+
+class TracepointMonitor : public PollMonitor
 {
 public:
-    CommReader(int cpu, trace::Trace& trace) : trace_(trace)
+    TracepointMonitor(trace::Trace& trace, int cpuid);
+
+private:
+    void monitor(int fd) override;
+    void initialize_thread() override;
+    void finalize_thread() override;
+
+    std::string group() const override
     {
-        perf_event_attr perf_attr;
-        memset(&perf_attr, 0, sizeof(perf_event_attr));
-
-        perf_attr.comm = 1;
-        perf_attr.sample_type = PERF_SAMPLE_TID;
-
-        init(perf_attr, cpu);
-    }
-
-public:
-    using Reader<CommReader>::handle;
-
-    bool handle(const Reader::RecordCommType* comm_event)
-    {
-        summary().register_process(comm_event->pid);
-
-        comms_[comm_event->tid] = comm_event->comm;
-
-        return false;
-    }
-    void merge_trace()
-    {
-        trace_.add_threads(comms_);
+        return "tracepoint::TracepointMonitor";
     }
 
 private:
-    trace::Trace& trace_;
-
-    std::unordered_map<pid_t, std::string> comms_;
+    int cpu_;
+    std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };
-} // namespace record
-} // namespace perf
+} // namespace monitor
 } // namespace lo2s

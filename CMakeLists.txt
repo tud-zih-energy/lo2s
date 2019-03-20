@@ -131,16 +131,14 @@ set(SOURCE_FILES
     src/metric/perf_counter.cpp
 
     src/monitor/cpu_set_monitor.cpp
-    src/monitor/cpu_switch_monitor.cpp
-    src/monitor/fd_monitor.cpp
-    src/monitor/interval_monitor.cpp
+    src/monitor/poll_monitor.cpp
     src/monitor/main_monitor.cpp
     src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp
     src/monitor/thread_monitor.cpp
-    src/monitor/cpu_counter_monitor.cpp
+    src/monitor/cpu_monitor.cpp
     src/monitor/threaded_monitor.cpp
-
+    src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
 
     src/perf/event_collection.cpp
@@ -151,7 +149,7 @@ set(SOURCE_FILES
 
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
-    src/perf/tracepoint/format.cpp src/perf/tracepoint/metric_monitor.cpp
+    src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
 
     src/time/time.cpp
@@ -163,6 +161,7 @@ set(SOURCE_FILES
     src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
     src/mmap.cpp
     src/util.cpp
+    src/perf/util.cpp
     src/summary.cpp
 )
 

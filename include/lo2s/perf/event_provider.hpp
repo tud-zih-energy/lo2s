@@ -24,8 +24,9 @@
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
-#include "lo2s/perf/counter_description.hpp"
+#include <lo2s/perf/counter_description.hpp>
 
 namespace lo2s
 {

@@ -21,7 +21,7 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/interval_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/perf/counter/process_writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
@@ -45,10 +45,12 @@ class ProcessInfo;
 namespace monitor
 {
 
-class ThreadMonitor : public IntervalMonitor
+class ThreadMonitor : public PollMonitor
 {
 public:
     ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, bool enable_on_exec);
+
+    void stop() override;
 
 private:
     void check_affinity(bool force = false);
@@ -66,7 +68,7 @@ public:
 
     void initialize_thread() override;
     void finalize_thread() override;
-    void monitor() override;
+    void monitor(int fd) override;
 
     std::string group() const override
     {

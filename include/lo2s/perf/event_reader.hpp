@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/build_config.hpp>
+#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/mmap.hpp>
@@ -137,13 +138,14 @@ public:
     }
 
 protected:
-    void init_mmap(int fd, size_t mmap_pages)
+    void init_mmap(int fd)
     {
-        assert(mmap_pages > 0);
-        base = mmap(NULL, (mmap_pages + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
+        fd_ = fd;
+
+        mmap_pages_ = config().mmap_pages;
+
+        base = mmap(NULL, (mmap_pages_ + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
                     fd, 0);
-        assert(mmap_pages_ == 0);
-        mmap_pages_ = mmap_pages;
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
@@ -312,6 +314,11 @@ private:
     }
 
 public:
+    int fd()
+    {
+        return fd_;
+    }
+
     bool handle(const RecordForkType*)
     {
         // It seems you get fork events even if not enabled via attr.task = true;
@@ -334,6 +341,7 @@ protected:
     size_t mmap_pages_ = 0;
 
 private:
+    int fd_;
     void* base;
     char event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };

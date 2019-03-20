@@ -39,54 +39,49 @@ extern "C"
 #include <linux/perf_event.h>
 }
 
-namespace
-{
-static int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
-                               unsigned long flags)
-{
-    int fd = lo2s::perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
-    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel &&
-        lo2s::perf::perf_event_paranoid() > 1)
-    {
-        perf_attr->exclude_kernel = 1;
-        lo2s::Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
-        lo2s::Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
-        lo2s::Log::warn() << " * run lo2s as root";
-        lo2s::Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
-                             "the first place,";
-        fd = lo2s::perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
-    }
-    return fd;
-}
-} // namespace
-
 namespace lo2s
 {
 namespace metric
 {
-PerfCounter::PerfCounter(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
-                         std::uint64_t config1, int group_fd)
-: fd_(open(tid, cpuid, type, config, config1, group_fd))
+
+static int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
+                               unsigned long flags)
+{
+    int fd = perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf::perf_event_paranoid() > 1)
+    {
+        perf_attr->exclude_kernel = 1;
+        Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
+        Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
+        Log::warn() << " * run lo2s as root";
+        Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
+                       "the first place,";
+        fd = perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    }
+    return fd;
+}
+
+PerfCounter::PerfCounter(pid_t tid, int cpuid, const perf::CounterDescription& desc, int group_fd)
+: fd_(open(tid, cpuid, desc, group_fd))
 {
 }
 
-int PerfCounter::open(pid_t tid, int cpuid, perf_type_id type, std::uint64_t config,
-                      std::uint64_t config1, int group_fd)
+int PerfCounter::open(pid_t tid, int cpuid, const perf::CounterDescription& desc, int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
     perf_attr.size = sizeof(perf_attr);
     perf_attr.sample_period = 0;
-    perf_attr.type = type;
-    perf_attr.config = config;
-    perf_attr.config1 = config1;
-    perf_attr.exclude_kernel = lo2s::config().exclude_kernel;
+    perf_attr.type = desc.type;
+    perf_attr.config = desc.config;
+    perf_attr.config1 = desc.config1;
+    perf_attr.exclude_kernel = config().exclude_kernel;
     // Needed when scaling multiplexed events, and recognize activation phases
     perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
 #if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-    perf_attr.use_clockid = lo2s::config().use_clockid;
-    perf_attr.clockid = lo2s::config().clockid;
+    perf_attr.use_clockid = config().use_clockid;
+    perf_attr.clockid = config().clockid;
 #endif
 
     int fd = perf_try_event_open(&perf_attr, tid, cpuid, group_fd, 0);
@@ -179,13 +174,31 @@ void CounterBuffer::update_buffers()
 }
 
 PerfCounterGroup::PerfCounterGroup(pid_t tid, int cpuid,
-                                   const std::vector<perf::CounterDescription>& counter_descs,
-                                   perf_event_attr leader_attr, bool enable_on_exec)
-: tid_(tid), cpuid_(cpuid), buf_(counter_descs.size() + 1 /* add group leader counter */)
+                                   const perf::EventCollection& event_collection,
+                                   bool enable_on_exec)
+: tid_(tid), cpuid_(cpuid), buf_(event_collection.events.size() + 1 /* add group leader counter */)
 {
-    leader_attr.size = sizeof(leader_attr);
-    leader_attr.disabled = 1; // disable until all events in the group are set up
-    leader_attr.exclude_kernel = lo2s::config().exclude_kernel;
+    perf_event_attr leader_attr = perf::common_perf_event_attrs();
+
+    leader_attr.type = event_collection.leader.type;
+    leader_attr.config = event_collection.leader.config;
+    leader_attr.config1 = event_collection.leader.config1;
+
+    leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
+    leader_attr.freq = config().metric_use_frequency;
+
+    if (leader_attr.freq)
+    {
+        Log::debug() << "PerfCounterGroup: sample_freq: " << config().metric_frequency;
+        leader_attr.sample_freq = config().metric_frequency;
+    }
+    else
+    {
+        Log::debug() << "PerfCounterGroup: sample_period: " << config().metric_count;
+        leader_attr.sample_period = config().metric_count;
+    }
+
+    leader_attr.exclude_kernel = config().exclude_kernel;
     leader_attr.read_format =
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
     leader_attr.enable_on_exec = enable_on_exec;
@@ -197,8 +210,10 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid, int cpuid,
         throw_errno();
     }
 
-    counters_.reserve(counter_descs.size());
-    for (auto& description : counter_descs)
+    Log::debug() << "PerfCounterGroup: leader event: '" << config().metric_leader << "'";
+
+    counters_.reserve(event_collection.events.size());
+    for (auto& description : event_collection.events)
     {
         try
         {
@@ -212,7 +227,7 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid, int cpuid,
             if (e.code().value() == EINVAL)
             {
                 Log::error()
-                    << "opening " << counter_descs.size()
+                    << "opening " << event_collection.events.size()
                     << " counters at once might exceed the hardware limit of simultaneously "
                        "openable counters.";
             }
@@ -234,8 +249,7 @@ PerfCounterGroup::PerfCounterGroup(pid_t tid, int cpuid,
 
 void PerfCounterGroup::add_counter(const perf::CounterDescription& counter)
 {
-    counters_.emplace_back(PerfCounter::open(tid_, cpuid_, counter.type, counter.config,
-                                             counter.config1, group_leader_fd_));
+    counters_.emplace_back(PerfCounter::open(tid_, cpuid_, counter, group_leader_fd_));
 }
 } // namespace metric
 } // namespace lo2s

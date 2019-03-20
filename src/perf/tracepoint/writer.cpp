@@ -1,11 +1,9 @@
 #include <lo2s/config.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/tracepoint/metric_monitor.hpp>
+#include <lo2s/perf/tracepoint/writer.hpp>
 
 #include <lo2s/trace/trace.hpp>
-
-#include <nitro/lang/enumerate.hpp>
 
 namespace lo2s
 {
@@ -16,7 +14,7 @@ namespace tracepoint
 
 Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
                const otf2::definition::metric_class& metric_class)
-: Reader(cpu, event.id(), config().mmap_pages), event_(event),
+: Reader(cpu, event.id()), event_(event),
   writer_(trace_.named_metric_writer((boost::format("tracepoint metrics for CPU %d") % cpu).str())),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),

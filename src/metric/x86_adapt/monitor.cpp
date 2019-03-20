@@ -13,12 +13,11 @@ namespace metric
 namespace x86_adapt
 {
 
-Monitor::Monitor(::x86_adapt::device device, std::chrono::nanoseconds sampling_interval,
+Monitor::Monitor(::x86_adapt::device device,
                  const std::vector<::x86_adapt::configuration_item>& configuration_items,
                  trace::Trace& trace, const otf2::definition::metric_class& metric_class)
-: IntervalMonitor(trace, std::to_string(device.id()), sampling_interval),
-  device_(std::move(device)), otf2_writer_(trace.named_metric_writer(name())),
-  configuration_items_(configuration_items),
+: PollMonitor(trace, std::to_string(device.id())), device_(std::move(device)),
+  otf2_writer_(trace.named_metric_writer(name())), configuration_items_(configuration_items),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(),
                                          trace.system_tree_cpu_node(device_.id()))),
   event_(otf2::chrono::genesis(), metric_instance_)
@@ -31,8 +30,9 @@ void Monitor::initialize_thread()
     try_pin_to_cpu(device_.id());
 }
 
-void Monitor::monitor()
+void Monitor::monitor(int fd)
 {
+    void(fd);
     // update timestamp
     event_.timestamp(time::now());
 
