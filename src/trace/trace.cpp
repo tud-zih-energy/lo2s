@@ -451,6 +451,11 @@ otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 
 otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
 {
+#ifdef USE_PERF_RECORD_SWITCH
+    // if we use switch records, we write sample in the same location
+    // thus we make sure to return the appropriate location
+    return cpu_switch_writer(cpuid);
+#else
     auto name = (boost::format("sample cpu %d") % cpuid).str();
 
     // As the cpuid is unique in this context, create only one writer/location per tid
@@ -460,6 +465,7 @@ otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
                               otf2::definition::location::location_type::cpu_thread));
 
     return archive()(location.first->second);
+#endif
 }
 
 otf2::writer::local& Trace::cpu_switch_writer(int cpuid)
