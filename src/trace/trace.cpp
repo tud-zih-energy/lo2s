@@ -452,8 +452,8 @@ otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
 {
 #ifdef USE_PERF_RECORD_SWITCH
-    // if we use switch records, we write sample in the same location
-    // thus we make sure to return the appropriate location
+    // if we use switch records, we write sample events in the same location as switch events,
+    // thus we make sure to return the appropriate location here.
     return cpu_switch_writer(cpuid);
 #else
     auto name = (boost::format("sample cpu %d") % cpuid).str();
