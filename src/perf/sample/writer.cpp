@@ -60,7 +60,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
-  last_time_point_(first_time_point_)
+  last_time_point_(first_time_point_), next_ip_ref_(0)
 {
 }
 
@@ -72,15 +72,16 @@ Writer::~Writer()
         otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
                                                  last_calling_context_);
     }
-    if (!local_ip_refs_.empty() || !thread_calling_context_refs_.empty())
+    if (next_ip_ref_ > 0)
     {
-        const auto& mapping = trace_.merge_calling_contexts(
-            local_ip_refs_, thread_calling_context_refs_, monitor_.get_process_infos());
+        const auto& mapping = trace_.merge_calling_contexts(local_ip_refs_, next_ip_ref_,
+                                                            thread_calling_context_refs_,
+                                                            monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
 }
 
-trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children)
+trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
 {
     // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
     if (addr == -1)
@@ -89,23 +90,31 @@ trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::
         addr = -2;
     }
     auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                                std::forward_as_tuple(pid, next_ip_ref()));
+                                std::forward_as_tuple(next_ip_ref_));
+    if (ret.second)
+    {
+        next_ip_ref_++;
+    }
     return ret.first;
 }
 otf2::definition::calling_context::reference_type
 Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
+    auto& tid_ip_refs = local_ip_refs_
+                            .emplace(std::piecewise_construct, std::forward_as_tuple(sample->tid),
+                                     std::forward_as_tuple(sample->pid))
+                            .first->second.ip_refs;
     if (!has_cct_)
     {
-        auto it = find_ip_child(sample->ip, sample->pid, local_ip_refs_);
+        auto it = find_ip_child(sample->ip, tid_ip_refs);
         return it->second.ref;
     }
     else
     {
-        auto children = &local_ip_refs_;
+        auto children = &tid_ip_refs;
         for (uint64_t i = sample->nr - 1;; i--)
         {
-            auto it = find_ip_child(sample->ips[i], sample->pid, *children);
+            auto it = find_ip_child(sample->ips[i], *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)
             {
@@ -192,9 +201,13 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
                      << last_time_point_ << ">" << tp;
     }
 
-    auto elem = thread_calling_context_refs_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(context_switch->pid),
-        std::forward_as_tuple(thread_calling_context_refs_.size()));
+    auto elem = thread_calling_context_refs_.emplace(std::piecewise_construct,
+                                                     std::forward_as_tuple(context_switch->pid),
+                                                     std::forward_as_tuple(next_ip_ref_));
+    if (elem.second)
+    {
+        next_ip_ref_++;
+    }
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
         if (last_event_type_ == LastEventType::leave)

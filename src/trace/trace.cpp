@@ -628,7 +628,8 @@ static LineInfo region_info(LineInfo info)
 
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos)
+                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos,
+                      pid_t pid)
 {
     for (auto& elem : new_children)
     {
@@ -637,7 +638,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& local_children = elem.second.children;
         LineInfo line_info = LineInfo::for_unknown_function();
 
-        auto info_it = infos.find(elem.second.pid);
+        auto info_it = infos.find(pid);
         if (info_it != infos.end())
         {
             MemoryMap maps = info_it->second.maps();
@@ -656,13 +657,13 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            if (config().disassemble && infos.count(elem.second.pid) == 1)
+            if (config().disassemble && infos.count(pid) == 1)
             {
                 try
                 {
                     // TODO do not write properties for useless unknown stuff
                     OTF2_AttributeValue_union value;
-                    auto instruction = infos.at(elem.second.pid).maps().lookup_instruction(ip);
+                    auto instruction = infos.at(pid).maps().lookup_instruction(ip);
                     Log::trace() << "mapped " << ip << " to " << instruction;
                     value.stringRef = intern(instruction).ref();
                     calling_context_properties_.emplace(new_cctx, intern("instruction"),
@@ -677,30 +678,33 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         const auto& cctx = cctx_it->second.cctx;
         mapping_table.at(local_ref) = cctx.ref();
 
-        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos);
+        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos, pid);
     }
 }
 
 otf2::definition::mapping_table Trace::merge_calling_contexts(
-    IpRefMap& new_ips,
+    ThreadIpRefMap& new_ips, size_t num_ip_refs,
     const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs,
     std::map<pid_t, ProcessInfo>& infos)
 {
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size(), -1u);
+    std::vector<uint32_t> mappings(num_ip_refs, -1u);
 #else
-    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size());
+    std::vector<uint32_t> mappings(num_ip_refs);
 #endif
-
     if (!new_ips.empty())
     {
-        merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(),
-                  infos);
+        for (auto& thread_ip_refs : new_ips)
+        {
+            merge_ips(thread_ip_refs.second.ip_refs, calling_context_tree_, mappings,
+                      otf2::definition::calling_context(), infos, thread_ip_refs.second.pid);
+        }
     }
     if (!thread_refs.empty())
     {
         merge_thread_calling_contexts(thread_refs, mappings);
     }
+
 #ifndef NDEBUG
     for (auto id : mappings)
     {

@@ -81,12 +81,7 @@ public:
 private:
     otf2::definition::calling_context::reference_type
     cctx_ref(const Reader::RecordSampleType* sample);
-    trace::IpRefMap::iterator find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children);
-
-    otf2::definition::calling_context::reference_type next_ip_ref() const
-    {
-        return local_ip_refs_.size() + thread_calling_context_refs_.size();
-    }
+    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
 
     pid_t pid_;
     pid_t tid_;
@@ -102,7 +97,7 @@ private:
 
     std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
         thread_calling_context_refs_;
-    trace::IpRefMap local_ip_refs_;
+    trace::ThreadIpRefMap local_ip_refs_;
 
     RawMemoryMapCache cached_mmap_events_;
     std::unordered_map<pid_t, std::string> comms_;
@@ -122,6 +117,7 @@ private:
         leave
     };
     LastEventType last_event_type_ = LastEventType::leave;
+    size_t next_ip_ref_;
 };
 } // namespace sample
 } // namespace perf

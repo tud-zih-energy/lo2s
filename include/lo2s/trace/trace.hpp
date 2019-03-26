@@ -45,13 +45,21 @@ using IpMap = std::map<Address, RefMap>;
 
 struct IpRefEntry
 {
-    IpRefEntry(pid_t pid, otf2::definition::calling_context::reference_type r) : ref(r), pid(pid)
+    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
     {
     }
 
     otf2::definition::calling_context::reference_type ref;
-    pid_t pid;
     IpMap<IpRefEntry> children;
+};
+
+struct ThreadIpRefs
+{
+    ThreadIpRefs(pid_t p) : pid(p)
+    {
+    }
+    pid_t pid;
+    IpMap<IpRefEntry> ip_refs;
 };
 
 struct IpCctxEntry
@@ -63,7 +71,7 @@ struct IpCctxEntry
     otf2::definition::calling_context cctx;
     IpMap<IpCctxEntry> children;
 };
-
+using ThreadIpRefMap = std::map<pid_t, ThreadIpRefs>;
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 
@@ -142,7 +150,7 @@ public:
 
     otf2::definition::metric_class tracepoint_metric_class(const std::string& event_name);
     otf2::definition::mapping_table merge_calling_contexts(
-        IpRefMap& new_ips,
+        ThreadIpRefMap& new_ips, size_t num_ip_refs,
         const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
             thread_refs,
         std::map<pid_t, ProcessInfo>& infos);
@@ -153,7 +161,7 @@ public:
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
-                   std::map<pid_t, ProcessInfo>& infos);
+                   std::map<pid_t, ProcessInfo>& infos, pid_t pid);
 
     void merge_thread_calling_contexts(
         const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&

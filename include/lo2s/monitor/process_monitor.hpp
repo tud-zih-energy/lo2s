@@ -50,7 +50,6 @@ public:
     void exit_thread(pid_t tid) override;
 
 private:
-    std::map<pid_t, ProcessInfo> processes_;
     std::map<pid_t, ThreadMonitor> threads_;
 };
 } // namespace monitor
