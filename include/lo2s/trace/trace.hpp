@@ -103,8 +103,8 @@ private:
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #add_threads.
      **/
-    void add_thread_exclusive(pid_t tid, const std::string& name,
-                              const std::lock_guard<std::mutex>&);
+    otf2::definition::calling_context& add_thread_exclusive(pid_t tid, const std::string& name,
+                                                            const std::lock_guard<std::mutex>&);
 
     void update_process_name(pid_t pid, const otf2::definition::string& name);
     void update_thread_name(pid_t tid, const otf2::definition::string& name);
@@ -114,7 +114,7 @@ public:
 
     void add_process(pid_t pid, pid_t parent, const std::string& name = "");
 
-    void add_thread(pid_t tid, const std::string& name);
+    otf2::definition::calling_context& add_thread(pid_t tid, const std::string& name);
     void add_threads(const std::unordered_map<pid_t, std::string>& tid_map);
 
     void add_monitoring_thread(pid_t tid, const std::string& name, const std::string& group);

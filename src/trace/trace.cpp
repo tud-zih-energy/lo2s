@@ -696,8 +696,9 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(
     {
         for (auto& thread_ip_refs : new_ips)
         {
+            auto& calling_context = add_thread(thread_ip_refs.first, "<unknown>");
             merge_ips(thread_ip_refs.second.ip_refs, calling_context_tree_, mappings,
-                      otf2::definition::calling_context(), infos, thread_ip_refs.second.pid);
+                      calling_context, infos, thread_ip_refs.second.pid);
         }
     }
     if (!thread_refs.empty())
@@ -716,8 +717,8 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
-void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
-                                 const std::lock_guard<std::mutex>&)
+otf2::definition::calling_context& Trace::add_thread_exclusive(pid_t tid, const std::string& name,
+                                                               const std::lock_guard<std::mutex>&)
 {
     auto iname = intern((boost::format("%s (%d)") % name % tid).str());
     auto ret = regions_thread_.emplace(
@@ -735,17 +736,18 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
     // TODO update iname if not newly inserted
 
     // create calling context
-    calling_contexts_thread_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(calling_context_ref(), ret.first->second,
-                              otf2::definition::source_code_location()));
+    return calling_contexts_thread_
+        .emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                 std::forward_as_tuple(calling_context_ref(), ret.first->second,
+                                       otf2::definition::source_code_location()))
+        .first->second;
 }
 
-void Trace::add_thread(pid_t tid, const std::string& name)
+otf2::definition::calling_context& Trace::add_thread(pid_t tid, const std::string& name)
 {
     // Lock this to avoid conflict on regions_thread_ with add_monitoring_thread
     std::lock_guard<std::mutex> guard(mutex_);
-    add_thread_exclusive(tid, name, guard);
+    return add_thread_exclusive(tid, name, guard);
 }
 
 void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std::string& group)
