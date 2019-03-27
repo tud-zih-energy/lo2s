@@ -53,13 +53,13 @@ struct IpRefEntry
     IpMap<IpRefEntry> children;
 };
 
-struct ThreadIpRefs
+struct ThreadCctxRefs
 {
-    ThreadIpRefs(pid_t p) : pid(p)
+    ThreadCctxRefs(pid_t p, otf2::definition::calling_context::reference_type r) : pid(p), entry(r)
     {
     }
     pid_t pid;
-    IpMap<IpRefEntry> ip_refs;
+    IpRefEntry entry;
 };
 
 struct IpCctxEntry
@@ -71,7 +71,8 @@ struct IpCctxEntry
     otf2::definition::calling_context cctx;
     IpMap<IpCctxEntry> children;
 };
-using ThreadIpRefMap = std::map<pid_t, ThreadIpRefs>;
+
+using ThreadIpRefMap = std::map<pid_t, ThreadCctxRefs>;
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 
