@@ -85,6 +85,7 @@ private:
 
     void update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
     void leave_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
+    otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     pid_t pid_;
     pid_t tid_;
@@ -98,9 +99,9 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    trace::ThreadIpRefMap local_cctx_refs_;
+    trace::ThreadCctxRefMap local_cctx_refs_;
     size_t next_cctx_ref_;
-    trace::ThreadIpRefMap::value_type* current_thread_cctx_refs_ = nullptr;
+    std::pair<pid_t, trace::ThreadCctxRefs&>* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
     std::unordered_map<pid_t, std::string> comms_;

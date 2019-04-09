@@ -66,7 +66,7 @@ private:
     const time::Converter time_converter_;
 
     using calling_context_ref = otf2::definition::calling_context::reference_type;
-    std::unordered_map<pid_t, calling_context_ref> thread_calling_context_refs_;
+    ThreadCctxRefMap thread_calling_context_refs_;
     pid_t current_pid_ = -1;
     calling_context_ref current_calling_context_ = calling_context_ref::undefined();
 

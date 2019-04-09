@@ -112,16 +112,10 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
 otf2::definition::calling_context::reference_type
 SwitchWriter::thread_calling_context_ref(pid_t tid)
 {
-    auto it = thread_calling_context_refs_.find(tid);
-    if (it == thread_calling_context_refs_.end())
-    {
-        // If we ever merge interrupt samples and switch events we must use a common counter here!
-        otf2::definition::calling_context::reference_type ref(thread_calling_context_refs_.size());
-        auto ret = thread_calling_context_refs_.emplace(tid, ref);
-        assert(ret.second);
-        it = ret.first;
-    }
-    return it->second;
+    auto ret = thread_calling_context_refs_.emplace(
+        std::piecewise_construct, std::forward_as_tuple(tid),
+        std::forward_as_tuple(-1, thread_calling_context_refs_.size()));
+    return ret.second->first.entry.ref;
 }
 } // namespace tracepoint
 } // namespace perf
