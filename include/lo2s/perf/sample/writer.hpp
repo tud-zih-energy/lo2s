@@ -101,7 +101,9 @@ private:
 
     trace::ThreadCctxRefMap local_cctx_refs_;
     size_t next_cctx_ref_;
-    std::pair<pid_t, trace::ThreadCctxRefs&>* current_thread_cctx_refs_ = nullptr;
+    //std::pair<pid_t, trace::ThreadCctxRefs&>* current_thread_cctx_refs_ = nullptr;
+    trace::ThreadCctxRefMap::value_type thread_monitoring_cctx_refs_;
+    trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
     std::unordered_map<pid_t, std::string> comms_;

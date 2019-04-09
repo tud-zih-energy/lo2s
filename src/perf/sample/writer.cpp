@@ -59,6 +59,8 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  thread_monitoring_cctx_refs_(
+      tid, { pid, otf2::definition::calling_context::reference_type::undefined() }),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -67,6 +69,8 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
     if (tid != -1)
     {
         // TODO create empty cctx root for thread monitoring
+        thread_monitoring_cctx_refs_.second.pid = pid;
+        current_thread_cctx_refs_ = &thread_monitoring_cctx_refs_;
     }
 }
 
@@ -210,11 +214,12 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
     }
 
     otf2_writer_.write_calling_context_enter(tp, ret.first->second.entry.ref, 2);
-    current_thread_cctx_refs_ = &std::make_pair(tid, ret.first->second);
+    current_thread_cctx_refs_ = &(*ret.first);
 }
 
 void Writer::leave_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
 {
+    (void)pid; // TODO fuer Mario
     if (tid_ != -1)
     {
         // should not happen (TM)
