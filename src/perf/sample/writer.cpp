@@ -77,7 +77,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
 Writer::~Writer()
 {
 
-    if (current_thread_cctx_refs_)
+    if (current_thread_cctx_refs_ && tid_ == -1)
     {
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
                                                  current_thread_cctx_refs_->second.entry.ref);
@@ -139,7 +139,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     if (sample->pid == 0)
     {
         // WHY???
-        Log::warn() << "sample from pid 0?";
+        Log::trace() << "sample from pid 0?";
         return false;
     }
 
@@ -181,14 +181,24 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 
 void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
 {
+
     if (tid_ != -1)
     {
         if (tid != tid_ || pid != pid_)
         {
             Log::warn() << "Sample outside of monitored process";
         }
-
         assert(tid == tid_ && pid == pid_);
+
+        auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                                            std::forward_as_tuple(pid, next_cctx_ref_));
+
+        if (ret.second)
+        {
+            next_cctx_ref_++;
+        }
+
+        current_thread_cctx_refs_ = &(*ret.first);
         return;
     }
     tp = adjust_timepoints(tp);
@@ -217,9 +227,8 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
     current_thread_cctx_refs_ = &(*ret.first);
 }
 
-void Writer::leave_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
+void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
 {
-    (void)pid; // TODO fuer Mario
     if (tid_ != -1)
     {
         // should not happen (TM)
@@ -235,7 +244,7 @@ void Writer::leave_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point
 
     if (current_thread_cctx_refs_->first != tid)
     {
-        Log::warn() << "inconsistent leave thread"; // will probably set to trace sooner or later
+        Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or later
     }
     tp = adjust_timepoints(tp);
 
@@ -264,7 +273,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        leave_current_thread(context_switch->pid, context_switch->tid, tp);
+        leave_current_thread(context_switch->tid, tp);
     }
     else
     {

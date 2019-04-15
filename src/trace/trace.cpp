@@ -714,6 +714,7 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
             {
                 add_thread(tid, "<idle>");
             }
+            global_thread_cctx = calling_context_tree_.find(tid);
         }
         mappings.at(local_ref) = global_thread_cctx->second.cctx.ref();
 

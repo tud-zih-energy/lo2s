@@ -27,6 +27,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/process_info.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -75,7 +76,9 @@ SwitchWriter::~SwitchWriter()
 
     if (!thread_calling_context_refs_.empty())
     {
-        const auto& mapping = trace_.merge_thread_calling_contexts(thread_calling_context_refs_);
+        std::map<pid_t, ProcessInfo> m;
+        const auto& mapping = trace_.merge_calling_contexts(thread_calling_context_refs_,
+                                                            thread_calling_context_refs_.size(), m);
         otf2_writer_ << mapping;
     }
 }
@@ -115,7 +118,7 @@ SwitchWriter::thread_calling_context_ref(pid_t tid)
     auto ret = thread_calling_context_refs_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
         std::forward_as_tuple(-1, thread_calling_context_refs_.size()));
-    return ret.second->first.entry.ref;
+    return ret.first->second.entry.ref;
 }
 } // namespace tracepoint
 } // namespace perf

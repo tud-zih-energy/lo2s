@@ -28,6 +28,7 @@
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/definition/calling_context.hpp>
 #include <otf2xx/definition/location.hpp>
@@ -66,7 +67,7 @@ private:
     const time::Converter time_converter_;
 
     using calling_context_ref = otf2::definition::calling_context::reference_type;
-    ThreadCctxRefMap thread_calling_context_refs_;
+    trace::ThreadCctxRefMap thread_calling_context_refs_;
     pid_t current_pid_ = -1;
     calling_context_ref current_calling_context_ = calling_context_ref::undefined();
 
