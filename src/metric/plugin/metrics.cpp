@@ -116,15 +116,36 @@ Metrics::Metrics(trace::Trace& trace) : trace_(trace)
             Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what();
         }
     }
+}
 
+Metrics::~Metrics()
+{
+    if (running_)
+    {
+        stop();
+    }
+
+    // We do the fetch in the dtor to ensure that trace_.record_to is valid
+    // NOTE: These are on purpose two seperate iterations
+    for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
+    {
+        // in order to not create to large traces (in the sense of to much time before and after
+        // the actuall recorded program(s)), we stick to the interval [trace_begin_, trace_end]
+        (*pi)->fetch_data(trace_.record_from(), trace_.record_to());
+    }
+}
+
+void Metrics::start()
+{
     // Start recording for each plugin
     for (auto& plugin : metric_plugins_)
     {
         plugin->start_recording();
     }
+    running_ = true;
 }
 
-Metrics::~Metrics()
+void Metrics::stop()
 {
     // first we stop recording, after that, we collect the data from each plugin
     // and the destructor of the vector member will finalize each plugin
@@ -134,14 +155,7 @@ Metrics::~Metrics()
     {
         (*pi)->stop_recording();
     }
-
-    // NOTE: These are on purpose two seperate iterations
-    for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
-    {
-        // in order to not create to large traces (in the sense of to much time before and after
-        // the actuall recorded program(s)), we stick to the interval [trace_begin_, trace_end]
-        (*pi)->fetch_data(trace_.record_from(), trace_.record_to());
-    }
+    running_ = false;
 }
 } // namespace plugin
 } // namespace metric

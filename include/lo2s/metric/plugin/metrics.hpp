@@ -42,9 +42,13 @@ public:
 
     ~Metrics();
 
+    void start();
+    void stop();
+
 private:
     trace::Trace& trace_;
     std::vector<std::unique_ptr<Plugin>> metric_plugins_;
+    bool running_ = false;
 };
 } // namespace plugin
 } // namespace metric

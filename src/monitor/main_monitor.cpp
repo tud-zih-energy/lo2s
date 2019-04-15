@@ -35,6 +35,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
     perf::time::Converter::instance();
 
+    metrics_.start();
+
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
     trace_.begin_record();
@@ -103,14 +105,6 @@ void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_even
 
 MainMonitor::~MainMonitor()
 {
-    if (!tracepoint_monitors_.empty())
-    {
-        for (auto& tracepoint_monitor : tracepoint_monitors_)
-        {
-            tracepoint_monitor->stop();
-        }
-    }
-
 #ifdef HAVE_X86_ENERGY
     if (x86_energy_metrics_)
     {
@@ -125,9 +119,20 @@ MainMonitor::~MainMonitor()
     }
 #endif
 
+
+    if (!tracepoint_monitors_.empty())
+    {
+        for (auto& tracepoint_monitor : tracepoint_monitors_)
+        {
+            tracepoint_monitor->stop();
+        }
+    }
+
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace
     trace_.end_record();
+
+    metrics_.stop();
 }
 } // namespace monitor
 } // namespace lo2s
