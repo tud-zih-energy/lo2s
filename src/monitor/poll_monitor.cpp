@@ -67,7 +67,11 @@ void PollMonitor::add_fd(int fd)
 
 void PollMonitor::stop()
 {
-    Log::warn() << "Cannot stop/join PollMonitor thread not running.";
+    if (!thread_.joinable())
+    {
+        Log::warn() << "Cannot stop/join PollMonitor thread not running.";
+        return;
+    }
 
     stop_pipe_.write();
     thread_.join();
