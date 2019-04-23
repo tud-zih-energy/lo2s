@@ -306,7 +306,7 @@ bool Writer::handle(const Reader::RecordCommType* comm)
     {
         summary().register_process(comm->pid);
 
-        comms_[comm->pid] = comm->comm;
+        comms_[comm->tid] = comm->comm;
     }
 
     return false;
