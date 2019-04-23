@@ -706,13 +706,18 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         auto global_thread_cctx = calling_context_tree_.find(tid);
         if (global_thread_cctx == calling_context_tree_.end())
         {
-            if (tid != 0)
+            // Threads rarely have their own name, in that case use the process name
+            global_thread_cctx = calling_context_tree_.find(local_thread_cctx.second.pid);
+            if (global_thread_cctx == calling_context_tree_.end())
             {
-                add_thread(tid, "<unknown>");
-            }
-            else
-            {
-                add_thread(tid, "<idle>");
+                if (tid != 0)
+                {
+                    add_thread(tid, "<unknown>");
+                }
+                else
+                {
+                    add_thread(tid, "<idle>");
+                }
             }
             global_thread_cctx = calling_context_tree_.find(tid);
         }
