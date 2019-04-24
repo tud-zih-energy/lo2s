@@ -136,13 +136,6 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
-    if (sample->pid == 0)
-    {
-        // WHY???
-        Log::trace() << "sample from pid 0?";
-        return false;
-    }
-
     if (first_event_ && cpuid_ == -1)
     {
         first_time_point_ = std::min(first_time_point_, tp);
@@ -316,7 +309,7 @@ void Writer::end()
 {
     if (cpuid_ == -1)
     {
-        last_time_point_ = adjust_timepoints(lo2s::time::now());
+        adjust_timepoints(lo2s::time::now());
 
         // If we have never written any samples on this location, we also never
         // got to write the thread_begin event.  Make sure we do that now.

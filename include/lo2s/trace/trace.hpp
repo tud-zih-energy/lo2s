@@ -320,6 +320,7 @@ private:
 
     std::map<pid_t, otf2::definition::comm> process_comms_;
 
+    std::map<pid_t, std::string> process_names_;
     std::map<pid_t, IpCctxEntry> calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
     otf2::definition::container<otf2::definition::calling_context_property>

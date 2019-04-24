@@ -709,15 +709,15 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         {
             if (tid != 0)
             {
-                // Threads rarely have their own name, in that case use the processes name
-                auto process_cctx = calling_context_tree_.find(local_thread_cctx.second.pid);
-                if(process_cctx == calling_context_tree_.end())
+                // Threads rarely have their own name, in that case, use the process' name
+                auto process_name = process_names_.find(local_thread_cctx.second.pid);
+                if (process_name == process_names_.end())
                 {
-                        add_thread(tid, "<unknown>");
+                    add_thread(tid, "<unknown thread>");
                 }
                 else
                 {
-                    add_thread(tid,  process_cctx->second.cctx.region().name().str());
+                    add_thread(tid, process_name->second);
                 }
             }
             else
@@ -746,6 +746,9 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
 void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
                                  const std::lock_guard<std::mutex>&)
 {
+    process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                           std::forward_as_tuple(name));
+
     auto iname = intern((boost::format("%s (%d)") % name % tid).str());
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
