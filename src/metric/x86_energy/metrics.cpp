@@ -71,9 +71,11 @@ Metrics::Metrics(trace::Trace& trace)
         std::string metric_name = str.str();
 
         auto mc = trace.metric_class();
+        // According to the developers, x86_energy gives values in J, not mJ!
+        // No scaling needed
         mc.add_member(trace.metric_member(metric_name, metric_name,
                                           otf2::common::metric_mode::accumulated_start,
-                                          otf2::common::type::Double, "J", -3));
+                                          otf2::common::type::Double, "J"));
 
         // if we get here, we need to setup a source counter, a monitor thread and so on
 
