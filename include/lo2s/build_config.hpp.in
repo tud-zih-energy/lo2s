@@ -1,4 +1,4 @@
-//Predefined events which are only present in more modern kernels src/perf/event_provider.cpp
+// Predefined events which are only present in more modern kernels src/perf/event_provider.cpp
 
 #cmakedefine HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
 
@@ -12,7 +12,7 @@
 
 #cmakedefine HAVE_PERF_EVENT_CACHE_NODE
 
-//Clocks which might only be available in more modern kernels
+// Clocks which might only be available in more modern kernels
 
 #cmakedefine HAVE_CLOCK_MONOTONIC_RAW
 
@@ -26,7 +26,7 @@
 
 #cmakedefine HAVE_CLOCK_BOOTTIME_ALARM
 
-//Features which might not be present in older kernels and workarounds for older kernels
+// Features which might not be present in older kernels and workarounds for older kernels
 
 #cmakedefine USE_HW_BREAKPOINT_COMPAT
 

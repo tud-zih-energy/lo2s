@@ -50,7 +50,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         {
             for (const auto& cpu : Topology::instance().cpus())
             {
-                tracepoint_monitors_.emplace_back(std::make_unique<TracepointMonitor>(trace_, cpu.id));
+                tracepoint_monitors_.emplace_back(
+                    std::make_unique<TracepointMonitor>(trace_, cpu.id));
                 tracepoint_monitors_.back()->start();
             }
         }
@@ -118,7 +119,6 @@ MainMonitor::~MainMonitor()
         x86_adapt_metrics_->stop();
     }
 #endif
-
 
     if (!tracepoint_monitors_.empty())
     {

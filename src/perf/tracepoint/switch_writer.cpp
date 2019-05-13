@@ -44,14 +44,14 @@ static const EventFormat& get_sched_switch_event()
     return evt;
 }
 
-SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace) try
-: Reader(cpu, get_sched_switch_event().id()),
-  otf2_writer_(trace.cpu_switch_writer(cpu)),
-  trace_(trace),
-  time_converter_(time::Converter::instance()),
-  prev_pid_field_(get_sched_switch_event().field("prev_pid")),
-  next_pid_field_(get_sched_switch_event().field("next_pid")),
-  prev_state_field_(get_sched_switch_event().field("prev_state"))
+SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
+try : Reader(cpu, get_sched_switch_event().id()),
+      otf2_writer_(trace.cpu_switch_writer(cpu)),
+      trace_(trace),
+      time_converter_(time::Converter::instance()),
+      prev_pid_field_(get_sched_switch_event().field("prev_pid")),
+      next_pid_field_(get_sched_switch_event().field("next_pid")),
+      prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
 }
 // NOTE: function-try-block is intentional; catch get_sched_switch_event()

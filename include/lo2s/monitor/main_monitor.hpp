@@ -33,8 +33,8 @@
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace lo2s
 {

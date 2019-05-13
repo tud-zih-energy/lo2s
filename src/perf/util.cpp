@@ -26,13 +26,13 @@ int perf_event_paranoid()
     }
 }
 
-int perf_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu,
-                                  int group_fd, unsigned long flags)
+int perf_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
+                    unsigned long flags)
 {
     return syscall(__NR_perf_event_open, perf_attr, tid, cpu, group_fd, flags);
 }
 
-//Default options we use in every perf_event_open call
+// Default options we use in every perf_event_open call
 struct perf_event_attr common_perf_event_attrs()
 {
     struct perf_event_attr attr;
@@ -45,11 +45,11 @@ struct perf_event_attr common_perf_event_attrs()
     attr.use_clockid = config().use_clockid;
     attr.clockid = config().clockid;
 #endif
-    //When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
-    //Default behaviour is to wakeup on every event, which is horrible performance wise
+    // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
+    // Default behaviour is to wakeup on every event, which is horrible performance wise
     attr.watermark = 1;
     attr.wakeup_watermark = static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
-    
+
     return attr;
 }
 } // namespace perf
