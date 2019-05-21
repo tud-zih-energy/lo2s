@@ -240,7 +240,12 @@ Trace::~Trace()
 
     archive_ << interrupt_generator();
     archive_ << calling_contexts_;
-    archive_ << calling_contexts_thread_;
+
+    for (auto& thread_cctx : calling_context_tree_)
+    {
+        archive_ << thread_cctx.second.cctx;
+    }
+
     archive_ << calling_context_properties_;
     archive_ << metric_members_;
     archive_ << metric_classes_;
@@ -628,7 +633,8 @@ static LineInfo region_info(LineInfo info)
 
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos)
+                      otf2::definition::calling_context parent, std::map<pid_t, ProcessInfo>& infos,
+                      pid_t pid)
 {
     for (auto& elem : new_children)
     {
@@ -637,7 +643,7 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         auto& local_children = elem.second.children;
         LineInfo line_info = LineInfo::for_unknown_function();
 
-        auto info_it = infos.find(elem.second.pid);
+        auto info_it = infos.find(pid);
         if (info_it != infos.end())
         {
             MemoryMap maps = info_it->second.maps();
@@ -656,13 +662,13 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
             assert(r.second);
             cctx_it = r.first;
 
-            if (config().disassemble && infos.count(elem.second.pid) == 1)
+            if (config().disassemble && infos.count(pid) == 1)
             {
                 try
                 {
                     // TODO do not write properties for useless unknown stuff
                     OTF2_AttributeValue_union value;
-                    auto instruction = infos.at(elem.second.pid).maps().lookup_instruction(ip);
+                    auto instruction = infos.at(pid).maps().lookup_instruction(ip);
                     Log::trace() << "mapped " << ip << " to " << instruction;
                     value.stringRef = intern(instruction).ref();
                     calling_context_properties_.emplace(new_cctx, intern("instruction"),
@@ -677,30 +683,55 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
         const auto& cctx = cctx_it->second.cctx;
         mapping_table.at(local_ref) = cctx.ref();
 
-        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos);
+        merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, infos, pid);
     }
 }
 
-otf2::definition::mapping_table Trace::merge_calling_contexts(
-    IpRefMap& new_ips,
-    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs,
-    std::map<pid_t, ProcessInfo>& infos)
+otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& new_ips,
+                                                              size_t num_ip_refs,
+                                                              std::map<pid_t, ProcessInfo>& infos)
 {
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size(), -1u);
+    std::vector<uint32_t> mappings(num_ip_refs, -1u);
 #else
-    std::vector<uint32_t> mappings(new_ips.size() + thread_refs.size());
+    std::vector<uint32_t> mappings(num_ip_refs);
 #endif
 
-    if (!new_ips.empty())
+    // Merge local thread tree into global thread tree
+    for (auto& local_thread_cctx : new_ips)
     {
-        merge_ips(new_ips, calling_context_tree_, mappings, otf2::definition::calling_context(),
-                  infos);
+        auto tid = local_thread_cctx.first;
+        auto local_ref = local_thread_cctx.second.entry.ref;
+
+        auto global_thread_cctx = calling_context_tree_.find(tid);
+
+        if (global_thread_cctx == calling_context_tree_.end())
+        {
+            if (tid != 0)
+            {
+                // Threads rarely have their own name, in that case, use the process' name
+                auto process_name = process_names_.find(local_thread_cctx.second.pid);
+                if (process_name == process_names_.end())
+                {
+                    add_thread(tid, "<unknown thread>");
+                }
+                else
+                {
+                    add_thread(tid, process_name->second);
+                }
+            }
+            else
+            {
+                add_thread(tid, "<idle>");
+            }
+            global_thread_cctx = calling_context_tree_.find(tid);
+        }
+        mappings.at(local_ref) = global_thread_cctx->second.cctx.ref();
+
+        merge_ips(local_thread_cctx.second.entry.children, global_thread_cctx->second.children,
+                  mappings, global_thread_cctx->second.cctx, infos, local_thread_cctx.second.pid);
     }
-    if (!thread_refs.empty())
-    {
-        merge_thread_calling_contexts(thread_refs, mappings);
-    }
+
 #ifndef NDEBUG
     for (auto id : mappings)
     {
@@ -715,6 +746,9 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(
 void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
                                  const std::lock_guard<std::mutex>&)
 {
+    process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                           std::forward_as_tuple(name));
+
     auto iname = intern((boost::format("%s (%d)") % name % tid).str());
     auto ret = regions_thread_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
@@ -731,10 +765,10 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
     // TODO update iname if not newly inserted
 
     // create calling context
-    calling_contexts_thread_.emplace(
+    calling_context_tree_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(calling_context_ref(), ret.first->second,
-                              otf2::definition::source_code_location()));
+        std::forward_as_tuple(otf2::definition::calling_context(
+            calling_context_ref(), ret.first->second, otf2::definition::source_code_location())));
 }
 
 void Trace::add_thread(pid_t tid, const std::string& name)
@@ -767,10 +801,10 @@ void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std:
     }
 
     // create calling context
-    calling_contexts_thread_.emplace(
+    calling_context_tree_.emplace(
         std::piecewise_construct, std::forward_as_tuple(tid),
-        std::forward_as_tuple(calling_context_ref(), ret.first->second,
-                              otf2::definition::source_code_location()));
+        std::forward_as_tuple(otf2::definition::calling_context(
+            calling_context_ref(), ret.first->second, otf2::definition::source_code_location())));
 }
 
 void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
@@ -782,51 +816,6 @@ void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
     for (const auto& elem : tid_map)
     {
         add_thread_exclusive(elem.first, elem.second, guard);
-    }
-}
-
-otf2::definition::mapping_table Trace::merge_thread_calling_contexts(
-    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs)
-{
-#ifndef NDEBUG
-    std::vector<uint32_t> mappings(thread_refs.size(), -1u);
-#else
-    std::vector<uint32_t> mappings(thread_refs.size());
-#endif
-
-    merge_thread_calling_contexts(thread_refs, mappings);
-#ifndef NDEBUG
-    for (auto id : mappings)
-    {
-        assert(id != -1u);
-    }
-#endif
-
-    return otf2::definition::mapping_table(
-        otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
-}
-
-void Trace::merge_thread_calling_contexts(
-    const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>& thread_refs,
-    std::vector<uint32_t>& mapping_table)
-{
-    for (const auto& elem : thread_refs)
-    {
-        auto pid = elem.first;
-        auto local_ref = elem.second;
-        if (calling_contexts_thread_.count(pid) == 0)
-        {
-            if (pid != 0)
-            {
-                add_thread(pid, "<unknown>");
-            }
-            else
-            {
-                add_thread(pid, "<idle>");
-            }
-        }
-        auto global_ref = calling_contexts_thread_.at(pid).ref();
-        mapping_table.at(local_ref) = global_ref;
     }
 }
 

@@ -81,12 +81,11 @@ public:
 private:
     otf2::definition::calling_context::reference_type
     cctx_ref(const Reader::RecordSampleType* sample);
-    trace::IpRefMap::iterator find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children);
+    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
 
-    otf2::definition::calling_context::reference_type next_ip_ref() const
-    {
-        return local_ip_refs_.size() + thread_calling_context_refs_.size();
-    }
+    void update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
+    void leave_current_thread(pid_t tid, otf2::chrono::time_point tp);
+    otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     pid_t pid_;
     pid_t tid_;
@@ -100,9 +99,11 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>
-        thread_calling_context_refs_;
-    trace::IpRefMap local_ip_refs_;
+    trace::ThreadCctxRefMap local_cctx_refs_;
+    size_t next_cctx_ref_;
+
+    trace::ThreadCctxRefMap::value_type thread_monitoring_cctx_refs_;
+    trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
     std::unordered_map<pid_t, std::string> comms_;
@@ -112,16 +113,6 @@ private:
     bool first_event_ = true;
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_;
-
-    otf2::definition::calling_context::reference_type last_calling_context_ =
-        otf2::definition::calling_context::reference_type::undefined();
-
-    enum class LastEventType
-    {
-        enter,
-        leave
-    };
-    LastEventType last_event_type_ = LastEventType::leave;
 };
 } // namespace sample
 } // namespace perf

@@ -45,13 +45,21 @@ using IpMap = std::map<Address, RefMap>;
 
 struct IpRefEntry
 {
-    IpRefEntry(pid_t pid, otf2::definition::calling_context::reference_type r) : ref(r), pid(pid)
+    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
     {
     }
 
     otf2::definition::calling_context::reference_type ref;
-    pid_t pid;
     IpMap<IpRefEntry> children;
+};
+
+struct ThreadCctxRefs
+{
+    ThreadCctxRefs(pid_t p, otf2::definition::calling_context::reference_type r) : pid(p), entry(r)
+    {
+    }
+    pid_t pid;
+    IpRefEntry entry;
 };
 
 struct IpCctxEntry
@@ -64,6 +72,7 @@ struct IpCctxEntry
     IpMap<IpCctxEntry> children;
 };
 
+using ThreadCctxRefMap = std::map<pid_t, ThreadCctxRefs>;
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 
@@ -141,24 +150,13 @@ public:
     otf2::definition::metric_class perf_metric_class();
 
     otf2::definition::metric_class tracepoint_metric_class(const std::string& event_name);
-    otf2::definition::mapping_table merge_calling_contexts(
-        IpRefMap& new_ips,
-        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
-            thread_refs,
-        std::map<pid_t, ProcessInfo>& infos);
-
-    otf2::definition::mapping_table merge_thread_calling_contexts(
-        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
-            thread_refs);
+    otf2::definition::mapping_table merge_calling_contexts(ThreadCctxRefMap& new_ips,
+                                                           size_t num_ip_refs,
+                                                           std::map<pid_t, ProcessInfo>& infos);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context parent,
-                   std::map<pid_t, ProcessInfo>& infos);
-
-    void merge_thread_calling_contexts(
-        const std::unordered_map<pid_t, otf2::definition::calling_context::reference_type>&
-            thread_refs,
-        std::vector<uint32_t>& mapping_table);
+                   std::map<pid_t, ProcessInfo>& infos, pid_t pid);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -269,7 +267,7 @@ private:
 
     otf2::definition::calling_context::reference_type calling_context_ref() const
     {
-        return calling_contexts_.size() + calling_contexts_thread_.size();
+        return calling_contexts_.size() + calling_context_tree_.size();
     }
 
     otf2::definition::system_tree_node& intern_process_node(pid_t pid);
@@ -322,9 +320,9 @@ private:
 
     std::map<pid_t, otf2::definition::comm> process_comms_;
 
-    IpCctxMap calling_context_tree_;
+    std::map<pid_t, std::string> process_names_;
+    std::map<pid_t, IpCctxEntry> calling_context_tree_;
     otf2::definition::container<otf2::definition::calling_context> calling_contexts_;
-    std::map<int, otf2::definition::calling_context> calling_contexts_thread_;
     otf2::definition::container<otf2::definition::calling_context_property>
         calling_context_properties_;
     otf2::definition::container<otf2::definition::metric_member> metric_members_;

@@ -59,28 +59,38 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  thread_monitoring_cctx_refs_(
+      tid, { pid, otf2::definition::calling_context::reference_type::undefined() }),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
+    // Must monitor either a CPU or (exclusive) a tid/pid
+    assert((cpu == -1) ^ (pid == -1 && tid == -1));
+    if (tid != -1)
+    {
+        // TODO create empty cctx root for thread monitoring
+        thread_monitoring_cctx_refs_.second.pid = pid;
+        current_thread_cctx_refs_ = &thread_monitoring_cctx_refs_;
+    }
 }
 
 Writer::~Writer()
 {
 
-    if (last_event_type_ == LastEventType::enter)
+    if (current_thread_cctx_refs_ && tid_ == -1)
     {
-        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
-                                                 last_calling_context_);
+        otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
+                                                 current_thread_cctx_refs_->second.entry.ref);
     }
-    if (!local_ip_refs_.empty() || !thread_calling_context_refs_.empty())
+    if (next_cctx_ref_ > 0)
     {
-        const auto& mapping = trace_.merge_calling_contexts(
-            local_ip_refs_, thread_calling_context_refs_, monitor_.get_process_infos());
+        const auto& mapping = trace_.merge_calling_contexts(local_cctx_refs_, next_cctx_ref_,
+                                                            monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
 }
 
-trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::IpRefMap& children)
+trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
 {
     // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
     if (addr == -1)
@@ -89,7 +99,11 @@ trace::IpRefMap::iterator Writer::find_ip_child(Address addr, pid_t pid, trace::
         addr = -2;
     }
     auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                                std::forward_as_tuple(pid, next_ip_ref()));
+                                std::forward_as_tuple(next_cctx_ref_));
+    if (ret.second)
+    {
+        next_cctx_ref_++;
+    }
     return ret.first;
 }
 otf2::definition::calling_context::reference_type
@@ -97,15 +111,15 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
     if (!has_cct_)
     {
-        auto it = find_ip_child(sample->ip, sample->pid, local_ip_refs_);
+        auto it = find_ip_child(sample->ip, current_thread_cctx_refs_->second.entry.children);
         return it->second.ref;
     }
     else
     {
-        auto children = &local_ip_refs_;
+        auto children = &current_thread_cctx_refs_->second.entry.children;
         for (uint64_t i = sample->nr - 1;; i--)
         {
-            auto it = find_ip_child(sample->ips[i], sample->pid, *children);
+            auto it = find_ip_child(sample->ips[i], *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)
             {
@@ -120,32 +134,8 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
-    // As they are sometimes out of order, we can not trust timestamps to be strictly in order all
-    // of the time
-    if (last_time_point_ > tp)
-    {
-        Log::debug() << "perf_event_open timestamps not in order for sampling event: "
-                     << last_time_point_ << ">" << tp;
-        tp = last_time_point_;
-    }
+    tp = adjust_timepoints(tp);
 
-    if (sample->pid == 0)
-    {
-        last_time_point_ = tp;
-        return false;
-    }
-    //    log::trace() << "sample event. ip: " << sample->ip << ", time: " << sample->time
-    //                 << ", pid: " << sample->pid << ", tid: " << sample->tid;
-
-    /*
-    Note: This is the inefficient version with a fake calling context that we don't use
-    otf2::definition::calling_context cctx(cctx_ref(sample),
-                                            otf2::definition::region::undefined(),
-                                           otf2::definition::source_code_location::undefined(),
-                                           otf2::definition::calling_context::undefined());
-    otf2::event::calling_context_sample ccs(tp, cctx, 2, trace_.interrupt_generator());
-    otf2_writer_ << ccs;
-    */
     if (first_event_ && cpuid_ == -1)
     {
         first_time_point_ = std::min(first_time_point_, tp);
@@ -153,16 +143,16 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         first_event_ = false;
     }
 
+    update_current_thread(sample->pid, sample->tid, tp);
+
     cpuid_metric_event_.timestamp(tp);
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
-    // Timepoints for Sample and Cpu Switch events are out of order sometimes, so we have to fix
-    // that
+    // we write the ugly raw ref-only events here due to performance reasons
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
                                               trace_.interrupt_generator().ref());
 
-    last_time_point_ = tp;
     return false;
 }
 
@@ -182,53 +172,107 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     return false;
 }
 
+void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
+{
+
+    if (tid_ != -1)
+    {
+        if (tid != tid_ || pid != pid_)
+        {
+            Log::warn() << "Sample outside of monitored process";
+        }
+        assert(tid == tid_ && pid == pid_);
+
+        auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                                            std::forward_as_tuple(pid, next_cctx_ref_));
+
+        if (ret.second)
+        {
+            next_cctx_ref_++;
+        }
+
+        current_thread_cctx_refs_ = &(*ret.first);
+        return;
+    }
+    tp = adjust_timepoints(tp);
+
+    // CPU monitoring
+    if (current_thread_cctx_refs_ && current_thread_cctx_refs_->first == tid)
+    {
+        // current thread is unchanged
+        return;
+    }
+    else if (current_thread_cctx_refs_)
+    {
+
+        // need to leave
+        otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
+    }
+    // thread has changed
+    auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                                        std::forward_as_tuple(pid, next_cctx_ref_));
+    if (ret.second)
+    {
+        next_cctx_ref_++;
+    }
+
+    otf2_writer_.write_calling_context_enter(tp, ret.first->second.entry.ref, 2);
+    current_thread_cctx_refs_ = &(*ret.first);
+}
+
+void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
+{
+    if (tid_ != -1)
+    {
+        // should not happen (TM)
+        assert(false);
+        return;
+    }
+
+    if (current_thread_cctx_refs_ == nullptr)
+    {
+        // Already not in a thread
+        return;
+    }
+
+    if (current_thread_cctx_refs_->first != tid)
+    {
+        Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or later
+    }
+    tp = adjust_timepoints(tp);
+
+    otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
+    current_thread_cctx_refs_ = nullptr;
+}
+
+otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
+{
+    // as the perf timepoints can not be trusted to be in order all the time fix them here
+    if (last_time_point_ > tp)
+    {
+        Log::debug() << "perf_event_open timestamps not in order: " << last_time_point_ << ">"
+                     << tp;
+        tp = last_time_point_;
+    }
+    last_time_point_ = tp;
+    return tp;
+}
+
 #ifdef USE_PERF_RECORD_SWITCH
 bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
+    assert(cpuid_ != -1);
     auto tp = time_converter_(context_switch->time);
-    if (last_time_point_ > tp)
-    {
-        Log::debug() << "perf_event_open timestamps not in order for CpuSwitch event: "
-                     << last_time_point_ << ">" << tp;
-    }
 
-    auto elem = thread_calling_context_refs_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(context_switch->pid),
-        std::forward_as_tuple(thread_calling_context_refs_.size()));
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        if (last_event_type_ == LastEventType::leave)
-        {
-            Log::trace() << "Writing missing calling context enter event for current calling "
-                            "context leave event.";
-            otf2_writer_.write_calling_context_enter(std::min(last_time_point_, tp),
-                                                     elem.first->second, 2);
-        }
-        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, tp),
-                                                 elem.first->second);
-        last_event_type_ = LastEventType::leave;
+        leave_current_thread(context_switch->tid, tp);
     }
     else
     {
-        if (last_event_type_ == LastEventType::enter)
-        {
-            Log::trace() << "Writing missing calling context leave event for the last calling "
-                            "context enter event.";
-            otf2_writer_.write_calling_context_leave(std::max(last_time_point_, tp),
-                                                     last_calling_context_);
-        }
-        otf2_writer_.write_calling_context_enter(std::max(last_time_point_, tp), elem.first->second,
-                                                 2);
-
-        if (context_switch->pid != 0)
-        {
-            summary().register_process(context_switch->pid);
-        }
-
-        last_event_type_ = LastEventType::enter;
+        update_current_thread(context_switch->pid, context_switch->tid, tp);
     }
-    last_time_point_ = tp;
-    last_calling_context_ = elem.first->second;
+
     return false;
 }
 #endif
@@ -255,7 +299,7 @@ bool Writer::handle(const Reader::RecordCommType* comm)
     {
         summary().register_process(comm->pid);
 
-        comms_[comm->pid] = comm->comm;
+        comms_[comm->tid] = comm->comm;
     }
 
     return false;
@@ -265,11 +309,7 @@ void Writer::end()
 {
     if (cpuid_ == -1)
     {
-        // Relative to the timestamps on samples (which stem from a kernel
-        // clock), time::now() can sometimes can be in the past :-(
-        // Therefore, ensure that last_time_point_ >= now.
-        auto now = lo2s::time::now();
-        last_time_point_ = std::max(last_time_point_, now);
+        adjust_timepoints(lo2s::time::now());
 
         // If we have never written any samples on this location, we also never
         // got to write the thread_begin event.  Make sure we do that now.

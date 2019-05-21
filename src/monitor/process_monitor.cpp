@@ -41,6 +41,8 @@ void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name
 
 void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn)
 {
+    trace_.add_thread(tid, name);
+
     if (config().sampling)
     {
         process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
