@@ -153,6 +153,10 @@ private:
             CLOCK_BOOTTIME_ALARM,
         },
 #endif
+        {
+            "pebs",
+            -1,
+        },
     };
 };
 

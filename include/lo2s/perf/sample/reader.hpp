@@ -85,6 +85,11 @@ protected:
                      << ", enable_on_exec: " << enable_on_exec;
         struct perf_event_attr perf_attr = common_perf_event_attrs();
 
+        if(config().use_pebs)
+        {
+            perf_attr.use_clockid = 0;
+        }
+
         perf_attr.exclude_kernel = config().exclude_kernel;
         perf_attr.sample_period = config().sampling_period;
 
