@@ -36,6 +36,8 @@
 #include <regex>
 #include <sstream>
 
+#include <cstring>
+
 extern "C"
 {
 #include <linux/perf_event.h>
@@ -169,7 +171,8 @@ static bool event_is_openable(const CounterDescription& ev)
             Log::debug() << "perf event not supported by the running kernel: " << ev.name;
             break;
         default:
-            Log::debug() << "perf event not available: " << ev.name;
+            Log::debug() << "perf event " << ev.name
+                         << " not available: " << std::string(std::strerror(errno));
             break;
         }
         return false;
