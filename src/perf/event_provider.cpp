@@ -383,11 +383,8 @@ const CounterDescription raw_read_event(const std::string& ev_desc)
 {
     uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
     const CounterDescription event(ev_desc, PERF_TYPE_RAW, code, 0);
-
-    if (!event_is_openable(event))
-    {
-        throw EventProvider::InvalidEvent("cannot open requested event");
-    }
+    // Do not check whether the event_is_openable because we don't know whether we are in
+    // system or process mode
     return event;
 }
 
@@ -507,10 +504,8 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
 
-    if (!event_is_openable(event))
-    {
-        throw EventProvider::InvalidEvent("cannot open requested event");
-    }
+    // Do not check whether the event_is_openable because we don't know whether we are in
+    // system or process mode
     return event;
 }
 
