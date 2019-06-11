@@ -497,10 +497,10 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     try
     {
-        //large PEBS only works when the clockid isn't set, however the internal clock
-        //large PEBS uses should be equal to monotonic-raw, so use monotonic-raw outside
-        //of pebs and everything should be in sync
-        if(requested_clock_name == "pebs")
+        // large PEBS only works when the clockid isn't set, however the internal clock
+        // large PEBS uses should be equal to monotonic-raw, so use monotonic-raw outside
+        // of pebs and everything should be in sync
+        if (requested_clock_name == "pebs")
         {
             requested_clock_name = "monotonic-raw";
             config.use_pebs = true;
