@@ -107,6 +107,26 @@ private:
     }
 };
 
+struct bfd_handle_deleter
+{
+    void operator()(bfd* p) const
+    {
+        bfd_close(p);
+        p = nullptr;
+    }
+};
+
+struct char_handle_deleter
+{
+    void operator()(char* p) const
+    {
+        free(p);
+    }
+};
+
+using unique_bfd_ptr = std::unique_ptr<bfd, bfd_handle_deleter>;
+using unique_char_ptr = std::unique_ptr<char, char_handle_deleter>;
+
 class Lib
 {
 public:
@@ -115,8 +135,6 @@ public:
     Lib(Lib&&) = delete;
     Lib& operator=(const Lib&) = delete;
     Lib& operator=(Lib&&) = delete;
-
-    ~Lib();
 
     LineInfo lookup(Address addr) const;
 
@@ -148,7 +166,7 @@ private:
     }
 
     std::string name_;
-    bfd* handle_;
+    unique_bfd_ptr handle_;
     std::vector<asymbol*> symbols_;
     std::map<Range, asection*> sections_;
 
