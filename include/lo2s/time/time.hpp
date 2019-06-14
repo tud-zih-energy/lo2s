@@ -153,7 +153,13 @@ private:
             CLOCK_BOOTTIME_ALARM,
         },
 #endif
+#ifdef HAVE_CLOCK_MONOTONIC_RAW
+        {
+            "pebs",
+            -1,
+        },
     };
+#endif
 };
 
 inline otf2::chrono::time_point now()

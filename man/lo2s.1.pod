@@ -177,6 +177,10 @@ minimize B<lo2s>'s overhead for your measurements.
 Set the internal reference clock used as a source of timestamps.
 See B<--list-clockids> for a list of supported arguments.
 
+Beyond standard clocks lo2s also supports a special "pebs" clock, which will
+give the same timestamps as "monotonic-raw", but is set up in a slightly different
+way to support the large PEBS feature of newer (Skylake+) Intel processors
+
 =item B<--list-clockids>
 
 List the names of clocks that can be used as I<CLOCKID> argument.
