@@ -109,36 +109,46 @@ Trace::Trace()
     attach_process_location_group(system_tree_root_node_, METRIC_PID,
                                   intern("Metric Location Group"));
 
+    system_tree_node_domains_.emplace(system_tree_root_node_,
+                                      otf2::common::system_tree_node_domain::shared_memory);
+
     const auto& sys = Topology::instance();
     for (auto& package : sys.packages())
     {
         Log::debug() << "Registering package " << package.id;
         const auto& parent = system_tree_root_node_;
-        system_tree_package_nodes_.emplace(
+        auto res = system_tree_package_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(package.id),
             std::forward_as_tuple(system_tree_ref(), intern(std::to_string(package.id)),
                                   intern("package"), parent));
+        system_tree_node_domains_.emplace(res.first->second,
+                                          otf2::common::system_tree_node_domain::socket);
     }
     for (auto& core : sys.cores())
     {
         Log::debug() << "Registering core " << core.id << "@" << core.package_id;
         const auto& parent = system_tree_package_nodes_.at(core.package_id);
-        system_tree_core_nodes_.emplace(
+        auto res = system_tree_core_nodes_.emplace(
             std::piecewise_construct, std::forward_as_tuple(core.id, core.package_id),
             std::forward_as_tuple(
                 system_tree_ref(),
                 intern(std::to_string(core.package_id) + ":"s + std::to_string(core.id)),
                 intern("core"), parent));
+
+        system_tree_node_domains_.emplace(res.first->second,
+                                          otf2::common::system_tree_node_domain::core);
     }
     for (auto& cpu : sys.cpus())
     {
         Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
         const auto& parent =
             system_tree_core_nodes_.at(std::make_pair(cpu.core_id, cpu.package_id));
-        system_tree_cpu_nodes_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                                       std::forward_as_tuple(system_tree_ref(),
-                                                             intern(std::to_string(cpu.id)),
-                                                             intern("cpu"), parent));
+        auto res = system_tree_cpu_nodes_.emplace(
+            std::piecewise_construct, std::forward_as_tuple(cpu.id),
+            std::forward_as_tuple(system_tree_ref(), intern(std::to_string(cpu.id)), intern("cpu"),
+                                  parent));
+        system_tree_node_domains_.emplace(res.first->second,
+                                          otf2::common::system_tree_node_domain::pu);
     }
 }
 
@@ -201,6 +211,7 @@ Trace::~Trace()
     archive_ << system_tree_core_nodes_;
     archive_ << system_tree_cpu_nodes_;
     archive_ << system_tree_process_nodes_;
+    archive_ << system_tree_node_domains_;
     archive_ << location_groups_process_;
     archive_ << location_groups_cpu_;
 

@@ -297,6 +297,9 @@ private:
     std::map<int, otf2::definition::system_tree_node> system_tree_cpu_nodes_;
     std::map<pid_t, otf2::definition::system_tree_node> system_tree_process_nodes_;
 
+    otf2::definition::container<otf2::definition::system_tree_node_domain>
+        system_tree_node_domains_;
+
     otf2::definition::interrupt_generator interrupt_generator_;
 
     std::map<pid_t, otf2::definition::location_group> location_groups_process_;
