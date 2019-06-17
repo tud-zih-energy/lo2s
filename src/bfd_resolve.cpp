@@ -56,30 +56,20 @@ static boost::filesystem::path check_path(const std::string& name)
 
 Initializer Lib::dummy_;
 
-Lib::Lib(const std::string& name) : name_(name)
+Lib::Lib(const std::string& name)
+: name_(name), handle_(bfd_openr(check_path(name).c_str(), nullptr))
 {
-    handle_ = bfd_openr(check_path(name).c_str(), nullptr);
-    if (handle_ == nullptr)
+    if (!handle_)
     {
         throw InitError("failed to open BFD handle", name);
     }
     // init stuff
     //  Not sure if those are needed for side-effects
-    bfd_get_arch_size(handle_);
-    bfd_find_target(nullptr, handle_);
-    if (!bfd_check_format(handle_, bfd_object))
+    bfd_get_arch_size(handle_.get());
+    bfd_find_target(nullptr, handle_.get());
+    if (!bfd_check_format(handle_.get(), bfd_object))
     {
-        bfd_close(handle_);
-        handle_ = nullptr;
         throw InitError("Not a valid bfd_object", name);
-    }
-
-    char** matching;
-    if (bfd_check_format_matches(handle_, bfd_archive, &matching))
-    {
-        bfd_close(handle_);
-        handle_ = nullptr;
-        throw InitError("BFD format does not match.", name);
     }
 
     //            if (bfd_get_flavour(handle_) != bfd_target_elf_flavour)
@@ -88,26 +78,8 @@ Lib::Lib(const std::string& name) : name_(name)
     //                throw std::runtime_error("BFD flavor not ELF.");
     //            }
 
-    try
-    {
-        read_symbols();
-        read_sections();
-    }
-    catch (...)
-    {
-        bfd_close(handle_);
-        handle_ = nullptr;
-        throw;
-    }
-}
-
-Lib::~Lib()
-{
-    if (handle_ != nullptr)
-    {
-        bfd_close(handle_);
-        handle_ = nullptr;
-    }
+    read_symbols();
+    read_sections();
 }
 
 LineInfo Lib::lookup(Address addr) const
@@ -130,27 +102,25 @@ LineInfo Lib::lookup(Address addr) const
             // This should not happen as long as we lookup sections in the range-map by
             // address, since base/size is the same as used for the ranges
             Log::error() << "address " << addr << " out of section bounds " << name_ << " "
-                         << bfd_get_section_name(handle_, section) << " filepos: " << hex << base
-                         << ", size: " << hex << size;
+                         << bfd_get_section_name(handle_.get(), section) << " filepos: " << hex
+                         << base << ", size: " << hex << size;
             throw LookupError("address out of .symtab bounds", addr);
         }
         auto evil_symtab = const_cast<asymbol**>(symbols_.data());
-        auto found = bfd_find_nearest_line(handle_, section, evil_symtab, local_addr.value(), &file,
-                                           &func, &line);
-        // we probably don't need to free here.
+        auto found = bfd_find_nearest_line(handle_.get(), section, evil_symtab, local_addr.value(),
+                                           &file, &func, &line);
         if (!found)
         {
             Log::debug() << "bfd_find_nearest_line failed " << addr << " in " << name_
-                         << bfd_get_section_name(handle_, section);
+                         << bfd_get_section_name(handle_.get(), section);
             throw LookupError("bfd_find_nearest_line failed", addr);
         }
         if (func != nullptr)
         {
-            auto demangled = bfd_demangle(handle_, func, DMGL_PARAMS | DMGL_ANSI);
-            if (demangled != nullptr)
+            unique_char_ptr demangled(bfd_demangle(handle_.get(), func, DMGL_PARAMS | DMGL_ANSI));
+            if (!demangled)
             {
-                LineInfo line_info = LineInfo::for_function(file, demangled, line, name_);
-                free(demangled);
+                LineInfo line_info = LineInfo::for_function(file, demangled.get(), line, name_);
                 return line_info;
             }
         }
@@ -170,9 +140,9 @@ void Lib::read_symbols()
     // read this: https://blogs.oracle.com/ali/entry/inside_elf_symbol_tables
     try
     {
-        symbols_.resize(check_symtab(bfd_get_symtab_upper_bound(handle_)));
+        symbols_.resize(check_symtab(bfd_get_symtab_upper_bound(handle_.get())));
         // Note: Keep the extra NULL element at the end for later use!
-        symbols_.resize(1 + check_symtab(bfd_canonicalize_symtab(handle_, symbols_.data())));
+        symbols_.resize(1 + check_symtab(bfd_canonicalize_symtab(handle_.get(), symbols_.data())));
         // filter_symbols();
         if (symbols_.size() <= 1)
         {
@@ -194,9 +164,9 @@ void Lib::read_symbols()
             // See linux/tools/perf/util/symbol-elf.c symsrc__init
             Log::debug() << "falling back to .dynsym";
 
-            symbols_.resize(check_symtab(bfd_get_dynamic_symtab_upper_bound(handle_)));
+            symbols_.resize(check_symtab(bfd_get_dynamic_symtab_upper_bound(handle_.get())));
             symbols_.resize(
-                1 + check_symtab(bfd_canonicalize_dynamic_symtab(handle_, symbols_.data())));
+                1 + check_symtab(bfd_canonicalize_dynamic_symtab(handle_.get(), symbols_.data())));
             // filter_symbols();
         }
         catch (std::exception& e)
@@ -234,7 +204,8 @@ void Lib::read_sections()
         auto size = bfd_get_section_size(section);
         if (size == 0)
         {
-            Log::debug() << "skipping empty section: " << bfd_get_section_name(handle_, section);
+            Log::debug() << "skipping empty section: "
+                         << bfd_get_section_name(handle_.get(), section);
             continue;
         }
         try
@@ -244,13 +215,13 @@ void Lib::read_sections()
                                        std::forward_as_tuple(section));
             if (r.second)
             {
-                Log::trace() << "Added section: " << bfd_get_section_name(handle_, section)
+                Log::trace() << "Added section: " << bfd_get_section_name(handle_.get(), section)
                              << " from symbol " << sym->name;
             }
         }
         catch (Range::Error& e)
         {
-            Log::warn() << "failed to add section " << bfd_get_section_name(handle_, sym)
+            Log::warn() << "failed to add section " << bfd_get_section_name(handle_.get(), sym)
                         << "due to " << e.what();
         }
     }
