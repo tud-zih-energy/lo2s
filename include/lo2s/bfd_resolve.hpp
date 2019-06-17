@@ -112,7 +112,6 @@ struct bfd_handle_deleter
     void operator()(bfd* p) const
     {
         bfd_close(p);
-        p = nullptr;
     }
 };
 

@@ -72,12 +72,6 @@ Lib::Lib(const std::string& name)
         throw InitError("Not a valid bfd_object", name);
     }
 
-    char** matching;
-    if (bfd_check_format_matches(handle_.get(), bfd_archive, &matching))
-    {
-        throw InitError("BFD format does not match.", name);
-    }
-
     //            if (bfd_get_flavour(handle_) != bfd_target_elf_flavour)
     //            {
     //                log::error() << "Only supporting elf right now. Need symbol size.";
