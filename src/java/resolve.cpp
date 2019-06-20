@@ -35,6 +35,7 @@ namespace java
 {
 JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid)
 {
+    Log::info() << "Attaching JVM agent to pid: " << pid_;
     attach();
 }
 
@@ -55,7 +56,7 @@ void JVMSymbols::attach()
     Log::info() << "lo2s folder: " << location;
 
     std::string command("$JAVA_HOME/bin/java -cp " + location.string() +
-                        ":$JAVA_HOME/lib/tools.jar de.tu-dresden.zih.lo2s.AttachOnce " +
+                        ":$JAVA_HOME/lib/tools.jar de.tudresden.zih.lo2s.AttachOnce " +
                         std::to_string(pid_));
     system(command.c_str());
 }
