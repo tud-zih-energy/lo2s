@@ -28,6 +28,7 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 
 #include <iomanip>
+#include <thread>
 
 namespace lo2s
 {
@@ -59,7 +60,9 @@ void JVMSymbols::attach()
     std::string command("$JAVA_HOME/bin/java -cp " + location.string() +
                         ":$JAVA_HOME/lib/tools.jar de.tudresden.zih.lo2s.AttachOnce " +
                         std::to_string(pid_));
-    system(command.c_str());
+    std::thread attacher_([command]() { system(command.c_str()); });
+
+    attacher_.detach()
 }
 
 void JVMSymbols::read_symbols()
