@@ -32,13 +32,14 @@ import java.util.Locale;
 public class AttachOnce {
     public static void main(String[] args) throws Exception {
         String pid = args[0];
-        loadAgent(pid);
+        String path = args[1];
+        loadAgent(pid, path);
     }
 
-    static void loadAgent(String pid) throws Exception {
+    static void loadAgent(String pid, String path) throws Exception {
         VirtualMachine vm = VirtualMachine.attach(pid);
         try {
-            final File lib = new File("liblo2s-perfmap.so");
+            final File lib = new File(path + "/liblo2s-perfmap.so");
             String fullPath = lib.getAbsolutePath();
             if (!lib.exists()) {
                 System.out.printf("Expected %s at '%s' but it didn't exist.\n", lib.getName(), fullPath);

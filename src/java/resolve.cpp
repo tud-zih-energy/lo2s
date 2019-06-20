@@ -53,13 +53,14 @@ void JVMSymbols::attach()
 
     ipc::Fifo::create(pid_, "jvmti");
 
-    auto location = boost::dll::program_location().parent_path() / "lo2s-agent.jar";
+    auto path = boost::dll::program_location().parent_path();
+    auto location = path / "lo2s-agent.jar";
 
     Log::debug() << "lo2s JVM agent jar: " << location;
 
     std::string command("$JAVA_HOME/bin/java -cp " + location.string() +
                         ":$JAVA_HOME/lib/tools.jar de.tudresden.zih.lo2s.AttachOnce " +
-                        std::to_string(pid_));
+                        std::to_string(pid_) + " " + path.string());
     std::thread attacher_([command]() { system(command.c_str()); });
 
     attacher_.detach();
