@@ -62,7 +62,7 @@ void JVMSymbols::attach()
                         std::to_string(pid_));
     std::thread attacher_([command]() { system(command.c_str()); });
 
-    attacher_.detach()
+    attacher_.detach();
 }
 
 void JVMSymbols::read_symbols()
