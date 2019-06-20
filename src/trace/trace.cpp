@@ -301,6 +301,7 @@ void Trace::add_process(Process parent, Process process, const std::string& name
         update_process_name(process, name);
         return;
     }
+
     else
     {
         thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(process.as_thread()),
