@@ -46,8 +46,6 @@ MemoryMap::MemoryMap(Process process, bool read_initial)
         return;
     }
 
-    java::JVMSymbols::instance->read_symbols();
-
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
     auto filename = fmt::format("/proc/{}/task/{}/maps", process.as_pid_t(), process.as_pid_t());
 
@@ -164,7 +162,7 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
 {
     try
     {
-        java::JVMSymbols::instance->lookup(ip);
+        return java::JVMSymbols::instance->lookup(ip);
     }
     catch (...)
     {
