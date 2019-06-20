@@ -132,9 +132,9 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
             proc_name = get_process_comm(process);
         }
 
-        java::JVMSymbols::instance = std::make_unique<java::JVMSymbols>(process.as_pid_t());
-
         ProcessController controller(process, proc_name, spawn, monitor);
+
+        java::JVMSymbols::instance = std::make_unique<java::JVMSymbols>(process.as_pid_t());
 
         controller.run();
     }

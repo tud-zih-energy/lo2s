@@ -35,7 +35,6 @@ namespace java
 {
 JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid)
 {
-    Log::info() << "Attaching JVM agent to pid: " << pid_;
     attach();
 }
 
@@ -49,11 +48,13 @@ LineInfo JVMSymbols::lookup(Address addr) const
 
 void JVMSymbols::attach()
 {
+    Log::info() << "Attaching JVM agent to pid: " << pid_;
+
     ipc::Fifo::create(pid_, "jvmti");
 
     auto location = boost::dll::program_location().parent_path() / "lo2s-agent.jar";
 
-    Log::info() << "lo2s folder: " << location;
+    Log::debug() << "lo2s JVM agent jar: " << location;
 
     std::string command("$JAVA_HOME/bin/java -cp " + location.string() +
                         ":$JAVA_HOME/lib/tools.jar de.tudresden.zih.lo2s.AttachOnce " +
