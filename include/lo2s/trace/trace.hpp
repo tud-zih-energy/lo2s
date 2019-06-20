@@ -105,7 +105,7 @@ private:
      *  multiple threads via #add_threads.
      **/
     void add_thread_exclusive(pid_t tid, const std::string& name,
-                              const std::lock_guard<std::mutex>&);
+                              const std::lock_guard<std::recursive_mutex>&);
 
     void update_process_name(pid_t pid, const otf2::definition::string& name);
     void update_thread_name(pid_t tid, const otf2::definition::string& name);
@@ -278,8 +278,7 @@ private:
     void add_lo2s_property(const std::string& name, const std::string& value);
 
 private:
-    std::mutex mutex_;
-    std::mutex thread_mutex_;
+    std::recursive_mutex mutex_;
 
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;

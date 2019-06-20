@@ -401,7 +401,7 @@ void Trace::update_process_name(pid_t pid, const std::string& name)
 void Trace::update_thread_name(pid_t tid, const otf2::definition::string& name)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
-    std::lock_guard<std::mutex> guard(thread_mutex_);
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     auto loc_it = thread_sample_locations_.find(tid);
 
@@ -450,7 +450,7 @@ void Trace::add_cpu(int cpuid)
 otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
-    std::lock_guard<std::mutex> guard(thread_mutex_);
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     auto name = (boost::format("thread %d") % tid).str();
 
@@ -755,7 +755,7 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
 }
 
 void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
-                                 const std::lock_guard<std::mutex>&)
+                                 const std::lock_guard<std::recursive_mutex>&)
 {
     process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                            std::forward_as_tuple(name));
@@ -785,7 +785,7 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
 void Trace::add_thread(pid_t tid, const std::string& name)
 {
     // Lock this to avoid conflict on regions_thread_ with add_monitoring_thread
-    std::lock_guard<std::mutex> guard(mutex_);
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     add_thread_exclusive(tid, name, guard);
 }
 
@@ -793,7 +793,7 @@ void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std:
 {
     // We must guard this here because this is called by monitoring threads itself rather than
     // the usual call from the single monitoring process
-    std::lock_guard<std::mutex> guard(mutex_);
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     Log::debug() << "Adding monitoring thread " << tid << " (" << name << "): group " << group;
     auto iname = intern((boost::format("lo2s::%s") % name).str());
@@ -823,7 +823,7 @@ void Trace::add_threads(const std::unordered_map<pid_t, std::string>& tid_map)
     Log::debug() << "Adding " << tid_map.size() << " monitored thread(s) to the trace";
 
     // Lock here to avoid conflicts when writing to regions_thread_
-    std::lock_guard<std::mutex> guard(mutex_);
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     for (const auto& elem : tid_map)
     {
         add_thread_exclusive(elem.first, elem.second, guard);
@@ -876,6 +876,8 @@ otf2::definition::region Trace::intern_region(const LineInfo& info)
 
 otf2::definition::string Trace::intern(const std::string& name)
 {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
+
     auto ret = strings_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                                 std::forward_as_tuple(string_ref(), name));
     return ret.first->second;
