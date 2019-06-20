@@ -69,6 +69,11 @@ public:
         return LineInfo(binary, binary, UNKNOWN_LINE, binary);
     }
 
+    static LineInfo for_java_symbol(const std::string& symbol)
+    {
+        return LineInfo("<unknown file>", symbol, UNKNOWN_LINE, "[java]");
+    }
+
     std::string file;
     std::string function;
     unsigned int line;

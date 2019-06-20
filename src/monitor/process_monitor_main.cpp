@@ -23,6 +23,7 @@
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 
+#include <lo2s/java/resolve.hpp>
 #include <lo2s/process_controller.hpp>
 #include <lo2s/util.hpp>
 
@@ -125,6 +126,8 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         if (spawn)
         {
             proc_name = config().command.at(0);
+
+            java::JVMSymbols::instance = std::make_unique<java::JVMSymbols>(pid);
         }
         else
         {

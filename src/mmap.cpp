@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/java/resolve.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/util.hpp>
@@ -44,6 +45,9 @@ MemoryMap::MemoryMap(Process process, bool read_initial)
     {
         return;
     }
+
+    java::JVMSymbols::instance->read_symbols();
+
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
     auto filename = fmt::format("/proc/{}/task/{}/maps", process.as_pid_t(), process.as_pid_t());
 
@@ -158,6 +162,14 @@ void MemoryMap::mmap(const RawMemoryMapEntry& entry)
 
 LineInfo MemoryMap::lookup_line_info(Address ip) const
 {
+    try
+    {
+        java::JVMSymbols::instance->lookup(ip);
+    }
+    catch (...)
+    {
+    }
+
     try
     {
         auto& mapping = map_.at(ip);

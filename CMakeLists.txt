@@ -194,6 +194,7 @@ set(SOURCE_FILES
     src/perf/util.cpp
     src/syscalls.cpp
     src/summary.cpp
+    src/ipc/fifo.cpp
 )
 
 # define lo2s target
@@ -360,6 +361,23 @@ if (IWYU)
     set_property(TARGET lo2s PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
 endif()
 
+find_package(JNI REQUIRED)
+
+target_sources(lo2s PRIVATE src/java/resolve.cpp)
+
+add_library(lo2s-perfmap MODULE src/java/perfmap.cpp src/ipc/fifo.cpp)
+target_compile_definitions(lo2s-perfmap PRIVATE _GNU_SOURCE)
+target_compile_options(lo2s-perfmap PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
+target_include_directories(lo2s-perfmap PRIVATE include)
+target_include_directories(lo2s-perfmap PRIVATE
+    ${JAVA_INCLUDE_PATH}
+    ${JAVA_INCLUDE_PATH2}
+)
+
+find_package(Java)
+include(UseJava)
+add_jar(lo2s-agent src/java/AttachOnce.java ENTRY_POINT de/tudresden/zih/lo2s/AttachOnce)
+
 #option for generating graphs of the code if doxygen and graphviz are present
 if(DOXYGEN_FOUND)
     set(DOXYGEN_EXTRACT_ALL YES)
@@ -387,7 +405,11 @@ FILE(GLOB_RECURSE clion_dummy_headers *.hpp *.h)
 FILE(GLOB_RECURSE clion_dummy_source main.cpp)
 add_executable(clion_dummy_executable EXCLUDE_FROM_ALL ${clion_dummy_source} ${clion_dummy_headers})
 
-install(TARGETS lo2s RUNTIME DESTINATION bin)
+install(TARGETS lo2s lo2s-perfmap
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION bin
+    RUNTIME DESTINATION bin
+)
 
 find_program(GIT_ARCHIVE_ALL git-archive-all PATHS ENV PATH)
 if(GIT_ARCHIVE_ALL)
