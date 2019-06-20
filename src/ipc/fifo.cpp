@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/ipc/Fifo.hpp>
+#include <lo2s/ipc/fifo.hpp>
 
 #include <lo2s/error.hpp>
 
