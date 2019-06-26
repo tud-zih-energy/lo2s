@@ -23,6 +23,8 @@
 
 #include <lo2s/ipc/fifo.hpp>
 
+#include <iomanip>
+#include <iostream>
 #include <memory>
 
 #include <jni.h>
@@ -35,12 +37,31 @@ extern "C"
 #include <unistd.h>
 }
 
+template <typename T>
+struct JNI_deleter
+{
+    JNI_deleter(jvmtiEnv* jvmti) : jvmti(jvmti)
+    {
+    }
+
+    void operator()(T* ptr)
+    {
+        jvmti->Deallocate(ptr);
+    }
+
+private:
+    jvmtiEnv* jvmti;
+}
+
+template <typename T>
+using jni_ptr = std::unique_ptr<T, JNI_deleter<T>>;
+
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
 static std::fstream f("/tmp/mario-java-test.cpp");
 
 static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
-                                         const void* code_addr, jint map_length,
+                                         const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
     (void)jvmti;
@@ -55,6 +76,15 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
     {
         return;
     }
+
+    jvmti->GetMethodName(jvmti, method, &name_ptr, &signature_ptr, &generic_ptr);
+
+    std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << *len << " "
+              << *name_str << " " << *signature_ptr << " " << *generic_ptr << std::endl;
+
+    jvmti->Deallocate(name_ptr);
+    jvmti->Deallocate(signature_ptr);
+    jvmti->Deallocate(generic_ptr);
 }
 
 void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const void* address,
@@ -75,7 +105,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
-        f << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << " " << name_str;
+        std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << " "
+                  << name_str << std::endl;
     }
     catch (...)
     {
@@ -119,6 +150,7 @@ extern "C"
 {
     JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char* options, void* reserved)
     {
+        std::cerr << "Loading JNI lo2s plugin" << std::endl;
         try
         {
             fifo = std::make_unique<lo2s::ipc::Fifo>(getpid(), "jvmti");
@@ -137,8 +169,13 @@ extern "C"
         jvmti->GenerateEvents(JVMTI_EVENT_COMPILED_METHOD_LOAD);
         set_notification_mode(jvmti, JVMTI_DISABLE);
 
-        fifo.reset(nullptr);
-
         return 0;
+    }
+
+    JNIEXPORT void JNICALL Agent_OnUnload(JavaVM* vm)
+    {
+        std::cerr << "Unloading JNI lo2s plugin" << std::endl;
+
+        fifo.reset(nullptr);
     }
 }
