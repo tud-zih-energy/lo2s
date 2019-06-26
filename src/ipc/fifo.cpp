@@ -22,6 +22,7 @@
 #include <lo2s/ipc/fifo.hpp>
 
 #include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 
 #include <cassert>
 
