@@ -72,6 +72,11 @@ void JVMSymbols::read_symbols()
     {
         while (true)
         {
+            if (!fifo_->has_data())
+            {
+                break;
+            }
+
             std::uint64_t address;
 
             fifo_->read(address);

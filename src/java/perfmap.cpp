@@ -22,6 +22,7 @@
  */
 
 #include <lo2s/ipc/fifo.hpp>
+#include <lo2s/log.hpp>
 
 #include <iomanip>
 #include <iostream>
@@ -45,7 +46,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
                                          const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
-    std::cerr << "JNI lo2s plugin: cbCompiledMethodLoad" << std::endl;
+    Log::info() << "JNI lo2s plugin: cbCompiledMethodLoad";
 
     (void)jvmti;
     (void)method;
@@ -66,8 +67,8 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     jvmti->GetMethodName(method, &name_ptr, &signature_ptr, &generic_ptr);
 
-    std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << std::dec
-              << code_size << " " << *name_ptr;
+    auto log_entry = Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " "
+                                 << std::dec << code_size << ": " << *name_ptr;
 
     {
         int len = code_size;
@@ -80,18 +81,16 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     if (signature_ptr)
     {
-        std::cerr << " | " << *signature_ptr;
+        log_entry << " | " << *signature_ptr;
 
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }
 
     if (generic_ptr)
     {
-        std::cerr << " " << *generic_ptr;
+        log_entry << " | " << *generic_ptr;
         jvmti->Deallocate((unsigned char*)generic_ptr);
     }
-
-    std::cerr << std::endl;
 
     jvmti->Deallocate((unsigned char*)name_ptr);
 }
@@ -116,8 +115,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
-        std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << " "
-                  << name_str << std::endl;
+        Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << ": "
+                    << name_str << std::endl;
     }
     catch (...)
     {
@@ -126,8 +125,6 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
 
 jvmtiError enable_capabilities(jvmtiEnv* jvmti)
 {
-    std::cerr << "Loading JNI lo2s plugin: enable capabilities" << std::endl;
-
     jvmtiCapabilities capabilities;
 
     memset(&capabilities, 0, sizeof(capabilities));
@@ -145,8 +142,6 @@ jvmtiError enable_capabilities(jvmtiEnv* jvmti)
 
 jvmtiError set_callbacks(jvmtiEnv* jvmti)
 {
-    std::cerr << "Loading JNI lo2s plugin: set callbacks" << std::endl;
-
     jvmtiEventCallbacks callbacks;
 
     memset(&callbacks, 0, sizeof(callbacks));
@@ -157,8 +152,6 @@ jvmtiError set_callbacks(jvmtiEnv* jvmti)
 
 void set_notification_mode(jvmtiEnv* jvmti, jvmtiEventMode mode)
 {
-    std::cerr << "Loading JNI lo2s plugin: set notification mode" << std::endl;
-
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_COMPILED_METHOD_LOAD, (jthread)NULL);
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_DYNAMIC_CODE_GENERATED, (jthread)NULL);
 }
@@ -167,7 +160,7 @@ extern "C"
 {
     JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char* options, void* reserved)
     {
-        std::cerr << "Loading JNI lo2s plugin" << std::endl;
+        Log::info() << "Loading JNI lo2s plugin";
         try
         {
             fifo = std::make_unique<lo2s::ipc::Fifo>(getpid(), "jvmti");
@@ -191,7 +184,7 @@ extern "C"
 
     JNIEXPORT void JNICALL Agent_OnUnload(JavaVM*)
     {
-        std::cerr << "Unloading JNI lo2s plugin" << std::endl;
+        Log::info() << "Unloading JNI lo2s plugin";
 
         fifo.reset(nullptr);
     }

@@ -29,6 +29,7 @@
 extern "C"
 {
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -76,6 +77,18 @@ void Fifo::read(char* data, std::size_t size)
     }
 
     assert(res == size);
+}
+
+bool Fifo::has_data()
+{
+    auto res = ::poll(&fd_, 1, 1);
+
+    if (res == -1)
+    {
+        throw_errno();
+    }
+
+    return res != 0;
 }
 
 std::string Fifo::path() const

@@ -69,6 +69,8 @@ public:
         read(&result[0], size);
     }
 
+    bool has_data();
+
 public:
     void write(const char* data, std::size_t size);
     void read(char* data, std::size_t size);
