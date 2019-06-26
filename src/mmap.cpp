@@ -162,23 +162,26 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
 {
     try
     {
-        return java::JVMSymbols::instance->lookup(ip);
-    }
-    catch (...)
-    {
-    }
-
-    try
-    {
         auto& mapping = map_.at(ip);
         return mapping.dso.lookup_line_info(ip - mapping.start + mapping.pgoff);
     }
     catch (std::out_of_range&)
     {
-        // This will just happen a lot in practice
-        Log::trace() << "no mapping found for address " << ip;
-        // Graceful fallback
-        return LineInfo::for_unknown_function();
+        // Java symbol lookup as fallback
+        try
+        {
+            // This will just happen a lot in practice
+            Log::info() << "Trying to resolve " << ip << " with Java symbols";
+            java::JVMSymbols::instance->read_symbols();
+            return java::JVMSymbols::instance->lookup(ip);
+        }
+        catch (...)
+        {
+            // This will just happen a lot in practice
+            Log::trace() << "no mapping found for address " << ip;
+            // Graceful fallback
+            return LineInfo::for_unknown_function();
+        }
     }
 }
 

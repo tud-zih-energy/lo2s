@@ -21,7 +21,6 @@
 
 #include <lo2s/java/resolve.hpp>
 
-#include <lo2s/ipc/fifo.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/log.hpp>
 
@@ -34,7 +33,8 @@ namespace lo2s
 {
 namespace java
 {
-JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid)
+JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid), fifo_(pid_, "jvmti")
+
 {
     attach();
 }
@@ -68,26 +68,23 @@ void JVMSymbols::attach()
 
 void JVMSymbols::read_symbols()
 {
-    ipc::Fifo fifo(pid_, "jvmti");
-
     try
     {
         while (true)
         {
             std::uint64_t address;
 
-            fifo.read(address);
+            fifo_.read(address);
 
             int len;
 
-            fifo.read(len);
+            fifo_.read(len);
 
             std::string symbol;
 
-            fifo.read(symbol);
+            fifo_.read(symbol);
 
-            Log::trace() << "Read java symbol from fifo: 0x" << std::hex << address << " "
-                         << symbol;
+            Log::info() << "Read java symbol from fifo: 0x" << std::hex << address << " " << symbol;
 
             symbols_.emplace(std::piecewise_construct, std::make_tuple(address, address + len),
                              std::make_tuple(symbol));
@@ -96,6 +93,7 @@ void JVMSymbols::read_symbols()
     catch (std::exception& e)
     {
         // eof in the fifo will throw, so this is fine... sorta
+        Log::error() << "Fifo read failed: " << e.what();
     }
 }
 } // namespace java

@@ -41,7 +41,7 @@ static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
 static std::fstream f("/tmp/mario-java-test.cpp");
 
-static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint len,
+static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
                                          const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
@@ -49,7 +49,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     (void)jvmti;
     (void)method;
-    (void)len;
+    (void)code_size;
     (void)address;
     (void)map_length;
     (void)map;
@@ -66,15 +66,21 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     jvmti->GetMethodName(method, &name_ptr, &signature_ptr, &generic_ptr);
 
-    std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << " "
-              << *name_ptr;
-    if (signature_ptr)
+    std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << std::dec
+              << code_size << " " << *name_ptr;
+
     {
-        std::cerr << " | " << *signature_ptr;
+        int len = code_size;
+        std::string name_str = name_ptr;
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
-        fifo->write(name_ptr);
+        fifo->write(name_str);
+    }
+
+    if (signature_ptr)
+    {
+        std::cerr << " | " << *signature_ptr;
 
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }

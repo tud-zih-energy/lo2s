@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/ipc/fifo.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/log.hpp>
 
@@ -48,6 +49,7 @@ private:
     void attach();
 
     pid_t pid_;
+    ipc::Fifo fifo_;
     std::map<Range, std::string> symbols_;
 };
 } // namespace java
