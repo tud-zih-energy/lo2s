@@ -37,14 +37,11 @@ extern "C"
 #include <unistd.h>
 }
 
-template <typename T>
-using jni_ptr = std::unique_ptr<T, JNI_deleter<T>>;
-
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
 static std::fstream f("/tmp/mario-java-test.cpp");
 
-static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
+static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint len,
                                          const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
@@ -52,8 +49,8 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     (void)jvmti;
     (void)method;
-    (void)code_size;
-    (void)code_addr;
+    (void)len;
+    (void)address;
     (void)map_length;
     (void)map;
     (void)compile_info;
@@ -63,14 +60,33 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         return;
     }
 
+    char* name_ptr;
+    char* signature_ptr;
+    char* generic_ptr;
+
     jvmti->GetMethodName(jvmti, method, &name_ptr, &signature_ptr, &generic_ptr);
 
     std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << *len << " "
-              << *name_str << " " << *signature_ptr << " " << *generic_ptr << std::endl;
+              << *name_str;
+    if (signature_ptr)
+    {
+        std::cerr << " | " << *signature_ptr;
+        jvmti->Deallocate(signature_ptr);
+
+        fifo->write(reinterpret_cast<std::uint64_t>(address));
+        fifo->write(len);
+        fifo->write(name_str);
+    }
+
+    if (generic_ptr)
+    {
+        std::cerr << " " << *generic_ptr;
+        jvmti->Deallocate(generic_ptr);
+    }
+
+    std::cerr << std::endl;
 
     jvmti->Deallocate(name_ptr);
-    jvmti->Deallocate(signature_ptr);
-    jvmti->Deallocate(generic_ptr);
 }
 
 void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const void* address,
@@ -166,7 +182,7 @@ extern "C"
         return 0;
     }
 
-    JNIEXPORT void JNICALL Agent_OnUnload(JavaVM* vm)
+    JNIEXPORT void JNICALL Agent_OnUnload(JavaVM*)
     {
         std::cerr << "Unloading JNI lo2s plugin" << std::endl;
 
