@@ -71,22 +71,23 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
     if (signature_ptr)
     {
         std::cerr << " | " << *signature_ptr;
-        jvmti->Deallocate(signature_ptr);
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
+
+        jvmti->Deallocate((unsigned char*)signature_ptr);
     }
 
     if (generic_ptr)
     {
         std::cerr << " " << *generic_ptr;
-        jvmti->Deallocate(generic_ptr);
+        jvmti->Deallocate((unsigned char*)generic_ptr);
     }
 
     std::cerr << std::endl;
 
-    jvmti->Deallocate(name_ptr);
+    jvmti->Deallocate((unsigned char*)name_ptr);
 }
 
 void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const void* address,
