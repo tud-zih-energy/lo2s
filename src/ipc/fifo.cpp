@@ -46,6 +46,11 @@ void Fifo::create(pid_t pid, const std::string& suffix)
 Fifo::Fifo(pid_t pid, const std::string& suffix) : pid_(pid), suffix_(suffix)
 {
     fd_ = open(path().c_str(), O_RDWR);
+    if (fd_ == -1)
+    {
+        Log::error() << "Failed to open fifo (" << path() << ")";
+        throw_errno();
+    }
 }
 
 void Fifo::write(const char* data, std::size_t size)
