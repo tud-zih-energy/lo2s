@@ -378,8 +378,13 @@ target_include_directories(lo2s-perfmap PRIVATE
 target_link_libraries(lo2s-perfmap PRIVATE otf2xx::Writer Nitro::nitro-log Nitro::nitro-env)
 
 find_package(Java)
+
 include(UseJava)
-add_jar(lo2s-agent src/java/AttachOnce.java ENTRY_POINT de/tudresden/zih/lo2s/AttachOnce)
+add_jar(lo2s-agent
+    src/java/AttachOnce.java
+    INCLUDE_JARS $ENV{JAVA_HOME}/lib/tools.jar
+    ENTRY_POINT de/tudresden/zih/lo2s/AttachOnce
+)
 
 #option for generating graphs of the code if doxygen and graphviz are present
 if(DOXYGEN_FOUND)
