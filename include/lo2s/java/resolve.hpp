@@ -27,6 +27,7 @@
 #include <lo2s/log.hpp>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -49,7 +50,7 @@ private:
     void attach();
 
     pid_t pid_;
-    ipc::Fifo fifo_;
+    std::unique_ptr<ipc::Fifo> fifo_;
     std::map<Range, std::string> symbols_;
 };
 } // namespace java

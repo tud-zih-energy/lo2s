@@ -33,10 +33,10 @@ namespace lo2s
 {
 namespace java
 {
-JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid), fifo_(pid_, "jvmti")
-
+JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid)
 {
     attach();
+    fifo_ = std::make_unique<ipc::Fifo>(pid_, "jvmti");
 }
 
 std::unique_ptr<JVMSymbols> JVMSymbols::instance;
@@ -74,15 +74,15 @@ void JVMSymbols::read_symbols()
         {
             std::uint64_t address;
 
-            fifo_.read(address);
+            fifo_->read(address);
 
             int len;
 
-            fifo_.read(len);
+            fifo_->read(len);
 
             std::string symbol;
 
-            fifo_.read(symbol);
+            fifo_->read(symbol);
 
             Log::info() << "Read java symbol from fifo: 0x" << std::hex << address << " " << symbol;
 
