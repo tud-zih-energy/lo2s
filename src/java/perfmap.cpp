@@ -38,22 +38,6 @@ extern "C"
 }
 
 template <typename T>
-struct JNI_deleter
-{
-    JNI_deleter(jvmtiEnv* jvmti) : jvmti(jvmti)
-    {
-    }
-
-    void operator()(T* ptr)
-    {
-        jvmti->Deallocate(ptr);
-    }
-
-private:
-    jvmtiEnv* jvmti;
-}
-
-template <typename T>
 using jni_ptr = std::unique_ptr<T, JNI_deleter<T>>;
 
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
