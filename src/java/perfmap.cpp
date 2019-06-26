@@ -64,7 +64,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
     char* signature_ptr;
     char* generic_ptr;
 
-    jvmti->GetMethodName(jvmti, method, &name_ptr, &signature_ptr, &generic_ptr);
+    jvmti->GetMethodName(method, &name_ptr, &signature_ptr, &generic_ptr);
 
     std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << *len << " "
               << *name_ptr;
