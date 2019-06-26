@@ -375,7 +375,7 @@ target_include_directories(lo2s-perfmap PRIVATE
 )
 
 # define dependencies of lo2s target
-target_link_libraries(lo2s-perfmap PRIVATE otf2xx::Writer Nitro::nitro-log)
+target_link_libraries(lo2s-perfmap PRIVATE otf2xx::Writer Nitro::nitro-log Nitro::nitro-env)
 
 find_package(Java)
 include(UseJava)
