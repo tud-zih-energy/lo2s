@@ -81,7 +81,12 @@ void Fifo::read(char* data, std::size_t size)
 
 bool Fifo::has_data()
 {
-    auto res = ::poll(&fd_, 1, 1);
+    pollfd pfd;
+
+    pfd.fd = fd_;
+    pfd.events = POLLIN;
+
+    auto res = ::poll(&pfd, 1, 1);
 
     if (res == -1)
     {

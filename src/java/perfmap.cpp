@@ -38,6 +38,8 @@ extern "C"
 #include <unistd.h>
 }
 
+using lo2s::Log;
+
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
 static std::fstream f("/tmp/mario-java-test.cpp");
@@ -98,7 +100,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const void* address,
                                     jint length)
 {
-    std::cerr << "JNI lo2s plugin: cbDynamicCodeGenerated" << std::endl;
+    Log::info() << "JNI lo2s plugin: cbDynamicCodeGenerated";
 
     (void)jvmti;
 
@@ -116,7 +118,7 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(len);
         fifo->write(name_str);
         Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << ": "
-                    << name_str << std::endl;
+                    << name_str;
     }
     catch (...)
     {
