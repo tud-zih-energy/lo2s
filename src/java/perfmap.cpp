@@ -67,14 +67,14 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
     jvmti->GetMethodName(jvmti, method, &name_ptr, &signature_ptr, &generic_ptr);
 
     std::cerr << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << *len << " "
-              << *name_str;
+              << *name_ptr;
     if (signature_ptr)
     {
         std::cerr << " | " << *signature_ptr;
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
-        fifo->write(name_str);
+        fifo->write(name_ptr);
 
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }
