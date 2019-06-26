@@ -64,6 +64,8 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
                                          const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
+    std::cerr << "JNI lo2s plugin: cbCompiledMethodLoad" << std::endl;
+
     (void)jvmti;
     (void)method;
     (void)code_size;
@@ -90,6 +92,8 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const void* address,
                                     jint length)
 {
+    std::cerr << "JNI lo2s plugin: cbDynamicCodeGenerated" << std::endl;
+
     (void)jvmti;
 
     if (!fifo)
@@ -115,6 +119,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
 
 jvmtiError enable_capabilities(jvmtiEnv* jvmti)
 {
+    std::cerr << "Loading JNI lo2s plugin: enable capabilities" << std::endl;
+
     jvmtiCapabilities capabilities;
 
     memset(&capabilities, 0, sizeof(capabilities));
@@ -132,6 +138,8 @@ jvmtiError enable_capabilities(jvmtiEnv* jvmti)
 
 jvmtiError set_callbacks(jvmtiEnv* jvmti)
 {
+    std::cerr << "Loading JNI lo2s plugin: set callbacks" << std::endl;
+
     jvmtiEventCallbacks callbacks;
 
     memset(&callbacks, 0, sizeof(callbacks));
@@ -142,6 +150,8 @@ jvmtiError set_callbacks(jvmtiEnv* jvmti)
 
 void set_notification_mode(jvmtiEnv* jvmti, jvmtiEventMode mode)
 {
+    std::cerr << "Loading JNI lo2s plugin: set notification mode" << std::endl;
+
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_COMPILED_METHOD_LOAD, (jthread)NULL);
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_DYNAMIC_CODE_GENERATED, (jthread)NULL);
 }
