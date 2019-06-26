@@ -37,6 +37,8 @@ extern "C"
 
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
+static std::fstream f("/tmp/mario-java-test.cpp");
+
 static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
                                          const void* code_addr, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
@@ -73,6 +75,7 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
+        f << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << " " << name_str;
     }
     catch (...)
     {
