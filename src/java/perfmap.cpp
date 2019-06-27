@@ -67,7 +67,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     char* class_signature_ptr;
 
-    jvmti->GetClassSignature(cls, &class_signature_ptr, );
+    jvmti->GetClassSignature(cls, &class_signature_ptr, nullptr);
 
     std::string class_str = class_signature_ptr;
 
