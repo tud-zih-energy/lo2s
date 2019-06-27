@@ -86,7 +86,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         int len = code_size;
         std::string name_str = name_ptr;
 
-        name_ptr = class_str + "$" + name_str;
+        name_str = class_str + "$" + name_str;
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
