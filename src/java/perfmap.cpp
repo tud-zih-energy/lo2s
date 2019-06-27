@@ -79,7 +79,7 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
     jvmti->GetMethodName(method, &name_ptr, &signature_ptr, nullptr);
 
     auto log_entry = Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " "
-                                 << std::dec << code_size << ": " class_signature_ptr << "$"
+                                 << std::dec << code_size << ": " << class_signature_ptr << "$"
                                  << name_ptr;
 
     {
