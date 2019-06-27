@@ -64,7 +64,7 @@ void Fifo::write(const char* data, std::size_t size)
         throw_errno();
     }
 
-    assert(res == size);
+    assert(res == (int)size);
 }
 
 void Fifo::read(char* data, std::size_t size)
@@ -76,7 +76,7 @@ void Fifo::read(char* data, std::size_t size)
         throw_errno();
     }
 
-    assert(res == size);
+    assert(res == (int)size);
 }
 
 bool Fifo::has_data()

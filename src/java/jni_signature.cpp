@@ -45,7 +45,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
 
     std::vector<std::string> result;
 
-    while (it != input.end())
+    while (it < input.end())
     {
         if (is_array)
         {
@@ -113,7 +113,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
             continue;
         }
 
-        if (std::regex_match(it, input.end(), m, internal_class_type,
+        if (std::regex_match(it, input.end(), m, class_type,
                              std::regex_constants::match_continuous))
         {
             // this matches any class
@@ -142,7 +142,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
 
 std::string parse_signature(const std::string& input)
 {
-    static std::regex signature("\\(([^\\)]+)\\)(.*)");
+    static std::regex signature("\\(([^\\)]*)\\)(.*)");
 
     std::smatch m;
     if (std::regex_match(input.begin(), input.end(), m, signature))

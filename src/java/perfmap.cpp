@@ -171,7 +171,7 @@ void set_notification_mode(jvmtiEnv* jvmti, jvmtiEventMode mode)
 
 extern "C"
 {
-    JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char* options, void* reserved)
+    JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char*, void*)
     {
         Log::info() << "Loading JNI lo2s plugin";
         try
