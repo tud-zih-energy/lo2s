@@ -171,7 +171,7 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
         try
         {
             // This will just happen a lot in practice
-            Log::info() << "Trying to resolve " << ip << " with Java symbols";
+            Log::trace() << "Trying to resolve " << ip << " with Java symbols";
             java::JVMSymbols::instance->read_symbols();
             return java::JVMSymbols::instance->lookup(ip);
         }

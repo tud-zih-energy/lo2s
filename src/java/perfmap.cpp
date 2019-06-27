@@ -63,18 +63,30 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         return;
     }
 
+    jclass cls;
+
+    jvmti->GetMethodDeclaringClass(method, &cls);
+
+    char* class_signature_ptr;
+
+    jvmti->GetClassSignature(jclass cls, &class_signature_ptr, nullptr);
+
+    std::string class_str = class_signature_ptr;
+
     char* name_ptr;
     char* signature_ptr;
-    char* generic_ptr;
 
-    jvmti->GetMethodName(method, &name_ptr, &signature_ptr, &generic_ptr);
+    jvmti->GetMethodName(method, &name_ptr, &signature_ptr, nullptr);
 
     auto log_entry = Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " "
-                                 << std::dec << code_size << ": " << *name_ptr;
+                                 << std::dec << code_size << ": " class_signature_ptr << "$"
+                                 << name_ptr;
 
     {
         int len = code_size;
         std::string name_str = name_ptr;
+
+        name_ptr = class_str + "$" + name_str;
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
@@ -83,15 +95,9 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     if (signature_ptr)
     {
-        log_entry << " | " << *signature_ptr;
+        log_entry << " | " << signature_ptr;
 
         jvmti->Deallocate((unsigned char*)signature_ptr);
-    }
-
-    if (generic_ptr)
-    {
-        log_entry << " | " << *generic_ptr;
-        jvmti->Deallocate((unsigned char*)generic_ptr);
     }
 
     jvmti->Deallocate((unsigned char*)name_ptr);
