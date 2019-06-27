@@ -22,6 +22,7 @@
  */
 
 #include <lo2s/ipc/fifo.hpp>
+#include <lo2s/java/jni_signature.hpp>
 #include <lo2s/log.hpp>
 
 #include <iomanip>
@@ -76,31 +77,28 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     jvmti->GetMethodName(method, &name_ptr, &signature_ptr, nullptr);
 
-    auto log_entry = Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " "
-                                 << std::dec << code_size << ": ";
-
     std::string symbol_name;
 
     if (class_signature_ptr)
     {
-        symbol_name = std::string(class_signature_ptr) + ".";
-        log_entry << class_signature_ptr << ".";
+        symbol_name = lo2s::java::parse_type(class_signature_ptr) + "::";
         jvmti->Deallocate((unsigned char*)class_signature_ptr);
     }
 
     if (name_ptr)
     {
         symbol_name += name_ptr;
-        log_entry << name_ptr;
         jvmti->Deallocate((unsigned char*)name_ptr);
     }
 
     if (signature_ptr)
     {
-        symbol_name += signature_ptr;
-        log_entry << signature_ptr;
+        symbol_name += lo2s::java::parse_signature(signature_ptr);
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }
+
+    Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << std::dec
+                << code_size << ": " << symbol_name;
 
     if (!symbol_name.empty())
     {

@@ -365,7 +365,12 @@ find_package(JNI REQUIRED)
 
 target_sources(lo2s PRIVATE src/java/resolve.cpp)
 
-add_library(lo2s-perfmap MODULE src/java/perfmap.cpp src/ipc/fifo.cpp src/time/time.cpp)
+add_library(lo2s-perfmap MODULE
+    src/java/perfmap.cpp
+    src/java/jni_signature.cpp
+    src/ipc/fifo.cpp
+    src/time/time.cpp
+)
 target_compile_definitions(lo2s-perfmap PRIVATE _GNU_SOURCE)
 target_compile_options(lo2s-perfmap PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
 target_include_directories(lo2s-perfmap PRIVATE include ${CMAKE_CURRENT_BINARY_DIR}/include)
