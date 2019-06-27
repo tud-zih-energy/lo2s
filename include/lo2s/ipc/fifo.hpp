@@ -21,7 +21,10 @@
 
 #pragma once
 
+#include <lo2s/log.hpp>
+
 #include <fstream>
+#include <mutex>
 #include <string>
 #include <type_traits>
 
@@ -65,8 +68,15 @@ public:
         std::size_t size;
         read(size);
 
-        result.resize(size);
-        read(&result[0], size);
+        if (has_data())
+        {
+            result.resize(size);
+            read(&result[0], size);
+        }
+        else
+        {
+            throw std::runtime_error("no data available now, this looks bad. :C");
+        }
     }
 
     bool has_data();
@@ -90,6 +100,7 @@ private:
     pid_t pid_;
     std::string suffix_;
     int fd_;
+    std::mutex mutex_;
 };
 } // namespace ipc
 } // namespace lo2s

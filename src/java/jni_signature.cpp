@@ -45,52 +45,62 @@ std::vector<std::string> parse_type_list(const std::string& input)
 
     std::vector<std::string> result;
 
-    while (it < input.end())
-    {
+    auto check_array = [&result, &is_array]() {
         if (is_array)
         {
             assert(!result.empty());
             is_array = false;
             result.back() += "[]";
-            continue;
         }
+    };
 
+    while (it < input.end())
+    {
         switch (*it)
         {
         case 'Z':
             result.push_back("boolean");
+            check_array();
             ++it;
             continue;
         case 'B':
             result.push_back("byte");
+            check_array();
             ++it;
             continue;
         case 'C':
             result.push_back("char");
+            check_array();
             ++it;
             continue;
         case 'S':
             result.push_back("short");
+            check_array();
             ++it;
             continue;
         case 'I':
             result.push_back("int");
+            check_array();
             ++it;
             continue;
         case 'J':
             result.push_back("long");
+            check_array();
             ++it;
             continue;
         case 'F':
             result.push_back("float");
+            check_array();
             ++it;
             continue;
         case 'D':
             result.push_back("double");
+            check_array();
             ++it;
             continue;
         case 'V':
             result.push_back("void");
+            check_array();
             ++it;
             continue;
         case '[':
@@ -104,17 +114,18 @@ std::vector<std::string> parse_type_list(const std::string& input)
 
         std::smatch m;
         if (std::regex_search(it, input.end(), m, internal_class_type,
-                             std::regex_constants::match_continuous))
+                              std::regex_constants::match_continuous))
         {
             // this matches `java/lang/String` and appends just `String`
             result.push_back(m[1]);
+            check_array();
             it += m.length();
 
             continue;
         }
 
         if (std::regex_search(it, input.end(), m, class_type,
-                             std::regex_constants::match_continuous))
+                              std::regex_constants::match_continuous))
         {
             // this matches any class
             std::string class_signature = m[1];
@@ -128,6 +139,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
             }
 
             result.push_back(class_signature);
+            check_array();
             it += m.length();
 
             continue;

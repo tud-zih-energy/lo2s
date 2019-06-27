@@ -57,6 +57,8 @@ Fifo::Fifo(pid_t pid, const std::string& suffix) : pid_(pid), suffix_(suffix)
 
 void Fifo::write(const char* data, std::size_t size)
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     auto res = ::write(fd_, data, size);
 
     if (res == -1)
@@ -69,14 +71,28 @@ void Fifo::write(const char* data, std::size_t size)
 
 void Fifo::read(char* data, std::size_t size)
 {
-    auto res = ::read(fd_, data, size);
+    std::lock_guard<std::mutex> lock(mutex_);
 
-    if (res == -1)
+    auto remaining = (int)size;
+
+    while (remaining != 0)
     {
-        throw_errno();
-    }
+        auto res = ::read(fd_, data + size - remaining, remaining);
 
-    assert(res == (int)size);
+        Log::info() << "read " << res << " bytes: " << std::string(data, data + size);
+
+        if (res == -1)
+        {
+            throw_errno();
+        }
+
+        remaining -= res;
+
+        if (remaining != 0 || res == 0)
+        {
+            throw std::runtime_error("Fifo file closed unexpectedly.");
+        }
+    }
 }
 
 bool Fifo::has_data()

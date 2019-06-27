@@ -68,6 +68,8 @@ void JVMSymbols::attach()
 
 void JVMSymbols::read_symbols()
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     try
     {
         while (true)
@@ -91,8 +93,15 @@ void JVMSymbols::read_symbols()
 
             Log::info() << "Read java symbol from fifo: 0x" << std::hex << address << " " << symbol;
 
-            symbols_.emplace(std::piecewise_construct, std::make_tuple(address, address + len),
-                             std::make_tuple(symbol));
+            auto res =
+                symbols_.emplace(std::piecewise_construct, std::make_tuple(address, address + len),
+                                 std::make_tuple(symbol));
+
+            if (!res.second)
+            {
+                Log::warn() << "Didn't inserted 0x" << std::hex << address << "-0x" << address + len
+                            << ": " << symbol;
+            }
         }
     }
     catch (std::exception& e)

@@ -43,16 +43,10 @@ using lo2s::Log;
 
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
 
-static std::fstream f("/tmp/mario-java-test.cpp");
-
 static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
                                          const void* address, jint map_length,
                                          const jvmtiAddrLocationMap* map, const void* compile_info)
 {
-    (void)jvmti;
-    (void)method;
-    (void)code_size;
-    (void)address;
     (void)map_length;
     (void)map;
     (void)compile_info;
@@ -97,8 +91,9 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }
 
-    Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << std::dec
-                << code_size << ": " << symbol_name;
+    Log::info() << "cbCompiledMethodLoad: 0x" << std::hex
+                << reinterpret_cast<std::uint64_t>(address) << " " << std::dec << code_size << ": "
+                << symbol_name;
 
     if (!symbol_name.empty())
     {
@@ -128,8 +123,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
-        Log::info() << std::hex << reinterpret_cast<std::uint64_t>(address) << " " << len << ": "
-                    << name_str;
+        Log::info() << "cbDynamicCodeGenerated: 0x" << std::hex
+                    << reinterpret_cast<std::uint64_t>(address) << " " << len << ": " << name_str;
     }
     catch (...)
     {
@@ -190,7 +185,7 @@ extern "C"
         set_notification_mode(jvmti, JVMTI_ENABLE);
         jvmti->GenerateEvents(JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
         jvmti->GenerateEvents(JVMTI_EVENT_COMPILED_METHOD_LOAD);
-        set_notification_mode(jvmti, JVMTI_DISABLE);
+        // set_notification_mode(jvmti, JVMTI_DISABLE);
 
         return 0;
     }

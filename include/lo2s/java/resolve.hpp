@@ -28,6 +28,7 @@
 
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,8 @@ public:
 
 private:
     void attach();
+
+    std::mutex mutex_;
 
     pid_t pid_;
     std::unique_ptr<ipc::Fifo> fifo_;
