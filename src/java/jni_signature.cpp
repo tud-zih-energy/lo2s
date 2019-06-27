@@ -103,7 +103,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
         }
 
         std::smatch m;
-        if (std::regex_match(it, input.end(), m, internal_class_type,
+        if (std::regex_search(it, input.end(), m, internal_class_type,
                              std::regex_constants::match_continuous))
         {
             // this matches `java/lang/String` and appends just `String`
@@ -113,7 +113,7 @@ std::vector<std::string> parse_type_list(const std::string& input)
             continue;
         }
 
-        if (std::regex_match(it, input.end(), m, class_type,
+        if (std::regex_search(it, input.end(), m, class_type,
                              std::regex_constants::match_continuous))
         {
             // this matches any class
