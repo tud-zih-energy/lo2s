@@ -28,6 +28,8 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include <jni.h>
 #include <jvmti.h>
@@ -42,6 +44,7 @@ extern "C"
 using lo2s::Log;
 
 static std::unique_ptr<lo2s::ipc::Fifo> fifo;
+static std::mutex mutex_;
 
 static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint code_size,
                                          const void* address, jint map_length,
@@ -97,6 +100,8 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
 
     if (!symbol_name.empty())
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         int len = code_size;
 
         fifo->write(reinterpret_cast<std::uint64_t>(address));
@@ -120,6 +125,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
 
     try
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
