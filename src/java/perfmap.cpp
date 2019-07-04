@@ -59,28 +59,27 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         return;
     }
 
+    std::string symbol_name;
+
     jclass cls;
 
     jvmti->GetMethodDeclaringClass(method, &cls);
 
-    char* class_signature_ptr;
+    {
+        char* class_signature_ptr;
+        jvmti->GetClassSignature(cls, &class_signature_ptr, nullptr);
 
-    jvmti->GetClassSignature(cls, &class_signature_ptr, nullptr);
-
-    std::string class_str = class_signature_ptr;
+        if (class_signature_ptr)
+        {
+            symbol_name = lo2s::java::parse_type(class_signature_ptr) + "::";
+            jvmti->Deallocate((unsigned char*)class_signature_ptr);
+        }
+    }
 
     char* name_ptr;
     char* signature_ptr;
 
     jvmti->GetMethodName(method, &name_ptr, &signature_ptr, nullptr);
-
-    std::string symbol_name;
-
-    if (class_signature_ptr)
-    {
-        symbol_name = lo2s::java::parse_type(class_signature_ptr) + "::";
-        jvmti->Deallocate((unsigned char*)class_signature_ptr);
-    }
 
     if (name_ptr)
     {
@@ -138,6 +137,30 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
     }
 }
 
+static void JNICALL cbClassPrepare(jvmtiEnv* jvmti, JNIEnv*, jthread, jclass cls)
+{
+    std::string class_str;
+
+    {
+        char* class_signature_ptr;
+        jvmti->GetClassSignature(cls, &class_signature_ptr, nullptr);
+        class_str = class_signature_ptr;
+        jvmti->Deallocate((unsigned char*)class_signature_ptr);
+    }
+
+    Log::info() << "class loaded: " << class_str;
+
+    jint method_count;
+    jmethod* methods_ptr;
+
+    jvmti->GetClassMethods(cls, &method_count, &methods_ptr);
+
+    for (jint i = 0; i < method_count; ++i)
+    {
+        std::string me
+    }
+}
+
 jvmtiError enable_capabilities(jvmtiEnv* jvmti)
 {
     jvmtiCapabilities capabilities;
@@ -162,6 +185,7 @@ jvmtiError set_callbacks(jvmtiEnv* jvmti)
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.CompiledMethodLoad = &cbCompiledMethodLoad;
     callbacks.DynamicCodeGenerated = &cbDynamicCodeGenerated;
+    callbacks.ClassPrepare = &cbClassPrepare;
     return jvmti->SetEventCallbacks(&callbacks, (jint)sizeof(callbacks));
 }
 
@@ -169,11 +193,36 @@ void set_notification_mode(jvmtiEnv* jvmti, jvmtiEventMode mode)
 {
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_COMPILED_METHOD_LOAD, (jthread)NULL);
     jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_DYNAMIC_CODE_GENERATED, (jthread)NULL);
+    jvmti->SetEventNotificationMode(mode, JVMTI_EVENT_CLASS_PREPARE, (jthread)NULL);
 }
 
 extern "C"
 {
     JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char*, void*)
+    {
+        Log::info() << "Loading JNI lo2s plugin";
+        try
+        {
+            fifo = std::make_unique<lo2s::ipc::Fifo>(getpid(), "jvmti");
+        }
+        catch (...)
+        {
+            return 0;
+        }
+
+        jvmtiEnv* jvmti;
+        vm->GetEnv((void**)&jvmti, JVMTI_VERSION_1);
+        enable_capabilities(jvmti);
+        set_callbacks(jvmti);
+        set_notification_mode(jvmti, JVMTI_ENABLE);
+        jvmti->GenerateEvents(JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
+        jvmti->GenerateEvents(JVMTI_EVENT_COMPILED_METHOD_LOAD);
+        // set_notification_mode(jvmti, JVMTI_DISABLE);
+
+        return 0;
+    }
+
+    JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* vm, char*, void*)
     {
         Log::info() << "Loading JNI lo2s plugin";
         try

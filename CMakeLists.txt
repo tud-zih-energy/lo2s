@@ -378,9 +378,18 @@ target_include_directories(lo2s-perfmap PRIVATE
     ${JAVA_INCLUDE_PATH}
     ${JAVA_INCLUDE_PATH2}
 )
-
-# define dependencies of lo2s target
 target_link_libraries(lo2s-perfmap PRIVATE otf2xx::Writer Nitro::nitro-log Nitro::nitro-env)
+
+add_executable(lo2s-test     src/time/time.cpp src/java/test.cpp src/java/jni_signature.cpp)
+target_compile_definitions(lo2s-test PRIVATE _GNU_SOURCE)
+target_compile_options(lo2s-test PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
+target_include_directories(lo2s-test PRIVATE include ${CMAKE_CURRENT_BINARY_DIR}/include)
+target_include_directories(lo2s-test PRIVATE
+    ${JAVA_INCLUDE_PATH}
+    ${JAVA_INCLUDE_PATH2}
+)
+target_link_libraries(lo2s-test PRIVATE otf2xx::Writer Nitro::nitro-log Nitro::nitro-env)
+
 
 find_package(Java)
 
