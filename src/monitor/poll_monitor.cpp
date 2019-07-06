@@ -23,6 +23,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 
+#include <cmath>
 extern "C"
 {
 #include <sys/timerfd.h>
@@ -47,7 +48,10 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
     // Set initial expiration to lowest possible value, this together with TFD_TIMER_ABSTIME should
     // synchronize our timers
     tspec.it_value.tv_nsec = 1;
-    tspec.it_interval.tv_nsec = config().read_interval.count();
+
+    tspec.it_interval.tv_sec = std::floor(config().read_interval / std::chrono::seconds(1));
+
+    tspec.it_interval.tv_nsec = (config().read_interval % std::chrono::seconds(1)).count();
 
     timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
     timer_pfd().events = POLLIN;
