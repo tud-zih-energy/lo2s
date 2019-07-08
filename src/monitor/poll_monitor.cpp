@@ -49,7 +49,8 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
     // synchronize our timers
     tspec.it_value.tv_nsec = 1;
 
-    tspec.it_interval.tv_sec = std::floor(config().read_interval / std::chrono::seconds(1));
+    tspec.it_interval.tv_sec =
+        std::chrono::duration_cast<std::chrono::seconds>(config().read_interval).count();
 
     tspec.it_interval.tv_nsec = (config().read_interval % std::chrono::seconds(1)).count();
 
