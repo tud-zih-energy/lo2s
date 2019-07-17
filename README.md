@@ -1,17 +1,32 @@
 [![Build Status](https://travis-ci.org/tud-zih-energy/lo2s.svg?branch=master)](https://travis-ci.org/tud-zih-energy/lo2s)
 
-# `lo2s` - Linux OTF2 sampling
+# `lo2s` - Lightweight Node-level Performance Monitoring
 
-`lo2s` creates a trace by running an uninstrumented executable. It uses the Linux perf
-infrastructure.
+`lo2s` creates parallel OTF2 traces with a focus on both application and system view.
+The traces can contain any of the following information:
 
-The trace contains the following information:
+ * From running threads
+   * Calling context samples based on instruction overflows
+   * The calling context samples are annotated with the disassembled assembler instruction string
+   * The framepointer-based call-path for each calling context sample
+   * Per-thread performance counter readings
+   * Which thread was scheduled on which CPU at what time
+ * From the system
+   * Metrics from tracepoints (e.g. the selected C-state or P-state) 
+   * The node-level system tree (cpus (HW-threads), cores, packages)
+   * CPU power measurements (x86_energy)
+   * Microarchitecture specific metrics (x86_adapt, per package or per core)
+   * Arbirary metrics through plugins (Score-P compatible)
 
- * Calling context samples based on instruction overflows
- * The calling context samples are annotated with the disassembled assembler instruction string
- * (optional) the framepointer-based call-path for each calling context sample
- * Several performance counter readings
- * The node-level system tree (cpus (HW-threads), cores, packages)
+In general `lo2s` operates either in **process monitoring** or **system monitoring** mode.
+
+With **process monitoring**, all information is grouped by each thread of a monitored process group - it shows you *on which CPU is each monitored thread running*.
+`lo2s` either acts as a prefix command to run the process (and also tracks its children), or `lo2s` attaches to a running process.
+
+In the **system monitoring** mode, information is grouped by logical CPU - it shows you *which thread was running on a given CPU*.
+Metrics are also shown per CPU.
+
+In both modes, system-level metrics (e.g. tracepoints), are always grouped by their respective system hardware component.   
 
 # Build Requirements
 
@@ -26,10 +41,9 @@ The trace contains the following information:
  
 # Optional Build Dependencies
 
- * libradare (somewhat recent)
- * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt)
- * [x86_energy](https://github.com/tud-zih-energy/x86_energy)
-
+ * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
+ * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
+ * libradare for disassembled instruction strings 
 
 # Runtime Requirements
 
@@ -37,25 +51,39 @@ The trace contains the following information:
 
    `sudo sysctl kernel.perf_event_paranoid=1`
    
- * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs. Grant permissions at your own discretion.
+ * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
+ Grant permissions at your own discretion.
  
    `sudo mount -t debugfs non /sys/kernel/debug`
    
 
 # Installation
 
+ * It is recommended to create an empty build directory anywhere.
  * `cmake /path/to/lo2s`
+ * Configure cmake as usual, e.g. with `ccmake .`
  * `make`
  * `make install`
 
 # Usage
 
- * `lo2s ./a.out`
- * `lo2s -- ./a.out --params`
+To monitor a given application in process monitoring execute
+ 
+ * `lo2s -- ./a.out --app-args`
+
+To monitor all activity on a system run
+
+ * `lo2s -a` (stop the recording with ctrl+c)
+ 
+## Usage with MPI
+
+You can record simple traces from MPI programs, but `lo2s` does not record MPI communication.
+To create fully-featured MPI-aware traces, use [Score-P](https://score-p.org/).
+
  * `lo2s mpirun ./a.out` Create one trace of mpirun, useful if mpirun is used locally on one node.
  * `mpirun lo2s ./a.out` Creates a separate trace for each process.
  
-See `lo2s --help` for a current listing of options.
+See `man lo2s` or `lo2s --help` for a full listing of options and usage.
 
 # Quirks
 
@@ -69,6 +97,10 @@ In the effort to keep compatible with older kernels, several quirks have been ad
 2. The used clock source for the kernel-space time measurments can be changed, however if you kernel doesn't support that, you can disable it with the CMake option `USE_PERF_CLOCKID`.
 3. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
 
+# Acknowledgements
+
+This work is supported by the German Research Foundation (DFG) within the CRC 912 - HAEC.
+
 # Primary Reference
 
 A description and use cases can be found in the following paper. Please cite this if you use `lo2s` for scientific work.
@@ -80,3 +112,7 @@ Thomas Ilsche, Robert Schöne, Mario Bielert, Andreas Gocht and Daniel Hackenber
 Thomas Ilsche, Marcus Hähnel, Robert Schöne, Mario Bielert and Daniel Hackenberg: [Powernightmares: The Challenge of Efficiently Using Sleep States on Multi-Core Systems 📕](https://tu-dresden.de/zih/forschung/ressourcen/dateien/projekte/haec/powernightmares.pdf) In: 5th Workshop on Runtime and Operating Systems for the Many-core Era (ROME). 2017, DOI: [10.1007/978-3-319-75178-8_50](https://doi.org/10.1007/978-3-319-75178-8_50)
 
 Thomas Ilsche, Robert Schöne, Philipp Joram, Mario Bielert and Andreas Gocht: "System Monitoring with lo2s: Power and Runtime Impact of C-State Transitions" In: 2018 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW), DOI: [10.1109/IPDPSW.2018.00114](https://doi.org/10.1109/IPDPSW.2018.00114)
+
+# Name
+
+The name `lo2s` is an acronym for **L**inux **O**TF**2** **S**ampling
