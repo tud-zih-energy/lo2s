@@ -16,7 +16,7 @@ The traces can contain any of the following information:
    * The node-level system tree (cpus (HW-threads), cores, packages)
    * CPU power measurements (x86_energy)
    * Microarchitecture specific metrics (x86_adapt, per package or per core)
-   * Arbirary metrics through plugins (Score-P compatible)
+   * Arbitrary metrics through plugins (Score-P compatible)
 
 In general `lo2s` operates either in **process monitoring** or **system monitoring** mode.
 
