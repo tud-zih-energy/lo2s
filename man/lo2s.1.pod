@@ -164,11 +164,9 @@ F</proc/sys/kernel/perf_event_mlock_kb>.
 
 =item B<-i>, B<--readout-interval> I<MSEC> (default: C<100>)
 
-Wake up B<lo2s> every I<MSEC> milliseconds to read both metric event and
-sampling event buffers.
-Increasing this values reduces the perturbation of measurements introduced by
-B<lo2s> waking up to read buffers, but increases the risk of losing samples
-because of overflowing buffers.
+Wake up B<lo2s> at least every I<MSEC> milliseconds to read event buffers.
+Lower values should lead to more synchronous readouts but might increase the
+perturbation of your measurements by B<lo2s>.
 Use in conjunction with B<--mmap-pages>, B<--count> and B<--metric-count> to
 minimize B<lo2s>'s overhead for your measurements.
 
