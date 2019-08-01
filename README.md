@@ -97,6 +97,12 @@ In the effort to keep compatible with older kernels, several quirks have been ad
 2. The used clock source for the kernel-space time measurments can be changed, however if you kernel doesn't support that, you can disable it with the CMake option `USE_PERF_CLOCKID`.
 3. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
 
+# Working with traces
+
+Traces can be visualized with [Vampir](https://vampir.eu).
+You can use [OTF2](https://www.vi-hps.org/projects/score-p/) or any of its tools.
+Native interfaces are available for C and Python
+
 # Acknowledgements
 
 This work is supported by the German Research Foundation (DFG) within the CRC 912 - HAEC.
