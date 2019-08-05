@@ -226,7 +226,7 @@ void parse_program_options(int argc, const char** argv)
             po::value(&read_interval_ms)
                 ->value_name("MSEC")
                 ->default_value(100),
-            "Time interval between metric and sampling buffer readouts in milliseconds.")
+            "Maximum amount of time between event buffer readouts in milliseconds.")
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
