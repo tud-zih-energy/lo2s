@@ -85,7 +85,7 @@ public:
             return configuration_item(type_, id_);
         }
 
-        bool operator!=(const iterator& other)
+        bool operator!=(const iterator& other) const
         {
             return id_ != other.id_;
         }

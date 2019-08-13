@@ -41,6 +41,7 @@
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>   // for CLOCK_* macros
 #include <iomanip> // for std::setw
@@ -85,27 +86,32 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
     std::sort(items.begin(), items.end());
     os << io::make_argument_list(description, items.begin(), items.end());
 }
-
-static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
+static inline std::map<std::string, std::string> x86_adapt_cpu_knobs()
 {
+    std::map<std::string, std::string> knobs;
 #ifdef HAVE_X86_ADAPT
-    std::vector<std::string> knobs;
     try
     {
         ::x86_adapt::x86_adapt x86_adapt;
         auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
 
-        knobs.reserve(cpu_cfg_items.size());
         for (const auto& item : cpu_cfg_items)
         {
-            knobs.emplace_back(item.name());
+            knobs.emplace(std::piecewise_construct, std::forward_as_tuple(item.name()), std::forward_as_tuple(item.description()));
+    
         }
     }
     catch (const ::x86_adapt::x86_adapt_error& e)
     {
         Log::debug() << "Failed to access x86_adapt CPU knobs! (error: " << e.what() << ")";
     }
-
+#endif
+    return knobs;
+}
+static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
+{
+#ifdef HAVE_X86_ADAPT
+    std::map<std::string, std::string> knobs = x86_adapt_cpu_knobs();
     os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
 #else
     (void)os;
@@ -117,24 +123,30 @@ static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
 static inline void list_x86_adapt_node_knobs(std::ostream& os)
 {
 #ifdef HAVE_X86_ADAPT
-    std::vector<std::string> knobs;
+    std::map<std::string, std::string> node_knobs;
+    std::map<std::string, std::string> cpu_knobs = x86_adapt_cpu_knobs();
+    std::map<std::string, std::string> node_only_knobs;
     try
     {
         ::x86_adapt::x86_adapt x86_adapt;
         auto node_cfg_items = x86_adapt.node_configuration_items();
 
-        knobs.reserve(node_cfg_items.size());
         for (const auto& item : node_cfg_items)
         {
-            knobs.emplace_back(item.name());
+            node_knobs.emplace(std::piecewise_construct, std::forward_as_tuple(item.name()), std::forward_as_tuple(item.description()));
         }
+        std::set_difference(
+                node_knobs.begin(), node_knobs.end(),
+                cpu_knobs.begin(), cpu_knobs.end(),
+                std::inserter(node_only_knobs, std::next(node_only_knobs.begin()))
+                );
     }
     catch (const ::x86_adapt::x86_adapt_error& e)
     {
         Log::debug() << "Failed to access x86_adapt node knobs! (error: " << e.what() << ")";
     }
 
-    os << io::make_argument_list("x86_adapt node knobs", knobs.begin(), knobs.end());
+    os << io::make_argument_list("x86_adapt node knobs", node_only_knobs.begin(), node_only_knobs.end());
 #else
     (void)os;
     std::cerr << "lo2s was built without support for x86_adapt; cannot read node knobs.\n";
