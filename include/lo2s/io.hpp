@@ -33,8 +33,8 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
-#include <string>
 #include <map>
+#include <string>
 
 #include <lo2s/time/time.hpp>
 
@@ -113,11 +113,12 @@ inline std::ostream& operator<<(std::ostream& os, const ArgumentList<InputIterat
 }
 
 #ifdef HAVE_X86_ADAPT
-template<>
-inline std::ostream& operator<<(std::ostream& os, const ArgumentList<std::map<std::string, std::string>::iterator>& list)
+template <>
+inline std::ostream&
+operator<<(std::ostream& os, const ArgumentList<std::map<std::string, std::string>::iterator>& list)
 {
     os << "\nList of " << list.description_ << ":\n\n";
-    if(list.first_ != list.last_)
+    if (list.first_ != list.last_)
     {
         size_t max_string_length = 0;
         for (auto it = list.first_; it != list.last_; ++it)
@@ -126,7 +127,8 @@ inline std::ostream& operator<<(std::ostream& os, const ArgumentList<std::map<st
         }
         for (auto it = list.first_; it != list.last_; ++it)
         {
-            os << "  " << std::left << std::setw(max_string_length + 2) << it->first << it->second << '\n';
+            os << "  " << std::left << std::setw(max_string_length + 2) << it->first << it->second
+               << '\n';
         }
     }
     else
