@@ -269,7 +269,6 @@ const CounterDescription& EventProvider::get_default_metric_leader_event()
              "ref-cycles",
              "cpu-cycles",
              "bus-cycles",
-             "cpu-clock",
          })
     {
         try

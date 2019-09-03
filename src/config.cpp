@@ -320,11 +320,11 @@ void parse_program_options(int argc, const char** argv)
         ("metric-count",
             po::value(&metric_count)
                 ->value_name("N"),
-            "Number of metric leader events to elapse before reading metric buffer. Prefer this setting over --metric-freqency")
+            "Number of metric leader events to elapse before reading metric buffer. Has to be used in conjunction with --metric-leader")
         ("metric-frequency",
             po::value(&metric_frequency)
                 ->value_name("HZ"),
-            "Number of metric buffer reads per second. When given, it will be used to set an approximate value for --metric-count");
+            "Number of metric buffer reads per second. Can not be used with --metric-leader");
 
     x86_adapt_options.add_options()
         ("x86-adapt-knob,x",
@@ -551,41 +551,45 @@ void parse_program_options(int argc, const char** argv)
         config.disassemble = false;
 #endif
     }
+    if (vm.count("metric-count") && !vm.count("metric-leader"))
+    {
+        Log::error() << "--metric-count can only be used in conjunction with a --metric-leader";
+        std::exit(EXIT_FAILURE);
+    }
 
-    // Determine a suitable default metric leader event if none was given on the
-    // command line.
+    if (vm.count("metric-frequency") && vm.count("metric-leader"))
+    {
+        Log::error() << "--metric-frequency can only be used with the default --metric-leader";
+        std::exit(EXIT_FAILURE);
+    }
+    // Use time interval based metric recording as a default
     if (!vm.count("metric-leader"))
     {
-        Log::debug() << "guessing metric leader event as none was given by the user...";
+        Log::debug() << "checking if cpu-clock is available...";
         try
         {
-            config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
+            config.metric_leader = perf::EventProvider::get_event_by_name("cpu-clock").name;
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
-            // Will be handled later in collect_requested_events
-            config.metric_leader.clear();
+            Log::warn() << "cpu-clock isn't available, trying to use a fallback event";
+            try
+            {
+                config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
+            }
+            catch (const perf::EventProvider::InvalidEvent& e)
+            {
+                // Will be handled later in collect_requested_events
+                config.metric_leader.clear();
+            }
         }
-    }
-
-    if (vm.count("metric-count"))
-    {
-        if (vm.count("metric-frequency"))
-        {
-            lo2s::Log::error()
-                << "Cannot specify metric read period and frequency at the same time.";
-            std::exit(EXIT_FAILURE);
-        }
-        else
-        {
-            config.metric_use_frequency = false;
-            config.metric_count = metric_count;
-        }
+        config.metric_use_frequency = true;
+        config.metric_frequency = metric_frequency;
     }
     else
     {
-        config.metric_use_frequency = true;
-        config.metric_frequency = metric_frequency;
+        config.metric_use_frequency = false;
+        config.metric_count = metric_count;
     }
 
     config.exclude_kernel = false;
