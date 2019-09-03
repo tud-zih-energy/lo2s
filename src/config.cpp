@@ -572,7 +572,8 @@ void parse_program_options(int argc, const char** argv)
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
-            Log::warn() << "cpu-clock isn't available, try using a custom metric leader";
+            Log::warn()
+                << "cpu-clock isn't available, try using a custom --metric-leader like cpu-cycles";
             // Will be handled later in collect_requested_events
             config.metric_leader.clear();
         }
