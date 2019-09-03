@@ -24,6 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
@@ -33,7 +34,7 @@ namespace monitor
 {
 
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, int cpuid)
-: monitor::PollMonitor(trace, ""), cpu_(cpuid)
+: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpuid)
 {
     for (const auto& event_name : config().tracepoint_events)
     {

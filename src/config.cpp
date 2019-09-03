@@ -191,6 +191,7 @@ void parse_program_options(int argc, const char** argv)
     bool kernel, no_kernel;
     bool list_clockids, list_events, list_tracepoints, list_knobs;
     std::uint64_t read_interval_ms;
+    std::uint64_t perf_read_interval_ms;
     std::uint64_t metric_count, metric_frequency = 10;
     std::vector<std::string> x86_adapt_knobs;
 
@@ -226,7 +227,12 @@ void parse_program_options(int argc, const char** argv)
             po::value(&read_interval_ms)
                 ->value_name("MSEC")
                 ->default_value(100),
-            "Maximum amount of time between event buffer readouts in milliseconds.")
+            "Amount of time between readouts of interval based monitors, e.g. x86_adapt, x86_energy.")
+        ("perf-readout-interval,I",
+            po::value(&perf_read_interval_ms)
+                ->value_name("MSEC")
+                ->default_value(0),
+            "Maximum amount of time between readouts of perf based monitors, e.g. sampling, metrics. 0 means interval based readouts are disabled ")
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
@@ -529,6 +535,7 @@ void parse_program_options(int argc, const char** argv)
     }
 
     config.read_interval = std::chrono::milliseconds(read_interval_ms);
+    config.perf_read_interval = std::chrono::milliseconds(perf_read_interval_ms);
 
     if (no_disassemble && disassemble)
     {

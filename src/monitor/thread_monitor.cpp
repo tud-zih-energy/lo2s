@@ -44,7 +44,8 @@ namespace monitor
 
 ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
                              bool enable_on_exec)
-: PollMonitor(parent_monitor.trace(), std::to_string(tid)), pid_(pid), tid_(tid)
+: PollMonitor(parent_monitor.trace(), std::to_string(tid), config().perf_read_interval), pid_(pid),
+  tid_(tid)
 {
     if (config().sampling)
     {

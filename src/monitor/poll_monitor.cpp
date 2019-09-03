@@ -33,7 +33,8 @@ namespace lo2s
 {
 namespace monitor
 {
-PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
+PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
+                         std::chrono::nanoseconds read_interval)
 : ThreadedMonitor(trace, name)
 {
     pfds_.resize(2);
@@ -47,18 +48,29 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
 
     // Set initial expiration to lowest possible value, this together with TFD_TIMER_ABSTIME should
     // synchronize our timers
-    tspec.it_value.tv_nsec = 1;
+    if (read_interval.count() != 0)
+    {
 
-    tspec.it_interval.tv_sec =
-        std::chrono::duration_cast<std::chrono::seconds>(config().read_interval).count();
+        tspec.it_value.tv_nsec = 1;
 
-    tspec.it_interval.tv_nsec = (config().read_interval % std::chrono::seconds(1)).count();
+        tspec.it_interval.tv_sec =
+            std::chrono::duration_cast<std::chrono::seconds>(read_interval).count();
 
-    timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-    timer_pfd().events = POLLIN;
-    timer_pfd().revents = 0;
+        tspec.it_interval.tv_nsec = (read_interval % std::chrono::seconds(1)).count();
 
-    timerfd_settime(timer_pfd().fd, TFD_TIMER_ABSTIME, &tspec, NULL);
+        timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+        timer_pfd().events = POLLIN;
+        timer_pfd().revents = 0;
+
+        timerfd_settime(timer_pfd().fd, TFD_TIMER_ABSTIME, &tspec, NULL);
+    }
+    else
+    {
+        // fd = -1 is just going to be ignored
+        timer_pfd().fd = -1;
+        timer_pfd().events = 0;
+        timer_pfd().revents = 0;
+    }
 }
 
 void PollMonitor::add_fd(int fd)
