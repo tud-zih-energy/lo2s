@@ -572,10 +572,16 @@ void parse_program_options(int argc, const char** argv)
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
-            Log::warn()
-                << "cpu-clock isn't available, try using a custom --metric-leader like cpu-cycles";
-            // Will be handled later in collect_requested_events
-            config.metric_leader.clear();
+            Log::warn() << "cpu-clock isn't available, trying to use a fallback event";
+            try
+            {
+                config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
+            }
+            catch (const perf::EventProvider::InvalidEvent& e)
+            {
+                // Will be handled later in collect_requested_events
+                config.metric_leader.clear();
+            }
         }
         config.metric_use_frequency = true;
         config.metric_frequency = metric_frequency;
