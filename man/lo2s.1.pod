@@ -276,32 +276,23 @@ Enable a set of default events for metric recording.
 
 =item B<--metric-leader> I<EVENT>
 
-The leading metric event that controls how often metric events are read from
-shared buffers.
+The leading metric event when using event count based metric recording, use in conjunction with
+B<--metric-count> to control the number of events that have to elapse before a metric read is performed
 
 =item B<--metric-count> I<N>
 
-Instruct B<lo2s> to read metrics from kernel buffers every time I<N> metric
-leader events (see B<--metric-leader>) have occured.
+Controls the number of events that have to elapse before a metric read is performed by the kernel when using event
+count based metric recording with B<--metric-leader>.
 Higher values reduce the overhead incurred by B<lo2s>, but may lead to the
 kernel buffers overflowing, in which case B<lo2s> will miss some metric events.
 Use in conjunction with B<-m> to increase internal buffer sizes to reduce
 overhead and risk of missing events.
+This can only be used in conjunction with B<--metric-leader>
 
 =item B<--metric-frequency> I<HZ>
 
-Instruct B<lo2s> to read metrics with a frequency of approximately I<HZ> Hz,
-i.e. 1 / I<HZ> times per second.
-
-=over 6
-
-=item B<NOTE:>
-
-The quality of this approximation depends on kernel heuristics and the selected
-leading metric event (see B<--metric-leader>).
-Prefer specifying B<--metric-count> over this option.
-
-=back
+This is used to set the frequency in time interval based metric recording, i.e. one readout every 1/I<HZ> seconds.
+Can not be used in conjunction with B<--metric-leader>
 
 =back
 
