@@ -164,11 +164,11 @@ F</proc/sys/kernel/perf_event_mlock_kb>.
 
 =item B<-i>, B<--readout-interval> I<MSEC> (default: C<100>)
 
-Wake up interval based monitors (e.g. x86_adapt, x86_energy) every I<MSEC> milliseconds to read event buffers
+Wake up interval based monitors (i.e. x86_adapt, x86_energy) every I<MSEC> milliseconds to read event buffers
 
 =item B<-I>, B<--perf-readout-interval> I<MSEC> (default: C<0>)
 
-Wake up perf based monitors (e.g. sampling, metrics) at least every I<MSEC> milliseconds to read event buffers.
+Wake up perf based monitors (i.e. sampling, metrics, tracepoints) at least every I<MSEC> milliseconds to read event buffers.
 If I<MSEC> is 0 interval based readouts will be disabled.
 Lower values should lead to more synchronous readouts but might increase the
 perturbation of your measurements by B<lo2s>.
