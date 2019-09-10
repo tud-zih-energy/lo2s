@@ -36,6 +36,7 @@
 #include <map>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s
@@ -127,8 +128,15 @@ operator<<(std::ostream& os, const ArgumentList<std::map<std::string, std::strin
         }
         for (auto it = list.first_; it != list.last_; ++it)
         {
-            os << "  " << std::left << std::setw(max_string_length + 2) << it->first << it->second
+            std::vector<std::string> lines;
+            boost::split(lines, it->second, [](char c) { return c == '\n'; });
+            os << "  " << std::left << std::setw(max_string_length + 2) << it->first << lines[0]
                << '\n';
+            lines.erase(lines.begin());
+            for (const auto& line : lines)
+            {
+                os << "  " << std::left << std::setw(max_string_length + 2) << "" << line << "\n";
+            }
         }
     }
     else
