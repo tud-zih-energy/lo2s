@@ -27,6 +27,7 @@
 #include <lo2s/pipe.hpp>
 #include <lo2s/trace/fwd.hpp>
 
+#include <chrono>
 #include <vector>
 
 extern "C"
@@ -41,7 +42,8 @@ namespace monitor
 class PollMonitor : public ThreadedMonitor
 {
 public:
-    PollMonitor(trace::Trace& trace, const std::string& name);
+    PollMonitor(trace::Trace& trace, const std::string& name,
+                std::chrono::nanoseconds read_interval);
 
     void stop() override;
 

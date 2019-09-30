@@ -34,7 +34,7 @@ namespace monitor
 {
 
 CpuMonitor::CpuMonitor(int cpuid, MainMonitor& parent)
-: PollMonitor(parent.trace(), std::to_string(cpuid)), cpu_(cpuid)
+: PollMonitor(parent.trace(), std::to_string(cpuid), config().perf_read_interval), cpu_(cpuid)
 #ifndef USE_PERF_RECORD_SWITCH
   ,
   switch_writer_(cpuid, parent.trace())
