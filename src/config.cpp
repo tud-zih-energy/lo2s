@@ -227,12 +227,12 @@ void parse_program_options(int argc, const char** argv)
             po::value(&read_interval_ms)
                 ->value_name("MSEC")
                 ->default_value(100),
-            "Amount of time between readouts of interval based monitors, e.g. x86_adapt, x86_energy.")
+            "Amount of time between readouts of interval based monitors, i.e. x86_adapt, x86_energy.")
         ("perf-readout-interval,I",
             po::value(&perf_read_interval_ms)
                 ->value_name("MSEC")
                 ->default_value(0),
-            "Maximum amount of time between readouts of perf based monitors, e.g. sampling, metrics. 0 means interval based readouts are disabled ")
+            "Maximum amount of time between readouts of perf based monitors, i.e. sampling, metrics, tracepoints. 0 means interval based readouts are disabled ")
         ("clockid,k",
             po::value(&requested_clock_name)
                 ->value_name("CLOCKID")
