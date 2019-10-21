@@ -30,9 +30,13 @@
 
 #pragma once
 
+#include <algorithm>
+#include <iomanip>
 #include <iostream>
+#include <map>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s
@@ -108,5 +112,40 @@ inline std::ostream& operator<<(std::ostream& os, const ArgumentList<InputIterat
     os << '\n';
     return os;
 }
+
+#ifdef HAVE_X86_ADAPT
+template <>
+inline std::ostream&
+operator<<(std::ostream& os, const ArgumentList<std::map<std::string, std::string>::iterator>& list)
+{
+    os << "\nList of " << list.description_ << ":\n\n";
+    if (list.first_ != list.last_)
+    {
+        size_t max_string_length = 0;
+        for (auto it = list.first_; it != list.last_; ++it)
+        {
+            max_string_length = std::max(max_string_length, it->first.length());
+        }
+        for (auto it = list.first_; it != list.last_; ++it)
+        {
+            std::vector<std::string> lines;
+            boost::split(lines, it->second, [](char c) { return c == '\n'; });
+            os << "  " << std::left << std::setw(max_string_length + 2) << it->first << lines[0]
+               << '\n';
+            lines.erase(lines.begin());
+            for (const auto& line : lines)
+            {
+                os << "  " << std::left << std::setw(max_string_length + 2) << "" << line << "\n";
+            }
+        }
+    }
+    else
+    {
+        os << "  (none available)\n";
+    }
+    os << '\n';
+    return os;
+}
+#endif
 } // namespace io
 } // namespace lo2s

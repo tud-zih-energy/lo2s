@@ -34,8 +34,7 @@
 #include <nitro/lang/optional.hpp>
 
 #ifdef HAVE_X86_ADAPT
-#include <x86_adapt_cxx/exception.hpp>
-#include <x86_adapt_cxx/x86_adapt.hpp>
+#include <lo2s/metric/x86_adapt/knobs.hpp>
 #endif
 
 #include <boost/optional.hpp>
@@ -84,62 +83,6 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 {
     std::sort(items.begin(), items.end());
     os << io::make_argument_list(description, items.begin(), items.end());
-}
-
-static inline void list_x86_adapt_cpu_knobs(std::ostream& os)
-{
-#ifdef HAVE_X86_ADAPT
-    std::vector<std::string> knobs;
-    try
-    {
-        ::x86_adapt::x86_adapt x86_adapt;
-        auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
-
-        knobs.reserve(cpu_cfg_items.size());
-        for (const auto& item : cpu_cfg_items)
-        {
-            knobs.emplace_back(item.name());
-        }
-    }
-    catch (const ::x86_adapt::x86_adapt_error& e)
-    {
-        Log::debug() << "Failed to access x86_adapt CPU knobs! (error: " << e.what() << ")";
-    }
-
-    os << io::make_argument_list("x86_adapt CPU knobs", knobs.begin(), knobs.end());
-#else
-    (void)os;
-    std::cerr << "lo2s was built without support for x86_adapt; cannot read CPU knobs.\n";
-    std::exit(EXIT_FAILURE);
-#endif
-}
-
-static inline void list_x86_adapt_node_knobs(std::ostream& os)
-{
-#ifdef HAVE_X86_ADAPT
-    std::vector<std::string> knobs;
-    try
-    {
-        ::x86_adapt::x86_adapt x86_adapt;
-        auto node_cfg_items = x86_adapt.node_configuration_items();
-
-        knobs.reserve(node_cfg_items.size());
-        for (const auto& item : node_cfg_items)
-        {
-            knobs.emplace_back(item.name());
-        }
-    }
-    catch (const ::x86_adapt::x86_adapt_error& e)
-    {
-        Log::debug() << "Failed to access x86_adapt node knobs! (error: " << e.what() << ")";
-    }
-
-    os << io::make_argument_list("x86_adapt node knobs", knobs.begin(), knobs.end());
-#else
-    (void)os;
-    std::cerr << "lo2s was built without support for x86_adapt; cannot read node knobs.\n";
-    std::exit(EXIT_FAILURE);
-#endif
 }
 
 static inline void print_version(std::ostream& os)
@@ -454,8 +397,20 @@ void parse_program_options(int argc, const char** argv)
 
         if (list_knobs)
         {
-            list_x86_adapt_cpu_knobs(std::cout);
-            list_x86_adapt_node_knobs(std::cout);
+#ifdef HAVE_X86_ADAPT
+
+            std::map<std::string, std::string> node_knobs =
+                metric::x86_adapt::x86_adapt_node_knobs();
+            std::cout << io::make_argument_list("x86_adapt node knobs", node_knobs.begin(),
+                                                node_knobs.end());
+
+            std::map<std::string, std::string> cpu_knobs = metric::x86_adapt::x86_adapt_cpu_knobs();
+            std::cout << io::make_argument_list("x86_adapt CPU knobs", cpu_knobs.begin(),
+                                                cpu_knobs.end());
+#else
+            std::cerr << "lo2s was built without support for x86_adapt; cannot read node knobs.\n";
+            std::exit(EXIT_FAILURE);
+#endif
             std::exit(EXIT_SUCCESS);
         }
     }

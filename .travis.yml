@@ -103,10 +103,10 @@ matrix:
 
 cache:
   directories:
-    - ${TRAVIS_BUILD_DIR}/deps/otf2-2.1
+    - ${TRAVIS_BUILD_DIR}/deps/otf2-2.2
 
 install:
-  - OTF2_VERSION=2.1 # Update cache too when changing this!
+  - OTF2_VERSION=2.2 # Update cache too when changing this!
   - OTF2_DIR=${TRAVIS_BUILD_DIR}/deps/otf2-${OTF2_VERSION}
   - |
     if [ -z "$(ls -A ${OTF2_DIR})" ]; then
