@@ -118,7 +118,7 @@ LineInfo Lib::lookup(Address addr) const
         if (func != nullptr)
         {
             unique_char_ptr demangled(bfd_demangle(handle_.get(), func, DMGL_PARAMS | DMGL_ANSI));
-            if (!demangled)
+            if (demangled)
             {
                 LineInfo line_info = LineInfo::for_function(file, demangled.get(), line, name_);
                 return line_info;
