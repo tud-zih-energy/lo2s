@@ -23,7 +23,7 @@
 
 #include <lo2s/build_config.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <otf2xx/chrono/convert.hpp>
 
 #include <chrono>
 #include <ctime>
