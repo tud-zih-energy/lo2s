@@ -208,7 +208,7 @@ protected:
         }
         catch (...)
         {
-            close(fd_);
+            close();
             throw;
         }
     }
@@ -231,7 +231,17 @@ protected:
                            "extend to prevent the kernel from doing that"
                            " or you can increase your sampling period.";
         }
-        close(fd_);
+        close();
+    }
+
+public:
+    void close()
+    {
+        if (fd_ != -1)
+        {
+            ::close(fd_);
+            fd_ = -1;
+        }
     }
 
 protected:

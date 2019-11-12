@@ -75,6 +75,8 @@ void ThreadMonitor::stop()
 
     stop_pipe_.write();
     thread_.join();
+    stop_pipe_.close();
+    sample_writer_->close();
 }
 
 void ThreadMonitor::check_affinity(bool force)
