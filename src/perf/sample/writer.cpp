@@ -77,7 +77,7 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
 Writer::~Writer()
 {
 
-    if (current_thread_cctx_refs_ && tid_ == -1)
+    if (current_thread_cctx_refs_)
     {
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
                                                  current_thread_cctx_refs_->second.entry.ref);
@@ -175,25 +175,25 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
 {
 
-    if (tid_ != -1)
-    {
-        if (tid != tid_ || pid != pid_)
-        {
-            Log::warn() << "Sample outside of monitored process";
-        }
-        assert(tid == tid_ && pid == pid_);
-
-        auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                                            std::forward_as_tuple(pid, next_cctx_ref_));
-
-        if (ret.second)
-        {
-            next_cctx_ref_++;
-        }
-
-        current_thread_cctx_refs_ = &(*ret.first);
-        return;
-    }
+    // if (tid_ != -1)
+    // {
+    //     if (tid != tid_ || pid != pid_)
+    //     {
+    //         Log::warn() << "Sample outside of monitored process";
+    //     }
+    //     assert(tid == tid_ && pid == pid_);
+    //
+    //     auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+    //                                         std::forward_as_tuple(pid, next_cctx_ref_));
+    //
+    //     if (ret.second)
+    //     {
+    //         next_cctx_ref_++;
+    //     }
+    //
+    //     current_thread_cctx_refs_ = &(*ret.first);
+    //     return;
+    // }
     tp = adjust_timepoints(tp);
 
     // CPU monitoring
@@ -222,12 +222,12 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
 
 void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
 {
-    if (tid_ != -1)
-    {
-        // should not happen (TM)
-        assert(false);
-        return;
-    }
+    // if (tid_ != -1)
+    // {
+    //     // should not happen (TM)
+    //     assert(false);
+    //     return;
+    // }
 
     if (current_thread_cctx_refs_ == nullptr)
     {
@@ -280,30 +280,30 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
 {
     assert(cpuid_ == -1);
 
+    auto tp = time_converter_(context_switch->time);
+
+    if (first_event_)
+    {
+        first_time_point_ = std::min(first_time_point_, tp);
+        otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_), -1);
+        first_event_ = false;
+    }
+
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        auto tp = time_converter_(context_switch->time);
-        tp = adjust_timepoints(tp);
+        leave_current_thread(context_switch->tid, tp);
 
-        if (first_event_ && cpuid_ == -1)
-        {
-            first_time_point_ = std::min(first_time_point_, tp);
-            otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_),
-                                                      -1);
-            first_event_ = false;
-        }
-
+        cpuid_metric_event_.timestamp(tp);
+        cpuid_metric_event_.raw_values()[0] = -1;
+        otf2_writer_ << cpuid_metric_event_;
+    }
+    else
+    {
         update_current_thread(context_switch->pid, context_switch->tid, tp);
 
         cpuid_metric_event_.timestamp(tp);
         cpuid_metric_event_.raw_values()[0] = context_switch->cpu;
         otf2_writer_ << cpuid_metric_event_;
-
-        // we write the a calling context sample with an "empty" stack to tell Vampir that we are
-        // leaving. Hopefully Vampir don't draw prolonged samples this way
-        otf2_writer_.write_calling_context_sample(tp, -1, 1, trace_.interrupt_generator().ref());
-
-        return false;
     }
 
     return false;
