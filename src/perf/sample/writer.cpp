@@ -275,6 +275,39 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 
     return false;
 }
+
+bool Writer::handle(const Reader::RecordSwitchType* context_switch)
+{
+    assert(cpuid_ == -1);
+
+    if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
+    {
+        auto tp = time_converter_(context_switch->time);
+        tp = adjust_timepoints(tp);
+
+        if (first_event_ && cpuid_ == -1)
+        {
+            first_time_point_ = std::min(first_time_point_, tp);
+            otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_),
+                                                      -1);
+            first_event_ = false;
+        }
+
+        update_current_thread(context_switch->pid, context_switch->tid, tp);
+
+        cpuid_metric_event_.timestamp(tp);
+        cpuid_metric_event_.raw_values()[0] = context_switch->cpu;
+        otf2_writer_ << cpuid_metric_event_;
+
+        // we write the a calling context sample with an "empty" stack to tell Vampir that we are
+        // leaving. Hopefully Vampir don't draw prolonged samples this way
+        otf2_writer_.write_calling_context_sample(tp, -1, 1, trace_.interrupt_generator().ref());
+
+        return false;
+    }
+
+    return false;
+}
 #endif
 
 bool Writer::handle(const Reader::RecordCommType* comm)

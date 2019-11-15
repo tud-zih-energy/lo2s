@@ -65,6 +65,7 @@ public:
     bool handle(const Reader::RecordCommType* comm);
 #ifdef USE_PERF_RECORD_SWITCH
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
+    bool handle(const Reader::RecordSwitchType* context_switch);
 #endif
 
     otf2::writer::local& otf2_writer()
