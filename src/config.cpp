@@ -89,7 +89,7 @@ static inline void print_version(std::ostream& os)
 {
     // clang-format off
     os << "lo2s " << lo2s::version() << "\n"
-       << "Copyright (C) 2018 Technische Universitaet Dresden, Germany\n"
+       << "Copyright (C) " LO2S_COPYRIGHT_YEAR " Technische Universitaet Dresden, Germany\n"
        << "This is free software; see the source for copying conditions.  There is NO\n"
        << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
     // clang-format on
