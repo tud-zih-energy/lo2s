@@ -86,6 +86,8 @@ private:
 
     void update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
     void leave_current_thread(pid_t tid, otf2::chrono::time_point tp);
+    void update_calling_context(pid_t pid, pid_t tid, otf2::chrono::time_point tp, bool switch_out);
+
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     pid_t pid_;
