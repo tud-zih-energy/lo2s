@@ -183,6 +183,14 @@ public:
         return system_tree_root_node_;
     }
 
+    void adjust_stop_time(otf2::chrono::time_point tp)
+    {
+        if (tp > stopping_time_)
+        {
+            stopping_time_ = tp;
+        }
+    }
+
     otf2::definition::regions_group regions_group_executable(const std::string& name);
     otf2::definition::regions_group regions_group_monitoring(const std::string& name);
     otf2::definition::comm process_comm(pid_t pid);

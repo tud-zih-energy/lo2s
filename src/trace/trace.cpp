@@ -86,7 +86,8 @@ std::string get_trace_name(std::string prefix = "")
 }
 
 Trace::Trace()
-: trace_name_(get_trace_name(config().trace_path)), archive_(trace_name_, "traces"),
+: stopping_time_(time::now()), trace_name_(get_trace_name(config().trace_path)),
+  archive_(trace_name_, "traces"),
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
   interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
                        otf2::common::interrupt_generator_mode_type::count,
@@ -171,7 +172,7 @@ void Trace::begin_record()
 
 void Trace::end_record()
 {
-    stopping_time_ = time::now();
+    adjust_stop_time(time::now());
     Log::info() << "Recording done. Start finalization...";
 }
 

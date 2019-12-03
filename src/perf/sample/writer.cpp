@@ -59,8 +59,6 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  thread_monitoring_cctx_refs_(
-      tid, { pid, otf2::definition::calling_context::reference_type::undefined() }),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -70,7 +68,6 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
 
 Writer::~Writer()
 {
-
     if (current_thread_cctx_refs_)
     {
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
@@ -82,6 +79,7 @@ Writer::~Writer()
                                                             monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
+    trace_.adjust_stop_time(last_time_point_);
 }
 
 trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
@@ -185,7 +183,6 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
     {
         next_cctx_ref_++;
     }
-
     otf2_writer_.write_calling_context_enter(tp, ret.first->second.entry.ref, 2);
     current_thread_cctx_refs_ = &(*ret.first);
 }
@@ -235,7 +232,6 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 bool Writer::handle(const Reader::RecordSwitchType* context_switch)
 {
     assert(cpuid_ == -1);
-
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
@@ -289,12 +285,9 @@ bool Writer::handle(const Reader::RecordCommType* comm)
             trace_.update_process_name(comm->pid, new_command);
         }
     }
-    else
-    {
-        summary().register_process(comm->pid);
+    summary().register_process(comm->pid);
 
-        comms_[comm->tid] = comm->comm;
-    }
+    comms_[comm->tid] = comm->comm;
 
     return false;
 }
