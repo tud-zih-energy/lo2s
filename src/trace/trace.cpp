@@ -381,11 +381,25 @@ void Trace::update_process_name(pid_t pid, const otf2::definition::string& name)
 {
     try
     {
+        // we probably need that lock while fiddling with the more complex changes :(
+        std::lock_guard<std::recursive_mutex> guard(mutex_);
+
         system_tree_process_nodes_.at(pid).name(name);
         location_groups_process_.at(pid).name(name);
 
         process_comm_groups_.at(pid).name(name);
         process_comms_.at(pid).name(name);
+
+        std::string n = (boost::format("%s (tid %d)") % name.str() % pid).str();
+        auto region = regions_thread_.at(pid);
+        region.name(intern(n));
+        auto group = regions_group_executable(name.str());
+        group.add_member(region);
+
+        auto parent_group = regions_group_executable(process_names_.at(pid));
+        parent_group.remove_member(region);
+
+        process_names_[pid] = name.str();
     }
     catch (const std::out_of_range&)
     {
