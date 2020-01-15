@@ -238,16 +238,10 @@ if(IN_GIT)
         OUTPUT_VARIABLE LO2S_VERSION_STRING
     )
     string(STRIP ${LO2S_VERSION_STRING} LO2S_VERSION_STRING)
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} log -1 --format=%cd --date=format:%Y
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        OUTPUT_VARIABLE LO2S_COPYRIGHT_YEAR
-    )
-    string(STRIP ${LO2S_COPYRIGHT_YEAR} LO2S_COPYRIGHT_YEAR)
 else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
-    set(LO2S_COPYRIGHT_YEAR "")
 endif()
+set(LO2S_COPYRIGHT_YEAR "2020")
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
 # check for version dependent features and generate a build config
