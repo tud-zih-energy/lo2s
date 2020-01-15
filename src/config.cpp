@@ -447,7 +447,7 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
-    if (!perf::EventProvider::has_event(config.sampling_event))
+    if (!perf::EventProvider::has_event(config.sampling_event) && config.sampling)
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";
