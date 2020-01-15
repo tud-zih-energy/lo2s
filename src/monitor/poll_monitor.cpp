@@ -122,7 +122,7 @@ void PollMonitor::run()
             Log::error() << "poll failed";
             throw_errno();
         }
-        Log::debug() << "PollMonitor poll returned " << ret;
+        Log::trace() << "PollMonitor poll returned " << ret;
 
         bool panic = false;
         for (const auto& pfd : pfds_)
