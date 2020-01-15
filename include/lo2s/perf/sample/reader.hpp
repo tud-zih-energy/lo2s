@@ -83,6 +83,18 @@ protected:
     {
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
+
+        if (perf_event_paranoid() == 3)
+        {
+            Log::fatal()
+                << "kernel.perf_event_paranoid is set to 3, which disables perf altogether.";
+            Log::warn() << "To solve this error, you can do one of the following:";
+            Log::warn() << " * sysctl kernel.perf_event_paranoid=2";
+            Log::warn() << " * run lo2s as root";
+
+            throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
+        }
+
         struct perf_event_attr perf_attr = common_perf_event_attrs();
 #ifdef USE_PERF_CLOCKID
         if (config().use_pebs)
@@ -150,11 +162,9 @@ protected:
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {
                 perf_attr.exclude_kernel = 1;
-                Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
-                Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
-                Log::warn() << " * run lo2s as root";
-                Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
-                               "the first place,";
+
+                perf_warn_paranoid();
+
                 continue;
             }
 

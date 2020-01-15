@@ -33,7 +33,10 @@ namespace monitor
 {
 MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
-    perf::time::Converter::instance();
+    if (config().sampling)
+    {
+        perf::time::Converter::instance();
+    }
 
     metrics_.start();
 

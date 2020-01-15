@@ -52,5 +52,22 @@ struct perf_event_attr common_perf_event_attrs()
 
     return attr;
 }
+
+void perf_warn_paranoid()
+{
+    static bool warning_issued = false;
+
+    if (!warning_issued)
+    {
+        Log::warn() << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
+                       "retrying without kernel samples.";
+        Log::warn() << "To solve this warning you can do one of the following:";
+        Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
+        Log::warn() << " * run lo2s as root";
+        Log::warn() << " * run with --no-kernel to disable kernel space sampling in "
+                       "the first place,";
+        warning_issued = true;
+    }
+}
 } // namespace perf
 } // namespace lo2s

@@ -552,7 +552,7 @@ const CounterDescription& EventProvider::get_event_by_name(const std::string& na
         }
         else
         {
-            throw InvalidEvent("Event failed to cache previously");
+            throw InvalidEvent("The event '" + name + "' is not available");
         }
     }
     else

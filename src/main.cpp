@@ -29,10 +29,9 @@
 
 int main(int argc, const char** argv)
 {
-    lo2s::parse_program_options(argc, argv);
-
     try
     {
+        lo2s::parse_program_options(argc, argv);
         lo2s::summary();
 
         switch (lo2s::config().monitor_type)

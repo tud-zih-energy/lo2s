@@ -51,11 +51,7 @@ static int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int
     if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf::perf_event_paranoid() > 1)
     {
         perf_attr->exclude_kernel = 1;
-        Log::warn() << "kernel.perf_event_paranoid > 1, retrying without kernel samples:";
-        Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
-        Log::warn() << " * run lo2s as root";
-        Log::warn() << " * run with --no-kernel to disable kernel space monitoring in "
-                       "the first place,";
+        perf::perf_warn_paranoid();
         fd = perf::perf_event_open(perf_attr, tid, cpu, group_fd, flags);
     }
     return fd;

@@ -89,7 +89,7 @@ Trace::Trace()
 : stopping_time_(time::now()), trace_name_(get_trace_name(config().trace_path)),
   archive_(trace_name_, "traces"),
   system_tree_root_node_(0, intern(nitro::env::hostname()), intern("machine")),
-  interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
+  interrupt_generator_(0u, intern("perf " + config().sampling_event),
                        otf2::common::interrupt_generator_mode_type::count,
                        otf2::common::base_type::decimal, 0, config().sampling_period)
 {
