@@ -28,6 +28,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
 
@@ -222,7 +223,7 @@ void parse_program_options(int argc, const char** argv)
         ("event,e",
             po::value(&config.sampling_event)
                 ->value_name("EVENT")
-                ->default_value("instructions"),
+                ->default_value(Topology::instance().hypervised() ? "cpu-clock" : "instructions"),
             "Interrupt source event for sampling.")
         ("count,c",
             po::value(&config.sampling_period)
