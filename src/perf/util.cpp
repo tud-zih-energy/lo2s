@@ -69,5 +69,18 @@ void perf_warn_paranoid()
         warning_issued = true;
     }
 }
+
+void perf_check_disabled()
+{
+    if (perf_event_paranoid() == 3)
+    {
+        Log::error() << "kernel.perf_event_paranoid is set to 3, which disables perf altogether.";
+        Log::warn() << "To solve this error, you can do one of the following:";
+        Log::warn() << " * sysctl kernel.perf_event_paranoid=2";
+        Log::warn() << " * run lo2s as root";
+
+        throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
+    }
+}
 } // namespace perf
 } // namespace lo2s

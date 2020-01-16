@@ -409,7 +409,7 @@ void parse_program_options(int argc, const char** argv)
             std::cout << io::make_argument_list("x86_adapt CPU knobs", cpu_knobs.begin(),
                                                 cpu_knobs.end());
 #else
-            std::cerr << "lo2s was built without support for x86_adapt; cannot read node knobs.\n";
+            std::cerr << "lo2s was built without support for x86_adapt; cannot read knobs.\n";
             std::exit(EXIT_FAILURE);
 #endif
             std::exit(EXIT_SUCCESS);
@@ -448,7 +448,12 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
-    if (!perf::EventProvider::has_event(config.sampling_event) && config.sampling)
+    if (config.sampling)
+    {
+        perf::perf_check_disabled();
+    }
+
+    if (config.sampling && !perf::EventProvider::has_event(config.sampling_event))
     {
         lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";

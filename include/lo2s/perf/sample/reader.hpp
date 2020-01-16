@@ -84,17 +84,6 @@ protected:
         Log::debug() << "initializing event_reader for tid: " << tid
                      << ", enable_on_exec: " << enable_on_exec;
 
-        if (perf_event_paranoid() == 3)
-        {
-            Log::fatal()
-                << "kernel.perf_event_paranoid is set to 3, which disables perf altogether.";
-            Log::warn() << "To solve this error, you can do one of the following:";
-            Log::warn() << " * sysctl kernel.perf_event_paranoid=2";
-            Log::warn() << " * run lo2s as root";
-
-            throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
-        }
-
         struct perf_event_attr perf_attr = common_perf_event_attrs();
 #ifdef USE_PERF_CLOCKID
         if (config().use_pebs)

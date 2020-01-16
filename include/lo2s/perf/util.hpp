@@ -15,6 +15,7 @@ int perf_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int g
                     unsigned long flags);
 struct perf_event_attr common_perf_event_attrs();
 void perf_warn_paranoid();
+void perf_check_disabled();
 
 } // namespace perf
 } // namespace lo2s
