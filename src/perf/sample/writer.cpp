@@ -59,25 +59,16 @@ Writer::Writer(pid_t pid, pid_t tid, int cpu, monitor::MainMonitor& Monitor, tra
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer.location(),
                                                otf2_writer.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  thread_monitoring_cctx_refs_(
-      tid, { pid, otf2::definition::calling_context::reference_type::undefined() }),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
     // Must monitor either a CPU or (exclusive) a tid/pid
     assert((cpu == -1) ^ (pid == -1 && tid == -1));
-    if (tid != -1)
-    {
-        // TODO create empty cctx root for thread monitoring
-        thread_monitoring_cctx_refs_.second.pid = pid;
-        current_thread_cctx_refs_ = &thread_monitoring_cctx_refs_;
-    }
 }
 
 Writer::~Writer()
 {
-
-    if (current_thread_cctx_refs_ && tid_ == -1)
+    if (current_thread_cctx_refs_)
     {
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
                                                  current_thread_cctx_refs_->second.entry.ref);
@@ -88,6 +79,7 @@ Writer::~Writer()
                                                             monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
+    trace_.adjust_stop_time(last_time_point_);
 }
 
 trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
@@ -136,13 +128,6 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
-    if (first_event_ && cpuid_ == -1)
-    {
-        first_time_point_ = std::min(first_time_point_, tp);
-        otf2_writer_ << otf2::event::thread_begin(first_time_point_, trace_.process_comm(pid_), -1);
-        first_event_ = false;
-    }
-
     update_current_thread(sample->pid, sample->tid, tp);
 
     cpuid_metric_event_.timestamp(tp);
@@ -174,29 +159,12 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 
 void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
 {
-
-    if (tid_ != -1)
+    if (first_event_ && cpuid_ == -1)
     {
-        if (tid != tid_ || pid != pid_)
-        {
-            Log::warn() << "Sample outside of monitored process";
-        }
-        assert(tid == tid_ && pid == pid_);
-
-        auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                                            std::forward_as_tuple(pid, next_cctx_ref_));
-
-        if (ret.second)
-        {
-            next_cctx_ref_++;
-        }
-
-        current_thread_cctx_refs_ = &(*ret.first);
-        return;
+        otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(pid_), -1);
+        first_event_ = false;
     }
-    tp = adjust_timepoints(tp);
 
-    // CPU monitoring
     if (current_thread_cctx_refs_ && current_thread_cctx_refs_->first == tid)
     {
         // current thread is unchanged
@@ -215,20 +183,12 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
     {
         next_cctx_ref_++;
     }
-
     otf2_writer_.write_calling_context_enter(tp, ret.first->second.entry.ref, 2);
     current_thread_cctx_refs_ = &(*ret.first);
 }
 
 void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
 {
-    if (tid_ != -1)
-    {
-        // should not happen (TM)
-        assert(false);
-        return;
-    }
-
     if (current_thread_cctx_refs_ == nullptr)
     {
         // Already not in a thread
@@ -239,8 +199,6 @@ void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
     {
         Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or later
     }
-    tp = adjust_timepoints(tp);
-
     otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
     current_thread_cctx_refs_ = nullptr;
 }
@@ -263,20 +221,52 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
     assert(cpuid_ != -1);
     auto tp = time_converter_(context_switch->time);
+    tp = adjust_timepoints(tp);
+
+    update_calling_context(context_switch->pid, context_switch->tid, tp,
+                           context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT);
+
+    return false;
+}
+
+bool Writer::handle(const Reader::RecordSwitchType* context_switch)
+{
+    assert(cpuid_ == -1);
+    auto tp = time_converter_(context_switch->time);
+    tp = adjust_timepoints(tp);
+
+    update_calling_context(context_switch->pid, context_switch->tid, tp,
+                           context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT);
 
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
     {
-        leave_current_thread(context_switch->tid, tp);
+        cpuid_metric_event_.timestamp(tp);
+        cpuid_metric_event_.raw_values()[0] = -1;
+        otf2_writer_ << cpuid_metric_event_;
     }
     else
     {
-        update_current_thread(context_switch->pid, context_switch->tid, tp);
+        cpuid_metric_event_.timestamp(tp);
+        cpuid_metric_event_.raw_values()[0] = context_switch->cpu;
+        otf2_writer_ << cpuid_metric_event_;
     }
 
     return false;
 }
-#endif
 
+void Writer::update_calling_context(pid_t pid, pid_t tid, otf2::chrono::time_point tp,
+                                    bool switch_out)
+{
+    if (switch_out)
+    {
+        leave_current_thread(tid, tp);
+    }
+    else
+    {
+        update_current_thread(pid, tid, tp);
+    }
+}
+#endif
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
     if (cpuid_ == -1)
@@ -295,12 +285,9 @@ bool Writer::handle(const Reader::RecordCommType* comm)
             trace_.update_process_name(comm->pid, new_command);
         }
     }
-    else
-    {
-        summary().register_process(comm->pid);
+    summary().register_process(comm->pid);
 
-        comms_[comm->tid] = comm->comm;
-    }
+    comms_[comm->tid] = comm->comm;
 
     return false;
 }
@@ -310,7 +297,6 @@ void Writer::end()
     if (cpuid_ == -1)
     {
         adjust_timepoints(lo2s::time::now());
-
         // If we have never written any samples on this location, we also never
         // got to write the thread_begin event.  Make sure we do that now.
         if (first_event_)

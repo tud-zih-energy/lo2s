@@ -65,6 +65,7 @@ public:
     bool handle(const Reader::RecordCommType* comm);
 #ifdef USE_PERF_RECORD_SWITCH
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
+    bool handle(const Reader::RecordSwitchType* context_switch);
 #endif
 
     otf2::writer::local& otf2_writer()
@@ -85,6 +86,8 @@ private:
 
     void update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
     void leave_current_thread(pid_t tid, otf2::chrono::time_point tp);
+    void update_calling_context(pid_t pid, pid_t tid, otf2::chrono::time_point tp, bool switch_out);
+
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     pid_t pid_;
@@ -102,7 +105,6 @@ private:
     trace::ThreadCctxRefMap local_cctx_refs_;
     size_t next_cctx_ref_ = 0;
 
-    trace::ThreadCctxRefMap::value_type thread_monitoring_cctx_refs_;
     trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
