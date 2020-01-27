@@ -12,7 +12,7 @@ The traces can contain any of the following information:
    * Per-thread performance counter readings
    * Which thread was scheduled on which CPU at what time
  * From the system
-   * Metrics from tracepoints (e.g. the selected C-state or P-state) 
+   * Metrics from tracepoints (e.g. the selected C-state or P-state)
    * The node-level system tree (cpus (HW-threads), cores, packages)
    * CPU power measurements (x86_energy)
    * Microarchitecture specific metrics (x86_adapt, per package or per core)
@@ -26,36 +26,36 @@ With **process monitoring**, all information is grouped by each thread of a moni
 In the **system monitoring** mode, information is grouped by logical CPU - it shows you *which thread was running on a given CPU*.
 Metrics are also shown per CPU.
 
-In both modes, system-level metrics (e.g. tracepoints), are always grouped by their respective system hardware component.   
+In both modes, system-level metrics (e.g. tracepoints), are always grouped by their respective system hardware component.
 
 # Build Requirements
 
  * Linux<sup>1</sup>
- * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 2.1)
+ * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 2.2)
  * libbfd
  * libiberty
  * boost (>= 1.62)
  * CMake (>= 3.5)
- 
+
 <sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
- 
+
 # Optional Build Dependencies
 
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
- * libradare for disassembled instruction strings 
+ * libradare for disassembled instruction strings
 
 # Runtime Requirements
 
  * `kernel.perf_event_paranoid` should be less than or equal to `1` for process monitoring mode and less than or equal to `0` in system monitoring mode. A value of `-1` will give the most features for non-root performance recording, at the cost of some security. Modify as follows:
 
    `sudo sysctl kernel.perf_event_paranoid=1`
-   
+
  * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
  Grant permissions at your own discretion.
- 
+
    `sudo mount -t debugfs non /sys/kernel/debug`
-   
+
 
 # Installation
 
@@ -68,13 +68,13 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 # Usage
 
 To monitor a given application in process monitoring execute
- 
+
  * `lo2s -- ./a.out --app-args`
 
 To monitor all activity on a system run
 
  * `lo2s -a` (stop the recording with ctrl+c)
- 
+
 ## Usage with MPI
 
 You can record simple traces from MPI programs, but `lo2s` does not record MPI communication.
@@ -82,13 +82,13 @@ To create fully-featured MPI-aware traces, use [Score-P](https://score-p.org/).
 
  * `lo2s mpirun ./a.out` Create one trace of mpirun, useful if mpirun is used locally on one node.
  * `mpirun lo2s ./a.out` Creates a separate trace for each process.
- 
+
 See `man lo2s` or `lo2s --help` for a full listing of options and usage.
 
 # Quirks
 
 The `perf_event_open` kernel infrastructure changed significantly over time.
-Therefore, it is already hard to just keep track which kernel version introduced which new feature. 
+Therefore, it is already hard to just keep track which kernel version introduced which new feature.
 Combine that with the abundance of backports of particular features by different distributors, and you end with a mess of options.
 
 In the effort to keep compatible with older kernels, several quirks have been added to `lo2s`:
