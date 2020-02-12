@@ -53,6 +53,15 @@ extern "C"
 #define DMGL_ANSI (1 << 1)   /* Include const, volatile, etc */
 #endif
 
+// Don't mind me, just randomly change the public interface
+// https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=commitdiff;h=fd3619828e94a24a92cddec42cbc0ab33352eeb4
+#ifndef bfd_get_section_size
+#define bfd_get_section_size bfd_section_size
+#endif
+#ifndef bfd_get_section_name
+#define bfd_get_section_name(bfd, sec) bfd_section_name(sec)
+#endif
+
 #include <unistd.h>
 }
 

@@ -221,7 +221,7 @@ void Lib::read_sections()
         }
         catch (Range::Error& e)
         {
-            Log::warn() << "failed to add section " << bfd_get_section_name(handle_.get(), sym)
+            Log::warn() << "failed to add section " << bfd_get_section_name(handle_.get(), section)
                         << "due to " << e.what();
         }
     }
