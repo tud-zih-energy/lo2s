@@ -30,6 +30,8 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 
+#include <nitro/lang/string.hpp>
+
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -68,7 +70,7 @@ namespace monitor
                    });
     tmp.push_back(nullptr);
 
-    Log::debug() << "execve(" << command_and_args.at(0) << ")";
+    Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
     // Stop yourself so the parent tracer can do initialize the options
     raise(SIGSTOP);
@@ -81,8 +83,8 @@ namespace monitor
     {
         delete[] cp;
     }
-    Log::error() << "Could not execute command: " << command_and_args.at(0);
-    exit(errno);
+    Log::error() << "Could not execute the command: " << nitro::lang::join(command_and_args);
+    throw_errno();
 }
 
 void process_monitor_main(AbstractProcessMonitor& monitor)
