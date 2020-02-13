@@ -26,9 +26,9 @@
 
 #include <nitro/dl/dl.hpp>
 #include <nitro/env/get.hpp>
+#include <nitro/lang/string.hpp>
 
 #include <algorithm>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,22 +41,6 @@ namespace metric
 {
 namespace plugin
 {
-
-static std::vector<std::string> explode(const std::string& str, char delim = ',')
-{
-    std::stringstream s(str);
-
-    std::string line;
-
-    std::vector<std::string> v;
-
-    while (std::getline(s, line, delim))
-    {
-        v.push_back(line);
-    }
-
-    return v;
-}
 
 static auto upper_case(std::string input)
 {
@@ -81,8 +65,13 @@ static auto read_env_variables()
 {
     std::vector<std::pair<std::string, std::vector<std::string>>> v;
 
-    for (const auto& plugin : explode(read_env("METRIC_PLUGINS")))
+    for (const auto& plugin : nitro::lang::split(read_env("METRIC_PLUGINS"), ","))
     {
+        if (plugin.empty())
+        {
+            continue;
+        }
+
         auto events = read_env(std::string("METRIC_") + upper_case(plugin));
 
         if (events.empty())
@@ -90,7 +79,7 @@ static auto read_env_variables()
             events = read_env(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
         }
 
-        v.push_back({ plugin, explode(events) });
+        v.push_back({ plugin, nitro::lang::split(events, ",") });
     }
 
     return v;
@@ -120,13 +109,17 @@ Metrics::Metrics(trace::Trace& trace) : trace_(trace)
 
 Metrics::~Metrics()
 {
+    // We do the fetch in the dtor to ensure that trace_.record_to is valid
+
+    // first we stop recording, after that, we collect the data from each plugin
+    // and the destructor of the vector member will finalize each plugin
+
     if (running_)
     {
         stop();
     }
 
-    // We do the fetch in the dtor to ensure that trace_.record_to is valid
-    // NOTE: These are on purpose two seperate iterations
+    // In order to get interval semantic for plugin lifetimes, we have to iterate in reverse order
     for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
     {
         // in order to not create to large traces (in the sense of to much time before and after
@@ -147,9 +140,6 @@ void Metrics::start()
 
 void Metrics::stop()
 {
-    // first we stop recording, after that, we collect the data from each plugin
-    // and the destructor of the vector member will finalize each plugin
-
     // In order to get interval semantic for plugin lifetimes, we have to iterate in reverse order
     for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
     {
