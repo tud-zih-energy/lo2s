@@ -30,7 +30,7 @@ inline std::system_error make_system_error()
     return std::system_error(errno, std::system_category());
 }
 
-inline void throw_errno()
+[[noreturn]] inline void throw_errno()
 {
     throw make_system_error();
 }

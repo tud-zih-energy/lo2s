@@ -51,7 +51,7 @@ namespace lo2s
 namespace monitor
 {
 
-static void run_command(const std::vector<std::string>& command_and_args)
+[[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
