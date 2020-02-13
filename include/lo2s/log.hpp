@@ -29,7 +29,6 @@
 
 #include <nitro/log/attribute/message.hpp>
 #include <nitro/log/attribute/pid.hpp>
-#include <nitro/log/attribute/pthread_id.hpp>
 #include <nitro/log/attribute/severity.hpp>
 #include <nitro/log/attribute/timestamp.hpp>
 
@@ -45,9 +44,9 @@ namespace lo2s
 namespace logging
 {
 
-using Record = nitro::log::record<
-    nitro::log::message_attribute, nitro::log::timestamp_clock_attribute<lo2s::time::Clock>,
-    nitro::log::severity_attribute, nitro::log::pid_attribute, nitro::log::pthread_id_attribute>;
+using Record = nitro::log::record<nitro::log::message_attribute,
+                                  nitro::log::timestamp_clock_attribute<lo2s::time::Clock>,
+                                  nitro::log::severity_attribute, nitro::log::pid_attribute>;
 
 template <typename R>
 class Lo2sLogFormatter
@@ -58,7 +57,7 @@ public:
         std::stringstream s;
 
         s << "[" << r.timestamp().time_since_epoch().count() << "][pid: " << r.pid()
-          << "][tid: " << r.pthread_id() << "][" << r.severity() << "]: " << r.message() << '\n';
+          << "][tid: " << r.tid() << "][" << r.severity() << "]: " << r.message() << '\n';
 
         return s.str();
     }
