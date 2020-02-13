@@ -408,11 +408,11 @@ void parse_program_options(int argc, const char** argv)
             std::map<std::string, std::string> cpu_knobs = metric::x86_adapt::x86_adapt_cpu_knobs();
             std::cout << io::make_argument_list("x86_adapt CPU knobs", cpu_knobs.begin(),
                                                 cpu_knobs.end());
+            std::exit(EXIT_SUCCESS);
 #else
             std::cerr << "lo2s was built without support for x86_adapt; cannot read knobs.\n";
             std::exit(EXIT_FAILURE);
 #endif
-            std::exit(EXIT_SUCCESS);
         }
     }
 
@@ -455,7 +455,7 @@ void parse_program_options(int argc, const char** argv)
 
     if (config.sampling && !perf::EventProvider::has_event(config.sampling_event))
     {
-        lo2s::Log::error() << "requested sampling event \'" << config.sampling_event
+        lo2s::Log::fatal() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";
         std::exit(EXIT_FAILURE); // hmm...
     }
@@ -491,7 +491,7 @@ void parse_program_options(int argc, const char** argv)
     }
     catch (const lo2s::time::ClockProvider::InvalidClock& e)
     {
-        lo2s::Log::error() << "Invalid clock requested: " << e.what();
+        lo2s::Log::fatal() << "Invalid clock requested: " << e.what();
         std::exit(EXIT_FAILURE);
     }
 
@@ -521,13 +521,13 @@ void parse_program_options(int argc, const char** argv)
     }
     if (vm.count("metric-count") && !vm.count("metric-leader"))
     {
-        Log::error() << "--metric-count can only be used in conjunction with a --metric-leader";
+        Log::fatal() << "--metric-count can only be used in conjunction with a --metric-leader";
         std::exit(EXIT_FAILURE);
     }
 
     if (vm.count("metric-frequency") && vm.count("metric-leader"))
     {
-        Log::error() << "--metric-frequency can only be used with the default --metric-leader";
+        Log::fatal() << "--metric-frequency can only be used with the default --metric-leader";
         std::exit(EXIT_FAILURE);
     }
     // Use time interval based metric recording as a default
@@ -575,8 +575,8 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_X86_ADAPT
         config.x86_adapt_knobs = std::move(x86_adapt_knobs);
 #else
-        lo2s::Log::error()
-            << "lo2s was built without support for x86_adapt; cannot set x86_adapt CPU knobs.\n";
+        lo2s::Log::fatal() << "lo2s was built without support for x86_adapt; "
+                              "cannot request x86_adapt knobs.\n";
         std::exit(EXIT_FAILURE);
 #endif
     }
@@ -584,8 +584,8 @@ void parse_program_options(int argc, const char** argv)
 #ifndef HAVE_X86_ENERGY
     if (config.use_x86_energy)
     {
-        lo2s::Log::error()
-            << "lo2s was built without support for x86_energy; cannot use x86_energy readings.\n";
+        lo2s::Log::fatal() << "lo2s was built without support for x86_energy; "
+                              "cannot request x86_energy readings.\n";
         std::exit(EXIT_FAILURE);
     }
 #endif
