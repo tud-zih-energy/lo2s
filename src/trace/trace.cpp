@@ -305,7 +305,7 @@ std::map<std::string, otf2::definition::regions_group> Trace::regions_groups_sam
         {
             groups.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                            std::forward_as_tuple(groups.size() + group_ref(), intern(name),
-                                                 otf2::common::paradigm_type::compiler,
+                                                 otf2::common::paradigm_type::sampling,
                                                  otf2::common::group_flag_type::none));
         }
         groups.at(name).add_member(region);
