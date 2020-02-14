@@ -134,8 +134,26 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
+    // For unwind distance definiton, see:
+    // http://scorepci.pages.jsc.fz-juelich.de/otf2-pipelines/docs/otf2-2.2/html/group__records__definition.html#CallingContext
+
+    // We always have a fake CallingContext for the process, which is scheduled.
+    // So if we don't record the calling context tree, all nodes in the calling context tree are:
+    // The fake node for the process and a second node for the current context of the sample.
+    // Therefore, we always have an unwind distance of 2. (Technically, it could also be 1, but we
+    // lack the information to distinguish those cases. Hence, we stick with 2.)
+    //
+    // However, in the case that we actually record the complete call stack, we get the number of
+    // nodes in the calling context tree from the number of elements in the call stack recorded from
+    // perf. Tough, we still have the fake calling context for the process, which adds 1 to that
+    // number. But we also remove the lowest entry from the call stack, because that is ALWAYS in
+    // the kernel, which can't be resolved and thus doesn't provide any useful information.
+    //
+    // Having these things in mind, look at this line and tell me, why it is still wrong:
+    auto unwind_distance = has_cct_ ? sample->nr /* + 1 - 1 */ : 2;
+
     // we write the ugly raw ref-only events here due to performance reasons
-    otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), 2,
+    otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), unwind_distance,
                                               trace_.interrupt_generator().ref());
 
     return false;
