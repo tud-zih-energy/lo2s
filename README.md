@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/tud-zih-energy/lo2s.svg?branch=master)](https://travis-ci.org/tud-zih-energy/lo2s)
 
-# `lo2s` - Lightweight Node-level Performance Monitoring
+# `lo2s` - Lightweight Node-Level Performance Monitoring
 
 `lo2s` creates parallel OTF2 traces with a focus on both application and system view.
 The traces can contain any of the following information:
