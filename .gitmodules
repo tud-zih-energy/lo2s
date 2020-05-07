@@ -1,7 +1,6 @@
 [submodule "lib/otf2xx"]
 	path = lib/otf2xx
-	url = https://github.com/tud-zih-energy/otf2xx.git
-	branch = lo2s
+    url = https://github.com/tud-zih-energy/otf2xx.git
 [submodule "lib/nitro"]
 	path = lib/nitro
 	url = https://github.com/tud-zih-energy/nitro.git

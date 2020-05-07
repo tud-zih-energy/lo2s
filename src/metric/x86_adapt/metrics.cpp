@@ -12,8 +12,8 @@ namespace x86_adapt
 
 Metrics::Metrics(trace::Trace& trace, const std::vector<std::string>& item_names)
 {
-    auto mc = trace.metric_class();
-    auto node_mc = trace.metric_class();
+    auto& mc = trace.metric_class();
+    auto& node_mc = trace.metric_class();
 
     std::vector<::x86_adapt::configuration_item> cpu_configuration_items;
     std::vector<::x86_adapt::configuration_item> node_configuration_items;

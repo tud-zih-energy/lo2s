@@ -79,7 +79,6 @@ Writer::~Writer()
                                                             monitor_.get_process_infos());
         otf2_writer_ << mapping;
     }
-    trace_.adjust_stop_time(last_time_point_);
 }
 
 trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)

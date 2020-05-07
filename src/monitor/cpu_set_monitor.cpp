@@ -48,8 +48,6 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        trace_.add_cpu(cpu.id);
-
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
 
         monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
