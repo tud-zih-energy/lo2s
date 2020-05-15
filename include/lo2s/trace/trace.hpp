@@ -166,7 +166,7 @@ public:
     }
     otf2::definition::comm& process_comm(pid_t pid)
     {
-        return registry_.find<otf2::definition::comm>(ByProcess(pid));
+        return registry_.get<otf2::definition::comm>(ByProcess(pid));
     }
 
 private:
@@ -196,15 +196,15 @@ private:
     static constexpr pid_t METRIC_PID = 0;
 
     std::string trace_name_;
-    otf2::writer::Archive<otf2::lookup_registry<MyHolder>> archive_;
-    otf2::lookup_registry<MyHolder>& registry_;
+    otf2::writer::Archive<otf2::lookup_registry<Holder>> archive_;
+    otf2::lookup_registry<Holder>& registry_;
 
     std::recursive_mutex mutex_;
 
     otf2::chrono::time_point starting_time_;
     otf2::chrono::time_point stopping_time_;
 
-    otf2::definition::interrupt_generator interrupt_generator_;
+    otf2::definition::interrupt_generator& interrupt_generator_;
 
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 

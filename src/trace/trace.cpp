@@ -86,10 +86,9 @@ std::string get_trace_name(std::string prefix = "")
 Trace::Trace()
 : trace_name_(get_trace_name(config().trace_path)), archive_(trace_name_, "traces"),
   registry_(archive_.registry()),
-  interrupt_generator_(0u, intern("perf HW_INSTRUCTIONS"),
-                       otf2::common::interrupt_generator_mode_type::count,
-                       otf2::common::base_type::decimal, 0, config().sampling_period),
-
+  interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
+      intern("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
+      otf2::common::base_type::decimal, 0, config().sampling_period)),
   comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
       intern("All pthread locations"), otf2::common::paradigm_type::pthread,
       otf2::common::group_flag_type::none)),
@@ -103,7 +102,6 @@ Trace::Trace()
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
       intern(nitro::env::hostname()), intern("machine")))
 {
-
     cpuid_metric_class_.add_member(metric_member("CPU", "CPU executing the task",
                                                  otf2::common::metric_mode::absolute_point,
                                                  otf2::common::type::int64, "cpuid"));
@@ -174,15 +172,15 @@ Trace::Trace()
     }
     for (auto& cpu : sys.cpus())
     {
+        const auto& name = intern((boost::format("cpu %d") % cpu.id).str());
+
         Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
         const auto& res = registry_.create<otf2::definition::system_tree_node>(
-            ByCpu(cpu.id), intern(std::to_string(cpu.id)), intern("cpu"),
+            ByCpu(cpu.id), name, intern("cpu"),
             registry_.get<otf2::definition::system_tree_node>(ByCore(cpu.core_id, cpu.package_id)));
 
         registry_.create<otf2::definition::system_tree_node_domain>(
             res, otf2::common::system_tree_node_domain::pu);
-
-        const auto& name = intern((boost::format("cpu %d") % cpu.id).str());
 
         registry_.create<otf2::definition::location_group>(
             ByCpu(cpu.id), name, otf2::definition::location_group::location_group_type::process,
@@ -264,7 +262,7 @@ void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
         const auto& parent_node = (parent == NO_PARENT_PROCESS_PID) ? system_tree_root_node_ :
                                                                       intern_process_node(parent);
 
-        const auto& ret = registry_.emplace<otf2::definition::system_tree_node>(
+        const auto& ret = registry_.create<otf2::definition::system_tree_node>(
             ByProcess(pid), iname, intern("process"), parent_node);
 
         registry_.emplace<otf2::definition::location_group>(
@@ -281,6 +279,7 @@ void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
 
 void Trace::update_process_name(pid_t pid, const std::string& name)
 {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
     const auto& iname = intern(name);
     try
     {
@@ -288,6 +287,15 @@ void Trace::update_process_name(pid_t pid, const std::string& name)
         registry_.get<otf2::definition::location_group>(ByProcess(pid)).name(iname);
         registry_.get<otf2::definition::comm_group>(ByProcess(pid)).name(iname);
         registry_.get<otf2::definition::comm>(ByProcess(pid)).name(iname);
+
+        auto& region = registry_.get<otf2::definition::region>(ByThread(pid));
+        region.name(iname);
+
+        registry_.get<otf2::definition::regions_group>(ByString(name)).add_member(region);
+        registry_.get<otf2::definition::regions_group>(ByString(process_names_.at(pid)))
+            .remove_member(region);
+
+        process_names_[pid] = name;
     }
     catch (const std::out_of_range&)
     {

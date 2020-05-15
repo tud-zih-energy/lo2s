@@ -120,66 +120,66 @@ struct ByLineInfoTag
 using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
 
 template <typename Definition>
-struct MyHolder
+struct Holder
 {
     using type = typename otf2::get_default_holder<Definition>::type;
 };
 
 template <>
-struct MyHolder<otf2::definition::system_tree_node>
+struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
                                                 ByProcess, ByCpu, ByPackage>;
 };
 template <>
-struct MyHolder<otf2::definition::regions_group>
+struct Holder<otf2::definition::regions_group>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString>;
 };
 template <>
-struct MyHolder<otf2::definition::metric_class>
+struct Holder<otf2::definition::metric_class>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString>;
 };
 template <>
-struct MyHolder<otf2::definition::string>
+struct Holder<otf2::definition::string>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::string, ByString>;
 };
 template <>
-struct MyHolder<otf2::definition::location_group>
+struct Holder<otf2::definition::location_group>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByProcess, ByCpu>;
 };
 template <>
-struct MyHolder<otf2::definition::location>
+struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByCpuSwitchWriter,
                                                 ByCpuMetricWriter, ByCpuSampleWriter,
                                                 ByThreadMetricWriter, ByThreadSampleWriter>;
 };
 template <>
-struct MyHolder<otf2::definition::region>
+struct Holder<otf2::definition::region>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo>;
 };
 template <>
-struct MyHolder<otf2::definition::calling_context>
+struct Holder<otf2::definition::calling_context>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread>;
 };
 template <>
-struct MyHolder<otf2::definition::source_code_location>
+struct Holder<otf2::definition::source_code_location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::source_code_location, ByLineInfo>;
 };
 template <>
-struct MyHolder<otf2::definition::comm>
+struct Holder<otf2::definition::comm>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess>;
 };
 template <>
-struct MyHolder<otf2::definition::comm_group>
+struct Holder<otf2::definition::comm_group>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByProcess>;
 };
