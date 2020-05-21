@@ -250,6 +250,7 @@ const otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
 
 void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
 {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     if (registry_.has<otf2::definition::system_tree_node>(ByProcess(pid)))
     {
@@ -530,6 +531,7 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
                                                               size_t num_ip_refs,
                                                               std::map<pid_t, ProcessInfo>& infos)
 {
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
 #ifndef NDEBUG
     std::vector<uint32_t> mappings(num_ip_refs, -1u);
 #else
