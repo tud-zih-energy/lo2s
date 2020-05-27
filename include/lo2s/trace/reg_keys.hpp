@@ -1,0 +1,187 @@
+
+/*
+ * This file is part of the lo2s software.
+ * Linux OTF2 sampling
+ *
+ * Copyright (c) 2016,
+ *    Technische Universitaet Dresden, Germany
+ *
+ * lo2s is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * lo2s is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#pragma once
+#include <lo2s/address.hpp>
+#include <lo2s/line_info.hpp>
+
+#include <otf2xx/otf2.hpp>
+
+#include <string>
+
+extern "C"
+{
+#include <sys/types.h>
+}
+namespace lo2s
+{
+namespace trace
+{
+
+template <typename KeyType, typename tag>
+struct SimpleKeyType
+{
+    using key_type = KeyType;
+    key_type key;
+
+    explicit SimpleKeyType(key_type key) : key(key)
+    {
+    }
+};
+
+struct ByCore
+{
+    using key_type = typename std::pair<int, int>;
+    key_type key;
+
+    ByCore(int core, int package) : key(std::make_pair(core, package))
+    {
+    }
+};
+
+// Can i haz strong typedef
+struct ByPackageTag
+{
+};
+using ByPackage = SimpleKeyType<int, ByPackageTag>;
+
+struct ByCpuTag
+{
+};
+using ByCpu = SimpleKeyType<int, ByCpuTag>;
+
+struct ByThreadTag
+{
+};
+using ByThread = SimpleKeyType<pid_t, ByThreadTag>;
+
+struct ByProcessTag
+{
+};
+using ByProcess = SimpleKeyType<pid_t, ByProcessTag>;
+
+struct ByCpuSwitchWriterTag
+{
+};
+using ByCpuSwitchWriter = SimpleKeyType<int, ByCpuSwitchWriterTag>;
+
+struct ByCpuMetricWriterTag
+{
+};
+using ByCpuMetricWriter = SimpleKeyType<int, ByCpuMetricWriterTag>;
+
+struct ByCpuSampleWriterTag
+{
+};
+using ByCpuSampleWriter = SimpleKeyType<int, ByCpuSampleWriterTag>;
+
+struct ByThreadMetricWriterTag
+{
+};
+using ByThreadMetricWriter = SimpleKeyType<int, ByThreadMetricWriterTag>;
+
+struct ByThreadSampleWriterTag
+{
+};
+using ByThreadSampleWriter = SimpleKeyType<int, ByThreadSampleWriterTag>;
+
+struct ByStringTag
+{
+};
+using ByString = SimpleKeyType<std::string, ByStringTag>;
+
+struct ByAddressTag
+{
+};
+using ByAddress = SimpleKeyType<Address, ByAddressTag>;
+
+struct ByLineInfoTag
+{
+};
+using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
+
+template <typename Definition>
+struct Holder
+{
+    using type = typename otf2::get_default_holder<Definition>::type;
+};
+
+template <>
+struct Holder<otf2::definition::system_tree_node>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
+                                                ByProcess, ByCpu, ByPackage>;
+};
+template <>
+struct Holder<otf2::definition::regions_group>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString>;
+};
+template <>
+struct Holder<otf2::definition::metric_class>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString>;
+};
+template <>
+struct Holder<otf2::definition::string>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::string, ByString>;
+};
+template <>
+struct Holder<otf2::definition::location_group>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByProcess, ByCpu>;
+};
+template <>
+struct Holder<otf2::definition::location>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::location, ByCpuSwitchWriter,
+                                                ByCpuMetricWriter, ByCpuSampleWriter,
+                                                ByThreadMetricWriter, ByThreadSampleWriter>;
+};
+template <>
+struct Holder<otf2::definition::region>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo>;
+};
+template <>
+struct Holder<otf2::definition::calling_context>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread>;
+};
+template <>
+struct Holder<otf2::definition::source_code_location>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::source_code_location, ByLineInfo>;
+};
+template <>
+struct Holder<otf2::definition::comm>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess>;
+};
+template <>
+struct Holder<otf2::definition::comm_group>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByProcess>;
+};
+} // namespace trace
+} // namespace lo2s
