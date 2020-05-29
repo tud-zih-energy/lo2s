@@ -54,7 +54,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
  * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
  Grant permissions at your own discretion.
 
-   `sudo mount -t debugfs non /sys/kernel/debug`
+   `sudo mount -t debugfs none /sys/kernel/debug`
 
 
 # Installation
