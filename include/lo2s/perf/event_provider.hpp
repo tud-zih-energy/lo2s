@@ -86,8 +86,8 @@ public:
 
     static bool has_event(const std::string& name);
 
-    static std::vector<std::string> get_predefined_event_names();
-    static std::vector<std::string> get_pmu_event_names();
+    static std::vector<CounterDescription> get_predefined_events();
+    static std::vector<CounterDescription> get_pmu_events();
 
     static const CounterDescription& get_default_metric_leader_event();
 

@@ -54,7 +54,7 @@ namespace
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
-static const lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
+static lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
     PERF_EVENT_HW("instructions", INSTRUCTIONS),
     PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
@@ -73,7 +73,7 @@ static const lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
 #endif
 };
 
-static const lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
+static lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
     PERF_EVENT_SW("task-clock", TASK_CLOCK),
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
@@ -100,7 +100,7 @@ struct string_to_id
     T id;
 };
 
-static constexpr string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
+static string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "L1-dcache", PERF_COUNT_HW_CACHE_L1D }, { "L1-icache", PERF_COUNT_HW_CACHE_L1I },
     { "LLC", PERF_COUNT_HW_CACHE_LL },        { "dTLB", PERF_COUNT_HW_CACHE_DTLB },
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
@@ -115,7 +115,7 @@ struct cache_op_and_result
     perf_hw_cache_op_result_id result_id;
 };
 
-static constexpr string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
+static string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
     { "loads", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
     { "stores", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
     { "prefetches", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
@@ -152,7 +152,9 @@ namespace lo2s
 namespace perf
 {
 
-static bool event_is_openable(const CounterDescription& ev)
+const CounterDescription sysfs_read_event(const std::string& ev_desc);
+
+static bool event_is_openable(CounterDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -162,8 +164,9 @@ static bool event_is_openable(const CounterDescription& ev)
     attr.config1 = ev.config1;
     attr.exclude_kernel = 1;
 
-    int fd = perf_event_open(&attr, 0, -1, -1, 0);
-    if (fd == -1)
+    int proc_fd = perf_event_open(&attr, 0, -1, -1, 0);
+    int sys_fd = perf_event_open(&attr, -1, 1, -1, 0);
+    if (sys_fd == -1 && proc_fd == -1)
     {
         switch (errno)
         {
@@ -177,8 +180,22 @@ static bool event_is_openable(const CounterDescription& ev)
         }
         return false;
     }
+    else if (sys_fd == -1)
+    {
+        close(proc_fd);
+        ev.availability = Availability::PROCESS_MODE;
+    }
+    else if (proc_fd == -1)
+    {
+        close(sys_fd);
+        ev.availability = Availability::SYSTEM_MODE;
+    }
+    else
+    {
+        close(sys_fd);
+        close(proc_fd);
+    }
 
-    close(fd);
     return true;
 }
 
@@ -187,22 +204,22 @@ static void populate_event_map(EventProvider::EventMap& map)
     Log::info() << "checking available events...";
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
                 array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
-    for (const auto& ev : HW_EVENT_TABLE)
+    for (auto& ev : HW_EVENT_TABLE)
     {
         map.emplace(ev.name,
                     event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
-    for (const auto& ev : SW_EVENT_TABLE)
+    for (auto& ev : SW_EVENT_TABLE)
     {
         map.emplace(ev.name,
                     event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
     }
 
     std::stringstream name_fmt;
-    for (const auto& cache : CACHE_NAME_TABLE)
+    for (auto& cache : CACHE_NAME_TABLE)
     {
-        for (const auto& operation : CACHE_OPERATION_TABLE)
+        for (auto& operation : CACHE_OPERATION_TABLE)
         {
             name_fmt.str(std::string());
             name_fmt << cache.name << '-' << operation.name;
@@ -218,9 +235,9 @@ static void populate_event_map(EventProvider::EventMap& map)
     }
 }
 
-std::vector<std::string> EventProvider::get_pmu_event_names()
+std::vector<CounterDescription> EventProvider::get_pmu_events()
 {
-    std::vector<std::string> names;
+    std::vector<CounterDescription> events;
 
     namespace fs = boost::filesystem;
 
@@ -255,11 +272,18 @@ std::vector<std::string> EventProvider::get_pmu_event_names()
             // use fs::path::string, otherwise the paths are formatted quoted
             event_name << pmu_path.filename().string() << '/' << event_path.filename().string()
                        << '/';
-            names.emplace_back(event_name.str());
+            try
+            {
+                events.emplace_back(sysfs_read_event(event_name.str()));
+            }
+            catch (const EventProvider::InvalidEvent& e)
+            {
+                Log::debug() << "Can not open event " << event_name.str() << ":" << e.what();
+            }
         }
     }
 
-    return names;
+    return events;
 }
 
 const CounterDescription& EventProvider::get_default_metric_leader_event()
@@ -503,8 +527,11 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
 
-    // Do not check whether the event_is_openable because we don't know whether we are in
-    // system or process mode
+    if (!event_is_openable(event))
+    {
+        throw EventProvider::InvalidEvent(
+            "Event can not be opened in process- or system-monitoring-mode");
+    }
     return event;
 }
 
@@ -583,23 +610,23 @@ bool EventProvider::has_event(const std::string& name)
     }
 }
 
-std::vector<std::string> EventProvider::get_predefined_event_names()
+std::vector<CounterDescription> EventProvider::get_predefined_events()
 {
 
     const auto& ev_map = instance().event_map_;
 
-    std::vector<EventMap::key_type> event_names;
-    event_names.reserve(ev_map.size());
+    std::vector<CounterDescription> events;
+    events.reserve(ev_map.size());
 
     for (const auto& event : ev_map)
     {
         if (event.second.is_valid())
         {
-            event_names.push_back(event.first);
+            events.push_back(event.second.description);
         }
     }
 
-    return event_names;
+    return events;
 }
 } // namespace perf
 } // namespace lo2s
