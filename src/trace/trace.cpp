@@ -603,7 +603,7 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
         auto& thread_region = registry_.create<otf2::definition::region>(
             ByThread(tid), iname, iname, iname, otf2::common::role_type::function,
             otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-        auto& regions_group = registry_.create<otf2::definition::regions_group>(
+        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
             ByString(name), intern(name), otf2::common::paradigm_type::user,
             otf2::common::group_flag_type::none);
         regions_group.add_member(thread_region);
