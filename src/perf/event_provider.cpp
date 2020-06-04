@@ -192,6 +192,7 @@ static bool event_is_openable(CounterDescription& ev)
     }
     else
     {
+        ev.availability = Availability::UNIVERSAL;
         close(sys_fd);
         close(proc_fd);
     }

@@ -34,6 +34,7 @@ namespace perf
 {
 enum class Availability
 {
+    UNAVAILABLE,
     SYSTEM_MODE,
     PROCESS_MODE,
     UNIVERSAL
@@ -44,7 +45,7 @@ struct CounterDescription
     CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
                        std::uint64_t config1 = 0)
     : name(name), type(type), config(config), config1(config1),
-      availability(Availability::UNIVERSAL)
+      availability(Availability::UNAVAILABLE)
     {
     }
 

@@ -92,7 +92,11 @@ static inline void print_availability(std::ostream& os, const std::string& descr
     std::vector<std::string> event_names;
     for (auto& ev : events)
     {
-        if (ev.availability == perf::Availability::PROCESS_MODE)
+        if (ev.availability == perf::Availability::UNAVAILABLE)
+        {
+            continue;
+        }
+        else if (ev.availability == perf::Availability::PROCESS_MODE)
         {
             event_names.push_back(ev.name + " *");
         }
