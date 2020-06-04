@@ -22,7 +22,7 @@
 #include <lo2s/bfd_resolve.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <filesystem>
+#include <lo2s/filesystem.hpp>
 #include <system_error>
 
 #include <cstdlib>

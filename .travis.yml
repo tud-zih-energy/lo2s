@@ -6,6 +6,21 @@ dist: bionic
 matrix:
   include:
     - os: linux
+      env: CXX="g++-7" CC="gcc-7"
+      compiler: gcc
+      addons:
+        apt:
+          packages:
+            - gcc-7
+            - g++-7
+            - cmake
+            - cmake-data
+            - binutils-dev
+            - zlib1g-dev
+            - libc6-dev
+            - libboost-program-options-dev
+            - linux-libc-dev
+    - os: linux
       env: CXX="g++-8" CC="gcc-8"
       compiler: gcc
       addons:
@@ -20,7 +35,6 @@ matrix:
             - libc6-dev
             - libboost-program-options-dev
             - linux-libc-dev
-          sources: *sources
     - os: linux
       env: CXX="clang++-6.0" CC="clang-6.0"
       compiler: clang
@@ -37,12 +51,12 @@ matrix:
             - libboost-program-options-dev
             - linux-libc-dev
     - os: linux
-      env: CXX="clang++-8.0" CC="clang-8.0"
+      env: CXX="clang++-8" CC="clang-8"
       compiler: clang
       addons:
         apt:
           packages:
-            - clang-8.0
+            - clang-8
             - g++-8
             - cmake
             - cmake-data

@@ -26,7 +26,7 @@
 
 #include <cstddef>
 
-#include <filesystem>
+#include <lo2s/filesystem.hpp>
 
 namespace lo2s
 {

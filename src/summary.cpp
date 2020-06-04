@@ -2,7 +2,7 @@
 #include <lo2s/summary.hpp>
 #include <lo2s/util.hpp>
 
-#include <filesystem>
+#include <lo2s/filesystem.hpp>
 
 #include <array>
 #include <fstream>

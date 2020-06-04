@@ -26,10 +26,10 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
-#include <filesystem>
 #include <fstream>
 #include <ios>
 #include <limits>
+#include <lo2s/filesystem.hpp>
 #include <regex>
 #include <sstream>
 

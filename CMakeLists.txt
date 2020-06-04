@@ -108,6 +108,7 @@ set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
+find_package(StdFilesystem REQUIRED)
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
@@ -186,7 +187,7 @@ target_link_libraries(lo2s
         Boost::program_options
         Binutils::Binutils
         fmt::fmt
-        stdc++fs
+        std::filesystem
 )
 
 # old glibc versions require -lrt for clock_gettime()
