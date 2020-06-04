@@ -2,7 +2,7 @@
 #include <lo2s/summary.hpp>
 #include <lo2s/util.hpp>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <array>
 #include <fstream>
@@ -95,16 +95,17 @@ void Summary::show()
 
     std::chrono::duration<double> cpu_time = get_cpu_time();
 
-    boost::filesystem::recursive_directory_iterator it(trace_dir_), end;
+    std::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
-    trace_size = std::accumulate(it, end, static_cast<size_t>(0),
-                                 [](std::size_t sum, boost::filesystem::directory_entry& entry) {
-                                     if (!boost::filesystem::is_directory(entry))
-                                     {
-                                         return sum + boost::filesystem::file_size(entry);
-                                     }
-                                     return sum;
-                                 });
+    trace_size =
+        std::accumulate(it, end, static_cast<size_t>(0),
+                        [](std::size_t sum, const std::filesystem::directory_entry& entry) {
+                            if (!std::filesystem::is_directory(entry))
+                            {
+                                return sum + std::filesystem::file_size(entry);
+                            }
+                            return sum;
+                        });
 
     if (config().monitor_type == lo2s::MonitorType::PROCESS)
     {

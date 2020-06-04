@@ -26,7 +26,7 @@
 
 #include <cstddef>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 namespace lo2s
 {
@@ -141,7 +141,7 @@ private:
     std::vector<EventField> common_fields_;
     std::vector<EventField> fields_;
 
-    const static boost::filesystem::path base_path_;
+    const static std::filesystem::path base_path_;
 };
 } // namespace tracepoint
 } // namespace perf

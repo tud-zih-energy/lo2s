@@ -22,7 +22,8 @@
 #include <lo2s/bfd_resolve.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+#include <system_error>
 
 #include <cstdlib>
 
@@ -31,22 +32,22 @@ namespace lo2s
 namespace bfdr
 {
 
-static boost::filesystem::path check_path(const std::string& name)
+static std::filesystem::path check_path(const std::string& name)
 {
-    boost::system::error_code ec;
-    auto path = boost::filesystem::canonical(name, ec);
+    std::error_code ec;
+    auto path = std::filesystem::canonical(name, ec);
     if (ec)
     {
         throw InvalidFileError("could not resolve to canonical path", name);
     }
 
-    auto status = boost::filesystem::status(path, ec);
+    auto status = std::filesystem::status(path, ec);
     if (ec)
     {
         throw InvalidFileError("could not read status", name);
     }
 
-    if (!boost::filesystem::is_regular_file(status))
+    if (!std::filesystem::is_regular_file(status))
     {
         throw InvalidFileError("not a regular file", name);
     }

@@ -32,8 +32,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <boost/filesystem.hpp>
-
 using std::hex;
 
 #include <cassert>

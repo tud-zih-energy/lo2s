@@ -26,11 +26,8 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
-#define BOOST_FILESYSTEM_NO_DEPRECATED
-
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/range/iterator_range.hpp>
+#include <filesystem>
+#include <fstream>
 #include <ios>
 #include <limits>
 #include <regex>
@@ -222,11 +219,11 @@ std::vector<std::string> EventProvider::get_pmu_event_names()
 {
     std::vector<std::string> names;
 
-    namespace fs = boost::filesystem;
+    namespace fs = std::filesystem;
 
     const fs::path pmu_devices("/sys/bus/event_source/devices");
 
-    for (const auto& pmu : boost::make_iterator_range(fs::directory_iterator{ pmu_devices }, {}))
+    for (const auto& pmu : fs::directory_iterator(pmu_devices))
     {
         const auto pmu_path = pmu.path();
 
@@ -238,8 +235,7 @@ std::vector<std::string> EventProvider::get_pmu_event_names()
             continue;
         }
 
-        for (const auto& event :
-             boost::make_iterator_range(fs::directory_iterator{ event_dir }, {}))
+        for (const auto& event : fs::directory_iterator(event_dir))
         {
             std::stringstream event_name;
 
@@ -389,7 +385,7 @@ const CounterDescription raw_read_event(const std::string& ev_desc)
 
 const CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
-    namespace fs = boost::filesystem;
+    namespace fs = std::filesystem;
 
     // Parse event description //
 
@@ -433,7 +429,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
 
     // read PMU type id
     std::underlying_type<perf_type_id>::type type;
-    if ((fs::ifstream(pmu_path / "type") >> type).fail())
+    if ((std::ifstream(pmu_path / "type") >> type).fail())
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
@@ -444,7 +440,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
 
     // read event configuration
     std::string ev_cfg;
-    if ((fs::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
+    if ((std::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown event '"s + event_name + "' for PMU '"s +
@@ -483,7 +479,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
             (kv_match[EC_VALUE].length() != 0) ? kv_match[EC_VALUE] : default_value;
 
         std::string format;
-        if (!(fs::ifstream(pmu_path / "format" / term) >> format))
+        if (!(std::ifstream(pmu_path / "format" / term) >> format))
         {
             throw EventProvider::InvalidEvent("cannot read event format");
         }

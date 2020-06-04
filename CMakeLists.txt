@@ -17,6 +17,9 @@ include(cmake/CheckStructHasBitField.cmake)
 include(cmake/GitSubmoduleUpdate.cmake)
 git_submodule_update()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Set of variables to enforce static or dynamic linking
 set(lo2s_USE_STATIC_LIBS "MOSTLY" CACHE STRING "Link lo2s statically.")
 set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
@@ -98,7 +101,7 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
+find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(Binutils REQUIRED)
 find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
@@ -181,7 +184,6 @@ target_link_libraries(lo2s
         Nitro::dl
         Threads::Threads
         Boost::program_options
-        Boost::filesystem
         Binutils::Binutils
         fmt::fmt
 )
