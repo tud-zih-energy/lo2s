@@ -5,6 +5,8 @@
 
 #include <lo2s/trace/trace.hpp>
 
+#include <fmt/core.h>
+
 namespace lo2s
 {
 namespace perf
@@ -15,7 +17,7 @@ namespace tracepoint
 Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
                const otf2::definition::metric_class& metric_class)
 : Reader(cpu, event.id()), event_(event),
-  writer_(trace_.named_metric_writer((boost::format("tracepoint metrics for CPU %d") % cpu).str())),
+  writer_(trace_.named_metric_writer(fmt::format("tracepoint metrics for CPU {}", cpu))),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
   time_converter_(perf::time::Converter::instance()),

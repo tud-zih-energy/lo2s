@@ -25,7 +25,8 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/system/error_code.hpp>
+
+#include <fmt/core.h>
 
 #include <mutex>
 #include <regex>
@@ -45,7 +46,7 @@ MemoryMap::MemoryMap(pid_t pid, bool read_initial)
         return;
     }
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
-    auto filename = str(fmt("/proc/%d/task/%d/maps") % pid % pid);
+    auto filename = fmt::format("/proc/{}/task/{}/maps", pid, pid);
 
     std::ifstream mapstream(filename);
     if (mapstream.fail())

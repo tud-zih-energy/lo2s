@@ -33,9 +33,7 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
-using fmt = boost::format;
-using boost::str;
+
 using std::hex;
 
 #include <cassert>

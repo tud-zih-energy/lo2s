@@ -37,9 +37,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/format.hpp>
 
-using fmt = boost::format;
 namespace fs = boost::filesystem;
 using namespace std::literals::string_literals;
 

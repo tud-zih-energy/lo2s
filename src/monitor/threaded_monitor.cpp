@@ -25,6 +25,8 @@
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
+#include <fmt/core.h>
+
 namespace lo2s
 {
 namespace monitor
@@ -52,7 +54,7 @@ std::string ThreadedMonitor::name() const
     {
         return group();
     }
-    return (boost::format("%s (%s)") % group() % name_).str();
+    return fmt::format("{} ({})", group(), name_);
 }
 
 void ThreadedMonitor::thread_main()

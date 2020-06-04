@@ -39,7 +39,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
+
+#include <fmt/core.h>
 
 #include <map>
 #include <mutex>
@@ -172,7 +173,7 @@ Trace::Trace()
     }
     for (auto& cpu : sys.cpus())
     {
-        const auto& name = intern((boost::format("cpu %d") % cpu.id).str());
+        const auto& name = intern(fmt::format("cpu {}", cpu.id));
 
         Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
         const auto& res = registry_.create<otf2::definition::system_tree_node>(
@@ -309,7 +310,7 @@ void Trace::update_thread_name(pid_t tid, const std::string& name)
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    auto& iname = intern((boost::format("%s (tid %d)") % name % tid).str());
+    auto& iname = intern(fmt::format("{} (tid {})", name, tid));
     if (registry_.has<otf2::definition::location>(ByThreadSampleWriter(tid)))
     {
         registry_.get<otf2::definition::location>(ByThreadSampleWriter(tid)).name(iname);
@@ -340,7 +341,7 @@ otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    auto name = (boost::format("thread %d") % tid).str();
+    auto name = (fmt::format("thread {}", tid));
 
     // As the tid is unique in this context, create only one writer/location per tid
     const auto& location = registry_.emplace<otf2::definition::location>(
@@ -362,7 +363,7 @@ otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
     // thus we make sure to return the appropriate location here.
     return cpu_switch_writer(cpuid);
 #else
-    auto name = (boost::format("sample cpu %d") % cpuid).str();
+    auto name = fmt::format("sample cpu {}", cpuid);
 
     // As the cpuid is unique in this context, create only one writer/location per cpuid
     const auto& location = registry_.emplace<otf2::definition::location>(
@@ -379,7 +380,7 @@ otf2::writer::local& Trace::cpu_switch_writer(int cpuid)
 {
     // As the cpuid is unique in this context, create only one writer/location per
     // cpuid
-    auto name = intern((boost::format("cpu %d") % cpuid).str());
+    auto name = intern(fmt::format("cpu {}", cpuid));
 
     const auto& location = registry_.emplace<otf2::definition::location>(
         ByCpuSwitchWriter(cpuid), name,
@@ -392,7 +393,7 @@ otf2::writer::local& Trace::cpu_switch_writer(int cpuid)
 
 otf2::writer::local& Trace::thread_metric_writer(pid_t pid, pid_t tid)
 {
-    auto name = (boost::format("metrics for thread %d") % tid).str();
+    auto name = fmt::format("metrics for thread {}", tid);
 
     // As the tid is unique in this context, create only one
     // writer/location per tid
@@ -406,7 +407,7 @@ otf2::writer::local& Trace::thread_metric_writer(pid_t pid, pid_t tid)
 
 otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
 {
-    auto name = intern((boost::format("metrics for cpu %d") % cpuid).str());
+    auto name = intern(fmt::format("metrics for cpu {}", cpuid));
 
     const auto& location = registry_.emplace<otf2::definition::location>(
         ByCpuMetricWriter(cpuid), name,
@@ -595,7 +596,7 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
     process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                            std::forward_as_tuple(name));
 
-    auto& iname = intern((boost::format("%s (%d)") % name % tid).str());
+    auto& iname = intern(fmt::format("{} ({})", name, tid));
 
     if (!registry_.has<otf2::definition::region>(ByThread(tid)))
     {
@@ -632,7 +633,7 @@ void Trace::add_monitoring_thread(pid_t tid, const std::string& name, const std:
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     Log::debug() << "Adding monitoring thread " << tid << " (" << name << "): group " << group;
-    auto& iname = intern((boost::format("lo2s::%s") % name).str());
+    auto& iname = intern(fmt::format("lo2s::{}", name));
 
     // TODO, should be paradigm_type::measurement_system, but that's a bug in Vampir
     if (!registry_.has<otf2::definition::region>(ByThread(tid)))
