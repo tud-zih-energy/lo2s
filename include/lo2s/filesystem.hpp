@@ -20,11 +20,10 @@
  */
 
 #pragma once
-#include <version>
 
-#ifdef __cpp_lib_filesystem
+#if __has_include(<filesystem>)
 #include <filesystem>
-#elif __cpp_lib_experimental_filesystem
+#elif __has_include(<experimental/filesystem>)
 #include <experimental/filesystem>
 namespace std
 {
