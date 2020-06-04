@@ -3,8 +3,9 @@
 #include <lo2s/util.hpp>
 
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
 #include <boost/range/iterator_range.hpp>
+
+#include <fmt/core.h>
 
 #include <fstream>
 #include <iomanip>
@@ -61,7 +62,7 @@ std::chrono::duration<double> get_cpu_time()
 
 std::string get_process_exe(pid_t pid)
 {
-    auto proc_exe_filename = (boost::format("/proc/%d/exe") % pid).str();
+    auto proc_exe_filename = fmt::format("/proc/{}/exe", pid);
     char exe_cstr[PATH_MAX + 1];
     auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
 
@@ -104,7 +105,7 @@ std::string get_process_comm(pid_t pid)
     catch (const std::ios::failure&)
     {
         Log::warn() << "Failed to get name for process " << pid;
-        return (boost::format{ "[process %d]" } % pid).str();
+        return fmt::format("[process {}]", pid);
     }
 }
 
@@ -119,7 +120,7 @@ std::string get_task_comm(pid_t pid, pid_t task)
     catch (const std::ios::failure&)
     {
         Log::warn() << "Failed to get name for task " << task << " in process " << pid;
-        return (boost::format{ "[thread %d]" } % task).str();
+        return fmt::format("[thread {}]", task);
     }
 }
 
@@ -183,7 +184,7 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
         ret.emplace(pid, name);
         try
         {
-            boost::filesystem::path task((boost::format("/proc/%d/task") % pid).str());
+            boost::filesystem::path task(fmt::format("/proc/{}/task", pid));
             for (auto& entry_task :
                  boost::make_iterator_range(boost::filesystem::directory_iterator(task), {}))
             {

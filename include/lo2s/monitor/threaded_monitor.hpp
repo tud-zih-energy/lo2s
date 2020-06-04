@@ -23,8 +23,6 @@
 
 #include <lo2s/trace/fwd.hpp>
 
-#include <boost/format.hpp>
-
 #include <string>
 #include <thread>
 

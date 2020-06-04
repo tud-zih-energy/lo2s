@@ -31,7 +31,6 @@
 #include <lo2s/util.hpp>
 
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
 
 #include <ios>
 

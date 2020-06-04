@@ -29,8 +29,6 @@
 
 #include <otf2xx/otf2.hpp>
 
-#include <boost/format.hpp>
-
 #include <map>
 #include <mutex>
 #include <unordered_map>

@@ -87,6 +87,9 @@ set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds CACHE INTERNAL "")
 add_subdirectory(lib/otf2xx)
 mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
+# configure fmtlib submodule
+add_subdirectory(lib/fmt)
+
 # configure Nitro submodule
 add_subdirectory(lib/nitro)
 
@@ -177,10 +180,10 @@ target_link_libraries(lo2s
         Nitro::env
         Nitro::dl
         Threads::Threads
-        Boost::system
         Boost::program_options
         Boost::filesystem
         Binutils::Binutils
+        fmt::fmt
 )
 
 # old glibc versions require -lrt for clock_gettime()

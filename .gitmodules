@@ -4,3 +4,6 @@
 [submodule "lib/nitro"]
 	path = lib/nitro
 	url = https://github.com/tud-zih-energy/nitro.git
+[submodule "lib/fmt"]
+	path = lib/fmt
+	url = https://github.com/fmtlib/fmt
