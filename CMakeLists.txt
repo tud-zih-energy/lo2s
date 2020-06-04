@@ -186,6 +186,7 @@ target_link_libraries(lo2s
         Boost::program_options
         Binutils::Binutils
         fmt::fmt
+        stdc++fs
 )
 
 # old glibc versions require -lrt for clock_gettime()
