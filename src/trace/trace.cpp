@@ -587,6 +587,11 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
 void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
                                  const std::lock_guard<std::recursive_mutex>&)
 {
+    if (registry_.has<otf2::definition::calling_context>(ByThread(tid)))
+    {
+        return;
+    }
+
     process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                            std::forward_as_tuple(name));
 
