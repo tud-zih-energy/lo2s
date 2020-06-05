@@ -86,6 +86,32 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
     os << io::make_argument_list(description, items.begin(), items.end());
 }
 
+static inline void print_availability(std::ostream& os, const std::string& description,
+                                      std::vector<perf::CounterDescription> events)
+{
+    std::vector<std::string> event_names;
+    for (auto& ev : events)
+    {
+        if (ev.availability == perf::Availability::UNAVAILABLE)
+        {
+            continue;
+        }
+        else if (ev.availability == perf::Availability::PROCESS_MODE)
+        {
+            event_names.push_back(ev.name + " *");
+        }
+        else if (ev.availability == perf::Availability::SYSTEM_MODE)
+        {
+            event_names.push_back(ev.name + " #");
+        }
+        else
+        {
+            event_names.push_back(ev.name);
+        }
+    }
+    list_arguments_sorted(os, description, event_names);
+}
+
 static inline void print_version(std::ostream& os)
 {
     // clang-format off
@@ -382,10 +408,14 @@ void parse_program_options(int argc, const char** argv)
 
         if (list_events)
         {
-            list_arguments_sorted(std::cout, "predefined events",
-                                  perf::EventProvider::get_predefined_event_names());
-            list_arguments_sorted(std::cout, "Kernel PMU events",
-                                  perf::EventProvider::get_pmu_event_names());
+            print_availability(std::cout, "predefined events",
+                               perf::EventProvider::get_predefined_events());
+            print_availability(std::cout, "Kernel PMU events",
+                               perf::EventProvider::get_pmu_events());
+
+            std::cout << "(* Only available in process-monitoring mode" << std::endl;
+            std::cout << "(# Only available in system-monitoring mode" << std::endl;
+
             std::exit(EXIT_SUCCESS);
         }
 

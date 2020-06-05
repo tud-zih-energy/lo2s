@@ -32,11 +32,20 @@ namespace lo2s
 {
 namespace perf
 {
+enum class Availability
+{
+    UNAVAILABLE,
+    SYSTEM_MODE,
+    PROCESS_MODE,
+    UNIVERSAL
+};
+
 struct CounterDescription
 {
     CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
                        std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1)
+    : name(name), type(type), config(config), config1(config1),
+      availability(Availability::UNAVAILABLE)
     {
     }
 
@@ -44,6 +53,7 @@ struct CounterDescription
     perf_type_id type;
     std::uint64_t config;
     std::uint64_t config1;
+    Availability availability;
 };
 } // namespace perf
 } // namespace lo2s
