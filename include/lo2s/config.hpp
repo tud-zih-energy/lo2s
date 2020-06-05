@@ -73,7 +73,6 @@ struct Config
     std::chrono::nanoseconds perf_read_interval;
     // Metrics
     bool metric_use_frequency;
-
     union
     {
         std::uint64_t metric_count;
