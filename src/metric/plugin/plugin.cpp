@@ -60,8 +60,7 @@ static std::string entry_point_name(const std::string& name)
     return std::string("SCOREP_MetricPlugin_") + name + "_get_info";
 }
 
-Plugin::Plugin(const std::string& name, const std::vector<std::string>& events, trace::Trace& trace)
-: name_(name), events_(events)
+Plugin::Plugin(const Configuration& config, trace::Trace& trace) : config_(config)
 {
     load_plugin_code();
     assert_compatibility();
@@ -70,7 +69,7 @@ Plugin::Plugin(const std::string& name, const std::vector<std::string>& events, 
 
 Plugin::~Plugin()
 {
-    Log::info() << "Unloading plugin: " << name_;
+    Log::info() << "Unloading plugin: " << name();
     plugin_.finalize();
 }
 
@@ -92,22 +91,22 @@ void Plugin::write_data_points(otf2::chrono::time_point from, otf2::chrono::time
     {
         if (channel.isDisabled())
         {
-            Log::warn() << "In plugin: " << name_ << " skipping channel '" << channel.name()
+            Log::warn() << "In plugin: " << name() << " skipping channel '" << channel.name()
                         << "' in data acquisition.";
             continue;
         }
 
         auto data = read_data_points(channel, plugin_);
 
-        Log::info() << "In plugin: " << name_ << " received for channel '" << channel.name() << "' "
-                    << data.first << " data points.";
+        Log::info() << "In plugin: " << name() << " received for channel '" << channel.name()
+                    << "' " << data.first << " data points.";
         channel.write_values(data.second.get(), data.second.get() + data.first, from, to);
     }
 }
 
 void Plugin::start_recording()
 {
-    Log::debug() << "Start recording for plugin: " << name_;
+    Log::debug() << "Start recording for plugin: " << name();
 
     if (plugin_.synchronize != nullptr)
     {
@@ -117,7 +116,7 @@ void Plugin::start_recording()
 
 void Plugin::stop_recording()
 {
-    Log::debug() << "Stop recording for plugin: " << name_;
+    Log::debug() << "Stop recording for plugin: " << name();
 
     if (plugin_.synchronize != nullptr)
     {
@@ -129,23 +128,23 @@ void Plugin::assert_compatibility()
 {
     if (plugin_.sync != wrapper::Synchronicity::ASYNC)
     {
-        Log::error() << "Plugin '" << name_ << "' is incompatible.";
+        Log::error() << "Plugin '" << name() << "' is incompatible.";
         throw std::runtime_error("Only plugins, which are ASYNC are supported.");
     }
 
     if (plugin_.run_per != wrapper::Per::ONCE && plugin_.run_per != wrapper::Per::HOST)
     {
-        Log::error() << "Plugin '" << name_ << "' is incompatible.";
+        Log::error() << "Plugin '" << name() << "' is incompatible.";
         throw std::runtime_error("Only plugins, which are PER_HOST or ONCE are supported.");
     }
 }
 
 void Plugin::load_plugin_code()
 {
-    Log::debug() << "Loading plugin: " << name_;
+    Log::debug() << "Loading plugin: " << name();
 
-    nitro::dl::dl lib(lib_name(name_));
-    auto entry_point = lib.load<wrapper::PluginInfo()>(entry_point_name(name_));
+    nitro::dl::dl lib(lib_name(name()));
+    auto entry_point = lib.load<wrapper::PluginInfo()>(entry_point_name(name()));
     plugin_ = entry_point();
 }
 
@@ -155,7 +154,7 @@ void Plugin::initialize_plugin_code(trace::Trace& trace)
     auto ret = plugin_.initialize();
     if (ret)
     {
-        Log::error() << "Plugin '" << name_ << "' failed to initialize: " << ret;
+        Log::error() << "Plugin '" << name() << "' failed to initialize: " << ret;
         throw std::runtime_error("Plugin initialization failed.");
     }
 
@@ -165,13 +164,13 @@ void Plugin::initialize_plugin_code(trace::Trace& trace)
 
 void Plugin::create_channels(trace::Trace& trace)
 {
-    for (const auto& token : events_)
+    for (const auto& event : config_.events())
     {
-        Log::debug() << "Plugin '" << name_ << "' calling get_event_info with: " << token;
+        Log::debug() << "Plugin '" << name() << "' calling get_event_info with: " << event;
 
         auto info =
             std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
-                plugin_.get_event_info(token.c_str()));
+                plugin_.get_event_info(event.c_str()));
 
         if (!info)
         {
@@ -187,7 +186,7 @@ void Plugin::create_channels(trace::Trace& trace)
 
 void Plugin::initialize_channels()
 {
-    auto log_info = Log::info() << "Plugin '" << name_ << "' recording channels: ";
+    auto log_info = Log::info() << "Plugin '" << name() << "' recording channels: ";
 
     for (auto& channel : channels_)
     {
@@ -195,7 +194,7 @@ void Plugin::initialize_channels()
 
         if (id == -1)
         {
-            Log::warn() << "Error in Plugin: " << name_
+            Log::warn() << "Error in Plugin: " << name()
                         << " Failed to call add_counter for token: " << channel.name();
 
             continue;

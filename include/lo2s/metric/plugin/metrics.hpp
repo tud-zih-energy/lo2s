@@ -24,6 +24,7 @@
 #include <lo2s/trace/fwd.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace lo2s
@@ -34,6 +35,7 @@ namespace plugin
 {
 
 class Plugin;
+class Configuration;
 
 class Metrics
 {
@@ -47,7 +49,7 @@ public:
 
 private:
     void fetch_plugins_data();
-    void load_plugin(const std::string& name, const std::vector<std::string>& configuration);
+    void load_plugin(const Configuration&);
 
 private:
     trace::Trace& trace_;

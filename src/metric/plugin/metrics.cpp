@@ -20,6 +20,8 @@
  */
 
 #include <lo2s/metric/plugin/metrics.hpp>
+
+#include <lo2s/metric/plugin/configuration.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
 
 #include <lo2s/trace/trace.hpp>
@@ -29,26 +31,12 @@
 #include <nitro/lang/reverse.hpp>
 #include <nitro/lang/string.hpp>
 
-#include <algorithm>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include <cctype>
-
 namespace lo2s
 {
 namespace metric
 {
 namespace plugin
 {
-
-static auto upper_case(std::string input)
-{
-    std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-
-    return input;
-}
 
 static auto read_env_variable(const std::string& name)
 {
@@ -62,9 +50,9 @@ static auto read_env_variable(const std::string& name)
     }
 }
 
-static auto read_plugin_configuration()
+static auto read_plugin_configurations()
 {
-    std::vector<std::pair<std::string, std::vector<std::string>>> v;
+    std::vector<Configuration> configs;
 
     for (const auto& plugin : nitro::lang::split(read_env_variable("METRIC_PLUGINS"), ","))
     {
@@ -73,41 +61,34 @@ static auto read_plugin_configuration()
             continue;
         }
 
-        auto events = read_env_variable(std::string("METRIC_") + upper_case(plugin));
-
-        if (events.empty())
-        {
-            events = read_env_variable(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
-        }
-
-        v.push_back({ plugin, nitro::lang::split(events, ",") });
+        configs.emplace_back(plugin);
     }
 
-    return v;
+    return configs;
 }
 
 Metrics::Metrics(trace::Trace& trace) : trace_(trace)
 {
-    for (const auto& plugin : read_plugin_configuration())
+    for (const auto& config : read_plugin_configurations())
     {
-        load_plugin(plugin.first, plugin.second);
+        load_plugin(config);
     }
 }
 
-void Metrics::load_plugin(const std::string& name, const std::vector<std::string>& configuration)
+void Metrics::load_plugin(const Configuration& config)
 {
     try
     {
-        metric_plugins_.emplace_back(std::make_unique<Plugin>(name, configuration, trace_));
+        metric_plugins_.emplace_back(std::make_unique<Plugin>(config, trace_));
     }
     catch (nitro::dl::exception& e)
     {
-        Log::error() << "skipping plugin " << name << ": " << e.what() << " (" << e.dlerror()
-                     << ")";
+        Log::error() << "skipping plugin " << config.name() << ": " << e.what() << " ("
+                     << e.dlerror() << ")";
     }
     catch (std::exception& e)
     {
-        Log::error() << "skipping plugin " << name << ": " << e.what();
+        Log::error() << "skipping plugin " << config.name() << ": " << e.what();
     }
 }
 

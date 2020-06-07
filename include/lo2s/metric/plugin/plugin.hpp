@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/metric/plugin/channel.hpp>
+#include <lo2s/metric/plugin/configuration.hpp>
 #include <lo2s/metric/plugin/wrapper.hpp>
 
 #include <lo2s/trace/fwd.hpp>
@@ -40,24 +41,20 @@ namespace plugin
 class Plugin
 {
 public:
-    Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
-           trace::Trace& trace);
+    Plugin(const Configuration& config, trace::Trace& trace);
 
     ~Plugin();
 
     Plugin(const Plugin&) = delete;
-
     Plugin& operator=(const Plugin&) = delete;
 
     void start_recording();
-
     void stop_recording();
-
     void write_data_points(otf2::chrono::time_point from, otf2::chrono::time_point to);
 
     const std::string name() const
     {
-        return name_;
+        return config_.name();
     }
 
 private:
@@ -68,8 +65,7 @@ private:
     void initialize_channels();
 
 private:
-    std::string name_;
-    std::vector<std::string> events_;
+    Configuration config_;
     wrapper::PluginInfo plugin_;
     std::vector<Channel> channels_;
 };
