@@ -26,8 +26,6 @@
 
 #include <lo2s/trace/fwd.hpp>
 
-#include <nitro/dl/dl.hpp>
-
 #include <otf2xx/chrono/time_point.hpp>
 
 #include <string>
@@ -55,17 +53,23 @@ public:
 
     void stop_recording();
 
-    void fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point to);
+    void write_data_points(otf2::chrono::time_point from, otf2::chrono::time_point to);
 
     const std::string name() const
     {
-        return plugin_name_;
+        return name_;
     }
 
 private:
-    std::string plugin_name_;
-    std::vector<std::string> plugin_events_;
-    nitro::dl::dl lib_;
+    void load_plugin_code();
+    void assert_compatibility();
+    void initialize_plugin_code(trace::Trace& trace);
+    void create_channels(trace::Trace& trace);
+    void initialize_channels();
+
+private:
+    std::string name_;
+    std::vector<std::string> events_;
     wrapper::PluginInfo plugin_;
     std::vector<Channel> channels_;
 };

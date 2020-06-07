@@ -26,6 +26,7 @@
 
 #include <nitro/dl/dl.hpp>
 #include <nitro/env/get.hpp>
+#include <nitro/lang/reverse.hpp>
 #include <nitro/lang/string.hpp>
 
 #include <algorithm>
@@ -49,7 +50,7 @@ static auto upper_case(std::string input)
     return input;
 }
 
-auto read_env(const std::string& name)
+static auto read_env_variable(const std::string& name)
 {
     try
     {
@@ -61,22 +62,22 @@ auto read_env(const std::string& name)
     }
 }
 
-static auto read_env_variables()
+static auto read_plugin_configuration()
 {
     std::vector<std::pair<std::string, std::vector<std::string>>> v;
 
-    for (const auto& plugin : nitro::lang::split(read_env("METRIC_PLUGINS"), ","))
+    for (const auto& plugin : nitro::lang::split(read_env_variable("METRIC_PLUGINS"), ","))
     {
         if (plugin.empty())
         {
             continue;
         }
 
-        auto events = read_env(std::string("METRIC_") + upper_case(plugin));
+        auto events = read_env_variable(std::string("METRIC_") + upper_case(plugin));
 
         if (events.empty())
         {
-            events = read_env(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
+            events = read_env_variable(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
         }
 
         v.push_back({ plugin, nitro::lang::split(events, ",") });
@@ -87,50 +88,53 @@ static auto read_env_variables()
 
 Metrics::Metrics(trace::Trace& trace) : trace_(trace)
 {
-    // initialize each plugin, which is set using the SCOREP_METRIC_PLUGINS variables
-    for (const auto& plugin_name_options : read_env_variables())
+    for (const auto& plugin : read_plugin_configuration())
     {
-        try
-        {
-            metric_plugins_.emplace_back(std::make_unique<Plugin>(
-                plugin_name_options.first, plugin_name_options.second, trace_));
-        }
-        catch (nitro::dl::exception& e)
-        {
-            Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what()
-                         << " (" << e.dlerror() << ")";
-        }
-        catch (std::exception& e)
-        {
-            Log::error() << "skipping plugin " << plugin_name_options.first << ": " << e.what();
-        }
+        load_plugin(plugin.first, plugin.second);
+    }
+}
+
+void Metrics::load_plugin(const std::string& name, const std::vector<std::string>& configuration)
+{
+    try
+    {
+        metric_plugins_.emplace_back(std::make_unique<Plugin>(name, configuration, trace_));
+    }
+    catch (nitro::dl::exception& e)
+    {
+        Log::error() << "skipping plugin " << name << ": " << e.what() << " (" << e.dlerror()
+                     << ")";
+    }
+    catch (std::exception& e)
+    {
+        Log::error() << "skipping plugin " << name << ": " << e.what();
     }
 }
 
 Metrics::~Metrics()
 {
-    // We do the fetch in the dtor to ensure that trace_.record_to is valid
-
-    // first we stop recording, after that, we collect the data from each plugin
-    // and the destructor of the vector member will finalize each plugin
-
     if (running_)
     {
         stop();
     }
 
-    // In order to get interval semantic for plugin lifetimes, we have to iterate in reverse order
-    for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
+    // this is only called in the dtor to ensure that trace_.record_to is valid
+    fetch_plugins_data();
+}
+
+void Metrics::fetch_plugins_data()
+{
+    assert(!running_);
+
+    // Iterate in reverse order to keep interval semantic for plugin lifetimes
+    for (auto& plugin : nitro::lang::reverse(metric_plugins_))
     {
-        // in order to not create to large traces (in the sense of to much time before and after
-        // the actuall recorded program(s)), we stick to the interval [trace_begin_, trace_end]
-        (*pi)->fetch_data(trace_.record_from(), trace_.record_to());
+        plugin->write_data_points(trace_.record_from(), trace_.record_to());
     }
 }
 
 void Metrics::start()
 {
-    // Start recording for each plugin
     for (auto& plugin : metric_plugins_)
     {
         plugin->start_recording();
@@ -141,9 +145,9 @@ void Metrics::start()
 void Metrics::stop()
 {
     // In order to get interval semantic for plugin lifetimes, we have to iterate in reverse order
-    for (auto pi = metric_plugins_.rbegin(); pi != metric_plugins_.rend(); ++pi)
+    for (auto& plugin : nitro::lang::reverse(metric_plugins_))
     {
-        (*pi)->stop_recording();
+        plugin->stop_recording();
     }
     running_ = false;
 }

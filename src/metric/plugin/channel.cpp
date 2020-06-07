@@ -73,6 +73,24 @@ int& Channel::id()
     return id_;
 }
 
+int Channel::id() const
+{
+    return id_;
+}
+
+void Channel::write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
+                           otf2::chrono::time_point from, otf2::chrono::time_point to)
+{
+    for (auto it = begin; it != end; it++)
+    {
+        auto timestamp = otf2::chrono::time_point(otf2::chrono::duration(it->timestamp));
+        if (from <= timestamp && timestamp <= to)
+        {
+            write_value(*it);
+        }
+    }
+}
+
 void Channel::write_value(wrapper::TimeValuePair tv)
 {
     // @tilsche look behind you, a three-headed monkey! -- This is necessary, because we forced too

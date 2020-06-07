@@ -29,6 +29,8 @@
 
 #include <otf2xx/chrono/duration.hpp>
 
+#include <nitro/dl/dl.hpp>
+
 #include <memory>
 #include <stdexcept>
 
@@ -43,7 +45,7 @@ namespace metric
 namespace plugin
 {
 
-static std::uint64_t get_time_wrapper()
+static std::uint64_t lo2s_clock_function()
 {
     return time::now().time_since_epoch().count();
 }
@@ -53,134 +55,59 @@ static std::string lib_name(const std::string& name)
     return std::string("lib") + name + ".so";
 }
 
-static std::string entry_name(const std::string& name)
+static std::string entry_point_name(const std::string& name)
 {
     return std::string("SCOREP_MetricPlugin_") + name + "_get_info";
 }
 
-static void parse_properties(std::vector<Channel>& channels, wrapper::Properties* props,
-                             trace::Trace& trace)
+Plugin::Plugin(const std::string& name, const std::vector<std::string>& events, trace::Trace& trace)
+: name_(name), events_(events)
 {
-    if (props == nullptr)
-    {
-        throw std::runtime_error("Plugin returned a nullptr, where it shouldn't");
-    }
-
-    for (std::size_t index = 0; props[index].name != nullptr; index++)
-    {
-        // TODO Think about freeing name, description, unit
-        //      It should be done, but Score-P doesn't do it either, even though it is documented.
-        // std::unique_ptr<char, malloc_delete<char>> name_owner(props[index].name);
-        // std::unique_ptr<char, malloc_delete<char>> desc_owner(props[index].description);
-        // std::unique_ptr<char, malloc_delete<char>> unit_owner(props[index].unit);
-
-        channels.emplace_back(props[index].name, props[index].description, props[index].unit,
-                              props[index].mode, props[index].value_type, props[index].base,
-                              props[index].exponent, trace);
-    }
-}
-
-Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
-               trace::Trace& trace)
-: plugin_name_(plugin_name), plugin_events_(plugin_events), lib_(lib_name(plugin_name)), plugin_()
-{
-    Log::debug() << "Loading plugin: " << plugin_name_;
-
-    // open lib file and call entry point
-    auto plugin_entry = lib_.load<wrapper::PluginInfo()>(entry_name(plugin_name_));
-    plugin_ = plugin_entry();
-
-    if (plugin_.sync != wrapper::Synchronicity::ASYNC)
-    {
-        Log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
-        throw std::runtime_error("Only plugins, which are ASYNC are supported.");
-    }
-
-    if (plugin_.run_per != wrapper::Per::ONCE && plugin_.run_per != wrapper::Per::HOST)
-    {
-        Log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
-        throw std::runtime_error("Only plugins, which are PER_HOST or ONCE are supported.");
-    }
-
-    plugin_.set_clock_function(&get_time_wrapper);
-    auto ret = plugin_.initialize();
-    if (ret)
-    {
-        Log::error() << "Plugin '" << plugin_name_ << "' failed to initialize: " << ret;
-        throw std::runtime_error("Plugin initialization failed.");
-    }
-
-    for (auto token : plugin_events_)
-    {
-        Log::debug() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
-
-        auto info =
-            std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
-                plugin_.get_event_info(token.c_str()));
-
-        parse_properties(channels_, info.get(), trace);
-    }
-
-    auto log_info = Log::info() << "Plugin '" << plugin_name_ << "' recording channels: ";
-
-    for (auto& channel : channels_)
-    {
-        auto id = plugin_.add_counter(channel.name().c_str());
-
-        if (id == -1)
-        {
-            Log::warn() << "Error in Plugin: " << plugin_name_
-                        << " Failed to call add_counter for token: " << channel.name();
-
-            continue;
-        }
-
-        log_info << channel.name() << ", ";
-
-        channel.id() = id;
-    }
+    load_plugin_code();
+    assert_compatibility();
+    initialize_plugin_code(trace);
 }
 
 Plugin::~Plugin()
 {
-    Log::info() << "Unloading plugin: " << plugin_name_;
+    Log::info() << "Unloading plugin: " << name_;
     plugin_.finalize();
 }
 
-void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point to)
+static auto read_data_points(const Channel& channel, const wrapper::PluginInfo& plugin)
+{
+    std::unique_ptr<wrapper::TimeValuePair[], wrapper::MallocDelete<wrapper::TimeValuePair>>
+        tv_list;
+
+    wrapper::TimeValuePair* ptr;
+    auto num_entries = plugin.get_all_values(channel.id(), &ptr);
+    tv_list.reset(ptr);
+
+    return std::make_pair(num_entries, std::move(tv_list));
+}
+
+void Plugin::write_data_points(otf2::chrono::time_point from, otf2::chrono::time_point to)
 {
     for (auto& channel : channels_)
     {
         if (channel.id() == -1)
         {
-            Log::warn() << "In plugin: " << plugin_name_ << " skipping channel '" << channel.name()
+            Log::warn() << "In plugin: " << name_ << " skipping channel '" << channel.name()
                         << "' in data acquisition.";
-            // something went wrong, skipping this channel
             continue;
         }
 
-        wrapper::TimeValuePair* tv_list;
-        auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
-        std::unique_ptr<wrapper::TimeValuePair, wrapper::MallocDelete<wrapper::TimeValuePair>>
-            tv_list_owner(tv_list);
+        auto data = read_data_points(channel, plugin_);
 
-        Log::info() << "In plugin: " << plugin_name_ << " received for channel '" << channel.name()
-                    << "' " << num_entries << " data points.";
-
-        for (std::size_t i = 0; i < num_entries; ++i)
-        {
-            auto timestamp = otf2::chrono::time_point(otf2::chrono::duration(tv_list[i].timestamp));
-            if (from <= timestamp && timestamp <= to)
-            {
-                channel.write_value(tv_list[i]);
-            }
-        }
+        Log::info() << "In plugin: " << name_ << " received for channel '" << channel.name() << "' "
+                    << data.first << " data points.";
+        channel.write_values(data.second.get(), data.second.get() + data.first, from, to);
     }
 }
 
 void Plugin::start_recording()
 {
-    Log::debug() << "Start recording for plugin: " << plugin_name_;
+    Log::debug() << "Start recording for plugin: " << name_;
 
     if (plugin_.synchronize != nullptr)
     {
@@ -190,11 +117,95 @@ void Plugin::start_recording()
 
 void Plugin::stop_recording()
 {
-    Log::debug() << "Stop recording for plugin: " << plugin_name_;
+    Log::debug() << "Stop recording for plugin: " << name_;
 
     if (plugin_.synchronize != nullptr)
     {
         plugin_.synchronize(true, wrapper::SynchronizationMode::END);
+    }
+}
+
+void Plugin::assert_compatibility()
+{
+    if (plugin_.sync != wrapper::Synchronicity::ASYNC)
+    {
+        Log::error() << "Plugin '" << name_ << "' is incompatible.";
+        throw std::runtime_error("Only plugins, which are ASYNC are supported.");
+    }
+
+    if (plugin_.run_per != wrapper::Per::ONCE && plugin_.run_per != wrapper::Per::HOST)
+    {
+        Log::error() << "Plugin '" << name_ << "' is incompatible.";
+        throw std::runtime_error("Only plugins, which are PER_HOST or ONCE are supported.");
+    }
+}
+
+void Plugin::load_plugin_code()
+{
+    Log::debug() << "Loading plugin: " << name_;
+
+    nitro::dl::dl lib(lib_name(name_));
+    auto entry_point = lib.load<wrapper::PluginInfo()>(entry_point_name(name_));
+    plugin_ = entry_point();
+}
+
+void Plugin::initialize_plugin_code(trace::Trace& trace)
+{
+    plugin_.set_clock_function(&lo2s_clock_function);
+    auto ret = plugin_.initialize();
+    if (ret)
+    {
+        Log::error() << "Plugin '" << name_ << "' failed to initialize: " << ret;
+        throw std::runtime_error("Plugin initialization failed.");
+    }
+
+    create_channels(trace);
+    initialize_channels();
+}
+
+void Plugin::create_channels(trace::Trace& trace)
+{
+    for (const auto& token : events_)
+    {
+        Log::debug() << "Plugin '" << name_ << "' calling get_event_info with: " << token;
+
+        auto info =
+            std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
+                plugin_.get_event_info(token.c_str()));
+
+        if (!info)
+        {
+            throw std::runtime_error("Plugin returned a nullptr, where it shouldn't");
+        }
+
+        for (std::size_t index = 0; info.get()[index].name != nullptr; index++)
+        {
+            const auto& event = info.get()[index];
+            channels_.emplace_back(event.name, event.description, event.unit, event.mode,
+                                   event.value_type, event.base, event.exponent, trace);
+        }
+    }
+}
+
+void Plugin::initialize_channels()
+{
+    auto log_info = Log::info() << "Plugin '" << name_ << "' recording channels: ";
+
+    for (auto& channel : channels_)
+    {
+        auto id = plugin_.add_counter(channel.name().c_str());
+
+        if (id == -1)
+        {
+            Log::warn() << "Error in Plugin: " << name_
+                        << " Failed to call add_counter for token: " << channel.name();
+
+            continue;
+        }
+
+        log_info << channel.name() << ", ";
+
+        channel.id() = id;
     }
 }
 } // namespace plugin

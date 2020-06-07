@@ -49,7 +49,10 @@ public:
     const std::string& name() const;
 
     int& id();
+    int id() const;
 
+    void write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
+                      otf2::chrono::time_point from, otf2::chrono::time_point to);
     void write_value(wrapper::TimeValuePair tv);
 
 private:

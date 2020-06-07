@@ -46,6 +46,10 @@ public:
     void stop();
 
 private:
+    void fetch_plugins_data();
+    void load_plugin(const std::string& name, const std::vector<std::string>& configuration);
+
+private:
     trace::Trace& trace_;
     std::vector<std::unique_ptr<Plugin>> metric_plugins_;
     bool running_ = false;
