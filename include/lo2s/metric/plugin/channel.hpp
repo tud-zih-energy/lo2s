@@ -41,14 +41,14 @@ namespace plugin
 class Channel
 {
 public:
-    Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-            wrapper::ValueType value_type, wrapper::ValueBase value_base, std::int64_t exponent,
-            trace::Trace& trace);
+    Channel(const wrapper::Properties& event, trace::Trace& trace);
 
 public:
     const std::string& name() const;
 
-    int& id();
+    bool isDisabled() const;
+
+    void id(int id);
     int id() const;
 
     void write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
@@ -58,10 +58,6 @@ public:
 private:
     int id_;
     std::string name_;
-    std::string description_;
-    std::string unit_;
-    wrapper::Mode mode_;
-    wrapper::ValueType value_type_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_;
     otf2::event::metric event_;

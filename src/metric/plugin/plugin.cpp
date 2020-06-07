@@ -90,7 +90,7 @@ void Plugin::write_data_points(otf2::chrono::time_point from, otf2::chrono::time
 {
     for (auto& channel : channels_)
     {
-        if (channel.id() == -1)
+        if (channel.isDisabled())
         {
             Log::warn() << "In plugin: " << name_ << " skipping channel '" << channel.name()
                         << "' in data acquisition.";
@@ -180,9 +180,7 @@ void Plugin::create_channels(trace::Trace& trace)
 
         for (std::size_t index = 0; info.get()[index].name != nullptr; index++)
         {
-            const auto& event = info.get()[index];
-            channels_.emplace_back(event.name, event.description, event.unit, event.mode,
-                                   event.value_type, event.base, event.exponent, trace);
+            channels_.emplace_back(info.get()[index], trace);
         }
     }
 }
@@ -205,7 +203,7 @@ void Plugin::initialize_channels()
 
         log_info << channel.name() << ", ";
 
-        channel.id() = id;
+        channel.id(id);
     }
 }
 } // namespace plugin

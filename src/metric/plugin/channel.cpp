@@ -48,17 +48,15 @@ static const char* empty_if_null(const char* cstr)
     return cstr == nullptr ? "" : cstr;
 }
 
-Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
-                 wrapper::ValueType value_type, wrapper::ValueBase value_base,
-                 std::int64_t exponent, trace::Trace& trace)
-: id_(-1), name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)),
-  mode_(mode), value_type_(value_type), writer_(trace.named_metric_writer(name_)),
-  metric_(
-      make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
-                                                 writer_.location().location_group().parent()),
-                           trace.metric_member(name_, description_, wrapper::convert_mode(mode_),
-                                               wrapper::convert_type(value_type_), unit_, exponent,
-                                               wrapper::convert_base(value_base)))),
+Channel::Channel(const wrapper::Properties& event, trace::Trace& trace)
+: id_(-1), name_(event.name), writer_(trace.named_metric_writer(name_)),
+  metric_(make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
+                                                     writer_.location().location_group().parent()),
+                               trace.metric_member(name_, empty_if_null(event.description),
+                                                   wrapper::convert_mode(event.mode),
+                                                   wrapper::convert_type(event.value_type),
+                                                   empty_if_null(event.unit), event.exponent,
+                                                   wrapper::convert_base(event.base)))),
   event_(otf2::chrono::genesis(), metric_)
 {
 }
@@ -68,14 +66,19 @@ const std::string& Channel::name() const
     return name_;
 }
 
-int& Channel::id()
+void Channel::id(int id)
 {
-    return id_;
+    id_ = id;
 }
 
 int Channel::id() const
 {
     return id_;
+}
+
+bool Channel::isDisabled() const
+{
+    return id_ == -1;
 }
 
 void Channel::write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
