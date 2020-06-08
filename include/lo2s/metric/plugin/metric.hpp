@@ -38,10 +38,10 @@ namespace metric
 {
 namespace plugin
 {
-class Channel
+class Metric
 {
 public:
-    Channel(const wrapper::Properties& event, trace::Trace& trace);
+    Metric(const wrapper::Properties& event, trace::Trace& trace);
 
 public:
     const std::string& name() const;
@@ -51,13 +51,13 @@ public:
     void id(int id);
     int id() const;
 
-    void write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
-                      otf2::chrono::time_point from, otf2::chrono::time_point to);
+    void write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end);
     void write_value(wrapper::TimeValuePair tv);
 
 private:
     int id_;
     std::string name_;
+    trace::Trace& trace_;
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_;
     otf2::event::metric event_;

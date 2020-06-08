@@ -31,20 +31,18 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
+MainMonitor::MainMonitor() : trace_(), plugin_manager_(trace_)
 {
     if (config().sampling)
     {
         perf::time::Converter::instance();
     }
 
-    metrics_.start();
+    plugin_manager_.start_recording();
 
     // notify the trace, that we are ready to start. That means, get_time() of this call will be
     // the first possible timestamp in the trace
     trace_.begin_record();
-
-    // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
     if (!config().tracepoint_events.empty())
@@ -85,7 +83,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            x86_energy_metrics_ = std::make_unique<metric::x86_energy::Metrics>(trace_);
+            x86_energy_metrics_ = std::make_unique<metric::x86_energy::PluginManager>(trace_);
             x86_energy_metrics_->start();
         }
         catch (std::exception& e)
@@ -135,7 +133,7 @@ MainMonitor::~MainMonitor()
     // the last possible timestamp in the trace
     trace_.end_record();
 
-    metrics_.stop();
+    plugin_manager_.stop_recording();
 }
 } // namespace monitor
 } // namespace lo2s

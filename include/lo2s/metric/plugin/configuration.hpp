@@ -21,14 +21,13 @@
 
 #pragma once
 
-#include <nitro/env/get.hpp>
+#include <lo2s/util/env.hpp>
+#include <lo2s/util/string.hpp>
+
 #include <nitro/lang/string.hpp>
 
-#include <algorithm>
 #include <string>
 #include <vector>
-
-#include <cctype>
 
 namespace lo2s
 {
@@ -42,33 +41,16 @@ class Configuration
 public:
     Configuration(const std::string& name) : name_(name)
     {
-        auto events = read_env_variable(std::string("METRIC_") + upper_case(name));
+        auto events = util::get_scorep_compatible_env_variable(std::string("METRIC_") +
+                                                               util::transform_upper_case(name));
 
         if (events.empty())
         {
-            events = read_env_variable(std::string("METRIC_") + upper_case(name) + "_PLUGIN");
+            events = util::get_scorep_compatible_env_variable(
+                std::string("METRIC_") + util::transform_upper_case(name) + "_PLUGIN");
         }
 
         events_ = nitro::lang::split(events, ",");
-    }
-
-    static std::string read_env_variable(const std::string& name)
-    {
-        try
-        {
-            return nitro::env::get(std::string("LO2S_") + name, nitro::env::no_default);
-        }
-        catch (std::exception& e)
-        {
-            return nitro::env::get(std::string("SCOREP_") + name);
-        }
-    }
-
-    static std::string upper_case(std::string input)
-    {
-        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
-
-        return input;
     }
 
     const std::string& name() const

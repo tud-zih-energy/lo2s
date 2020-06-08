@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/metric/plugin/metrics.hpp>
+#include <lo2s/metric/plugin/manager.hpp>
 #ifdef HAVE_X86_ADAPT
 #include <lo2s/metric/x86_adapt/metrics.hpp>
 #endif
@@ -64,7 +64,7 @@ protected:
     trace::Trace trace_;
 
     std::map<pid_t, ProcessInfo> process_infos_;
-    metric::plugin::Metrics metrics_;
+    metric::plugin::PluginManager plugin_manager_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;

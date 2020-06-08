@@ -21,12 +21,9 @@
 
 #pragma once
 
-#include <lo2s/metric/plugin/configuration.hpp>
-#include <lo2s/metric/plugin/metric.hpp>
-#include <lo2s/metric/plugin/wrapper.hpp>
-
 #include <lo2s/trace/fwd.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -36,36 +33,27 @@ namespace metric
 {
 namespace plugin
 {
-class Plugin
+
+class Plugin;
+class Configuration;
+
+class PluginManager
 {
 public:
-    Plugin(const Configuration& config, trace::Trace& trace);
+    PluginManager(trace::Trace& trace);
 
-    ~Plugin();
-
-    Plugin(const Plugin&) = delete;
-    Plugin& operator=(const Plugin&) = delete;
+    ~PluginManager();
 
     void start_recording();
     void stop_recording();
-    void write_metrics();
-
-    const std::string name() const
-    {
-        return config_.name();
-    }
 
 private:
-    void load_plugin_code();
-    void assert_compatibility();
-    void initialize_plugin_code(trace::Trace& trace);
-    void generate_metrics(trace::Trace& trace);
-    void initialize_metrics();
+    void write_metric_data();
+    void load_plugin(const Configuration&, trace::Trace& trace);
 
 private:
-    Configuration config_;
-    wrapper::PluginInfo plugin_;
-    std::vector<Metric> metrics_;
+    std::vector<std::unique_ptr<Plugin>> metric_plugins_;
+    bool running_ = false;
 };
 } // namespace plugin
 } // namespace metric

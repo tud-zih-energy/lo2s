@@ -19,13 +19,14 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/metric/plugin/channel.hpp>
+#include <lo2s/metric/plugin/metric.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
 #include <lo2s/metric/plugin/wrapper.hpp>
 
 #include <lo2s/log.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/util/memory.hpp>
 
 #include <otf2xx/chrono/duration.hpp>
 
@@ -73,34 +74,34 @@ Plugin::~Plugin()
     plugin_.finalize();
 }
 
-static auto read_data_points(const Channel& channel, const wrapper::PluginInfo& plugin)
+static auto read_values(const Metric& metric, const wrapper::PluginInfo& plugin)
 {
-    std::unique_ptr<wrapper::TimeValuePair[], wrapper::MallocDelete<wrapper::TimeValuePair>>
+    std::unique_ptr<wrapper::TimeValuePair[], util::MallocDelete<wrapper::TimeValuePair>>
         tv_list;
 
     wrapper::TimeValuePair* ptr;
-    auto num_entries = plugin.get_all_values(channel.id(), &ptr);
+    auto num_entries = plugin.get_all_values(metric.id(), &ptr);
     tv_list.reset(ptr);
 
     return std::make_pair(num_entries, std::move(tv_list));
 }
 
-void Plugin::write_data_points(otf2::chrono::time_point from, otf2::chrono::time_point to)
+void Plugin::write_metrics()
 {
-    for (auto& channel : channels_)
+    for (auto& metric : metrics_)
     {
-        if (channel.isDisabled())
+        if (metric.isDisabled())
         {
-            Log::warn() << "In plugin: " << name() << " skipping channel '" << channel.name()
+            Log::warn() << "In plugin: " << name() << " skipping metric '" << metric.name()
                         << "' in data acquisition.";
             continue;
         }
 
-        auto data = read_data_points(channel, plugin_);
+        auto data = read_values(metric, plugin_);
 
-        Log::info() << "In plugin: " << name() << " received for channel '" << channel.name()
+        Log::info() << "In plugin: " << name() << " received for metric '" << metric.name()
                     << "' " << data.first << " data points.";
-        channel.write_values(data.second.get(), data.second.get() + data.first, from, to);
+        metric.write_values(data.second.get(), data.second.get() + data.first);
     }
 }
 
@@ -158,18 +159,18 @@ void Plugin::initialize_plugin_code(trace::Trace& trace)
         throw std::runtime_error("Plugin initialization failed.");
     }
 
-    create_channels(trace);
-    initialize_channels();
+    generate_metrics(trace);
+    initialize_metrics();
 }
 
-void Plugin::create_channels(trace::Trace& trace)
+void Plugin::generate_metrics(trace::Trace& trace)
 {
     for (const auto& event : config_.events())
     {
         Log::debug() << "Plugin '" << name() << "' calling get_event_info with: " << event;
 
         auto info =
-            std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
+            std::unique_ptr<wrapper::Properties, util::MallocDelete<wrapper::Properties>>(
                 plugin_.get_event_info(event.c_str()));
 
         if (!info)
@@ -179,16 +180,16 @@ void Plugin::create_channels(trace::Trace& trace)
 
         for (std::size_t index = 0; info.get()[index].name != nullptr; index++)
         {
-            channels_.emplace_back(info.get()[index], trace);
+            metrics_.emplace_back(info.get()[index], trace);
         }
     }
 }
 
-void Plugin::initialize_channels()
+void Plugin::initialize_metrics()
 {
-    auto log_info = Log::info() << "Plugin '" << name() << "' recording channels: ";
+    auto log_info = Log::info() << "Plugin '" << name() << "' recording metrics: ";
 
-    for (auto& channel : channels_)
+    for (auto& channel : metrics_)
     {
         auto id = plugin_.add_counter(channel.name().c_str());
 

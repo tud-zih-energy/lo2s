@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2020,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,41 +21,17 @@
 
 #pragma once
 
-#include <lo2s/trace/fwd.hpp>
-
-#include <memory>
-#include <string>
-#include <vector>
-
 namespace lo2s
 {
-namespace metric
+namespace util
 {
-namespace plugin
+template <class T>
+struct MallocDelete
 {
-
-class Plugin;
-class Configuration;
-
-class Metrics
-{
-public:
-    Metrics(trace::Trace& trace);
-
-    ~Metrics();
-
-    void start();
-    void stop();
-
-private:
-    void fetch_plugins_data();
-    void load_plugin(const Configuration&);
-
-private:
-    trace::Trace& trace_;
-    std::vector<std::unique_ptr<Plugin>> metric_plugins_;
-    bool running_ = false;
+    void operator()(T* ptr) const
+    {
+        free(ptr);
+    }
 };
-} // namespace plugin
-} // namespace metric
+} // namespace util
 } // namespace lo2s

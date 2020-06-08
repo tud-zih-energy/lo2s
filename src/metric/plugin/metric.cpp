@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <lo2s/metric/plugin/channel.hpp>
+#include <lo2s/metric/plugin/metric.hpp>
 
 #include <lo2s/trace/trace.hpp>
 
@@ -48,8 +48,8 @@ static const char* empty_if_null(const char* cstr)
     return cstr == nullptr ? "" : cstr;
 }
 
-Channel::Channel(const wrapper::Properties& event, trace::Trace& trace)
-: id_(-1), name_(event.name), writer_(trace.named_metric_writer(name_)),
+Metric::Metric(const wrapper::Properties& event, trace::Trace& trace)
+: id_(-1), name_(event.name), trace_(trace), writer_(trace.named_metric_writer(name_)),
   metric_(make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
                                                      writer_.location().location_group().parent()),
                                trace.metric_member(name_, empty_if_null(event.description),
@@ -61,40 +61,39 @@ Channel::Channel(const wrapper::Properties& event, trace::Trace& trace)
 {
 }
 
-const std::string& Channel::name() const
+const std::string& Metric::name() const
 {
     return name_;
 }
 
-void Channel::id(int id)
+void Metric::id(int id)
 {
     id_ = id;
 }
 
-int Channel::id() const
+int Metric::id() const
 {
     return id_;
 }
 
-bool Channel::isDisabled() const
+bool Metric::isDisabled() const
 {
     return id_ == -1;
 }
 
-void Channel::write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end,
-                           otf2::chrono::time_point from, otf2::chrono::time_point to)
+void Metric::write_values(wrapper::TimeValuePair* begin, wrapper::TimeValuePair* end)
 {
     for (auto it = begin; it != end; it++)
     {
         auto timestamp = otf2::chrono::time_point(otf2::chrono::duration(it->timestamp));
-        if (from <= timestamp && timestamp <= to)
+        if (trace_.record_from() <= timestamp && timestamp <= trace_.record_to())
         {
             write_value(*it);
         }
     }
 }
 
-void Channel::write_value(wrapper::TimeValuePair tv)
+void Metric::write_value(wrapper::TimeValuePair tv)
 {
     // @tilsche look behind you, a three-headed monkey! -- This is necessary, because we forced too
     // much type-safety in the metric event refactoring :( Need to change that. Band-aid incoming.
