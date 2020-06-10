@@ -533,6 +533,13 @@ void parse_program_options(int argc, const char** argv)
     // Use time interval based metric recording as a default
     if (!vm.count("metric-leader"))
     {
+        if (metric_frequency == 0)
+        {
+            Log::fatal()
+                << "--metric-frequency should not be zero when using the default metric leader";
+            std::exit(EXIT_FAILURE);
+        }
+
         Log::debug() << "checking if cpu-clock is available...";
         try
         {
@@ -556,6 +563,12 @@ void parse_program_options(int argc, const char** argv)
     }
     else
     {
+        if (metric_count == 0)
+        {
+            Log::fatal() << "--metric-count should not be zero when using a custom metric leader";
+            std::exit(EXIT_FAILURE);
+        }
+
         config.metric_use_frequency = false;
         config.metric_count = metric_count;
     }
