@@ -237,23 +237,21 @@ std::vector<CounterDescription> EventProvider::get_pmu_events()
 {
     std::vector<CounterDescription> events;
 
-    namespace fs = std::filesystem;
+    const std::filesystem::path pmu_devices("/sys/bus/event_source/devices");
 
-    const fs::path pmu_devices("/sys/bus/event_source/devices");
-
-    for (const auto& pmu : fs::directory_iterator(pmu_devices))
+    for (const auto& pmu : std::filesystem::directory_iterator(pmu_devices))
     {
         const auto pmu_path = pmu.path();
 
-        const fs::path event_dir(pmu_path / "events");
+        const std::filesystem::path event_dir(pmu_path / "events");
 
         // some PMUs don't have any events, in that case event_dir doesn't exist
-        if (!fs::is_directory(event_dir))
+        if (!std::filesystem::is_directory(event_dir))
         {
             continue;
         }
 
-        for (const auto& event : fs::directory_iterator(event_dir))
+        for (const auto& event : std::filesystem::directory_iterator(event_dir))
         {
             std::stringstream event_name;
 
@@ -266,7 +264,7 @@ std::vector<CounterDescription> EventProvider::get_pmu_events()
                 continue;
             }
 
-            // use fs::path::string, otherwise the paths are formatted quoted
+            // use std::filesystem::path::string, otherwise the paths are formatted quoted
             event_name << pmu_path.filename().string() << '/' << event_path.filename().string()
                        << '/';
             try
@@ -410,8 +408,6 @@ const CounterDescription raw_read_event(const std::string& ev_desc)
 
 const CounterDescription sysfs_read_event(const std::string& ev_desc)
 {
-    namespace fs = std::filesystem;
-
     // Parse event description //
 
     /* Event description format:
@@ -450,7 +446,8 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
     Log::debug() << "parsing event description: pmu='" << pmu_name << "', event='" << event_name
                  << "'";
 
-    const fs::path pmu_path = fs::path("/sys/bus/event_source/devices") / pmu_name;
+    const std::filesystem::path pmu_path =
+        std::filesystem::path("/sys/bus/event_source/devices") / pmu_name;
 
     // read PMU type id
     std::underlying_type<perf_type_id>::type type;

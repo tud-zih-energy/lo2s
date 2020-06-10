@@ -6,21 +6,6 @@ dist: bionic
 matrix:
   include:
     - os: linux
-      env: CXX="g++-7" CC="gcc-7"
-      compiler: gcc
-      addons:
-        apt:
-          packages:
-            - gcc-7
-            - g++-7
-            - cmake
-            - cmake-data
-            - binutils-dev
-            - zlib1g-dev
-            - libc6-dev
-            - libboost-program-options-dev
-            - linux-libc-dev
-    - os: linux
       env: CXX="g++-8" CC="gcc-8"
       compiler: gcc
       addons:

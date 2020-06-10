@@ -23,6 +23,7 @@
 
 #include <lo2s/log.hpp>
 
+#include <filesystem>
 #include <fstream>
 #include <regex>
 #include <string>
