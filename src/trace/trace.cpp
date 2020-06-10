@@ -36,8 +36,8 @@
 
 #include <nitro/env/get.hpp>
 #include <nitro/env/hostname.hpp>
+#include <nitro/lang/string.hpp>
 
-#include <boost/algorithm/string/replace.hpp>
 #include <filesystem>
 
 #include <fmt/core.h>
@@ -67,8 +67,8 @@ std::string get_trace_name(std::string prefix = "")
         prefix = "lo2s_trace_{DATE}";
     }
 
-    boost::replace_all(prefix, "{DATE}", get_datetime());
-    boost::replace_all(prefix, "{HOSTNAME}", nitro::env::hostname());
+    nitro::lang::replace_all(prefix, "{DATE}", get_datetime());
+    nitro::lang::replace_all(prefix, "{HOSTNAME}", nitro::env::hostname());
 
     auto result = prefix;
 
@@ -78,7 +78,7 @@ std::string get_trace_name(std::string prefix = "")
 
     for (std::sregex_iterator it = env_begin; it != env_end; ++it)
     {
-        boost::replace_all(result, it->str(), nitro::env::get((*it)[1]));
+        nitro::lang::replace_all(result, it->str(), nitro::env::get((*it)[1]));
     }
 
     return result;

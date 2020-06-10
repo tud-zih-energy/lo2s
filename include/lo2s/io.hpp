@@ -36,8 +36,8 @@
 #include <map>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
 #include <lo2s/time/time.hpp>
+#include <nitro/lang/string.hpp>
 
 namespace lo2s
 {
@@ -128,8 +128,7 @@ operator<<(std::ostream& os, const ArgumentList<std::map<std::string, std::strin
         }
         for (auto it = list.first_; it != list.last_; ++it)
         {
-            std::vector<std::string> lines;
-            boost::split(lines, it->second, [](char c) { return c == '\n'; });
+            std::vector<std::string> lines = nitro::lang::split(it->second, "\n");
             os << "  " << std::left << std::setw(max_string_length + 2) << it->first << lines[0]
                << '\n';
             lines.erase(lines.begin());

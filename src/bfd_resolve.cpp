@@ -21,8 +21,8 @@
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <filesystem>
+
 #include <system_error>
 
 #include <cstdlib>
