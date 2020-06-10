@@ -73,10 +73,15 @@ struct Config
     std::chrono::nanoseconds perf_read_interval;
     // Metrics
     bool metric_use_frequency;
+
+    // Newer versions format this differently, so protect this for now
+    // clang-format off
     union {
         std::uint64_t metric_count;
         std::uint64_t metric_frequency;
     };
+    // clang-format on
+
     std::string metric_leader;
     bool standard_metrics;
 
