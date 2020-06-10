@@ -164,6 +164,7 @@ public:
     }
     otf2::definition::comm& process_comm(pid_t pid)
     {
+        std::lock_guard<std::recursive_mutex> guard(mutex_);
         return registry_.get<otf2::definition::comm>(ByProcess(pid));
     }
 
