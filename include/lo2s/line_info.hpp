@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 namespace lo2s
 {
@@ -50,7 +50,7 @@ public:
     {
         return LineInfo((file != nullptr) ? file : "<unknown file>",
                         (function != nullptr) ? function : "<unknown function>", line,
-                        boost::filesystem::path(dso).filename().string());
+                        std::filesystem::path(dso).filename().string());
     }
 
     static LineInfo for_unknown_function()
@@ -61,7 +61,7 @@ public:
     static LineInfo for_unknown_function_in_dso(const std::string& dso)
     {
         return LineInfo("<unknown file>", "<unknown function>", UNKNOWN_LINE,
-                        boost::filesystem::path(dso).filename().string());
+                        std::filesystem::path(dso).filename().string());
     }
 
     static LineInfo for_binary(const std::string& binary)

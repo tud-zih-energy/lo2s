@@ -2,8 +2,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/iterator_range.hpp>
+#include <filesystem>
 
 #include <fmt/core.h>
 
@@ -76,9 +75,9 @@ std::string get_process_exe(pid_t pid)
     return exe_cstr;
 }
 
-static std::string read_file(const boost::filesystem::path& path)
+static std::string read_file(const std::filesystem::path& path)
 {
-    boost::filesystem::ifstream s;
+    std::ifstream s;
     s.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     s.open(path);
 
@@ -97,7 +96,7 @@ static std::string read_file(const boost::filesystem::path& path)
 
 std::string get_process_comm(pid_t pid)
 {
-    auto proc_comm = boost::filesystem::path{ "/proc" } / std::to_string(pid) / "comm";
+    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(pid) / "comm";
     try
     {
         return read_file(proc_comm);
@@ -111,7 +110,7 @@ std::string get_process_comm(pid_t pid)
 
 std::string get_task_comm(pid_t pid, pid_t task)
 {
-    auto task_comm = boost::filesystem::path{ "/proc" } / std::to_string(pid) / "task" /
+    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(pid) / "task" /
                      std::to_string(task) / "comm";
     try
     {
@@ -167,8 +166,8 @@ const struct ::utsname& get_uname()
 std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
 {
     std::unordered_map<pid_t, std::string> ret;
-    boost::filesystem::path proc("/proc");
-    for (auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(proc), {}))
+    std::filesystem::path proc("/proc");
+    for (auto& entry : std::filesystem::directory_iterator(proc))
     {
         pid_t pid;
         try
@@ -184,9 +183,8 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
         ret.emplace(pid, name);
         try
         {
-            boost::filesystem::path task(fmt::format("/proc/{}/task", pid));
-            for (auto& entry_task :
-                 boost::make_iterator_range(boost::filesystem::directory_iterator(task), {}))
+            std::filesystem::path task(fmt::format("/proc/{}/task", pid));
+            for (auto& entry_task : std::filesystem::directory_iterator(task))
             {
                 pid_t tid;
                 try

@@ -35,10 +35,8 @@
 
 #include <cstdint>
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 
-namespace fs = boost::filesystem;
 using namespace std::literals::string_literals;
 
 namespace lo2s
@@ -143,6 +141,6 @@ private:
 
     bool hypervised_ = false;
 
-    const static fs::path base_path;
+    const static std::filesystem::path base_path;
 };
 } // namespace lo2s

@@ -30,7 +30,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <ios>
 
@@ -41,8 +41,6 @@ extern "C"
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 }
-
-namespace fs = boost::filesystem;
 
 namespace lo2s
 {
@@ -186,11 +184,12 @@ protected:
 private:
     int cpu_;
     int fd_ = -1;
-    const static fs::path base_path;
+    const static std::filesystem::path base_path;
 };
 
 template <typename T>
-const fs::path Reader<T>::base_path = fs::path("/sys/kernel/debug/tracing/events");
+const std::filesystem::path
+    Reader<T>::base_path = std::filesystem::path("/sys/kernel/debug/tracing/events");
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s
