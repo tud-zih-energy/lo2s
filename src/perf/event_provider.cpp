@@ -451,7 +451,9 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
 
     // read PMU type id
     std::underlying_type<perf_type_id>::type type;
-    if ((std::ifstream(pmu_path / "type") >> type).fail())
+    std::ifstream type_stream(pmu_path / "type");
+    type_stream >> type;
+    if (!type_stream)
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
@@ -462,7 +464,9 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
 
     // read event configuration
     std::string ev_cfg;
-    if ((std::ifstream(pmu_path / "events" / event_name) >> ev_cfg).fail())
+    std::ifstream event_stream(pmu_path / "events" / event_name);
+    event_stream >> ev_cfg;
+    if (!event_stream)
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown event '"s + event_name + "' for PMU '"s +
@@ -501,7 +505,9 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
             (kv_match[EC_VALUE].length() != 0) ? kv_match[EC_VALUE] : default_value;
 
         std::string format;
-        if (!(std::ifstream(pmu_path / "format" / term) >> format))
+        std::ifstream format_stream(pmu_path / "format" / term);
+        format_stream >> format;
+        if (!format_stream)
         {
             throw EventProvider::InvalidEvent("cannot read event format");
         }
