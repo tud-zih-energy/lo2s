@@ -79,7 +79,7 @@ if(NOT _HAS_INTEGRATED_STD_FILESYSTEM AND NOT _HAS_BUNDLED_FILESYSTEM_LIBRARY)
     endif()
 
     find_package_handle_standard_args(StdFilesystem
-        "Coudln't determine a proper setup for std::filesystem. Please use a fully C++17 compliant compiler and standard library."
+        "Couldn't determine a proper setup for std::filesystem. Please use a fully C++17 compliant compiler and standard library."
         StdFilesystem_LIBRARY
         HAS_STD_FILESYSTEM
     )
@@ -90,7 +90,7 @@ else()
         set(OUTPUT_MESSAGE "Using -l${StdFSLibName}")
     endif()
     find_package_handle_standard_args(StdFilesystem
-        "Coudln't determine a proper setup for std::filesystem. Please use a fully C++17 compliant compiler and standard library."
+        "Couldn't determine a proper setup for std::filesystem. Please use a fully C++17 compliant compiler and standard library."
         OUTPUT_MESSAGE
         HAS_STD_FILESYSTEM
     )
@@ -107,8 +107,6 @@ if(StdFilesystem_FOUND)
         target_link_libraries(std::filesystem INTERFACE ${StdFSLibName})
         set(StdFilesystem_LIBRARY ${StdFSLibName})
     endif()
-
-    set_target_properties(std::filesystem PROPERTIES INTERFACE_COMPILE_DEFINITIONS HAS_STD_FILESYSTEM)
 
     mark_as_advanced(StdFilesystem_LIBRARY)
 endif()
