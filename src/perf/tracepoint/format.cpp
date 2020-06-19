@@ -28,7 +28,7 @@
 #include <regex>
 #include <string>
 
-#include <boost/algorithm/string/predicate.hpp>
+#include <nitro/lang/string.hpp>
 
 #include <cerrno>
 
@@ -111,7 +111,7 @@ void EventFormat::parse_format_line(const std::string& line)
     std::string name = type_name_match[2];
     EventField field(name, offset, size);
 
-    if (boost::starts_with(name, "common_"))
+    if (nitro::lang::starts_with(name, "common_"))
     {
         common_fields_.emplace_back(field);
     }

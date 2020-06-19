@@ -23,7 +23,7 @@
 #include <lo2s/mmap.hpp>
 #include <lo2s/util.hpp>
 
-#include <boost/algorithm/string/predicate.hpp>
+#include <nitro/lang/string.hpp>
 
 #include <fmt/core.h>
 
@@ -83,7 +83,7 @@ void MemoryMap::mmap(const RawMemoryMapEntry& entry)
     if (entry.filename.empty() || std::string("//anon") == entry.filename ||
         std::string("/dev/zero") == entry.filename ||
         std::string("/anon_hugepage") == entry.filename ||
-        boost::starts_with(entry.filename, "/SYSV"))
+        nitro::lang::starts_with(entry.filename, "/SYSV"))
     {
         Log::debug() << "mmap: skipping dso: " << entry.filename << " (known non-library)";
         return;
