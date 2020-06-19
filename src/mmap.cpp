@@ -24,7 +24,6 @@
 #include <lo2s/util.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
 
 #include <fmt/core.h>
 

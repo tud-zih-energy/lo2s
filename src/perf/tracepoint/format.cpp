@@ -23,12 +23,12 @@
 
 #include <lo2s/log.hpp>
 
+#include <filesystem>
+#include <fstream>
 #include <regex>
 #include <string>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
 
 #include <cerrno>
 
@@ -50,8 +50,8 @@ EventFormat::EventFormat(const std::string& name) : name_(name)
     // allow perf-like name format which uses ':' as a separator
     std::replace(name_.begin(), name_.end(), ':', '/');
 
-    boost::filesystem::path path_event = base_path_ / name_;
-    boost::filesystem::ifstream ifs_id, ifs_format;
+    std::filesystem::path path_event = base_path_ / name_;
+    std::ifstream ifs_id, ifs_format;
 
     auto id_path = path_event / "id";
     auto format_path = path_event / "format";
@@ -125,7 +125,7 @@ std::vector<std::string> EventFormat::get_tracepoint_event_names()
 {
     try
     {
-        boost::filesystem::ifstream ifs_available_events;
+        std::ifstream ifs_available_events;
         ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
 
         ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
@@ -146,7 +146,7 @@ std::vector<std::string> EventFormat::get_tracepoint_event_names()
         return {};
     }
 }
-const boost::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
+const std::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s

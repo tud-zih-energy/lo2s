@@ -2,7 +2,7 @@
 
 namespace lo2s
 {
-const fs::path Topology::base_path = "/sys/devices/system/cpu";
+const std::filesystem::path Topology::base_path = "/sys/devices/system/cpu";
 
 namespace detail
 {
@@ -43,10 +43,10 @@ void Topology::read_proc()
     std::string present_list;
 
     {
-        fs::ifstream cpu_online(base_path / "/online");
+        std::ifstream cpu_online(base_path / "/online");
         std::getline(cpu_online, online_list);
 
-        fs::ifstream cpu_present(base_path / "/present");
+        std::ifstream cpu_present(base_path / "/present");
         std::getline(cpu_present, present_list);
     }
 
@@ -57,9 +57,9 @@ void Topology::read_proc()
     {
         std::stringstream filename_stream;
 
-        fs::path topology = base_path / ("cpu"s + std::to_string(cpu_id)) / "topology";
-        fs::ifstream package_stream(topology / "physical_package_id");
-        fs::ifstream core_stream(topology / "core_id");
+        std::filesystem::path topology = base_path / ("cpu"s + std::to_string(cpu_id)) / "topology";
+        std::ifstream package_stream(topology / "physical_package_id");
+        std::ifstream core_stream(topology / "core_id");
 
         uint32_t package_id, core_id;
         package_stream >> package_id;
@@ -98,7 +98,7 @@ void Topology::read_proc()
 
     {
         std::string line;
-        fs::ifstream cpuinfo("/proc/cpuinfo");
+        std::ifstream cpuinfo("/proc/cpuinfo");
 
         while (std::getline(cpuinfo, line))
         {

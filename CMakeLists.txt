@@ -98,13 +98,14 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Boost REQUIRED COMPONENTS system program_options filesystem)
+find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(Binutils REQUIRED)
 find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
+find_package(StdFilesystem REQUIRED)
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
@@ -181,9 +182,9 @@ target_link_libraries(lo2s
         Nitro::dl
         Threads::Threads
         Boost::program_options
-        Boost::filesystem
         Binutils::Binutils
         fmt::fmt
+        std::filesystem
 )
 
 # old glibc versions require -lrt for clock_gettime()

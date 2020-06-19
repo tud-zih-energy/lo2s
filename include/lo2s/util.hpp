@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 
 #include <chrono>
+#include <fstream>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -81,8 +81,8 @@ const struct ::utsname& get_uname();
 template <typename T>
 T get_sysctl(const std::string& group, const std::string& name)
 {
-    auto sysctl_path = boost::filesystem::path("/proc/sys") / group / name;
-    boost::filesystem::ifstream sysctl_stream;
+    auto sysctl_path = std::filesystem::path("/proc/sys") / group / name;
+    std::ifstream sysctl_stream;
     sysctl_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     sysctl_stream.open(sysctl_path);
 

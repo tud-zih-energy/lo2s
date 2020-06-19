@@ -38,7 +38,7 @@
 #include <nitro/env/hostname.hpp>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <fmt/core.h>
 
@@ -216,24 +216,24 @@ Trace::~Trace()
 
     archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_);
 
-    boost::filesystem::path symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
+    std::filesystem::path symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
 
     if (symlink_path.empty())
     {
         return;
     }
 
-    if (boost::filesystem::is_symlink(symlink_path))
+    if (std::filesystem::is_symlink(symlink_path))
     {
-        boost::filesystem::remove(symlink_path);
+        std::filesystem::remove(symlink_path);
     }
-    else if (boost::filesystem::exists(symlink_path))
+    else if (std::filesystem::exists(symlink_path))
     {
         Log::warn() << "The path " << symlink_path
                     << " exists and isn't a symlink, refusing to create link to latest trace";
         return;
     }
-    boost::filesystem::create_symlink(trace_name_, symlink_path);
+    std::filesystem::create_symlink(trace_name_, symlink_path);
 }
 
 const otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)

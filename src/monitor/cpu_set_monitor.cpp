@@ -8,8 +8,7 @@
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/perf/event_collection.hpp>
 
-#include <boost/filesystem.hpp>
-#include <boost/range/iterator_range.hpp>
+#include <filesystem>
 
 #include <regex>
 
@@ -28,13 +27,13 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     std::smatch pid_match;
     pid_t pid;
 
-    const boost::filesystem::path proc_path("/proc");
+    const std::filesystem::path proc_path("/proc");
     if (config().sampling)
     {
-        for (const auto& p :
-             boost::make_iterator_range(boost::filesystem::directory_iterator{ proc_path }, {}))
+        for (const auto& p : std::filesystem::directory_iterator(proc_path))
         {
-            if (std::regex_match(p.path().string(), pid_match, proc_regex))
+            std::string path = p.path().string();
+            if (std::regex_match(path, pid_match, proc_regex))
             {
                 pid = std::stol(pid_match[1]);
 
