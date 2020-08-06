@@ -161,7 +161,6 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
         {
             // we need the pid of the new process
             pid_t new_pid = ptrace_geteventmsg(child);
-
             std::string command = get_process_comm(new_pid);
             Log::debug() << "New process " << new_pid << " (" << command << "): forked from "
                          << child;
@@ -217,6 +216,13 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
                          << e.what();
             throw;
         }
+    }
+    break;
+    case PTRACE_EVENT_EXEC:
+    {
+        std::string name = get_process_comm(child);
+        Log::debug() << "Exec in " << child << " (" << name << ")";
+        monitor_.update_process_name(child, name);
     }
     break;
     case PTRACE_EVENT_EXIT:
@@ -280,7 +286,8 @@ void ProcessController::handle_signal(pid_t child, int status)
 
             // we are only interested in fork/join events
             ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                                         PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT);
+                                         PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT |
+                                         PTRACE_O_TRACEEXEC);
             // FIXME TODO continue this new thread/process ONLY if already registered in the
             // thread map.
             break;

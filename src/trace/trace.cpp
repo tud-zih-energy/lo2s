@@ -213,6 +213,15 @@ otf2::chrono::time_point Trace::record_to() const
 
 Trace::~Trace()
 {
+    for (auto& thread : thread_names_)
+    {
+        auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread.first));
+        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
+            ByString(thread.second), intern(thread.second), otf2::common::paradigm_type::user,
+            otf2::common::group_flag_type::none);
+
+        regions_group.add_member(thread_region);
+    }
 
     archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_);
 
@@ -290,14 +299,7 @@ void Trace::update_process_name(pid_t pid, const std::string& name)
         registry_.get<otf2::definition::comm_group>(ByProcess(pid)).name(iname);
         registry_.get<otf2::definition::comm>(ByProcess(pid)).name(iname);
 
-        auto& region = registry_.get<otf2::definition::region>(ByThread(pid));
-        region.name(iname);
-
-        registry_.get<otf2::definition::regions_group>(ByString(name)).add_member(region);
-        registry_.get<otf2::definition::regions_group>(ByString(process_names_.at(pid)))
-            .remove_member(region);
-
-        process_names_[pid] = name;
+        update_thread_name(pid, name);
     }
     catch (const std::out_of_range&)
     {
@@ -311,12 +313,20 @@ void Trace::update_thread_name(pid_t tid, const std::string& name)
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    auto& iname = intern(fmt::format("{} (tid {})", name, tid));
-    if (registry_.has<otf2::definition::location>(ByThreadSampleWriter(tid)))
+    try
     {
+        auto& iname = intern(fmt::format("{} ({})", name, tid));
+        auto& thread_region = registry_.get<otf2::definition::region>(ByThread(tid));
+        thread_region.name(iname);
+        thread_region.canonical_name(iname);
+        thread_region.source_file(iname);
+        thread_region.description(iname);
+
         registry_.get<otf2::definition::location>(ByThreadSampleWriter(tid)).name(iname);
+
+        thread_names_[tid] = name;
     }
-    else
+    catch (const std::out_of_range&)
     {
         Log::warn() << "Attempting to update name of unknown thread " << tid << " (" << name << ")";
     }
@@ -551,15 +561,14 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         {
             if (tid != 0)
             {
-                // Threads rarely have their own name, in that case, use the process' name
-                auto process_name = process_names_.find(local_thread_cctx.second.pid);
-                if (process_name == process_names_.end())
+                auto thread_name = thread_names_.find(tid);
+                if (thread_name == thread_names_.end())
                 {
                     add_thread(tid, "<unknown thread>");
                 }
                 else
                 {
-                    add_thread(tid, process_name->second);
+                    add_thread(tid, thread_name->second);
                 }
             }
             else
@@ -592,26 +601,18 @@ void Trace::add_thread_exclusive(pid_t tid, const std::string& name,
 {
     if (registry_.has<otf2::definition::calling_context>(ByThread(tid)))
     {
+        update_thread_name(tid, name);
         return;
     }
 
-    process_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                           std::forward_as_tuple(name));
+    thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                          std::forward_as_tuple(name));
 
     auto& iname = intern(fmt::format("{} ({})", name, tid));
 
-    if (!registry_.has<otf2::definition::region>(ByThread(tid)))
-    {
-        auto& thread_region = registry_.create<otf2::definition::region>(
-            ByThread(tid), iname, iname, iname, otf2::common::role_type::function,
-            otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-            ByString(name), intern(name), otf2::common::paradigm_type::user,
-            otf2::common::group_flag_type::none);
-        regions_group.add_member(thread_region);
-    }
-    auto& thread_region = registry_.get<otf2::definition::region>(ByThread(tid));
-    // TODO update iname if not newly inserted
+    auto& thread_region = registry_.emplace<otf2::definition::region>(
+        ByThread(tid), iname, iname, iname, otf2::common::role_type::function,
+        otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
 
     // create calling context
     auto& thread_cctx = registry_.create<otf2::definition::calling_context>(
