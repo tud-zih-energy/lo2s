@@ -58,6 +58,11 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool 
     trace_.update_thread_name(tid, name);
 }
 
+void ProcessMonitor::update_process_name(pid_t pid, const std::string& name)
+{
+    trace_.update_process_name(pid, name);
+}
+
 void ProcessMonitor::exit_process(pid_t pid)
 {
     exit_thread(pid);

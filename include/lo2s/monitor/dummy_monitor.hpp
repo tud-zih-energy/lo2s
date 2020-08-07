@@ -61,6 +61,11 @@ public:
     {
         (void)tid;
     }
+
+    virtual void update_process_name([[maybe_unused]] pid_t pid,
+                                     [[maybe_unused]] const std::string& name) override
+    {
+    }
 };
 } // namespace monitor
 } // namespace lo2s

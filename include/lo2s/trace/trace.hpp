@@ -207,7 +207,7 @@ private:
 
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 
-    std::map<pid_t, std::string> process_names_;
+    std::map<pid_t, std::string> thread_names_;
     std::map<pid_t, IpCctxEntry> calling_context_tree_;
 
     otf2::definition::comm_locations_group& comm_locations_group_;

@@ -49,6 +49,8 @@ public:
     void exit_process(pid_t pid) override;
     void exit_thread(pid_t tid) override;
 
+    void update_process_name(pid_t pid, const std::string& name) override;
+
 private:
     std::map<pid_t, ThreadMonitor> threads_;
 };
