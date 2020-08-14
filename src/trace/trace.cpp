@@ -322,7 +322,10 @@ void Trace::update_thread_name(pid_t tid, const std::string& name)
         thread_region.source_file(iname);
         thread_region.description(iname);
 
-        registry_.get<otf2::definition::location>(ByThreadSampleWriter(tid)).name(iname);
+        if (registry_.has<otf2::definition::location>(ByThreadSampleWriter(tid)))
+        {
+            registry_.get<otf2::definition::location>(ByThreadSampleWriter(tid)).name(iname);
+        }
 
         thread_names_[tid] = name;
     }
