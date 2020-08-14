@@ -35,7 +35,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
  * libbfd
  * libiberty
  * boost (>= 1.62)
- * CMake (>= 3.5)
+ * CMake (>= 3.11)
  * A C++ Compiler with C++17 support and the std::filesystem library (GCC > 7, Clang > 5)
 
 <sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.11)
 project(lo2s VERSION 1.3.0)
 
 include(CMakeDependentOption)
