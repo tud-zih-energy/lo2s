@@ -25,6 +25,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 
+#include <cstddef>
 #include <cstdint>
 
 extern "C"
@@ -50,7 +51,7 @@ public:
 
     Radare();
 
-    static std::string single_instruction(char* buf);
+    static std::string single_instruction(std::byte* buf);
 
     std::string operator()(Address ip, std::istream& obj);
 

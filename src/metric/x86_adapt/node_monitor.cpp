@@ -33,9 +33,8 @@ void NodeMonitor::initialize_thread()
     try_pin_to_cpu(*(package.cpu_ids.begin()));
 }
 
-void NodeMonitor::monitor(int fd)
+void NodeMonitor::monitor([[maybe_unused]] int fd)
 {
-    (void)fd;
     event_.timestamp(time::now());
     for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))
     {

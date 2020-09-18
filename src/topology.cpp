@@ -84,8 +84,8 @@ void Topology::read_proc()
         core.cpu_ids.insert(cpu_id);
 
         auto insert_cpu = cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
-        auto& cpu = insert_cpu.first->second;
-        (void)cpu;
+        [[maybe_unused]] auto& cpu = insert_cpu.first->second;
+
         if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id)
         {
             throw std::runtime_error("Inconsistent cpu/package/core ids in topology.");

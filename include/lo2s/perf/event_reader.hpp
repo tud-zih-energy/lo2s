@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -201,7 +202,7 @@ public:
                 // Event spans the wrap-around of the ring buffer
                 if (index + len > data_size())
                 {
-                    char* dst = event_copy;
+                    std::byte* dst = event_copy;
                     do
                     {
                         auto cpy = std::min<std::size_t>(data_size() - index, len);
@@ -317,11 +318,11 @@ private:
         return mmap_pages_ * get_page_size();
     }
 
-    char* data()
+    std::byte* data()
     {
         // workaround for old kernels
         // assert(header()->data_offset == get_page_size());
-        return (char*)base + get_page_size();
+        return reinterpret_cast<std::byte*>(base) + get_page_size();
     }
 
 public:
@@ -354,7 +355,7 @@ protected:
 private:
     int fd_;
     void* base;
-    char event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
+    std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
 } // namespace perf
 } // namespace lo2s

@@ -128,8 +128,7 @@ void MemoryMap::mmap(const RawMemoryMapEntry& entry)
             assert(ex_range.start < entry.addr);
             ex_range.end = entry.addr;
             Log::debug() << "truncating map entry at " << ex_range.start << " to " << ex_range.end;
-            auto r = map_.emplace(ex_range, std::move(ex_elem));
-            (void)r;
+            [[maybe_unused]] auto r = map_.emplace(ex_range, std::move(ex_elem));
             assert(r.second);
         }
     }
