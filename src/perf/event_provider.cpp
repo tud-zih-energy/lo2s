@@ -542,8 +542,8 @@ EventProvider::EventProvider()
 
 const CounterDescription& EventProvider::cache_event(const std::string& name)
 {
-    // Format for raw events is rNNNN
-    static const std::regex raw_regex("r[[:xdigit:]]{4}");
+    // Format for raw events is r followed by a hexadecimal number
+    static const std::regex raw_regex("r[[:xdigit:]]{1-8}");
 
     // save event in event map; return a reference to the inserted event to
     // the caller.
