@@ -54,7 +54,7 @@ ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monito
             parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec);
         add_fd(sample_writer_->fd());
     }
-    if (!perf::requested_events().events.empty())
+    if (!perf::counter::requested_counters().counters.empty())
     {
         counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
             pid, tid, parent_monitor.trace().thread_metric_writer(pid, tid), parent_monitor,

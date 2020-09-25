@@ -6,7 +6,7 @@
 
 #include <lo2s/monitor/dummy_monitor.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
-#include <lo2s/perf/event_collection.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
 
 #include <filesystem>
 

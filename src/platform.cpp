@@ -217,7 +217,7 @@ Processor detect_processor(void)
     return Processor::UNKNOWN;
 }
 
-std::vector<perf::CounterDescription> get_mem_events()
+std::vector<perf::EventDescription> get_mem_events()
 {
     static auto proc = detect_processor();
     switch (proc)

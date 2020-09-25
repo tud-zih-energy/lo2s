@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_description.hpp>
 
 namespace lo2s
 {
@@ -45,12 +45,12 @@ public:
         }
 
     public:
-        DescriptionCache(const CounterDescription& description)
+        DescriptionCache(const EventDescription& description)
         : description(description), valid_(true)
         {
         }
 
-        DescriptionCache(CounterDescription&& description)
+        DescriptionCache(EventDescription&& description)
         : description(std::move(description)), valid_(true)
         {
         }
@@ -65,7 +65,7 @@ public:
             return valid_;
         }
 
-        CounterDescription description;
+        EventDescription description;
 
     private:
         bool valid_;
@@ -82,14 +82,14 @@ public:
         return instance_mutable();
     }
 
-    static const CounterDescription& get_event_by_name(const std::string& name);
+    static const EventDescription& get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name);
 
-    static std::vector<CounterDescription> get_predefined_events();
-    static std::vector<CounterDescription> get_pmu_events();
+    static std::vector<EventDescription> get_predefined_events();
+    static std::vector<EventDescription> get_pmu_events();
 
-    static const CounterDescription& get_default_metric_leader_event();
+    static const EventDescription& get_default_metric_leader_event();
 
     class InvalidEvent : public std::runtime_error
     {
@@ -107,7 +107,7 @@ private:
         return e;
     }
 
-    const CounterDescription& cache_event(const std::string& name);
+    const EventDescription& cache_event(const std::string& name);
 
     EventMap event_map_;
 };

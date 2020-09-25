@@ -26,7 +26,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
-#include <lo2s/perf/event_collection.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
@@ -107,18 +107,19 @@ Trace::Trace()
                                                  otf2::common::metric_mode::absolute_point,
                                                  otf2::common::type::int64, "cpuid"));
 
-    const perf::EventCollection& event_collection = perf::requested_events();
-    if (!event_collection.events.empty())
+    const perf::counter::CounterCollection& counter_collection =
+        perf::counter::requested_counters();
+    if (!counter_collection.counters.empty())
     {
         perf_metric_class_.add_member(metric_member(
-            event_collection.leader.name, event_collection.leader.name,
+            counter_collection.leader.name, counter_collection.leader.name,
             otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
 
-        for (const auto& ev : event_collection.events)
+        for (const auto& counter : counter_collection.counters)
         {
-            perf_metric_class_.add_member(
-                metric_member(ev.name, ev.name, otf2::common::metric_mode::accumulated_start,
-                              otf2::common::type::Double, "#"));
+            perf_metric_class_.add_member(metric_member(
+                counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::Double, "#"));
         }
 
         perf_metric_class_.add_member(metric_member("time_enabled", "time event active",

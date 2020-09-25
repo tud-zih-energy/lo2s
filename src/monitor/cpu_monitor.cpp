@@ -40,7 +40,7 @@ CpuMonitor::CpuMonitor(int cpuid, MainMonitor& parent)
   switch_writer_(cpuid, parent.trace())
 #endif
 {
-    if (!perf::requested_events().events.empty())
+    if (!perf::counter::requested_counters().counters.empty())
     {
         counter_writer_ = std::make_unique<perf::counter::CpuWriter>(
             cpuid, parent.trace().cpu_metric_writer(cpuid), parent);

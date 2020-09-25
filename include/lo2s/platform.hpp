@@ -32,7 +32,7 @@
 
 #include <cstdint>
 
-#include "perf/counter_description.hpp"
+#include <lo2s/perf/event_description.hpp>
 
 /* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
 
@@ -140,6 +140,6 @@ enum class Processor
     ARM1176 = 204,
 };
 
-std::vector<perf::CounterDescription> get_mem_events();
+std::vector<perf::EventDescription> get_mem_events();
 } // namespace platform
 } // namespace lo2s
