@@ -87,7 +87,7 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::CounterDescription> events)
+                                      std::vector<perf::EventDescription> events)
 {
     std::vector<std::string> event_names;
     for (auto& ev : events)
@@ -584,7 +584,7 @@ void parse_program_options(int argc, const char** argv)
             }
             catch (const perf::EventProvider::InvalidEvent& e)
             {
-                // Will be handled later in collect_requested_events
+                // Will be handled later in collect_requested_counters
                 config.metric_leader.clear();
             }
         }

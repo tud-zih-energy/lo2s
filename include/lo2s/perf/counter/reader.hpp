@@ -21,16 +21,16 @@
 
 #pragma once
 
-#include <lo2s/config.hpp>
-
-#include <lo2s/perf/counter_description.hpp>
-#include <lo2s/perf/event_collection.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/counter/counter_buffer.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
-#include <lo2s/metric/perf_counter.hpp>
+#include <vector>
 
-#include <cstring>
+extern "C"
+{
+#include <sys/types.h>
+}
 
 namespace lo2s
 {
@@ -38,26 +38,42 @@ namespace perf
 {
 namespace counter
 {
+
+// This class is concerned with setting up and reading out perf counters in a group.
+// This group has a group leader event, which triggers a readout of the other
+// events every --metric-count occurences. The value is then written into a memory-mapped
+// ring buffer, which we read out routinely to get the counter values.
 template <class T>
 class Reader : public EventReader<T>
 {
 public:
+    Reader(pid_t tid, int cpuid, const CounterCollection& counter_collection, bool enable_on_exec);
+
     struct RecordSampleType
     {
         struct perf_event_header header;
         uint64_t time;
-        struct metric::GroupReadFormat v;
+        struct GroupReadFormat v;
     };
 
-    Reader(pid_t tid, int cpuid, const EventCollection& event_collection, bool enable_on_exec)
-    : counters_(tid, cpuid, event_collection, enable_on_exec)
+    ~Reader()
     {
-        EventReader<T>::init_mmap(counters_.group_leader_fd());
+        for (int fd : counter_fds_)
+        {
+            if (fd != -1)
+            {
+                ::close(fd);
+            }
+        }
+        ::close(group_leader_fd_);
     }
 
 protected:
-    metric::PerfCounterGroup counters_;
+    int group_leader_fd_;
+    std::vector<int> counter_fds_;
+    CounterBuffer counter_buffer_;
 };
+
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

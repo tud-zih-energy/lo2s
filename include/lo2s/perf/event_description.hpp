@@ -40,10 +40,10 @@ enum class Availability
     UNIVERSAL
 };
 
-struct CounterDescription
+struct EventDescription
 {
-    CounterDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                       std::uint64_t config1 = 0)
+    EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
+                     std::uint64_t config1 = 0)
     : name(name), type(type), config(config), config1(config1),
       availability(Availability::UNAVAILABLE)
     {

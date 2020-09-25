@@ -21,7 +21,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_collection.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/platform.hpp>
 
@@ -29,11 +29,13 @@ namespace lo2s
 {
 namespace perf
 {
-EventCollection collect_requested_events()
+namespace counter
+{
+CounterCollection collect_requested_counters()
 {
     const auto& user_events = lo2s::config().perf_events;
 
-    std::vector<perf::CounterDescription> used_counters;
+    std::vector<perf::EventDescription> used_counters;
 
     used_counters.reserve(user_events.size());
     for (const auto& ev : user_events)
@@ -91,7 +93,7 @@ EventCollection collect_requested_events()
     if (used_counters.empty())
     {
         // if no events will be recorded, we make an early exit with a fake leader
-        return { CounterDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
+        return { EventDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
                  std::move(used_counters) };
     }
     if (config().metric_leader.empty())
@@ -112,10 +114,12 @@ EventCollection collect_requested_events()
              std::move(used_counters) };
 }
 
-const EventCollection& requested_events()
+const CounterCollection& requested_counters()
 {
-    static EventCollection events{ collect_requested_events() };
-    return events;
+    static CounterCollection counters{ collect_requested_counters() };
+    return counters;
 }
+
+} // namespace counter
 } // namespace perf
 } // namespace lo2s

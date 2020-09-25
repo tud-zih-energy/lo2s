@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_description.hpp>
 
 #include <vector>
 
@@ -29,12 +29,16 @@ namespace lo2s
 {
 namespace perf
 {
-struct EventCollection
+namespace counter
 {
-    CounterDescription leader;
-    std::vector<CounterDescription> events;
+struct CounterCollection
+{
+    EventDescription leader;
+    std::vector<EventDescription> counters;
 };
 
-const EventCollection& requested_events();
+const CounterCollection& requested_counters();
+
+} // namespace counter
 } // namespace perf
 } // namespace lo2s

@@ -97,7 +97,7 @@ protected:
 
         if (config().sampling)
         {
-            CounterDescription sampling_event = EventProvider::get_event_by_name(
+            EventDescription sampling_event = EventProvider::get_event_by_name(
                 config().sampling_event); // config parser has already
                                           // checked for event
                                           // availability, should not throw

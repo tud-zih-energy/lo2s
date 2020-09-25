@@ -22,7 +22,7 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/counter_description.hpp>
+#include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -51,7 +51,7 @@ namespace
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
-static lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
+static lo2s::perf::EventDescription HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
     PERF_EVENT_HW("instructions", INSTRUCTIONS),
     PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
@@ -70,7 +70,7 @@ static lo2s::perf::CounterDescription HW_EVENT_TABLE[] = {
 #endif
 };
 
-static lo2s::perf::CounterDescription SW_EVENT_TABLE[] = {
+static lo2s::perf::EventDescription SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
     PERF_EVENT_SW("task-clock", TASK_CLOCK),
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
@@ -149,9 +149,9 @@ namespace lo2s
 namespace perf
 {
 
-const CounterDescription sysfs_read_event(const std::string& ev_desc);
+const EventDescription sysfs_read_event(const std::string& ev_desc);
 
-static bool event_is_openable(CounterDescription& ev)
+static bool event_is_openable(EventDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -222,7 +222,7 @@ static void populate_event_map(EventProvider::EventMap& map)
             name_fmt.str(std::string());
             name_fmt << cache.name << '-' << operation.name;
 
-            CounterDescription ev(
+            EventDescription ev(
                 name_fmt.str(), PERF_TYPE_HW_CACHE,
                 make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
 
@@ -233,9 +233,9 @@ static void populate_event_map(EventProvider::EventMap& map)
     }
 }
 
-std::vector<CounterDescription> EventProvider::get_pmu_events()
+std::vector<EventDescription> EventProvider::get_pmu_events()
 {
-    std::vector<CounterDescription> events;
+    std::vector<EventDescription> events;
 
     const std::filesystem::path pmu_devices("/sys/bus/event_source/devices");
 
@@ -281,7 +281,7 @@ std::vector<CounterDescription> EventProvider::get_pmu_events()
     return events;
 }
 
-const CounterDescription& EventProvider::get_default_metric_leader_event()
+const EventDescription& EventProvider::get_default_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
@@ -292,7 +292,7 @@ const CounterDescription& EventProvider::get_default_metric_leader_event()
     {
         try
         {
-            const CounterDescription& ev = get_event_by_name(candidate);
+            const EventDescription& ev = get_event_by_name(candidate);
             Log::debug() << "found suitable metric leader event: " << candidate;
             return ev;
         }
@@ -365,7 +365,7 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-static void event_description_update(CounterDescription& event, std::uint64_t value,
+static void event_description_update(EventDescription& event, std::uint64_t value,
                                      const std::string& format)
 {
     // Parse config terms //
@@ -397,16 +397,16 @@ static void event_description_update(CounterDescription& event, std::uint64_t va
     }
 }
 
-const CounterDescription raw_read_event(const std::string& ev_desc)
+const EventDescription raw_read_event(const std::string& ev_desc)
 {
     uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
-    const CounterDescription event(ev_desc, PERF_TYPE_RAW, code, 0);
+    const EventDescription event(ev_desc, PERF_TYPE_RAW, code, 0);
     // Do not check whether the event_is_openable because we don't know whether we are in
     // system or process mode
     return event;
 }
 
-const CounterDescription sysfs_read_event(const std::string& ev_desc)
+const EventDescription sysfs_read_event(const std::string& ev_desc)
 {
     // Parse event description //
 
@@ -458,7 +458,7 @@ const CounterDescription sysfs_read_event(const std::string& ev_desc)
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
     }
-    CounterDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
+    EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
 
     // Parse event configuration from sysfs //
 
@@ -540,7 +540,7 @@ EventProvider::EventProvider()
     populate_event_map(event_map_);
 }
 
-const CounterDescription& EventProvider::cache_event(const std::string& name)
+const EventDescription& EventProvider::cache_event(const std::string& name)
 {
     // Format for raw events is r followed by a hexadecimal number
     static const std::regex raw_regex("r[[:xdigit:]]{1-8}");
@@ -567,7 +567,7 @@ const CounterDescription& EventProvider::cache_event(const std::string& name)
     }
 }
 
-const CounterDescription& EventProvider::get_event_by_name(const std::string& name)
+const EventDescription& EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
     const auto event_it = ev_map.find(name);
@@ -610,12 +610,12 @@ bool EventProvider::has_event(const std::string& name)
     }
 }
 
-std::vector<CounterDescription> EventProvider::get_predefined_events()
+std::vector<EventDescription> EventProvider::get_predefined_events()
 {
 
     const auto& ev_map = instance().event_map_;
 
-    std::vector<CounterDescription> events;
+    std::vector<EventDescription> events;
     events.reserve(ev_map.size());
 
     for (const auto& event : ev_map)
