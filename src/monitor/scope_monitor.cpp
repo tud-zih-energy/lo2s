@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor/thread_monitor.hpp>
+#include <lo2s/monitor/scope_monitor.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
@@ -42,62 +42,40 @@ namespace lo2s
 namespace monitor
 {
 
-ThreadMonitor::ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor,
-                             bool enable_on_exec)
-: PollMonitor(parent_monitor.trace(), std::to_string(tid), config().perf_read_interval), pid_(pid),
-  tid_(tid)
+ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec)
+: PollMonitor(parent.trace(), scope.name(), config().perf_read_interval), scope_(scope)
 {
+#ifndef USE_PERF_RECORD_SWITCH
     if (config().sampling)
+#else
+    if (config().sampling || scope.type == ExecutionScopeType::CPU)
+#endif
     {
-        sample_writer_ = std::make_unique<perf::sample::Writer>(
-            pid, tid, -1, parent_monitor, parent_monitor.trace(),
-            parent_monitor.trace().thread_sample_writer(pid, tid), enable_on_exec);
+        sample_writer_ =
+            std::make_unique<perf::sample::Writer>(scope, parent, parent.trace(), enable_on_exec);
         add_fd(sample_writer_->fd());
     }
+
     if (!perf::counter::requested_counters().counters.empty())
     {
-        counter_writer_ = std::make_unique<perf::counter::ProcessWriter>(
-            pid, tid, parent_monitor.trace().thread_metric_writer(pid, tid), parent_monitor,
-            enable_on_exec);
+        counter_writer_ =
+            std::make_unique<perf::counter::group::Writer>(scope, parent.trace(), enable_on_exec);
         add_fd(counter_writer_->fd());
     }
 
+#ifndef USE_PERF_RECORD_SWITCH
+    switch_writer_ = std::make_unique<perf::tracepoint::SwitchWriter>(scope, parent.trace());
+#endif
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
 }
 
-void ThreadMonitor::stop()
+void ScopeMonitor::initialize_thread()
 {
-    if (!thread_.joinable())
-    {
-        return;
-    }
-
-    stop_pipe_.write();
-    thread_.join();
-    stop_pipe_.close();
-    sample_writer_->close();
+    try_pin_to_scope(scope_);
 }
 
-void ThreadMonitor::check_affinity(bool force)
-{
-    // Pin the monitoring thread on the same cores as the monitored thread
-    cpu_set_t new_mask;
-    CPU_ZERO(&new_mask); // make valgrind happy
-    sched_getaffinity(tid(), sizeof(new_mask), &new_mask);
-    if (force || !CPU_EQUAL(&new_mask, &affinity_mask_))
-    {
-        sched_setaffinity(0, sizeof(new_mask), &new_mask);
-        affinity_mask_ = new_mask;
-    }
-}
-
-void ThreadMonitor::initialize_thread()
-{
-    check_affinity(true);
-}
-
-void ThreadMonitor::finalize_thread()
+void ScopeMonitor::finalize_thread()
 {
     if (sample_writer_)
     {
@@ -105,9 +83,12 @@ void ThreadMonitor::finalize_thread()
     }
 }
 
-void ThreadMonitor::monitor(int fd)
+void ScopeMonitor::monitor(int fd)
 {
-    check_affinity();
+    if (scope_.type == ExecutionScopeType::THREAD)
+    {
+        try_pin_to_scope(scope_);
+    }
 
     if (sample_writer_ &&
         (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
@@ -120,6 +101,12 @@ void ThreadMonitor::monitor(int fd)
     {
         counter_writer_->read();
     }
+#ifndef USE_PERF_RECORD_SWITCH
+    if (switch_writer_ && (fd == timer_pfd().fd || fd == stop_pfd.fd))
+    {
+        switch_writer_->read();
+    }
+#endif
 }
 } // namespace monitor
 } // namespace lo2s

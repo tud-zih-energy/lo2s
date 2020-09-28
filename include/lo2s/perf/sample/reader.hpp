@@ -79,9 +79,9 @@ public:
 protected:
     using EventReader<T>::init_mmap;
 
-    Reader(pid_t tid, int cpu, bool enable_on_exec) : has_cct_(config().enable_cct)
+    Reader(ExecutionScope scope, bool enable_on_exec) : has_cct_(config().enable_cct)
     {
-        Log::debug() << "initializing event_reader for tid: " << tid
+        Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
         struct perf_event_attr perf_attr = common_perf_event_attrs();
@@ -146,7 +146,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = perf_event_open(&perf_attr, tid, cpu, -1, 0);
+            fd_ = perf_event_open(&perf_attr, scope.tid(), scope.cpuid(), -1, 0);
 
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {

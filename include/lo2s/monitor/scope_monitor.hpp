@@ -21,9 +21,10 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 
-#include <lo2s/perf/counter/process_writer.hpp>
+#include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 
 #include <array>
@@ -40,31 +41,13 @@ extern "C"
 
 namespace lo2s
 {
-class ProcessInfo;
-
 namespace monitor
 {
 
-class ThreadMonitor : public PollMonitor
+class ScopeMonitor : public PollMonitor
 {
 public:
-    ThreadMonitor(pid_t pid, pid_t tid, ProcessMonitor& parent_monitor, bool enable_on_exec);
-
-    void stop() override;
-
-private:
-    void check_affinity(bool force = false);
-
-public:
-    pid_t pid() const
-    {
-        return pid_;
-    }
-
-    pid_t tid() const
-    {
-        return tid_;
-    }
+    ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec);
 
     void initialize_thread() override;
     void finalize_thread() override;
@@ -72,17 +55,24 @@ public:
 
     std::string group() const override
     {
-        return "lo2s::ThreadMonitor";
+        if (scope_.type == ExecutionScopeType::THREAD)
+        {
+            return "lo2s::ThreadMonitor";
+        }
+        else
+        {
+            return "lo2s::CpuMonitor";
+        }
     }
 
 private:
-    pid_t pid_;
-    pid_t tid_;
-
-    cpu_set_t affinity_mask_;
+    ExecutionScope scope_;
 
     std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::ProcessWriter> counter_writer_;
+    std::unique_ptr<perf::counter::group::Writer> counter_writer_;
+#ifndef USE_PERF_RECORD_SWITCH
+    std::unique_ptr<perf::tracepoint::SwitchWriter> switch_writer_;
+#endif
 };
 } // namespace monitor
 } // namespace lo2s

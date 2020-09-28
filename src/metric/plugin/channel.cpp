@@ -52,7 +52,7 @@ Channel::Channel(const char* name, const char* description, const char* unit, wr
                  wrapper::ValueType value_type, wrapper::ValueBase value_base,
                  std::int64_t exponent, trace::Trace& trace)
 : id_(-1), name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)),
-  mode_(mode), value_type_(value_type), writer_(trace.named_metric_writer(name_)),
+  mode_(mode), value_type_(value_type), writer_(trace.create_metric_writer(name_)),
   metric_(
       make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
                                                  writer_.location().location_group().parent()),

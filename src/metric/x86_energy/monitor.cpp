@@ -18,7 +18,7 @@ Monitor::Monitor(::x86_energy::SourceCounter counter, int cpu, trace::Trace& tra
                  const otf2::definition::metric_class& metric_class,
                  const otf2::definition::system_tree_node& stn)
 : PollMonitor(trace, std::to_string(cpu), config().read_interval), counter_(std::move(counter)),
-  cpu_(cpu), otf2_writer_(trace.named_metric_writer(name())),
+  cpu_(cpu), otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(), stn)),
   metric_event_(otf2::chrono::genesis(), metric_instance_)
 // (WOW this is (almost) better than LISP)
@@ -27,7 +27,7 @@ Monitor::Monitor(::x86_energy::SourceCounter counter, int cpu, trace::Trace& tra
 
 void Monitor::initialize_thread()
 {
-    try_pin_to_cpu(cpu_);
+    try_pin_to_scope(ExecutionScope::cpu(cpu_));
 }
 
 void Monitor::monitor([[maybe_unused]] int fd)

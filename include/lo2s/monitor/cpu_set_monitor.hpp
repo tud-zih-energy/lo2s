@@ -23,7 +23,7 @@
 
 #include <lo2s/monitor/main_monitor.hpp>
 
-#include <lo2s/monitor/cpu_monitor.hpp>
+#include <lo2s/monitor/scope_monitor.hpp>
 
 #include <vector>
 
@@ -44,7 +44,7 @@ public:
     void run();
 
 private:
-    std::map<int, CpuMonitor> monitors_;
+    std::map<int, ScopeMonitor> monitors_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -19,8 +19,8 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/counter/abstract_writer.hpp>
-#include <lo2s/perf/counter/reader.hpp>
+#include <lo2s/perf/counter/group/reader.hpp>
+#include <lo2s/perf/counter/group/writer.hpp>
 
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
@@ -43,6 +43,8 @@ namespace lo2s
 namespace perf
 {
 namespace counter
+{
+namespace group
 {
 
 int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
@@ -86,10 +88,14 @@ int open_counter(pid_t tid, int cpuid, const EventDescription& desc, int group_f
 }
 
 template <class T>
-Reader<T>::Reader(pid_t tid, int cpuid, const CounterCollection& counter_collection,
+Reader<T>::Reader(ExecutionScope scope, const CounterCollection& counter_collection,
                   bool enable_on_exec)
 : counter_buffer_(counter_collection.counters.size() + 1)
 {
+
+    int cpuid = scope.cpuid();
+    pid_t tid = scope.tid();
+
     perf_event_attr leader_attr = common_perf_event_attrs();
 
     leader_attr.type = counter_collection.leader.type;
@@ -160,8 +166,8 @@ Reader<T>::Reader(pid_t tid, int cpuid, const CounterCollection& counter_collect
     }
     EventReader<T>::init_mmap(group_leader_fd_);
 }
-
-template class Reader<AbstractWriter>;
+template class Reader<Writer>;
+} // namespace group
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

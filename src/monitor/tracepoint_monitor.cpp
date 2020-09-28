@@ -50,7 +50,7 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, int cpuid)
 }
 void TracepointMonitor::initialize_thread()
 {
-    try_pin_to_cpu(cpu_);
+    try_pin_to_scope(ExecutionScope::cpu(cpu_));
 }
 void TracepointMonitor::monitor(int fd)
 {

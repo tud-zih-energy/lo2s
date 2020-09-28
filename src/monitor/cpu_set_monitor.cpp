@@ -50,7 +50,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
 
         monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                          std::forward_as_tuple(cpu.id, *this));
+                          std::forward_as_tuple(ExecutionScope::cpu(cpu.id), *this, false));
     }
 }
 
@@ -68,11 +68,6 @@ void CpuSetMonitor::run()
             Log::error() << "Failed to set pthread_sigmask: " << ret;
             throw std::runtime_error("Failed to set pthread_sigmask");
         }
-    }
-
-    for (auto& monitor_elem : monitors_)
-    {
-        monitor_elem.second.start();
     }
 
     if (config().command.empty() && config().pid == -1)

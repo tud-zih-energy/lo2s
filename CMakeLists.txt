@@ -129,8 +129,7 @@ set(SOURCE_FILES
     src/monitor/main_monitor.cpp
     src/monitor/process_monitor.cpp
     src/monitor/process_monitor_main.cpp
-    src/monitor/thread_monitor.cpp
-    src/monitor/cpu_monitor.cpp
+    src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
@@ -139,9 +138,8 @@ set(SOURCE_FILES
 
     src/perf/counter/counter_collection.cpp
     src/perf/counter/counter_buffer.cpp
-    src/perf/counter/reader.cpp
-    src/perf/counter/process_writer.cpp
-    src/perf/counter/abstract_writer.cpp
+    src/perf/counter/group/reader.cpp
+    src/perf/counter/group/writer.cpp
 
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp

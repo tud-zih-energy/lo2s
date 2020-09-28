@@ -22,7 +22,10 @@
 
 #pragma once
 #include <lo2s/address.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/util.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -79,31 +82,6 @@ struct ByProcessTag
 };
 using ByProcess = SimpleKeyType<pid_t, ByProcessTag>;
 
-struct ByCpuSwitchWriterTag
-{
-};
-using ByCpuSwitchWriter = SimpleKeyType<int, ByCpuSwitchWriterTag>;
-
-struct ByCpuMetricWriterTag
-{
-};
-using ByCpuMetricWriter = SimpleKeyType<int, ByCpuMetricWriterTag>;
-
-struct ByCpuSampleWriterTag
-{
-};
-using ByCpuSampleWriter = SimpleKeyType<int, ByCpuSampleWriterTag>;
-
-struct ByThreadMetricWriterTag
-{
-};
-using ByThreadMetricWriter = SimpleKeyType<int, ByThreadMetricWriterTag>;
-
-struct ByThreadSampleWriterTag
-{
-};
-using ByThreadSampleWriter = SimpleKeyType<int, ByThreadSampleWriterTag>;
-
 struct ByStringTag
 {
 };
@@ -118,6 +96,16 @@ struct ByLineInfoTag
 {
 };
 using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
+
+struct ByExecutionScopeTag
+{
+};
+using ByExecutionScope = SimpleKeyType<ExecutionScope, ByExecutionScopeTag>;
+
+struct ByMeasurementScopeTag
+{
+};
+using ByMeasurementScope = SimpleKeyType<MeasurementScope, ByMeasurementScopeTag>;
 
 template <typename Definition>
 struct Holder
@@ -149,14 +137,13 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByProcess, ByCpu>;
+    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByExecutionScope>;
 };
 template <>
 struct Holder<otf2::definition::location>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location, ByCpuSwitchWriter,
-                                                ByCpuMetricWriter, ByCpuSampleWriter,
-                                                ByThreadMetricWriter, ByThreadSampleWriter>;
+    using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
+                                                ByMeasurementScope>;
 };
 template <>
 struct Holder<otf2::definition::region>
@@ -176,12 +163,12 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByExecutionScope>;
 };
 template <>
 struct Holder<otf2::definition::comm_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByProcess>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByExecutionScope>;
 };
 } // namespace trace
 } // namespace lo2s
