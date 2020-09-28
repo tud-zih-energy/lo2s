@@ -86,7 +86,8 @@ Trace::Trace()
   lo2s_regions_group_(registry_.create<otf2::definition::regions_group>(
       intern("lo2s"), otf2::common::paradigm_type::user, otf2::common::group_flag_type::none)),
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
-      intern(nitro::env::hostname()), intern("machine")))
+      intern(nitro::env::hostname()), intern("machine"))),
+  groups_(ExecutionScopeGroup::instance())
 {
     Log::info() << "Using trace directory: " << trace_name_;
     summary().set_trace_dir(trace_name_);
@@ -102,7 +103,7 @@ Trace::Trace()
     add_lo2s_property("UNAME::MACHINE", std::string{ uname.machine });
 
     registry_.create<otf2::definition::location_group>(
-        ByProcess(METRIC_PID), intern("Metric Location Group"),
+        ByExecutionScope(ExecutionScope::thread(METRIC_PID)), intern("Metric Location Group"),
         otf2::definition::location_group::location_group_type::process, system_tree_root_node_);
 
     registry_.create<otf2::definition::system_tree_node_domain>(
@@ -132,7 +133,8 @@ Trace::Trace()
     }
     for (auto& cpu : sys.cpus())
     {
-        const auto& name = intern(fmt::format("cpu {}", cpu.id));
+        const auto& cpu_scope = ExecutionScope::cpu(cpu.id);
+        const auto& name = intern(cpu_scope.name());
 
         Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
         const auto& res = registry_.create<otf2::definition::system_tree_node>(
@@ -143,8 +145,11 @@ Trace::Trace()
             res, otf2::common::system_tree_node_domain::pu);
 
         registry_.create<otf2::definition::location_group>(
-            ByCpu(cpu.id), name, otf2::definition::location_group::location_group_type::process,
+            ByExecutionScope(cpu_scope), name,
+            otf2::definition::location_group::location_group_type::process,
             registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu.id)));
+
+        groups_.add_parent(cpu_scope);
     }
 }
 
@@ -231,6 +236,9 @@ void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
     }
     else
     {
+        thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+                              std::forward_as_tuple(name));
+
         const auto& iname = intern(name);
         const auto& parent_node = (parent == NO_PARENT_PROCESS_PID) ? system_tree_root_node_ :
                                                                       intern_process_node(parent);
@@ -239,14 +247,15 @@ void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
             ByProcess(pid), iname, intern("process"), parent_node);
 
         registry_.emplace<otf2::definition::location_group>(
-            ByProcess(pid), iname, otf2::definition::location_group::location_group_type::process,
-            ret);
+            ByExecutionScope(ExecutionScope::thread(pid)), iname,
+            otf2::definition::location_group::location_group_type::process, ret);
 
         const auto& comm_group = registry_.emplace<otf2::definition::comm_group>(
-            ByProcess(pid), iname, otf2::common::paradigm_type::pthread,
-            otf2::common::group_flag_type::none);
+            ByExecutionScope(ExecutionScope::thread(pid)), iname,
+            otf2::common::paradigm_type::pthread, otf2::common::group_flag_type::none);
 
-        registry_.emplace<otf2::definition::comm>(ByProcess(pid), iname, comm_group);
+        registry_.emplace<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(pid)),
+                                                  iname, comm_group);
     }
 }
 
@@ -257,9 +266,13 @@ void Trace::update_process_name(pid_t pid, const std::string& name)
     try
     {
         registry_.get<otf2::definition::system_tree_node>(ByProcess(pid)).name(iname);
-        registry_.get<otf2::definition::location_group>(ByProcess(pid)).name(iname);
-        registry_.get<otf2::definition::comm_group>(ByProcess(pid)).name(iname);
-        registry_.get<otf2::definition::comm>(ByProcess(pid)).name(iname);
+        registry_
+            .get<otf2::definition::location_group>(ByExecutionScope(ExecutionScope::thread(pid)))
+            .name(iname);
+        registry_.get<otf2::definition::comm_group>(ByExecutionScope(ExecutionScope::thread(pid)))
+            .name(iname);
+        registry_.get<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(pid)))
+            .name(iname);
 
         update_thread_name(pid, name);
     }
@@ -284,9 +297,13 @@ void Trace::update_thread_name(pid_t tid, const std::string& name)
         thread_region.source_file(iname);
         thread_region.description(iname);
 
-        if (registry_.has<otf2::definition::location>(ByThreadSampleWriter(tid)))
+        if (registry_.has<otf2::definition::location>(
+                ByMeasurementScope(MeasurementScope::sample(ExecutionScope::thread(tid)))))
         {
-            registry_.get<otf2::definition::location>(ByThreadSampleWriter(tid)).name(iname);
+            registry_
+                .get<otf2::definition::location>(
+                    ByMeasurementScope(MeasurementScope::sample(ExecutionScope::thread(tid))))
+                .name(iname);
         }
 
         thread_names_[tid] = name;
@@ -312,91 +329,47 @@ void Trace::add_lo2s_property(const std::string& name, const std::string& value)
         system_tree_root_node_, intern(property_name), otf2::attribute_value{ intern(value) });
 }
 
-otf2::writer::local& Trace::thread_sample_writer(pid_t pid, pid_t tid)
+otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    auto name = (fmt::format("thread {}", tid));
-
-    // As the tid is unique in this context, create only one writer/location per tid
-    const auto& location = registry_.emplace<otf2::definition::location>(
-        ByThreadSampleWriter(tid), intern(name),
-        registry_.get<otf2::definition::location_group>(ByProcess(pid)),
-        otf2::definition::location::location_type::cpu_thread);
-
-    registry_.get<otf2::definition::comm_group>(ByProcess(pid)).add_member(location);
-
-    comm_locations_group_.add_member(location);
-
-    return archive_(location);
+    return archive_(location(writer_scope));
 }
 
-otf2::writer::local& Trace::cpu_sample_writer(int cpuid)
+otf2::writer::local& Trace::metric_writer(const ExecutionScope& writer_scope)
 {
-#ifdef USE_PERF_RECORD_SWITCH
-    // if we use switch records, we write sample events in the same location as switch events,
-    // thus we make sure to return the appropriate location here.
-    return cpu_switch_writer(cpuid);
-#else
-    auto name = fmt::format("sample cpu {}", cpuid);
+    MeasurementScope metric_scope = MeasurementScope::metric(writer_scope);
 
-    // As the cpuid is unique in this context, create only one writer/location per cpuid
-    const auto& location = registry_.emplace<otf2::definition::location>(
-        ByCpuSampleWriter(cpuid), intern(name),
-        registry_.get<otf2::definition::location_group>(ByCpu(cpuid)),
-        otf2::definition::location::location_type::cpu_thread);
-
-    comm_locations_group_.add_member(location);
-    return archive_(location);
-#endif
-}
-
-otf2::writer::local& Trace::cpu_switch_writer(int cpuid)
-{
-    // As the cpuid is unique in this context, create only one writer/location per
-    // cpuid
-    auto name = intern(fmt::format("cpu {}", cpuid));
-
-    const auto& location = registry_.emplace<otf2::definition::location>(
-        ByCpuSwitchWriter(cpuid), name,
-        registry_.get<otf2::definition::location_group>(ByCpu(cpuid)),
-        otf2::definition::location::location_type::cpu_thread);
-
-    comm_locations_group_.add_member(location);
-    return archive_(location);
-}
-
-otf2::writer::local& Trace::thread_metric_writer(pid_t pid, pid_t tid)
-{
-    auto name = fmt::format("metrics for thread {}", tid);
-
-    // As the tid is unique in this context, create only one
-    // writer/location per tid
-    const auto& location = registry_.emplace<otf2::definition::location>(
-        ByThreadMetricWriter(tid), intern(name),
-        registry_.get<otf2::definition::location_group>(ByProcess(pid)),
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(metric_scope), intern(metric_scope.name()),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_group(writer_scope))),
         otf2::definition::location::location_type::metric);
-
-    return archive_(location);
+    return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::cpu_metric_writer(int cpuid)
+otf2::writer::local& Trace::switch_writer(const ExecutionScope& writer_scope)
 {
-    auto name = intern(fmt::format("metrics for cpu {}", cpuid));
+    MeasurementScope scope = MeasurementScope::context_switch(writer_scope);
 
-    const auto& location = registry_.emplace<otf2::definition::location>(
-        ByCpuMetricWriter(cpuid), name,
-        registry_.get<otf2::definition::location_group>(ByCpu(cpuid)),
-        otf2::definition::location::location_type::metric);
-    return archive_(location);
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(scope), intern(scope.name()),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_group(writer_scope))),
+        otf2::definition::location::location_type::cpu_thread);
+
+    comm_locations_group_.add_member(intern_location);
+
+    return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::named_metric_writer(const std::string& name)
+otf2::writer::local& Trace::create_metric_writer(const std::string& name)
 {
-    // As names may not be unique in this context, always generate a new location/writer pair
     const auto& location = registry_.create<otf2::definition::location>(
-        intern(name), registry_.get<otf2::definition::location_group>(ByProcess(METRIC_PID)),
+        intern(name),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(ExecutionScope::thread(METRIC_PID))),
         otf2::definition::location::location_type::metric);
     return archive_(location);
 }

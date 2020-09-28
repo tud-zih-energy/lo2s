@@ -211,12 +211,20 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
     return ret;
 }
 
-void try_pin_to_cpu(int cpu, pid_t pid)
+void try_pin_to_scope(ExecutionScope scope)
 {
     cpu_set_t cpumask;
     CPU_ZERO(&cpumask);
-    CPU_SET(cpu, &cpumask);
-    auto ret = sched_setaffinity(pid, sizeof(cpumask), &cpumask);
+    if (scope.type == ExecutionScopeType::THREAD)
+    {
+        // Copy affinity from mentioned thread
+        sched_getaffinity(scope.id, sizeof(cpumask), &cpumask);
+    }
+    else
+    {
+        CPU_SET(scope.id, &cpumask);
+    }
+    auto ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
     if (ret != 0)
     {
         Log::error() << "sched_setaffinity failed with: " << make_system_error().what();

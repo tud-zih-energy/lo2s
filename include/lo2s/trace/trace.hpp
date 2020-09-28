@@ -22,6 +22,7 @@
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
@@ -80,10 +81,8 @@ class Trace
 public:
     static constexpr pid_t NO_PARENT_PROCESS_PID =
         0; //<! sentinel value for an inserted process that has no known parent
-
     Trace();
     ~Trace();
-
     void begin_record();
     void end_record();
 
@@ -104,12 +103,10 @@ public:
                                                            size_t num_ip_refs,
                                                            std::map<pid_t, ProcessInfo>& infos);
 
-    otf2::writer::local& thread_sample_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& cpu_sample_writer(int cpuid);
-    otf2::writer::local& thread_metric_writer(pid_t pid, pid_t tid);
-    otf2::writer::local& named_metric_writer(const std::string& name);
-    otf2::writer::local& cpu_metric_writer(int cpuid);
-    otf2::writer::local& cpu_switch_writer(int cpuid);
+    otf2::writer::local& sample_writer(const ExecutionScope& scope);
+    otf2::writer::local& switch_writer(const ExecutionScope& scope);
+    otf2::writer::local& metric_writer(const ExecutionScope& scope);
+    otf2::writer::local& create_metric_writer(const std::string& name);
 
     otf2::definition::metric_member
     metric_member(const std::string& name, const std::string& description,
@@ -122,12 +119,12 @@ public:
     otf2::definition::metric_instance
     metric_instance(const otf2::definition::metric_class& metric_class,
                     const otf2::definition::location& recorder,
-                    const otf2::definition::location& scope);
+                    const otf2::definition::location& location);
 
     otf2::definition::metric_instance
     metric_instance(const otf2::definition::metric_class& metric_class,
                     const otf2::definition::location& recorder,
-                    const otf2::definition::system_tree_node& scope);
+                    const otf2::definition::system_tree_node& location);
 
     otf2::definition::metric_class cpuid_metric_class()
     {
@@ -200,10 +197,31 @@ public:
     {
         return system_tree_root_node_;
     }
-    otf2::definition::comm& process_comm(pid_t pid)
+
+    otf2::definition::comm& process_comm(ExecutionScope scope)
     {
         std::lock_guard<std::recursive_mutex> guard(mutex_);
-        return registry_.get<otf2::definition::comm>(ByProcess(pid));
+        return registry_.get<otf2::definition::comm>(ByExecutionScope(groups_.get_group(scope)));
+    }
+
+    const otf2::definition::location& location(const ExecutionScope& scope)
+    {
+        MeasurementScope metric_scope = MeasurementScope::metric(scope);
+
+        const auto& intern_location = registry_.emplace<otf2::definition::location>(
+            ByMeasurementScope(metric_scope), intern(metric_scope.name()),
+            registry_.get<otf2::definition::location_group>(
+                ByExecutionScope(groups_.get_group(scope))),
+            otf2::definition::location::location_type::cpu_thread);
+
+        comm_locations_group_.add_member(intern_location);
+
+        if (registry_.has<otf2::definition::comm_group>(ByExecutionScope(groups_.get_group(scope))))
+        {
+            registry_.get<otf2::definition::comm_group>(ByExecutionScope(groups_.get_group(scope)))
+                .add_member(intern_location);
+        }
+        return intern_location;
     }
 
 private:
@@ -255,6 +273,8 @@ private:
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_metric_class_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
+
+    ExecutionScopeGroup& groups_;
 };
 } // namespace trace
 } // namespace lo2s

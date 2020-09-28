@@ -20,7 +20,7 @@
  */
 
 #include <lo2s/log.hpp>
-#include <lo2s/perf/counter/abstract_writer.hpp>
+#include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s
@@ -29,16 +29,14 @@ namespace perf
 {
 namespace counter
 {
-AbstractWriter::AbstractWriter(pid_t tid, int cpuid, otf2::writer::local& writer,
-                               otf2::definition::metric_instance metric_instance,
-                               bool enable_on_exec)
-: Reader(tid, cpuid, requested_counters(), enable_on_exec),
-  time_converter_(time::Converter::instance()), writer_(writer), metric_instance_(metric_instance),
-  metric_event_(otf2::chrono::genesis(), metric_instance)
+namespace group
+{
+Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
+: Reader(scope, requested_counters(), enable_on_exec), MetricWriter(scope, trace)
 {
 }
 
-bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
+bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     // update event timestamp from sample
     metric_event_.timestamp(time_converter_(sample->time));
@@ -62,6 +60,8 @@ bool AbstractWriter::handle(const Reader::RecordSampleType* sample)
     writer_.write(metric_event_);
     return false;
 }
+
+} // namespace group
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

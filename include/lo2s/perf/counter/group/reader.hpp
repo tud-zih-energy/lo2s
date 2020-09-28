@@ -24,7 +24,6 @@
 #include <lo2s/perf/counter/counter_buffer.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_reader.hpp>
-
 #include <vector>
 
 extern "C"
@@ -38,6 +37,8 @@ namespace perf
 {
 namespace counter
 {
+namespace group
+{
 
 // This class is concerned with setting up and reading out perf counters in a group.
 // This group has a group leader event, which triggers a readout of the other
@@ -47,7 +48,7 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(pid_t tid, int cpuid, const CounterCollection& counter_collection, bool enable_on_exec);
+    Reader(ExecutionScope scope, const CounterCollection& counter_collection, bool enable_on_exec);
 
     struct RecordSampleType
     {
@@ -73,7 +74,8 @@ protected:
     std::vector<int> counter_fds_;
     CounterBuffer counter_buffer_;
 };
-
+} // namespace group
 } // namespace counter
+// namespace counter
 } // namespace perf
 } // namespace lo2s

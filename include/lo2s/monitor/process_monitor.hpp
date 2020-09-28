@@ -22,7 +22,7 @@
 #pragma once
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
+#include <lo2s/monitor/scope_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
 #include <map>
@@ -52,7 +52,7 @@ public:
     void update_process_name(pid_t pid, const std::string& name) override;
 
 private:
-    std::map<pid_t, ThreadMonitor> threads_;
+    std::map<pid_t, ScopeMonitor> threads_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -20,7 +20,7 @@
  */
 
 #include <lo2s/monitor/process_monitor.hpp>
-#include <lo2s/monitor/thread_monitor.hpp>
+#include <lo2s/monitor/scope_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
 namespace lo2s
@@ -52,7 +52,7 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool 
     if (config().sampling || !perf::counter::requested_counters().counters.empty())
     {
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                         std::forward_as_tuple(pid, tid, *this, spawn));
+                         std::forward_as_tuple(ExecutionScope::thread(tid), *this, spawn));
     }
 
     trace_.update_thread_name(tid, name);
@@ -74,6 +74,7 @@ void ProcessMonitor::exit_thread(pid_t tid)
     {
         threads_.at(tid).stop();
     }
+    threads_.erase(tid);
 }
 
 ProcessMonitor::~ProcessMonitor()

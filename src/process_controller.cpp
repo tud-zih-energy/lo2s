@@ -110,7 +110,7 @@ static void ptrace_cont(pid_t pid, long signum = 0)
 ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn,
                                      monitor::AbstractProcessMonitor& monitor)
 : first_child_(child), default_signal_handler(signal(SIGINT, sig_handler)), monitor_(monitor),
-  num_wakeups_(0)
+  num_wakeups_(0), groups_(ExecutionScopeGroup::instance())
 {
     if (spawn)
     {
@@ -122,7 +122,7 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
     }
     running = true;
 
-    watched_threads_.add_main_thread_for_process(child);
+    groups_.add_parent(ExecutionScope::thread(child));
 
     monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, name, spawn);
 
@@ -167,7 +167,7 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
 
             // Register the newly created process for monitoring:
             // (1) Associate a main thread with this process.
-            watched_threads_.add_main_thread_for_process(new_pid);
+            groups_.add_parent(ExecutionScope::thread(new_pid));
             // (2) Tell the process monitor to watch a new process.
             monitor_.insert_process(new_pid, child, command);
             // (3) Update our summary information.
@@ -193,14 +193,14 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
 
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
-            pid_t pid = watched_threads_.get_process_for_thread(child);
+            pid_t pid = groups_.get_group(ExecutionScope::thread(child)).tid();
             std::string command = get_task_comm(pid, new_tid);
             Log::info() << "New thread " << new_tid << " (" << command << "): cloned from " << child
                         << " in process " << pid;
 
             // Register the newly created thread for monitoring:
             // (1) Keep track of the process the new thread was spawned in.
-            watched_threads_.add_thread_to_process(new_tid, pid);
+            groups_.add_child(ExecutionScope::thread(new_tid), ExecutionScope::thread(pid));
             // (2) Tell the process monitor to watch the new thread.
             monitor_.insert_thread(pid, new_tid, command);
             // (3) Update our summary information.
@@ -231,18 +231,16 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
 
         try
         {
-            pid_t pid = watched_threads_.get_process_for_thread(child);
-            if (pid == child)
+            if (groups_.is_group(ExecutionScope::thread(child)))
             {
                 Log::info() << "Process " << child << " is about to exit";
                 monitor_.exit_process(child);
             }
             else
             {
-                Log::info() << "Thread  " << child << " in process " << pid << " is about to exit";
+                Log::info() << "Thread  " << child << " is about to exit";
                 monitor_.exit_thread(child);
             }
-            watched_threads_.remove_thread(child);
         }
         catch (std::out_of_range&)
         {

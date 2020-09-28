@@ -18,7 +18,13 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <lo2s/perf/counter/process_writer.hpp>
+
+#pragma once
+
+#include <lo2s/perf/counter/group/reader.hpp>
+#include <lo2s/perf/counter/metric_writer.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
@@ -26,15 +32,17 @@ namespace perf
 {
 namespace counter
 {
-ProcessWriter::ProcessWriter(pid_t pid, pid_t tid, otf2::writer::local& writer,
-                             monitor::MainMonitor& parent, bool enable_on_exec)
-: AbstractWriter(
-      tid, -1, writer,
-      parent.trace().metric_instance(parent.trace().perf_metric_class(), writer.location(),
-                                     parent.trace().thread_sample_writer(pid, tid).location()),
-      enable_on_exec)
+namespace group
 {
-}
+class Writer : public Reader<Writer>, MetricWriter
+{
+public:
+    Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+
+    using Reader<Writer>::handle;
+    bool handle(const RecordSampleType* sample);
+};
+} // namespace group
 } // namespace counter
 } // namespace perf
 } // namespace lo2s
