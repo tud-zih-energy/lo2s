@@ -43,10 +43,10 @@ void Topology::read_proc()
     std::string present_list;
 
     {
-        std::ifstream cpu_online(base_path / "/online");
+        std::ifstream cpu_online(base_path / "online");
         std::getline(cpu_online, online_list);
 
-        std::ifstream cpu_present(base_path / "/present");
+        std::ifstream cpu_present(base_path / "present");
         std::getline(cpu_present, present_list);
     }
 
