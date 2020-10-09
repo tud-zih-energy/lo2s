@@ -42,24 +42,24 @@ public:
     {
     }
 
-    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn) override
+    virtual void insert_process([[maybe_unused]] pid_t pid, [[maybe_unused]] pid_t ppid,
+                                [[maybe_unused]] std::string proc_name,
+                                [[maybe_unused]] bool spawn) override
     {
-        (void)pid, (void)ppid, (void)proc_name, (void)spawn;
     }
 
-    virtual void insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn) override
+    virtual void insert_thread([[maybe_unused]] pid_t pid, [[maybe_unused]] pid_t tid,
+                               [[maybe_unused]] std::string name,
+                               [[maybe_unused]] bool spawn) override
     {
-        (void)pid, (void)tid, (void)name, (void)spawn;
     }
 
-    virtual void exit_process(pid_t pid) override
+    virtual void exit_process([[maybe_unused]] pid_t pid) override
     {
-        (void)pid;
     }
 
-    virtual void exit_thread(pid_t tid) override
+    virtual void exit_thread([[maybe_unused]] pid_t tid) override
     {
-        (void)tid;
     }
 
     virtual void update_process_name([[maybe_unused]] pid_t pid,

@@ -34,6 +34,8 @@
 
 #include <ios>
 
+#include <cstddef>
+
 extern "C"
 {
 #include <fcntl.h>
@@ -98,7 +100,7 @@ public:
 
         // DO NOT TOUCH, MUST NOT BE size_t!!!!
         uint32_t size_;
-        char raw_data_[1]; // Can I still not [0] with ISO-C++ :-(
+        std::byte raw_data_[1]; // Can I still not [0] with ISO-C++ :-(
     };
 
     struct RecordSampleType

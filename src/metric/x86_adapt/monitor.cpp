@@ -31,10 +31,8 @@ void Monitor::initialize_thread()
     try_pin_to_cpu(device_.id());
 }
 
-void Monitor::monitor(int fd)
+void Monitor::monitor([[maybe_unused]] int fd)
 {
-    (void)fd;
-
     // update timestamp
     event_.timestamp(time::now());
 

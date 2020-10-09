@@ -27,6 +27,7 @@
 #include <utility>
 
 #include <cerrno>
+#include <cstddef>
 
 extern "C"
 {
@@ -105,7 +106,7 @@ std::size_t Pipe::write(const void* buf, std::size_t count)
 
 std::size_t Pipe::write()
 {
-    char buf = 0;
+    auto buf = std::byte{ 0 };
     return write(&buf, 1);
 }
 
@@ -128,7 +129,7 @@ std::size_t Pipe::read(void* buf, std::size_t count)
 
 std::size_t Pipe::read()
 {
-    char buf;
+    std::byte buf;
     return read(&buf, 1);
 }
 
