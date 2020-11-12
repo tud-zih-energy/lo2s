@@ -3,7 +3,8 @@
 	url = https://github.com/tud-zih-energy/otf2xx.git
 [submodule "lib/nitro"]
 	path = lib/nitro
-	url = https://github.com/tud-zih-energy/nitro.git
+    url = https://github.com/Daddelhai/nitro.git
+    branch = issue22-2
 [submodule "lib/fmt"]
 	path = lib/fmt
 	url = https://github.com/fmtlib/fmt
