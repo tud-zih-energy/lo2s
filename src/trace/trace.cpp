@@ -468,20 +468,28 @@ Trace::metric_instance(const otf2::definition::metric_class& metric_class,
 
 otf2::definition::metric_class& Trace::tracepoint_metric_class(const std::string& event_name)
 {
-    auto& mc = registry_.emplace<otf2::definition::metric_class>(
-        ByString(event_name), otf2::common::metric_occurence::async,
-        otf2::common::recorder_kind::abstract);
-    perf::tracepoint::EventFormat event(event_name);
-    for (const auto& field : event.fields())
+    if (!registry_.has<otf2::definition::metric_class>(ByString(event_name)))
     {
-        if (field.is_integer())
+        auto& mc = registry_.create<otf2::definition::metric_class>(
+            ByString(event_name), otf2::common::metric_occurence::async,
+            otf2::common::recorder_kind::abstract);
+
+        perf::tracepoint::EventFormat event(event_name);
+        for (const auto& field : event.fields())
         {
-            mc.add_member(metric_member(event_name + "::" + field.name(), "?",
-                                        otf2::common::metric_mode::absolute_next,
-                                        otf2::common::type::int64, "#"));
+            if (field.is_integer())
+            {
+                mc.add_member(metric_member(event_name + "::" + field.name(), "?",
+                                            otf2::common::metric_mode::absolute_next,
+                                            otf2::common::type::int64, "#"));
+            }
         }
+        return mc;
     }
-    return mc;
+    else
+    {
+        return registry_.get<otf2::definition::metric_class>(ByString(event_name));
+    }
 }
 
 otf2::definition::metric_class& Trace::metric_class()
