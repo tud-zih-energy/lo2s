@@ -26,7 +26,6 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
-#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
@@ -95,41 +94,9 @@ Trace::Trace()
       otf2::common::group_flag_type::none)),
   lo2s_regions_group_(registry_.create<otf2::definition::regions_group>(
       intern("lo2s"), otf2::common::paradigm_type::user, otf2::common::group_flag_type::none)),
-
-  perf_metric_class_(registry_.create<otf2::definition::metric_class>(
-      otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract)),
-  cpuid_metric_class_(registry_.create<otf2::definition::metric_class>(
-      otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract)),
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
       intern(nitro::env::hostname()), intern("machine")))
 {
-    cpuid_metric_class_.add_member(metric_member("CPU", "CPU executing the task",
-                                                 otf2::common::metric_mode::absolute_point,
-                                                 otf2::common::type::int64, "cpuid"));
-
-    const perf::counter::CounterCollection& counter_collection =
-        perf::counter::requested_counters();
-    if (!counter_collection.counters.empty())
-    {
-        perf_metric_class_.add_member(metric_member(
-            counter_collection.leader.name, counter_collection.leader.name,
-            otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
-
-        for (const auto& counter : counter_collection.counters)
-        {
-            perf_metric_class_.add_member(metric_member(
-                counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
-                otf2::common::type::Double, "#"));
-        }
-
-        perf_metric_class_.add_member(metric_member("time_enabled", "time event active",
-                                                    otf2::common::metric_mode::accumulated_start,
-                                                    otf2::common::type::uint64, "ns"));
-        perf_metric_class_.add_member(metric_member("time_running", "time event on CPU",
-                                                    otf2::common::metric_mode::accumulated_start,
-                                                    otf2::common::type::uint64, "ns"));
-    }
-
     Log::info() << "Using trace directory: " << trace_name_;
     summary().set_trace_dir(trace_name_);
 
