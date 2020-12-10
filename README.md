@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/tud-zih-energy/lo2s.svg?branch=master)](https://travis-ci.org/tud-zih-energy/lo2s)
+![Build](https://github.com/tud-zih-energy/lo2s/workflows/Build/badge.svg)
 
 # `lo2s` - Lightweight Node-Level Performance Monitoring
 
