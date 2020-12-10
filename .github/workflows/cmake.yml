@@ -27,7 +27,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install libboost-all-dev binutils-dev libiberty-dev
+      run: |
+        sudo apt-get install libboost-all-dev binutils-dev libiberty-dev
+        sudo pip install git-archive-all
     - name: Cache OTF2
       id: cache-otf2
       uses: actions/cache@v2
@@ -48,3 +50,10 @@ jobs:
       run: cmake .
     - name: Build
       run: make -j
+    - name: Create source tarball
+      if: ${{ matrix.compiler ==  g++-10 }}
+      run: make dist
+    - uses: actions/upload-artifact@v2
+      if: ${{ matrix.compiler ==  g++-10 }}
+      with:
+        path: lo2s*.tar.bz2
