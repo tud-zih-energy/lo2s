@@ -51,9 +51,9 @@ jobs:
     - name: Build
       run: make -j
     - name: Create source tarball
-      if: ${{ matrix.compiler ==  g++-10 }}
+      if: ${{ matrix.compiler ==  "g++-10" }}
       run: make dist
     - uses: actions/upload-artifact@v2
-      if: ${{ matrix.compiler ==  g++-10 }}
+      if: ${{ matrix.compiler ==  "g++-10" }}
       with:
         path: lo2s*.tar.bz2
