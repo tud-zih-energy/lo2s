@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install libboost-all-dev
+      run: sudo apt-get install libboost-all-dev binutils-dev libiberty-dev
     - name: Cache OTF2
       id: cache-otf2
       uses: actions/cache@v2
