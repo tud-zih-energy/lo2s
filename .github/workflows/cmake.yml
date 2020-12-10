@@ -1,0 +1,73 @@
+name: Build
+
+on: [push, pull_request]
+
+env:
+  OTF2_VERSION: 2.2
+
+jobs:
+  build-ubuntu-1604:
+
+    runs-on: ubuntu-16.04
+
+    strategy:
+      matrix:
+        compiler: [g++-5, g++-7, clang++-6.0]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache OTF2
+      id: cache-otf2
+      uses: actions/cache@v2
+      with:
+        path: /opt/otf2/
+        key: ${{ runner.os }}-otf2
+    - name: Install OTF2
+      if: steps.cache-otf2.outputs.cache-hit != 'true'
+      run: | 
+        wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+        tar -xf otf2-${OTF2_VERSION}.tar.gz
+        cd otf2-${OTF2_VERSION}
+        ./configure --prefix=/opt/otf2
+        make -j2 install
+    - name: Run CMake configure
+      env:
+        CXX: ${{ matrix.compiler }}
+      run: cmake .
+    - name: Build
+      run: make
+    - name: Run CTest
+      run: ctest .
+  
+  build-ubuntu:
+
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        compiler: [g++-8, g++-9, g++-10, clang++-8, clang++-9, clang++-10]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache OTF2
+      id: cache-otf2
+      uses: actions/cache@v2
+      with:
+        path: /opt/otf2/
+        key: ${{ runner.os }}-otf2
+    - name: Install OTF2
+      if: steps.cache-otf2.outputs.cache-hit != 'true'
+      run: | 
+        wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+        tar -xf otf2-${OTF2_VERSION}.tar.gz
+        cd otf2-${OTF2_VERSION}
+        ./configure --prefix=/opt/otf2
+        make -j2 install
+    - name: Run CMake configure
+      env:
+        CXX: ${{ matrix.compiler }}
+      run: cmake .
+    - name: Build
+      run: make
+    - name: Run CTest
+      run: ctest .
