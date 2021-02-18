@@ -171,6 +171,7 @@ target_link_libraries(lo2s
         Nitro::log
         Nitro::env
         Nitro::dl
+        Nitro::options
         Threads::Threads
         Binutils::Binutils
         fmt::fmt

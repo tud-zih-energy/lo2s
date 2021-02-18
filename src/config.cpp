@@ -38,7 +38,7 @@
 #include <lo2s/metric/x86_adapt/knobs.hpp>
 #endif
 
-#include <nitro/broken_options/parser.hpp>
+#include <nitro/options/parser.hpp>
 
 #include <cstdlib>
 #include <ctime>   // for CLOCK_* macros
@@ -102,169 +102,239 @@ const Config& config()
 }
 void parse_program_options(int argc, const char** argv)
 {
-    nitro::broken_options::parser parser("lo2s", "Lightweight Node-Level Performance Monitoring");
-    parser.accept_positionals();
-    parser.positional_name("COMMAND");
+    std::stringstream description;
+    description << "Lightweight Node-Level Performance Monitoring" << std::endl << std::endl;
+    description << "  " << argv[0] << " [options] [-a | -A] COMMAND\n  " << argv[0]
+                << " [options] [-a | -A] -- COMMAND [args to command...]\n  " << argv[0]
+                << " [options] [-a | -A] -p PID\n";
 
-    auto general_options = parser.group("Options");
-    auto system_mode_options = parser.group("System-monitoring mode options");
-    auto sampling_options = parser.group("Sampling options");
-    auto kernel_tracepoint_options = parser.group("Kernel tracepoint options");
-    auto perf_metric_options = parser.group("perf metric options");
-    auto x86_adapt_options = parser.group("x86_adapt options");
-    auto x86_energy_options = parser.group("x86_energy options");
+    nitro::options::parser parser("lo2s", description.str());
+    parser.accept_positionals();
+    parser.positional_metavar("COMMAND");
+
+    auto& general_options = parser.group("Options");
+    auto& system_mode_options = parser.group("System-monitoring mode options");
+    auto& sampling_options = parser.group("Sampling options");
+    auto& perf_metric_options = parser.group("perf metric options");
+    auto& kernel_tracepoint_options = parser.group("Kernel tracepoint options");
+    auto& x86_adapt_options = parser.group("x86_adapt options");
+    auto& x86_energy_options = parser.group("x86_energy options");
 
     lo2s::Config config;
 
     general_options.toggle("help", "Show this help message.").short_name("h");
 
-    general_options.toggle("version",
-            "Print version information.");
+    general_options.toggle("version", "Print version information.").short_name("V");
 
-    general_options.option("output-trace", "Output trace directory. Defaults to lo2s_trace_{DATE} if not specified.").short_name("o");
     general_options.toggle("quiet", "Suppress output.").short_name("q");
-    general_options.toggle("verbose", "Verbose output (specify multiple times to get increasingly more verbose output).").short_name("v");
+    general_options
+        .toggle("verbose",
+                "Verbose output (specify multiple times to get increasingly more verbose output).")
+        .short_name("v");
 
-    general_options.option("mmap-pages", "Number of pages to be used by internal buffers.").short_name("m").default_value("16").metavar("PAGES");
-        
-    general_options.option("readout-interval", "Amount of time between readouts of interval based monitors, i.e. x86_adapt, x86_energy.").short_name("i").default_value("100").metavar("MSEC");
-    
-    general_options.option("perf-readout-interval", "Maximum amount of time between readouts of perf based monitors, i.e. sampling, metrics, tracepoints. 0 means interval based readouts are disabled ").short_name("I").default_value(0).metavar("MSEC");
-    
-    general_options.option("clockid", "Reference clock used as timestamp source.").short_name("k").default_value("monotonic-raw").metavar("CLOCKID");
-    
-    general_options.option("pid", "Attach to process of given PID.").short_name("p").metavar("PID").default_value("-1");  
+    general_options.option("output-trace", "Output trace directory.")
+        .default_value("lo2s_trace_{DATE}")
+        .env("LO2S_OUTPUT_TRACE")
+        .short_name("o");
+
+    general_options.option("pid", "Attach to process of given PID.")
+        .short_name("p")
+        .metavar("PID")
+        .optional();
+
+    general_options.option("mmap-pages", "Number of pages to be used by internal buffers.")
+        .short_name("m")
+        .default_value("16")
+        .metavar("PAGES");
+
+    general_options
+        .option("readout-interval", "Amount of time between readouts of interval based monitors, "
+                                    "i.e. x86_adapt, x86_energy.")
+        .short_name("i")
+        .default_value("100")
+        .metavar("MSEC");
+
+    general_options
+        .option("perf-readout-interval",
+                "Maximum amount of time between readouts of perf based monitors, i.e. sampling, "
+                "metrics, tracepoints. If not provided, interval based readouts are disabled.")
+        .short_name("I")
+        .optional()
+        .metavar("MSEC");
+
+    general_options.option("clockid", "Reference clock used as timestamp source.")
+        .short_name("k")
+        .default_value("monotonic-raw")
+        .metavar("CLOCKID");
+
     general_options.toggle("list-clockids", "List all available clockids.");
-        
+
     general_options.toggle("list-events", "List available metric and sampling events.");
     general_options.toggle("list-tracepoints", "List available kernel tracepoint events.");
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
-    system_mode_options.toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
-            "Monitor as long as COMMAND is running or until PID exits.").short_name("a");
+    system_mode_options
+        .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
+                            "Monitor as long as COMMAND is running or until PID exits.")
+        .short_name("a");
 
-    system_mode_options.toggle("all-cpus-sampling",
-            "System-monitoring mode with instruction sampling. "
-            "Shorthand for \"-a --instruction-sampling\".").short_name("A");
+    system_mode_options
+        .toggle("all-cpus-sampling", "System-monitoring mode with instruction sampling. "
+                                     "Shorthand for \"-a --instruction-sampling\".")
+        .short_name("A");
 
-    sampling_options.toggle("instruction-sampling",
-            "Enable instruction sampling.");
+    sampling_options.toggle("instruction-sampling", "Enable instruction sampling.")
+        .default_value(true)
+        .allow_reverse();
 
-    sampling_options.toggle("no-instruction-sampling",
-            "Disable instruction sampling.");
+    // sampling_options.toggle("no-instruction-sampling", "Disable instruction sampling.");
 
-    sampling_options.option("event", "Interrupt source event for sampling.").short_name("e").metavar("EVENT").default_value(Topology::instance().hypervised() ? "cpu-clock" : "instructions"),
-    
-    sampling_options.option("count", "Sampling period (in number of events specified by -e).").short_name("c").default_value("11010113").metavar("N");
-    
-    sampling_options.toggle("call-graph",
-            "Record call stack of instruction samples.").short_name("g");
+    sampling_options.option("event", "Interrupt source event for sampling.")
+        .short_name("e")
+        .metavar("EVENT")
+        .default_value(Topology::instance().hypervised() ? "cpu-clock" : "instructions");
+
+    sampling_options.option("count", "Sampling period (in number of events specified by -e).")
+        .short_name("c")
+        .default_value("11010113")
+        .metavar("N");
+
+    sampling_options.toggle("call-graph", "Record call stack of instruction samples.")
+        .short_name("g");
 
     sampling_options.toggle("no-ip",
-            "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]");
+                            "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]");
 
-    sampling_options.toggle("disassemble", "Enable augmentation of samples with instructions (default if supported).");
+    sampling_options
+        .toggle("disassemble",
+                "Enable augmentation of samples with instructions (default if supported).")
+        .allow_reverse();
 
-    sampling_options.toggle("no-disassemble", "Disable augmentation of samples with instructions.");
+    // sampling_options.toggle("no-disassemble", "Disable augmentation of samples with
+    // instructions.");
 
-    sampling_options.toggle("kernel", "Include events happening in kernel space (default).");
+    sampling_options.toggle("kernel", "Include events happening in kernel space (default).")
+        .allow_reverse();
 
-    sampling_options.toggle("no-kernel", "Exclude events happening in kernel space.");
+    // sampling_options.toggle("no-kernel", "Exclude events happening in kernel space.");
 
-    kernel_tracepoint_options.option
-        ("tracepoint", "Enable global recording of a raw tracepoint event (usually requires root).").short_name("t").metavar("TRACEPOINT");
+    kernel_tracepoint_options
+        .multi_option("tracepoint",
+                      "Enable global recording of a raw tracepoint event (usually requires root).")
+        .short_name("t")
+        .optional()
+        .metavar("TRACEPOINT");
 
-    perf_metric_options.multi_option("metric-event","Record metrics for this perf event.").short_name("E").metavar("EVENT");
-        
+    perf_metric_options.multi_option("metric-event", "Record metrics for this perf event.")
+        .short_name("E")
+        .optional()
+        .metavar("EVENT");
+
     perf_metric_options.toggle("standard-metrics", "Enable a set of default metrics.");
 
-    perf_metric_options.option("metric-leader", "The leading metric event.").metavar("EVENT");
+    perf_metric_options.option("metric-leader", "The leading metric event.")
+        .optional()
+        .metavar("EVENT");
 
-    perf_metric_options.option("metric-count","Number of metric leader events to elapse before reading metric buffer. Has to be used in conjunction with --metric-leader").metavar("N").default_value("0");
-    
-    perf_metric_options.option("metric-frequency", "Number of metric buffer reads per second. Can not be used with --metric-leader").metavar("HZ").default_value("10");
+    perf_metric_options
+        .option("metric-count", "Number of metric leader events to elapse before reading metric "
+                                "buffer. Has to be used in conjunction with --metric-leader")
+        .metavar("N")
+        .optional();
 
-    x86_adapt_options.multi_option("x86-adapt-knob", "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.").short_name("x").metavar("KNOB");
+    perf_metric_options
+        .option("metric-frequency",
+                "Number of metric buffer reads per second. Can not be used with --metric-leader")
+        .metavar("HZ")
+        .default_value("10");
 
-    x86_energy_options.option("x86-energy", "Add x86_energy recordings.").short_name("X");
+    x86_adapt_options
+        .multi_option("x86-adapt-knob",
+                      "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
+        .short_name("x")
+        .optional()
+        .metavar("KNOB");
 
-    nitro::broken_options::options options;
+    x86_energy_options.toggle("x86-energy", "Add x86_energy recordings.").short_name("X");
+
+    nitro::options::arguments arguments;
     try
     {
-        options = parser.parse(argc, argv);
+        arguments = parser.parse(argc, argv);
     }
-    catch (const nitro::broken_options::parsing_error& e)
+    catch (const nitro::options::parsing_error& e)
     {
         std::cerr << e.what() << '\n';
         parser.usage();
         std::exit(EXIT_FAILURE);
     }
 
-    config.trace_path = options.get("output-trace");
-    config.quiet = options.given("quiet");
-    config.mmap_pages = options.as<std::size_t>("mmap-pages");
-    config.pid = options.as<pid_t>("pid");
-    config.sampling_event = options.get("event");
-    config.sampling_period = options.as<std::uint64_t>("count");
-    config.enable_cct = options.given("call-graph");
-    config.no_ip = options.given("no-ip");
-    config.tracepoint_events = options.get("tracepoint");
-    config.perf_events = options.get("metric-event");
-    config.standard_metrics = options.given("standard-metrics");
-    config.metric_leader = options.get("metric-leader");
-    config.use_x86_energy = options.given("x86-energy");
-    config.command = options.positionals();
+    config.trace_path = arguments.get("output-trace");
+    config.quiet = arguments.given("quiet");
+    config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
+    config.pid = arguments.provided("pid") ? arguments.as<pid_t>("pid") : -1;
+    config.sampling_event = arguments.get("event");
+    config.sampling_period = arguments.as<std::uint64_t>("count");
+    config.enable_cct = arguments.given("call-graph");
+    config.suppress_ip = arguments.given("no-ip");
+    config.tracepoint_events = arguments.get_all("tracepoint");
+    config.perf_events = arguments.get_all("metric-event");
+    config.standard_metrics = arguments.given("standard-metrics");
+    config.use_x86_energy = arguments.given("x86-energy");
+    config.command = arguments.positionals();
 
-    if (options.given("help"))
+    if (arguments.given("help"))
     {
         parser.usage();
         std::exit(EXIT_SUCCESS);
     }
 
-    if (options.given("version"))
+    if (arguments.given("version"))
     {
         print_version(std::cout);
         std::exit(EXIT_SUCCESS);
     }
 
-    if (options.given("quiet") && options.given("verbose"))
+    if (arguments.given("quiet") && arguments.given("verbose"))
     {
         lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
         config.quiet = false;
     }
-
-    if (options.given("quiet"))
-    {
-        lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
-    }
     else
     {
-        using sl = nitro::log::severity_level;
-        switch (options.given("verbose"))
+        if (arguments.given("quiet"))
         {
-        case 0:
-            lo2s::logging::set_min_severity_level(sl::warn);
-            break;
-        case 1:
-            lo2s::Log::info() << "Enabling log-level 'info'";
-            lo2s::logging::set_min_severity_level(sl::info);
-            break;
-        case 2:
-            lo2s::Log::info() << "Enabling log-level 'debug'";
-            lo2s::logging::set_min_severity_level(sl::debug);
-            break;
-        case 3:
-        default:
-            lo2s::Log::info() << "Enabling log-level 'trace'";
-            lo2s::logging::set_min_severity_level(sl::trace);
-            break;
+            lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
+        }
+        else
+        {
+            using sl = nitro::log::severity_level;
+            switch (arguments.given("verbose"))
+            {
+            case 0:
+                lo2s::logging::set_min_severity_level(sl::warn);
+                break;
+            case 1:
+                lo2s::Log::info() << "Enabling log-level 'info'";
+                lo2s::logging::set_min_severity_level(sl::info);
+                break;
+            case 2:
+                lo2s::Log::info() << "Enabling log-level 'debug'";
+                lo2s::logging::set_min_severity_level(sl::debug);
+                break;
+            case 3:
+            default:
+                lo2s::Log::info() << "Enabling log-level 'trace'";
+                lo2s::logging::set_min_severity_level(sl::trace);
+                break;
+            }
         }
     }
 
-    // list arguments to options and exit
+    // list arguments to arguments and exit
     {
-        if (options.given("list-clockids"))
+        if (arguments.given("list-clockids"))
         {
             auto& clockids = time::ClockProvider::get_descriptions();
             std::cout << io::make_argument_list("available clockids", std::begin(clockids),
@@ -272,7 +342,7 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_SUCCESS);
         }
 
-        if (options.given("list-events"))
+        if (arguments.given("list-events"))
         {
             print_availability(std::cout, "predefined events",
                                perf::EventProvider::get_predefined_events());
@@ -285,14 +355,14 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_SUCCESS);
         }
 
-        if (options.given("list-tracepoints"))
+        if (arguments.given("list-tracepoints"))
         {
             list_arguments_sorted(std::cout, "Kernel tracepoint events",
                                   perf::tracepoint::EventFormat::get_tracepoint_event_names());
             std::exit(EXIT_SUCCESS);
         }
 
-        if (options.given("list-knobs"))
+        if (arguments.given("list-knobs"))
         {
 #ifdef HAVE_X86_ADAPT
 
@@ -312,16 +382,12 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (options.given("instruction-sampling") && options.given("no-instruction-sampling"))
-    {
-        lo2s::Log::warn() << "Can not enable and disable instruction sampling at the same time";
-    }
-    if (options.given("all-cpus") || options.given("all-cpus-sampling"))
+    if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
         config.sampling = false;
 
-        if (options.given("all-cpus-sampling") || options.given("instruction-sampling"))
+        if (arguments.given("all-cpus-sampling") || arguments.given("instruction-sampling"))
         {
             config.sampling = true;
         }
@@ -331,7 +397,7 @@ void parse_program_options(int argc, const char** argv)
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
 
-        if (options.given("no-instruction-sampling"))
+        if (!arguments.given("instruction-sampling"))
         {
             config.sampling = false;
         }
@@ -340,7 +406,7 @@ void parse_program_options(int argc, const char** argv)
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
         config.command.empty())
     {
-        print_usage(std::cerr, argv[0], visible_options);
+        parser.usage(std::cerr);
         std::exit(EXIT_FAILURE);
     }
 
@@ -360,7 +426,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_clockid = false;
     try
     {
-        std::string requested_clock_name = options.get("clockid");
+        std::string requested_clock_name = arguments.get("clockid");
         // large PEBS only works when the clockid isn't set, however the internal clock
         // large PEBS uses should be equal to monotonic-raw, so use monotonic-raw outside
         // of pebs and everything should be in sync
@@ -392,15 +458,16 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
-    config.read_interval = std::chrono::milliseconds(options.as<std::uint64_t>("readout-interval"));
-    config.perf_read_interval = std::chrono::milliseconds(options.as<std::uint64_t("perf-readout-interval"));
+    config.read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("readout-interval"));
 
-    if (options.given("no-disassemble") && options.given("disassemble"))
+    if (arguments.provided("perf-readout-interval"))
     {
-        lo2s::Log::warn() << "Cannot enable and disable disassemble option at the same time.";
-        config.disassemble = false;
+        config.perf_read_interval =
+            std::chrono::milliseconds(arguments.as<std::uint64_t>("perf-readout-interval"));
     }
-    else if (options.given("no-disassemble"))
+
+    if (!arguments.given("disassemble"))
     {
         config.disassemble = false;
     }
@@ -409,28 +476,30 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_RADARE
         config.disassemble = true;
 #else
-        if (options.given("disassemble"))
+        if (arguments.provided("disassemble"))
         {
             lo2s::Log::warn() << "Disassemble requested, but not supported by this installation.";
         }
         config.disassemble = false;
 #endif
     }
-    if (options.as<std::uint64_t>("metric-count") == 0 && options.get("metric-leader").empty())
+
+    if (arguments.provided("metric-count") && !arguments.provided("metric-leader"))
     {
         Log::fatal() << "--metric-count can only be used in conjunction with a --metric-leader";
         std::exit(EXIT_FAILURE);
     }
 
-    if (options.as<std::uint64_t>("metric-frequency") == 10 && options.get("metric-leader").empty())
+    if (arguments.provided("metric-frequency") && arguments.provided("metric-leader"))
     {
         Log::fatal() << "--metric-frequency can only be used with the default --metric-leader";
         std::exit(EXIT_FAILURE);
     }
+
     // Use time interval based metric recording as a default
-    if (!options.get("metric-leader").empty())
+    if (!arguments.provided("metric-leader"))
     {
-        if (options.as<std::uint64_t>("metric-frequency") == 0)
+        if (arguments.as<std::uint64_t>("metric-frequency") == 0)
         {
             Log::fatal()
                 << "--metric-frequency should not be zero when using the default metric leader";
@@ -456,37 +525,32 @@ void parse_program_options(int argc, const char** argv)
             }
         }
         config.metric_use_frequency = true;
-        config.metric_frequency = options.as<std::uint64_t>("metric-frequency");
+        config.metric_frequency = arguments.as<std::uint64_t>("metric-frequency");
     }
     else
     {
-        if (options.as("metric-count") == 0)
+        config.metric_leader = arguments.get("metric-leader");
+
+        if (!arguments.provided("metric-count") || arguments.as<int>("metric-count") == 0)
         {
-            Log::fatal() << "--metric-count should not be zero when using a custom metric leader";
+            Log::fatal() << "--metric-count should not be less or equal to zero when using a "
+                            "custom metric leader";
             std::exit(EXIT_FAILURE);
         }
 
         config.metric_use_frequency = false;
-        config.metric_count = options.as<std::uint64_t>("metric-count");
+        config.metric_count = arguments.as<std::uint64_t>("metric-count");
     }
 
-    config.exclude_kernel = false;
-    if (options.given("kernel") && options.given("no-kernel"))
-    {
-        lo2s::Log::warn() << "Cannot enable and disable kernel events at the same time.";
-    }
-    else if (options.given("no-kernel"))
-    {
-        config.exclude_kernel = true;
-    }
+    config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
 
-    if (options.count("x86-adapt-knob"))
+    if (arguments.count("x86-adapt-knob"))
     {
 #ifdef HAVE_X86_ADAPT
-        config.x86_adapt_knobs = std::move(options.get_all("x86-adapt-knob"));
+        config.x86_adapt_knobs = std::move(arguments.get_all("x86-adapt-knob"));
 #else
-        lo2s::Log::fatal() << "lo2s was built without support for x86_adapt; "
-                              "cannot request x86_adapt knobs.\n";
+        Log::fatal() << "lo2s was built without support for x86_adapt; "
+                        "cannot request x86_adapt knobs.\n";
         std::exit(EXIT_FAILURE);
 #endif
     }
@@ -500,7 +564,8 @@ void parse_program_options(int argc, const char** argv)
     }
 #endif
 
-    config.command_line = options.positionals();
+    config.command_line =
+        nitro::lang::join(arguments.positionals().begin(), arguments.positionals().end());
 
     instance = std::move(config);
 }
