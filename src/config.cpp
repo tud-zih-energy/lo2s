@@ -137,7 +137,7 @@ void parse_program_options(int argc, const char** argv)
         .env("LO2S_OUTPUT_TRACE")
         .short_name("o");
 
-    general_options.option("pid", "Attach to process of given PID.")
+    general_options.option("pid", "Attach to the process with the given PID.")
         .short_name("p")
         .metavar("PID")
         .optional();
@@ -148,15 +148,15 @@ void parse_program_options(int argc, const char** argv)
         .metavar("PAGES");
 
     general_options
-        .option("readout-interval", "Amount of time between readouts of interval based monitors, "
-                                    "i.e. x86_adapt, x86_energy.")
+        .option("readout-interval", "Time in milliseconds between readouts of interval based "
+                                    "monitors, i.e. x86_adapt, x86_energy.")
         .short_name("i")
         .default_value("100")
         .metavar("MSEC");
 
     general_options
         .option("perf-readout-interval",
-                "Maximum amount of time between readouts of perf based monitors, i.e. sampling, "
+                "Time in milliseconds between readouts of perf based monitors, i.e. sampling, "
                 "metrics, tracepoints. If not provided, interval based readouts are disabled.")
         .short_name("I")
         .optional()
@@ -184,7 +184,9 @@ void parse_program_options(int argc, const char** argv)
                                      "Shorthand for \"-a --instruction-sampling\".")
         .short_name("A");
 
-    sampling_options.toggle("instruction-sampling", "Enable instruction sampling.")
+    sampling_options
+        .toggle("instruction-sampling", "Enable instruction sampling. In system monitoring: "
+                                        "(default: disabled). In process monitoring:")
         .default_value(true)
         .allow_reverse();
 
@@ -207,17 +209,15 @@ void parse_program_options(int argc, const char** argv)
                             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]");
 
     sampling_options
-        .toggle("disassemble",
-                "Enable augmentation of samples with instructions (default if supported).")
+        .toggle("disassemble", "Enable augmentation of samples with instructions.")
+#ifdef HAVE_RADARE
+        .default_value(true)
+#endif
         .allow_reverse();
 
-    // sampling_options.toggle("no-disassemble", "Disable augmentation of samples with
-    // instructions.");
-
-    sampling_options.toggle("kernel", "Include events happening in kernel space (default).")
-        .allow_reverse();
-
-    // sampling_options.toggle("no-kernel", "Exclude events happening in kernel space.");
+    sampling_options.toggle("kernel", "Include events happening in kernel space.")
+        .allow_reverse()
+        .default_value(true);
 
     kernel_tracepoint_options
         .multi_option("tracepoint",
@@ -231,9 +231,11 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("EVENT");
 
-    perf_metric_options.toggle("standard-metrics", "Enable a set of default metrics.");
+    perf_metric_options.toggle("standard-metrics", "Record a set of default metrics.");
 
-    perf_metric_options.option("metric-leader", "The leading metric event.")
+    perf_metric_options
+        .option("metric-leader", "The leading metric event. This event is used as an interval "
+                                 "giver for the other metric events.")
         .optional()
         .metavar("EVENT");
 
@@ -251,7 +253,7 @@ void parse_program_options(int argc, const char** argv)
 
     x86_adapt_options
         .multi_option("x86-adapt-knob",
-                      "Add x86_adapt knobs as recordings. Append #accumulated_last for semantics.")
+                      "Record the given x86_adapt knob. Append #accumulated_last for semantics.")
         .short_name("x")
         .optional()
         .metavar("KNOB");
@@ -406,6 +408,8 @@ void parse_program_options(int argc, const char** argv)
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
         config.command.empty())
     {
+        lo2s::Log::fatal() << "No process to monitor provided. "
+                              "You need to pass either a COMMAND or a PID.";
         parser.usage(std::cerr);
         std::exit(EXIT_FAILURE);
     }
@@ -547,7 +551,7 @@ void parse_program_options(int argc, const char** argv)
     if (arguments.count("x86-adapt-knob"))
     {
 #ifdef HAVE_X86_ADAPT
-        config.x86_adapt_knobs = std::move(arguments.get_all("x86-adapt-knob"));
+        config.x86_adapt_knobs = arguments.get_all("x86-adapt-knob");
 #else
         Log::fatal() << "lo2s was built without support for x86_adapt; "
                         "cannot request x86_adapt knobs.\n";
