@@ -59,7 +59,7 @@ int main(int argc, const char** argv)
             return EXIT_SUCCESS;
         }
     }
-    catch (const std::runtime_error& e)
+    catch (const std::exception& e)
     {
         lo2s::Log::fatal() << "Aborting: " << e.what();
         return EXIT_FAILURE;

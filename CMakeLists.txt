@@ -24,8 +24,6 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
     Binutils_USE_STATIC_LIBS
-    Boost_USE_STATIC_LIBS
-    Boost_USE_STATIC_RUNTIME
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Radare_USE_STATIC_LIBS
@@ -36,8 +34,6 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
     set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
-    set(Boost_USE_STATIC_LIBS    OFF CACHE BOOL "")
-    set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
@@ -48,9 +44,6 @@ endif()
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
     set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
-    set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
-    # Disable it because it seems to be unavailable for most installations, will go away with #147
-    set(Boost_USE_STATIC_RUNTIME OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
@@ -62,8 +55,6 @@ endif()
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
     set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
-    set(Boost_USE_STATIC_LIBS    ON CACHE BOOL "")
-    set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
@@ -98,7 +89,6 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(Binutils REQUIRED)
 find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
@@ -181,8 +171,8 @@ target_link_libraries(lo2s
         Nitro::log
         Nitro::env
         Nitro::dl
+        Nitro::options
         Threads::Threads
-        Boost::program_options
         Binutils::Binutils
         fmt::fmt
         std::filesystem

@@ -28,7 +28,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
-        sudo apt-get install libboost-all-dev binutils-dev libiberty-dev
+        sudo apt-get install binutils-dev libiberty-dev
         sudo pip install git-archive-all
     - name: Cache OTF2
       id: cache-otf2

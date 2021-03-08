@@ -70,7 +70,7 @@ struct Config
     bool disassemble;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
-    std::chrono::nanoseconds perf_read_interval;
+    std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
     // Metrics
     bool metric_use_frequency;
 
