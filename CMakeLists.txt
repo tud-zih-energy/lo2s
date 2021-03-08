@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(lo2s VERSION 1.3.1)
+project(lo2s VERSION 1.4.0)
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
