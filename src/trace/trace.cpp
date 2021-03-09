@@ -40,6 +40,7 @@
 #include <filesystem>
 
 #include <fmt/core.h>
+#include <fmt/chrono.h>
 
 #include <map>
 #include <mutex>
@@ -153,11 +154,7 @@ void Trace::begin_record()
     starting_time_ = time::now();
 
     const std::time_t t_c = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-
-    std::ostringstream oss;
-    oss << std::put_time(std::localtime(&t_c), "%c");
-
-    add_lo2s_property("STARTING_TIME", oss.str());
+    add_lo2s_property("STARTING_TIME", fmt::format("{:%c}", fmt::localtime(t_c)));
 }
 
 void Trace::end_record()
