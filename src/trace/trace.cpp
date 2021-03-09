@@ -39,8 +39,8 @@
 
 #include <filesystem>
 
-#include <fmt/core.h>
 #include <fmt/chrono.h>
+#include <fmt/core.h>
 
 #include <map>
 #include <mutex>
