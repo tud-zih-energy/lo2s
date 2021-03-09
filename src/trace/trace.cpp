@@ -151,6 +151,13 @@ void Trace::begin_record()
 {
     Log::info() << "Initialization done. Start recording...";
     starting_time_ = time::now();
+
+    const std::time_t t_c = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+
+    std::ostringstream oss;
+    oss << std::put_time(std::localtime(&t_c), "%c");
+
+    add_lo2s_property("STARTING_TIME", oss.str());
 }
 
 void Trace::end_record()
