@@ -455,6 +455,8 @@ A comma separated list of metric events to record for the plugin I<PLUGIN>.
 
 In compatibility with L<scorep(1)>, all environment variables starting with
 C<LO2S_METRIC_> may be prefixed with C<SCOREP> instead of C<LO2S>.
+Plugins themselves may use additional environment variables for configuration
+that allow only the C<SCOREP> prefix.
 
 =back
 
