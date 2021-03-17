@@ -389,7 +389,13 @@ void parse_program_options(int argc, const char** argv)
         config.monitor_type = lo2s::MonitorType::CPU_SET;
         config.sampling = false;
 
-        if (arguments.given("all-cpus-sampling") || arguments.given("instruction-sampling"))
+        // The check for instruction sampling is a bit more complicated, because the default value
+        // is different depending on the monitoring mode. This check here is only relevant for
+        // system monitoring, where the default is to not use intruction sampling. However, the
+        // configured default value in Nitro::options is to have instruction sampling enabled.
+        // Hence, this check seems a bit odd at first glance.
+        if (arguments.given("all-cpus-sampling") ||
+            (arguments.provided("instruction-sampling") && arguments.given("instruction-sampling")))
         {
             config.sampling = true;
         }
