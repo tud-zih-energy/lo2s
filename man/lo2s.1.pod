@@ -106,9 +106,9 @@ this option takes precedence over B<-q>.
 =back
 
 
-=item B<-o>, B<--output-path> I<PATH> (default: C<lo2s_trace_{DATE}>)
+=item B<-o>, B<--output-trace> I<ARG> (default: C<lo2s_trace_{DATE}>)
 
-Save the generated trace in a directory specified by I<PATH>.
+Save the generated trace in a directory specified by I<ARG>.
 The argument to this option supports a simple templating mechanism.
 If it contains sequences in the form of C<{...}>, the sequence is substituted
 before being interpreted as a filesystem path.
