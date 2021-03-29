@@ -165,6 +165,7 @@ const struct ::utsname& get_uname()
 
 std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
 {
+    ExecutionScopeGroup& scope_group = ExecutionScopeGroup::instance();
     std::unordered_map<pid_t, std::string> ret;
     std::filesystem::path proc("/proc");
     for (auto& entry : std::filesystem::directory_iterator(proc))
@@ -179,6 +180,10 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
             continue;
         }
         std::string name = get_process_comm(pid);
+
+        ExecutionScope process_scope = ExecutionScope::thread(pid);
+        scope_group.add_parent(process_scope);
+
         Log::trace() << "mapping from /proc/" << pid << ": " << name;
         ret.emplace(pid, name);
         try
@@ -199,6 +204,9 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
                 {
                     continue;
                 }
+
+                scope_group.add_child(ExecutionScope::thread(tid), process_scope);
+
                 name = get_task_comm(pid, tid);
                 Log::trace() << "mapping from /proc/" << pid << "/" << tid << ": " << name;
                 ret.emplace(tid, name);

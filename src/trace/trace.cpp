@@ -183,11 +183,27 @@ Trace::~Trace()
     for (auto& thread : thread_names_)
     {
         auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread.first));
-        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-            ByString(thread.second), intern(thread.second), otf2::common::paradigm_type::user,
-            otf2::common::group_flag_type::none);
 
-        regions_group.add_member(thread_region);
+        ExecutionScope thread_scope = ExecutionScope::thread(thread.first);
+
+        try
+        {
+            ExecutionScope process_scope = groups_.get_group(thread_scope);
+
+            auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
+                ByExecutionScope(process_scope), intern(thread_names_[process_scope.tid()]),
+                otf2::common::paradigm_type::user, otf2::common::group_flag_type::none);
+
+            regions_group.add_member(thread_region);
+        }
+        catch (const std::out_of_range&)
+        {
+            auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
+                ByExecutionScope(thread_scope), intern(thread.second),
+                otf2::common::paradigm_type::user, otf2::common::group_flag_type::none);
+
+            regions_group.add_member(thread_region);
+        }
     }
 
     archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_);
@@ -498,7 +514,11 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
     // Merge local thread tree into global thread tree
     for (auto& local_thread_cctx : new_ips)
     {
+
         auto tid = local_thread_cctx.first;
+        auto pid = local_thread_cctx.second.pid;
+
+        groups_.add_child(ExecutionScope::thread(tid), ExecutionScope::thread(pid));
         auto local_ref = local_thread_cctx.second.entry.ref;
 
         auto global_thread_cctx = calling_context_tree_.find(tid);
@@ -528,7 +548,7 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         mappings.at(local_ref) = global_thread_cctx->second.cctx.ref();
 
         merge_ips(local_thread_cctx.second.entry.children, global_thread_cctx->second.children,
-                  mappings, global_thread_cctx->second.cctx, infos, local_thread_cctx.second.pid);
+                  mappings, global_thread_cctx->second.cctx, infos, pid);
     }
 
 #ifndef NDEBUG
