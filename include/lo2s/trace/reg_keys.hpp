@@ -122,7 +122,8 @@ struct Holder<otf2::definition::system_tree_node>
 template <>
 struct Holder<otf2::definition::regions_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::regions_group, ByString, ByExecutionScope>;
 };
 template <>
 struct Holder<otf2::definition::metric_class>
