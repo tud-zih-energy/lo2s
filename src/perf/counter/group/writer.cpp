@@ -53,7 +53,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
         values[i] = counter_buffer_[i];
     }
 
-    auto index = counter_fds_.size();
+    auto index = counter_buffer_.size();
     values[index++] = counter_buffer_.enabled();
     values[index++] = counter_buffer_.running();
 
