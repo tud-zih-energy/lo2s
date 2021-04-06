@@ -645,9 +645,17 @@ const otf2::definition::region& Trace::intern_region(const LineInfo& info)
         ByLineInfo(info), name_str, name_str, name_str, otf2::common::role_type::function,
         otf2::common::paradigm_type::sampling, otf2::common::flags_type::none, intern(info.file),
         info.line, 0);
-    registry_.emplace<otf2::definition::regions_group>(ByString(info.dso), intern(info.dso),
-                                                       otf2::common::paradigm_type::compiler,
-                                                       otf2::common::group_flag_type::none);
+
+    if (registry_.has<otf2::definition::regions_group>(ByString(info.dso)))
+    {
+        registry_.get<otf2::definition::regions_group>(ByString(info.dso)).add_member(region);
+    }
+    else
+    {
+        registry_.emplace<otf2::definition::regions_group>(ByString(info.dso), intern(info.dso),
+                                                           otf2::common::paradigm_type::compiler,
+                                                           otf2::common::group_flag_type::none);
+    }
     return region;
 }
 const otf2::definition::string& Trace::intern(const std::string& name)
