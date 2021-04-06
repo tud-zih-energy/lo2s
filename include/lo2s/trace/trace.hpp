@@ -206,10 +206,10 @@ public:
 
     const otf2::definition::location& location(const ExecutionScope& scope)
     {
-        MeasurementScope metric_scope = MeasurementScope::metric(scope);
+        MeasurementScope sample_scope = MeasurementScope::sample(scope);
 
         const auto& intern_location = registry_.emplace<otf2::definition::location>(
-            ByMeasurementScope(metric_scope), intern(metric_scope.name()),
+            ByMeasurementScope(sample_scope), intern(sample_scope.name()),
             registry_.get<otf2::definition::location_group>(
                 ByExecutionScope(groups_.get_group(scope))),
             otf2::definition::location::location_type::cpu_thread);
