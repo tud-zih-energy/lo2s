@@ -30,7 +30,7 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device,
 void NodeMonitor::initialize_thread()
 {
     auto package = lo2s::Topology::instance().packages().at(device_.id());
-    try_pin_to_scope(ExecutionScope::cpu(*(package.cpu_ids.begin())));
+    try_pin_to_scope(ExecutionScope(Cpu(*(package.cpu_ids.begin()))));
 }
 
 void NodeMonitor::monitor([[maybe_unused]] int fd)

@@ -289,7 +289,8 @@ void parse_program_options(int argc, const char** argv)
     config.trace_path = arguments.get("output-trace");
     config.quiet = arguments.given("quiet");
     config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
-    config.pid = arguments.provided("pid") ? arguments.as<pid_t>("pid") : -1;
+    config.process =
+        arguments.provided("pid") ? Process(arguments.as<pid_t>("pid")) : Process::invalid();
     config.sampling_event = arguments.get("event");
     config.sampling_period = arguments.as<std::uint64_t>("count");
     config.enable_cct = arguments.given("call-graph");
@@ -441,7 +442,7 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.process == Process::invalid() &&
         config.command.empty())
     {
         lo2s::Log::fatal() << "No process to monitor provided. "

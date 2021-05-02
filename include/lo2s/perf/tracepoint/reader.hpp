@@ -112,7 +112,7 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(int cpu, int event_id) : cpu_(cpu)
+    Reader(Cpu cpu, int event_id) : cpu_(cpu)
     {
         struct perf_event_attr attr = common_perf_event_attrs();
         attr.type = PERF_TYPE_TRACEPOINT;
@@ -120,13 +120,13 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-        fd_ = perf_event_open(&attr, -1, cpu_, -1, 0);
+        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0);
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-        Log::debug() << "Opened perf_sample_tracepoint_reader for cpu " << cpu_ << " with id "
+        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_.name() << " with id "
                      << event_id;
 
         try
@@ -184,7 +184,7 @@ protected:
     using EventReader<T>::init_mmap;
 
 private:
-    int cpu_;
+    Cpu cpu_;
     int fd_ = -1;
     const static std::filesystem::path base_path;
 };

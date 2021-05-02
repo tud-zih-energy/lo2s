@@ -48,7 +48,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
 #ifndef USE_PERF_RECORD_SWITCH
     if (config().sampling)
 #else
-    if (config().sampling || scope.type == ExecutionScopeType::CPU)
+    if (config().sampling || scope.is_cpu())
 #endif
     {
         sample_writer_ =
@@ -92,7 +92,7 @@ void ScopeMonitor::finalize_thread()
 
 void ScopeMonitor::monitor(int fd)
 {
-    if (scope_.type == ExecutionScopeType::THREAD)
+    if (!scope_.is_cpu())
     {
         try_pin_to_scope(scope_);
     }

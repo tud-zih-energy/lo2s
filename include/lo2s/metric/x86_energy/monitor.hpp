@@ -8,6 +8,7 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/types.hpp>
 
 #include <x86_energy.hpp>
 
@@ -25,7 +26,7 @@ namespace x86_energy
 class Monitor : public monitor::PollMonitor
 {
 public:
-    Monitor(::x86_energy::SourceCounter counter, int cpu, trace::Trace& trace,
+    Monitor(::x86_energy::SourceCounter counter, Cpu cpu, trace::Trace& trace,
             const otf2::definition::metric_class& metric_class,
             const otf2::definition::system_tree_node& stn);
 
@@ -41,7 +42,7 @@ protected:
 private:
     ::x86_energy::SourceCounter counter_;
 
-    int cpu_;
+    Cpu cpu_;
 
     otf2::writer::local& otf2_writer_;
 

@@ -33,13 +33,13 @@ namespace lo2s
 class ProcessInfo
 {
 public:
-    ProcessInfo(pid_t pid, bool enable_on_exec) : pid_(pid), maps_(pid, !enable_on_exec)
+    ProcessInfo(Process p, bool enable_on_exec) : process_(p), maps_(p, !enable_on_exec)
     {
     }
 
-    pid_t pid() const
+    Process process() const
     {
-        return pid_;
+        return process_;
     }
 
     void mmap(const RawMemoryMapEntry& entry)
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    const pid_t pid_;
+    const Process process_;
     std::mutex mutex_;
     MemoryMap maps_;
 };

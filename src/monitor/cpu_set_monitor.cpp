@@ -38,26 +38,26 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
                 pid = std::stol(pid_match[1]);
 
                 process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                                       std::forward_as_tuple(pid, false));
+                                       std::forward_as_tuple(Process(pid), false));
             }
         }
     }
 
-    trace_.add_threads(get_comms_for_running_processes());
+    trace_.add_threads(get_comms_for_running_threads());
 
     for (const auto& cpu : Topology::instance().cpus())
     {
         Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
 
         monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                          std::forward_as_tuple(ExecutionScope::cpu(cpu.id), *this, false));
+                          std::forward_as_tuple(ExecutionScope(Cpu(cpu.id)), *this, false));
     }
 }
 
 void CpuSetMonitor::run()
 {
     sigset_t ss;
-    if (config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().process == Process::invalid())
     {
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
@@ -70,7 +70,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    if (config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().process == Process::invalid())
     {
         int sig;
         auto ret = sigwait(&ss, &sig);
@@ -95,7 +95,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_processes());
+    trace_.add_threads(get_comms_for_running_threads());
 
     for (auto& monitor_elem : monitors_)
     {

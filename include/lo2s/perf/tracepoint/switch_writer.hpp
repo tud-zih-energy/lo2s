@@ -34,8 +34,6 @@
 #include <otf2xx/definition/location.hpp>
 #include <otf2xx/writer/local.hpp>
 
-#include <unordered_map>
-
 extern "C"
 {
 #include <sys/types.h>
@@ -50,7 +48,7 @@ namespace tracepoint
 class SwitchWriter : public Reader<SwitchWriter>
 {
 public:
-    SwitchWriter(int cpu, trace::Trace& trace);
+    SwitchWriter(Cpu cpu, trace::Trace& trace);
     ~SwitchWriter();
 
 public:
@@ -59,7 +57,7 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    otf2::definition::calling_context::reference_type thread_calling_context_ref(pid_t tid);
+    otf2::definition::calling_context::reference_type thread_calling_context_ref(Thread thread);
 
 private:
     otf2::writer::local& otf2_writer_;
@@ -68,7 +66,7 @@ private:
 
     using calling_context_ref = otf2::definition::calling_context::reference_type;
     trace::ThreadCctxRefMap thread_calling_context_refs_;
-    pid_t current_pid_ = -1;
+    Process current_process_;
     calling_context_ref current_calling_context_ = calling_context_ref::undefined();
 
     EventField prev_pid_field_;

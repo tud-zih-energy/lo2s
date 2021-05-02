@@ -37,7 +37,7 @@ namespace monitor
 class TracepointMonitor : public PollMonitor
 {
 public:
-    TracepointMonitor(trace::Trace& trace, int cpuid);
+    TracepointMonitor(trace::Trace& trace, Cpu cpu);
 
 private:
     void monitor(int fd) override;
@@ -50,7 +50,7 @@ private:
     }
 
 private:
-    int cpu_;
+    Cpu cpu_;
     std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };
 } // namespace monitor

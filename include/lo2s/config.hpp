@@ -27,6 +27,8 @@
 
 #include <cstdint>
 
+#include <lo2s/types.hpp>
+
 extern "C"
 {
 #include <unistd.h>
@@ -46,7 +48,7 @@ struct Config
 {
     // General
     MonitorType monitor_type;
-    pid_t pid;
+    Process process;
     std::vector<std::string> command;
     std::string command_line;
     bool quiet;

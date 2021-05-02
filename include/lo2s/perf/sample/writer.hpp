@@ -23,6 +23,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/mmap.hpp>
+
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -32,6 +33,7 @@
 #include <otf2xx/definition/location.hpp>
 
 #include <cstdint>
+#include <unordered_map>
 
 extern "C"
 {
@@ -75,9 +77,10 @@ private:
     cctx_ref(const Reader::RecordSampleType* sample);
     trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
 
-    void update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp);
-    void leave_current_thread(pid_t tid, otf2::chrono::time_point tp);
-    void update_calling_context(pid_t pid, pid_t tid, otf2::chrono::time_point tp, bool switch_out);
+    void update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp);
+    void leave_current_thread(Thread thread, otf2::chrono::time_point tp);
+    void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
+                                bool switch_out);
 
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
@@ -97,7 +100,7 @@ private:
     trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
-    std::unordered_map<pid_t, std::string> comms_;
+    std::unordered_map<Thread, std::string> comms_;
 
     const time::Converter time_converter_;
 

@@ -46,13 +46,11 @@ static const EventFormat& get_sched_switch_event()
 }
 
 SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
-try : Reader(cpu, get_sched_switch_event().id()),
-      otf2_writer_(trace.cpu_switch_writer(cpu)),
-      trace_(trace),
-      time_converter_(time::Converter::instance()),
-      prev_pid_field_(get_sched_switch_event().field("prev_pid")),
-      next_pid_field_(get_sched_switch_event().field("next_pid")),
-      prev_state_field_(get_sched_switch_event().field("prev_state"))
+try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.cpu_switch_writer(cpu)),
+    trace_(trace), time_converter_(time::Converter::instance()),
+    prev_pid_field_(get_sched_switch_event().field("prev_pid")),
+    next_pid_field_(get_sched_switch_event().field("next_pid")),
+    prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
 }
 // NOTE: function-try-block is intentional; catch get_sched_switch_event()
@@ -76,7 +74,7 @@ SwitchWriter::~SwitchWriter()
 
     if (!thread_calling_context_refs_.empty())
     {
-        std::map<pid_t, ProcessInfo> m;
+        std::map<Process, ProcessInfo> m;
         const auto& mapping = trace_.merge_calling_contexts(thread_calling_context_refs_,
                                                             thread_calling_context_refs_.size(), m);
         otf2_writer_ << mapping;
@@ -86,37 +84,37 @@ SwitchWriter::~SwitchWriter()
 bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
-    pid_t prev_pid = sample->raw_data.get(prev_pid_field_);
-    pid_t next_pid = sample->raw_data.get(next_pid_field_);
+    Process prev_process = Process(sample->raw_data.get(prev_pid_field_));
+    Process next_process = Process(sample->raw_data.get(next_pid_field_));
     if (!current_calling_context_.is_undefined())
     {
-        if (prev_pid != current_pid_)
+        if (prev_process != current_procesws_)
         {
-            Log::warn() << "Conflicting pids: prev_pid: " << prev_pid
-                        << " != current_pid: " << current_pid_
+            Log::warn() << "Conflicting processes: previous: " << prev_process
+                        << " != current: " << current_process_
                         << " current_region: " << current_calling_context_;
         }
         otf2_writer_.write_calling_context_leave(tp, current_calling_context_);
     }
-    current_pid_ = next_pid;
+    current_process_ = next_process;
 
-    current_calling_context_ = thread_calling_context_ref(current_pid_);
+    current_calling_context_ = thread_calling_context_ref(current_process.as_thread());
     otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
 
     last_time_point_ = tp;
 
-    if (next_pid != 0)
+    if (next_process != 0)
     {
-        summary().register_process(next_pid);
+        summary().register_process(next_process);
     }
     return false;
 }
 
 otf2::definition::calling_context::reference_type
-SwitchWriter::thread_calling_context_ref(pid_t tid)
+SwitchWriter::thread_calling_context_ref(Thread thread)
 {
     auto ret = thread_calling_context_refs_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(tid),
+        std::piecewise_construct, std::forward_as_tuple(thread),
         std::forward_as_tuple(-1, thread_calling_context_refs_.size()));
     return ret.first->second.entry.ref;
 }
