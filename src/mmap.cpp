@@ -38,14 +38,14 @@ MemoryMap::MemoryMap()
 {
 }
 
-MemoryMap::MemoryMap(pid_t pid, bool read_initial)
+MemoryMap::MemoryMap(Process process, bool read_initial)
 {
     if (!read_initial)
     {
         return;
     }
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
-    auto filename = fmt::format("/proc/{}/task/{}/maps", pid, pid);
+    auto filename = fmt::format("/proc/{}/task/{}/maps", process.as_pid_t(), process.as_pid_t());
 
     std::ifstream mapstream(filename);
     if (mapstream.fail())

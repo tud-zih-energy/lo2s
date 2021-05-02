@@ -22,11 +22,13 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/types.hpp>
 
 #include <filesystem>
 
 #include <chrono>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -71,9 +73,9 @@ private:
 };
 
 std::size_t get_page_size();
-std::string get_process_exe(pid_t pid);
-std::string get_process_comm(pid_t pid);
-std::string get_task_comm(pid_t pid, pid_t task);
+std::string get_process_exe(Process process);
+std::string get_process_comm(Process process);
+std::string get_task_comm(Process process, Thread thread);
 
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
@@ -95,9 +97,9 @@ T get_sysctl(const std::string& group, const std::string& name)
 
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 
-std::unordered_map<pid_t, std::string> get_comms_for_running_processes();
+std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 
 void try_pin_to_scope(ExecutionScope scope);
 
-pid_t gettid();
+Thread gettid();
 } // namespace lo2s

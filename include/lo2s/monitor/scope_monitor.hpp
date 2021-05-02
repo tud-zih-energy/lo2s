@@ -57,13 +57,13 @@ public:
 
     std::string group() const override
     {
-        if (scope_.type == ExecutionScopeType::THREAD)
+        if (scope_.is_cpu())
         {
-            return "lo2s::ThreadMonitor";
+            return "lo2s::CpuMonitor";
         }
         else
         {
-            return "lo2s::CpuMonitor";
+            return "lo2s::ThreadMonitor";
         }
     }
 

@@ -120,7 +120,7 @@ Metrics::Metrics(trace::Trace& trace)
                 stn = trace.system_tree_core_node(coreid, packageid);
                 break;
             case xe::Granularity::THREAD:
-                stn = trace.system_tree_cpu_node(cpuid);
+                stn = trace.system_tree_cpu_node(Cpu(cpuid));
                 break;
             default:
                 Log::warn() << "Cannot determine a suitable system tree node for the " << counter
@@ -129,7 +129,7 @@ Metrics::Metrics(trace::Trace& trace)
             }
 
             recorders_.emplace_back(std::make_unique<Monitor>(active_source->get(counter, index),
-                                                              cpuid, trace, mc, stn));
+                                                              Cpu(cpuid), trace, mc, stn));
         }
     }
 }

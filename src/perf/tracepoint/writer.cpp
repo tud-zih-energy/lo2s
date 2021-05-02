@@ -14,10 +14,10 @@ namespace perf
 namespace tracepoint
 {
 
-Writer::Writer(int cpu, const EventFormat& event, trace::Trace& trace_,
+Writer::Writer(Cpu cpu, const EventFormat& event, trace::Trace& trace_,
                const otf2::definition::metric_class& metric_class)
 : Reader(cpu, event.id()), event_(event),
-  writer_(trace_.create_metric_writer(fmt::format("tracepoint metrics for CPU {}", cpu))),
+  writer_(trace_.create_metric_writer(fmt::format("tracepoint metrics for {}", cpu.name()))),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
   time_converter_(perf::time::Converter::instance()),
