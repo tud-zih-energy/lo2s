@@ -33,15 +33,15 @@ namespace lo2s
 namespace monitor
 {
 
-TracepointMonitor::TracepointMonitor(trace::Trace& trace, int cpuid)
-: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpuid)
+TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
+: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
 {
     for (const auto& event_name : config().tracepoint_events)
     {
         auto& mc = trace.tracepoint_metric_class(event_name);
         perf::tracepoint::EventFormat event(event_name);
         std::unique_ptr<perf::tracepoint::Writer> writer =
-            std::make_unique<perf::tracepoint::Writer>(cpuid, event, trace, mc);
+            std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 
         add_fd(writer->fd());
         perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),
@@ -50,7 +50,7 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, int cpuid)
 }
 void TracepointMonitor::initialize_thread()
 {
-    try_pin_to_scope(ExecutionScope::cpu(cpu_));
+    try_pin_to_scope(cpu_.as_scope());
 }
 void TracepointMonitor::monitor(int fd)
 {

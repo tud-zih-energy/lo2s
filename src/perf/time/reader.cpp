@@ -76,7 +76,7 @@ Reader::Reader()
 
     try
     {
-        fd_ = perf_event_open(&attr, 0, -1, -1, 0);
+        fd_ = perf_event_open(&attr, ExecutionScope::thread(0), -1, 0);
         init_mmap(fd_);
 
         if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)

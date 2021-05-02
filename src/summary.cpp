@@ -31,10 +31,10 @@ Summary::Summary()
 {
 }
 
-void Summary::register_process(pid_t pid)
+void Summary::register_process(Process process)
 {
-    std::lock_guard<std::mutex> lock(pids_mutex_);
-    pids_.emplace(pid);
+    std::lock_guard<std::mutex> lock(processes_mutex_);
+    processes_.emplace(process);
 }
 
 void Summary::record_perf_wakeups(std::size_t num_wakeups)
@@ -127,7 +127,7 @@ void Summary::show()
     }
     if (config().monitor_type == lo2s::MonitorType::CPU_SET)
     {
-        std::cout << "monitored processes: " << pids_.size() << ", ";
+        std::cout << "monitored processes: " << processes_.size() << ", ";
     }
     std::cout << cpu_time.count() << "s CPU, ";
     std::cout << wall_time.count() << "s total ]\n";

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016-2018,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,41 +19,37 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/monitor/abstract_process_monitor.hpp>
-
-#include <map>
-#include <string>
-
-extern "C"
-{
-#include <signal.h>
-}
-
+#include <lo2s/types.hpp>
 namespace lo2s
 {
 
-class ProcessController
+ExecutionScope Thread::as_scope() const
 {
-public:
-    ProcessController(Process child, const std::string& name, bool spawn,
-                      monitor::AbstractProcessMonitor& monitor);
+    return ExecutionScope::thread(tid_);
+}
 
-    ~ProcessController();
+ExecutionScope Process::as_scope() const
+{
+    return ExecutionScope::process(pid_);
+}
+Process Thread::as_process() const
+{
+    return Process(tid_);
+}
+Thread Process::as_thread() const
+{
+    return Thread(pid_);
+}
 
-    void run();
+int Cpu::as_int() const
+{
+    return cpu_;
+}
 
-private:
-    void handle_ptrace_event(Thread thread, int event);
+ExecutionScope Cpu::as_scope() const
+{
+    return ExecutionScope::cpu(cpu_);
+}
 
-    void handle_signal(Thread thread, int status);
-
-    const Thread first_child_;
-    sighandler_t default_signal_handler;
-    monitor::AbstractProcessMonitor& monitor_;
-    std::size_t num_wakeups_;
-    ExecutionScopeGroup& groups_;
-};
 } // namespace lo2s

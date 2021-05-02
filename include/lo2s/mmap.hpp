@@ -26,13 +26,13 @@
 #ifdef HAVE_RADARE
 #include <lo2s/radare.hpp>
 #endif
+#include <lo2s/types.hpp>
 #include <lo2s/util.hpp>
 
 #include <deque>
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
-#include <unordered_map>
 
 extern "C"
 {
@@ -159,17 +159,18 @@ struct RecordMmapType
 struct RawMemoryMapEntry
 {
     RawMemoryMapEntry(Address addr, Address end, Address pgoff, const std::string& filename)
-    : pid(0), tid(0), addr(addr), end(end), pgoff(pgoff), filename(filename)
+    : process(0), thread(0), addr(addr), end(end), pgoff(pgoff), filename(filename)
     {
     }
 
     RawMemoryMapEntry(const RecordMmapType* record)
-    : pid(record->pid), tid(record->tid), addr(record->addr), end(record->addr + record->len),
-      pgoff(record->pgoff), filename(record->filename)
+    : process(record->pid), thread(record->tid), addr(record->addr),
+      end(record->addr + record->len), pgoff(record->pgoff), filename(record->filename)
     {
     }
 
-    pid_t pid, tid;
+    Process process;
+    Thread thread;
     Address addr;
     Address end;
     Address pgoff;
@@ -182,7 +183,7 @@ class MemoryMap
 {
 public:
     MemoryMap();
-    MemoryMap(pid_t pid, bool read_initial);
+    MemoryMap(Process p, bool read_initial);
 
     void mmap(const RawMemoryMapEntry& entry);
 

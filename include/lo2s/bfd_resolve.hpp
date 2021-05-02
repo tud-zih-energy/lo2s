@@ -29,7 +29,6 @@
 #include <mutex>
 #include <regex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using std::hex;
