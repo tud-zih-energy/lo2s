@@ -19,47 +19,46 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <string>
-
-extern "C"
-{
-#include <linux/perf_event.h>
-}
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/safe/writer.hpp>
+#include <lo2s/time/time.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-enum class Availability
+namespace counter
 {
-    UNAVAILABLE,
-    SYSTEM_MODE,
-    PROCESS_MODE,
-    UNIVERSAL
-};
+namespace safe
+{
+Writer::Writer(ExecutionScope scope, trace::Trace& trace)
+: Reader(scope), MetricWriter(MeasurementScope::safe_metric(scope), trace)
+{
+}
 
-struct EventDescription
+bool Writer::handle(std::vector<SafeReadFormat>& data)
 {
-    EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                     std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1),
-      availability(Availability::UNAVAILABLE)
+    // update event timestamp from sample
+    metric_event_.timestamp(lo2s::time::now());
+
+    counter_buffer_.read(data);
+
+    otf2::event::metric::values& values = metric_event_.raw_values();
+
+    assert(counter_buffer_.size() <= values.size());
+
+    // read counter values into metric event
+    for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
+        values[i] = counter_buffer_[i];
     }
 
-    EventDescription()
-    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0),
-      availability(Availability::UNAVAILABLE)
-    {
-    }
+    writer_.write(metric_event_);
+    return false;
+}
 
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
-    Availability availability;
-};
+} // namespace safe
+} // namespace counter
 } // namespace perf
 } // namespace lo2s

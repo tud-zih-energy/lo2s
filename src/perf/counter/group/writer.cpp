@@ -32,7 +32,7 @@ namespace counter
 namespace group
 {
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: Reader(scope, requested_counters(), enable_on_exec), MetricWriter(scope, trace)
+: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace)
 {
 }
 
