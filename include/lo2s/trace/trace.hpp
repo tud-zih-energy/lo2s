@@ -105,7 +105,7 @@ public:
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& switch_writer(const ExecutionScope& scope);
-    otf2::writer::local& metric_writer(const ExecutionScope& scope);
+    otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& create_metric_writer(const std::string& name);
 
     otf2::definition::metric_member
@@ -138,38 +138,26 @@ public:
         }
         return cpuid_metric_class_;
     }
-    otf2::definition::metric_class perf_metric_class()
+
+    otf2::definition::metric_class perf_metric_class(MeasurementScope scope)
     {
-        if (!perf_metric_class_)
+        assert(scope.type == MeasuerementScopeType::GROUP_METRIC ||
+               scope.type == MeasurementScopeType::USERSPACE_METRIC);
+
+        if (scope.type == MeasurementScopeType::GROUP_METRIC)
         {
-            perf_metric_class_ = registry_.create<otf2::definition::metric_class>(
-                otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
-            const perf::counter::CounterCollection& counter_collection =
-                perf::counter::requested_counters();
-            if (!counter_collection.counters.empty())
+            if (!perf_group_metric_class_)
             {
-                perf_metric_class_->add_member(metric_member(
-                    counter_collection.leader.name, counter_collection.leader.name,
-                    otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
-
-                for (const auto& counter : counter_collection.counters)
-                {
-                    perf_metric_class_->add_member(metric_member(
-                        counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
-                        otf2::common::type::Double, "#"));
-                }
-
-                perf_metric_class_->add_member(
-                    metric_member("time_enabled", "time event active",
-                                  otf2::common::metric_mode::accumulated_start,
-                                  otf2::common::type::uint64, "ns"));
-                perf_metric_class_->add_member(
-                    metric_member("time_running", "time event on CPU",
-                                  otf2::common::metric_mode::accumulated_start,
-                                  otf2::common::type::uint64, "ns"));
+                create_group_metric_class();
             }
+            return perf_group_metric_class_;
         }
-        return perf_metric_class_;
+
+        if (!perf_userspace_metric_class_)
+        {
+            create_userspace_metric_class();
+        }
+        return perf_userspace_metric_class_;
     }
 
     otf2::definition::metric_class& tracepoint_metric_class(const std::string& event_name);
@@ -237,6 +225,51 @@ private:
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context& parent,
                    std::map<pid_t, ProcessInfo>& infos, pid_t pid);
 
+    void create_group_metric_class()
+    {
+        auto counter_collection_ = perf::counter::requested_group_counters();
+
+        perf_group_metric_class_ = registry_.create<otf2::definition::metric_class>(
+            otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
+        if (!counter_collection_.counters.empty())
+        {
+            perf_group_metric_class_->add_member(metric_member(
+                counter_collection_.leader.name, counter_collection_.leader.name,
+                otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
+
+            for (const auto& counter : counter_collection_.counters)
+            {
+                perf_group_metric_class_->add_member(metric_member(
+                    counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
+                    otf2::common::type::Double, "#"));
+            }
+
+            perf_group_metric_class_->add_member(metric_member(
+                "time_enabled", "time event active", otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::uint64, "ns"));
+            perf_group_metric_class_->add_member(metric_member(
+                "time_running", "time event on CPU", otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::uint64, "ns"));
+        }
+    }
+
+    void create_userspace_metric_class()
+    {
+        const auto& counter_collection_ = perf::counter::requested_userspace_counters();
+
+        perf_userspace_metric_class_ = registry_.create<otf2::definition::metric_class>(
+            otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
+        if (!counter_collection_.counters.empty())
+        {
+            for (const auto& counter : counter_collection_.counters)
+            {
+                perf_userspace_metric_class_->add_member(metric_member(
+                    counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
+                    otf2::common::type::Double, "#"));
+            }
+        }
+    }
+
     const otf2::definition::source_code_location& intern_scl(const LineInfo&);
 
     const otf2::definition::region& intern_region(const LineInfo&);
@@ -270,7 +303,8 @@ private:
     otf2::definition::regions_group& lo2s_regions_group_;
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
-    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_metric_class_;
+    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_group_metric_class_;
+    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_userspace_metric_class_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 

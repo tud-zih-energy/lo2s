@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,45 +21,28 @@
 
 #pragma once
 
-#include <string>
+#include <lo2s/perf/counter/metric_writer.hpp>
+#include <lo2s/perf/counter/userspace/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/trace.hpp>
 
-extern "C"
-{
-#include <linux/perf_event.h>
-}
-
+#include <vector>
 namespace lo2s
 {
 namespace perf
 {
-enum class Availability
+namespace counter
 {
-    UNAVAILABLE,
-    SYSTEM_MODE,
-    PROCESS_MODE,
-    UNIVERSAL
-};
-
-struct EventDescription
+namespace userspace
 {
-    EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                     std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1),
-      availability(Availability::UNAVAILABLE)
-    {
-    }
+class Writer : public Reader<Writer>, MetricWriter
+{
+public:
+    Writer(ExecutionScope scope, trace::Trace& trace);
 
-    EventDescription()
-    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0),
-      availability(Availability::UNAVAILABLE)
-    {
-    }
-
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
-    Availability availability;
+    bool handle(std::vector<UserspaceReadFormat>& data);
 };
+} // namespace userspace
+} // namespace counter
 } // namespace perf
 } // namespace lo2s

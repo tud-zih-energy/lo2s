@@ -20,7 +20,8 @@
  */
 
 #include <lo2s/log.hpp>
-#include <lo2s/perf/counter/group/writer.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s
@@ -29,39 +30,35 @@ namespace perf
 {
 namespace counter
 {
-namespace group
+namespace userspace
 {
-Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace)
+Writer::Writer(ExecutionScope scope, trace::Trace& trace)
+: Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace)
 {
 }
 
-bool Writer::handle(const Reader::RecordSampleType* sample)
+bool Writer::handle(std::vector<UserspaceReadFormat>& data)
 {
     // update event timestamp from sample
-    metric_event_.timestamp(time_converter_(sample->time));
+    metric_event_.timestamp(lo2s::time::now());
 
-    counter_buffer_.read(&sample->v);
+    counter_buffer_.read(data);
 
     otf2::event::metric::values& values = metric_event_.raw_values();
 
     assert(counter_buffer_.size() <= values.size());
 
     // read counter values into metric event
-    for (std::size_t i = 0; i <= counter_buffer_.size(); i++)
+    for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
         values[i] = counter_buffer_[i];
     }
-
-    auto index = counter_buffer_.size();
-    values[index++] = counter_buffer_.enabled();
-    values[index++] = counter_buffer_.running();
 
     writer_.write(metric_event_);
     return false;
 }
 
-} // namespace group
+} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

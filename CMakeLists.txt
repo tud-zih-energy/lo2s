@@ -137,8 +137,10 @@ set(SOURCE_FILES
     src/perf/event_provider.cpp
 
     src/perf/counter/counter_collection.cpp
-    src/perf/counter/counter_buffer.cpp
     src/perf/counter/group/reader.cpp
+    src/perf/counter/userspace/reader.cpp
+
+    src/perf/counter/userspace/writer.cpp
     src/perf/counter/group/writer.cpp
 
     src/perf/sample/writer.cpp

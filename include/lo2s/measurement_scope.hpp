@@ -27,7 +27,8 @@ namespace lo2s
 enum class MeasurementScopeType
 {
     SAMPLE,
-    METRIC,
+    GROUP_METRIC,
+    USERSPACE_METRIC,
     SWITCH,
     UNKNOWN
 };
@@ -50,9 +51,14 @@ struct MeasurementScope
         return { MeasurementScopeType::SAMPLE, s };
     }
 
-    static MeasurementScope metric(ExecutionScope s)
+    static MeasurementScope group_metric(ExecutionScope s)
     {
-        return { MeasurementScopeType::METRIC, s };
+        return { MeasurementScopeType::GROUP_METRIC, s };
+    }
+
+    static MeasurementScope userspace_metric(ExecutionScope s)
+    {
+        return { MeasurementScopeType::USERSPACE_METRIC, s };
     }
 
     static MeasurementScope context_switch(ExecutionScope s)
@@ -77,11 +83,12 @@ struct MeasurementScope
         }
     }
 
-    std::string name()
+    std::string name() const
     {
         switch (type)
         {
-        case MeasurementScopeType::METRIC:
+        case MeasurementScopeType::GROUP_METRIC:
+        case MeasurementScopeType::USERSPACE_METRIC:
             return fmt::format("metrics for {}", scope.name());
         case MeasurementScopeType::SAMPLE:
             return fmt::format("samples for {}", scope.name());

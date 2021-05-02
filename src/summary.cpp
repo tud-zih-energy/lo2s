@@ -117,7 +117,7 @@ void Summary::show()
     }
     if (!config().command.empty())
     {
-        for (const auto command : config().command)
+        for (const auto& command : config().command)
         {
             std::cout << command << ' ';
         }

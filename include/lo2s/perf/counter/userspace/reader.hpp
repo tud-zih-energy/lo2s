@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2021,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,45 +21,45 @@
 
 #pragma once
 
-#include <string>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
+#include <lo2s/trace/trace.hpp>
 
-extern "C"
-{
-#include <linux/perf_event.h>
-}
+#include <cstdint>
 
+#include <vector>
+
+#include <cstdlib>
 namespace lo2s
 {
 namespace perf
 {
-enum class Availability
+namespace counter
 {
-    UNAVAILABLE,
-    SYSTEM_MODE,
-    PROCESS_MODE,
-    UNIVERSAL
-};
+namespace userspace
+{
 
-struct EventDescription
+template <class T>
+class Reader
 {
-    EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                     std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1),
-      availability(Availability::UNAVAILABLE)
+public:
+    Reader(ExecutionScope scope);
+
+    void read();
+
+    int fd()
     {
+        return timer_fd_;
     }
 
-    EventDescription()
-    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0),
-      availability(Availability::UNAVAILABLE)
-    {
-    }
+protected:
+    std::vector<int> counter_fds_;
+    UserspaceCounterBuffer counter_buffer_;
+    int timer_fd_;
 
-    std::string name;
-    perf_type_id type;
-    std::uint64_t config;
-    std::uint64_t config1;
-    Availability availability;
+    std::vector<UserspaceReadFormat> data_;
 };
+} // namespace userspace
+} // namespace counter
 } // namespace perf
 } // namespace lo2s
