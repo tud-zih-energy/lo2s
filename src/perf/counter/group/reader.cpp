@@ -47,52 +47,11 @@ namespace counter
 namespace group
 {
 
-int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
-                        unsigned long flags)
-{
-    int fd = perf_event_open(perf_attr, tid, cpu, group_fd, flags);
-    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
-    {
-        perf_attr->exclude_kernel = 1;
-        perf_warn_paranoid();
-        fd = perf_event_open(perf_attr, tid, cpu, group_fd, flags);
-    }
-    return fd;
-}
-
-int open_counter(pid_t tid, int cpuid, const EventDescription& desc, int group_fd)
-{
-    struct perf_event_attr perf_attr;
-    memset(&perf_attr, 0, sizeof(perf_attr));
-    perf_attr.size = sizeof(perf_attr);
-    perf_attr.sample_period = 0;
-    perf_attr.type = desc.type;
-    perf_attr.config = desc.config;
-    perf_attr.config1 = desc.config1;
-    perf_attr.exclude_kernel = config().exclude_kernel;
-    // Needed when scaling multiplexed events, and recognize activation phases
-    perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
-    perf_attr.use_clockid = config().use_clockid;
-    perf_attr.clockid = config().clockid;
-#endif
-
-    int fd = perf_try_event_open(&perf_attr, tid, cpuid, group_fd, 0);
-    if (fd < 0)
-    {
-        Log::error() << "perf_event_open for counter failed";
-        throw_errno();
-    }
-    return fd;
-}
-
 template <class T>
-Reader<T>::Reader(ExecutionScope scope, const CounterCollection& counter_collection,
-                  bool enable_on_exec)
-: counter_buffer_(counter_collection.counters.size() + 1)
+Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
+: counter_buffer_(requested_group_counters().counters.size() + 1)
 {
-
+    const CounterCollection counter_collection = requested_group_counters();
     int cpuid = scope.cpuid();
     pid_t tid = scope.tid();
 
@@ -136,7 +95,8 @@ Reader<T>::Reader(ExecutionScope scope, const CounterCollection& counter_collect
     {
         try
         {
-            counter_fds_.emplace_back(open_counter(tid, cpuid, description, group_leader_fd_));
+            counter_fds_.emplace_back(
+                perf_event_description_open(tid, cpuid, description, group_leader_fd_));
         }
         catch (const std::system_error& e)
         {

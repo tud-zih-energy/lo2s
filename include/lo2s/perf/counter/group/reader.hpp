@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/counter/counter_buffer.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/perf/counter/group/group_counter_buffer.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <vector>
 
@@ -48,7 +48,7 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(ExecutionScope scope, const CounterCollection& counter_collection, bool enable_on_exec);
+    Reader(ExecutionScope scope, bool enable_on_exec);
 
     struct RecordSampleType
     {
@@ -72,7 +72,7 @@ public:
 protected:
     int group_leader_fd_;
     std::vector<int> counter_fds_;
-    CounterBuffer counter_buffer_;
+    GroupCounterBuffer counter_buffer_;
 };
 } // namespace group
 } // namespace counter

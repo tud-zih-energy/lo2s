@@ -353,14 +353,12 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
-otf2::writer::local& Trace::metric_writer(const ExecutionScope& writer_scope)
+otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
 {
-    MeasurementScope metric_scope = MeasurementScope::metric(writer_scope);
-
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(metric_scope), intern(metric_scope.name()),
+        ByMeasurementScope(writer_scope), intern(writer_scope.name()),
         registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_group(writer_scope))),
+            ByExecutionScope(groups_.get_group(writer_scope.scope))),
         otf2::definition::location::location_type::metric);
     return archive_(intern_location);
 }

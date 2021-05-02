@@ -1,5 +1,7 @@
 #include <lo2s/config.hpp>
+#include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
 
@@ -81,6 +83,45 @@ void perf_check_disabled()
 
         throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
     }
+}
+int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, int group_fd,
+                        unsigned long flags)
+{
+    int fd = perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
+    {
+        perf_attr->exclude_kernel = 1;
+        perf_warn_paranoid();
+        fd = perf_event_open(perf_attr, tid, cpu, group_fd, flags);
+    }
+    return fd;
+}
+
+int perf_event_description_open(pid_t tid, int cpuid, const EventDescription& desc, int group_fd)
+{
+    struct perf_event_attr perf_attr;
+    memset(&perf_attr, 0, sizeof(perf_attr));
+    perf_attr.size = sizeof(perf_attr);
+    perf_attr.sample_period = 0;
+    perf_attr.type = desc.type;
+    perf_attr.config = desc.config;
+    perf_attr.config1 = desc.config1;
+    perf_attr.exclude_kernel = config().exclude_kernel;
+    // Needed when scaling multiplexed events, and recognize activation phases
+    perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+    perf_attr.use_clockid = config().use_clockid;
+    perf_attr.clockid = config().clockid;
+#endif
+
+    int fd = perf_try_event_open(&perf_attr, tid, cpuid, group_fd, 0);
+    if (fd < 0)
+    {
+        Log::error() << "perf_event_open for counter failed";
+        throw_errno();
+    }
+    return fd;
 }
 } // namespace perf
 } // namespace lo2s

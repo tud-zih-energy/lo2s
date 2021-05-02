@@ -21,10 +21,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <memory>
-#include <utility>
 #include <vector>
 
 namespace lo2s
@@ -34,76 +30,62 @@ namespace perf
 namespace counter
 {
 
-struct GroupReadFormat
-{
-    uint64_t nr;
-    uint64_t time_enabled;
-    uint64_t time_running;
-    uint64_t values[1];
-
-    static constexpr std::size_t total_size(std::size_t ncounters)
-    {
-        return sizeof(GroupReadFormat) + (ncounters - 1) * sizeof(uint64_t);
-    }
-};
-
 /* when reading perf counters, the counter value is reported as the amount of events since
  * the start of measurement, while we want the amount of events since the previous read.
  *
  * To get the amount of events in regards to the previous read, this class buffers the previous read
  * result to calculate the difference
  */
+
+template <class T>
 class CounterBuffer
 {
 public:
     CounterBuffer(const CounterBuffer&) = delete;
     void operator=(const CounterBuffer&) = delete;
 
-    CounterBuffer(std::size_t ncounters);
+    CounterBuffer(std::size_t ncounters) : accumulated_(ncounters, 0)
+    {
+    }
 
     auto operator[](std::size_t i) const
     {
         return accumulated_[i];
     }
 
-    uint64_t enabled() const
-    {
-        return previous_->time_enabled;
-    }
-
-    uint64_t running() const
-    {
-        return previous_->time_running;
-    }
-
-    void read(const GroupReadFormat* buf);
-
     std::size_t size() const
     {
         return accumulated_.size();
     }
 
-private:
-    void update_buffers();
-
-    static double scale(uint64_t value, uint64_t time_running, uint64_t time_enabled)
+protected:
+    void update_buffers()
     {
-        if (time_running == 0 || time_running == time_enabled)
-        {
-            return value;
-        }
-        // there is a bug in perf where this is sometimes swapped
-        if (time_enabled > time_running)
-        {
-            return (static_cast<double>(time_enabled) / time_running) * value;
-        }
-        return (static_cast<double>(time_running) / time_enabled) * value;
-    }
+        auto crtp_this = static_cast<T*>(this);
 
-    // Double-buffering of read values.  Allows to compute differences between reads
-    std::array<std::unique_ptr<std::byte[]>, 2> buf_;
-    GroupReadFormat* current_;
-    GroupReadFormat* previous_;
+        for (std::size_t i = 0; i < accumulated_.size(); ++i)
+        {
+            auto diff_enabled = crtp_this->diff_enabled(i);
+            auto diff_running = crtp_this->diff_running(i);
+            auto diff_value = crtp_this->diff_value(i);
+
+            if (diff_enabled == 0 || diff_running == diff_enabled)
+            {
+                accumulated_[i] += diff_value;
+            }
+            // Due to a perf bug diff_enabled and diff_running may be swapped
+            // diff_enabled is always smaller than diff_running so swap them if diff_enabled >
+            // diff_running
+            else if (diff_enabled > diff_running)
+            {
+                accumulated_[i] += (static_cast<double>(diff_enabled) / diff_running) * diff_value;
+            }
+            else
+            {
+                accumulated_[i] += (static_cast<double>(diff_running) / diff_enabled) * diff_value;
+            }
+        }
+    }
     std::vector<double> accumulated_;
 };
 
