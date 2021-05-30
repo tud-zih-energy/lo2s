@@ -28,7 +28,7 @@ enum class MeasurementScopeType
 {
     SAMPLE,
     GROUP_METRIC,
-    SAFE_METRIC,
+    USERSPACE_METRIC,
     SWITCH,
     UNKNOWN
 };
@@ -56,9 +56,9 @@ struct MeasurementScope
         return { MeasurementScopeType::GROUP_METRIC, s };
     }
 
-    static MeasurementScope safe_metric(ExecutionScope s)
+    static MeasurementScope userspace_metric(ExecutionScope s)
     {
-        return { MeasurementScopeType::SAFE_METRIC, s };
+        return { MeasurementScopeType::USERSPACE_METRIC, s };
     }
 
     static MeasurementScope context_switch(ExecutionScope s)
@@ -88,7 +88,7 @@ struct MeasurementScope
         switch (type)
         {
         case MeasurementScopeType::GROUP_METRIC:
-        case MeasurementScopeType::SAFE_METRIC:
+        case MeasurementScopeType::USERSPACE_METRIC:
             return fmt::format("metrics for {}", scope.name());
         case MeasurementScopeType::SAMPLE:
             return fmt::format("samples for {}", scope.name());

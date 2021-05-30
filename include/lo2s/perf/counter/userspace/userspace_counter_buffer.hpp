@@ -31,11 +31,11 @@ namespace perf
 {
 namespace counter
 {
-namespace safe
+namespace userspace
 {
-struct SafeReadFormat
+struct UserspaceReadFormat
 {
-    SafeReadFormat() : value(0), time_enabled(0), time_running(0)
+    UserspaceReadFormat() : value(0), time_enabled(0), time_running(0)
     {
     }
     uint64_t value;
@@ -43,15 +43,15 @@ struct SafeReadFormat
     uint64_t time_running;
 };
 
-class SafeCounterBuffer : public CounterBuffer<SafeCounterBuffer>
+class UserspaceCounterBuffer : public CounterBuffer<UserspaceCounterBuffer>
 {
 public:
-    SafeCounterBuffer(std::size_t ncounters)
-    : CounterBuffer<SafeCounterBuffer>(ncounters), current_(ncounters), previous_(ncounters)
+    UserspaceCounterBuffer(std::size_t ncounters)
+    : CounterBuffer<UserspaceCounterBuffer>(ncounters), current_(ncounters), previous_(ncounters)
     {
     }
 
-    void read(std::vector<SafeReadFormat>& inbuf)
+    void read(std::vector<UserspaceReadFormat>& inbuf)
     {
         current_ = inbuf;
         update_buffers();
@@ -73,11 +73,11 @@ public:
     }
 
 protected:
-    std::vector<SafeReadFormat> current_;
-    std::vector<SafeReadFormat> previous_;
+    std::vector<UserspaceReadFormat> current_;
+    std::vector<UserspaceReadFormat> previous_;
 };
 
-} // namespace safe
+} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

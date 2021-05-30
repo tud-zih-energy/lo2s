@@ -138,9 +138,9 @@ set(SOURCE_FILES
 
     src/perf/counter/counter_collection.cpp
     src/perf/counter/group/reader.cpp
-    src/perf/counter/safe/reader.cpp
+    src/perf/counter/userspace/reader.cpp
 
-    src/perf/counter/safe/writer.cpp
+    src/perf/counter/userspace/writer.cpp
     src/perf/counter/group/writer.cpp
 
     src/perf/sample/writer.cpp

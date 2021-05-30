@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2018,
+ * Copyright (c) 2021,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,28 +21,45 @@
 
 #pragma once
 
-#include <lo2s/perf/counter/metric_writer.hpp>
-#include <lo2s/perf/counter/safe/reader.hpp>
-#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/trace/trace.hpp>
 
+#include <cstdint>
+
 #include <vector>
+
+#include <cstdlib>
 namespace lo2s
 {
 namespace perf
 {
 namespace counter
 {
-namespace safe
+namespace userspace
 {
-class Writer : public Reader<Writer>, MetricWriter
+
+template <class T>
+class Reader
 {
 public:
-    Writer(ExecutionScope scope, trace::Trace& trace);
+    Reader(ExecutionScope scope);
 
-    bool handle(std::vector<SafeReadFormat>& data);
+    void read();
+
+    int fd()
+    {
+        return timer_fd_;
+    }
+
+protected:
+    std::vector<int> counter_fds_;
+    UserspaceCounterBuffer counter_buffer_;
+    int timer_fd_;
+
+    std::vector<UserspaceReadFormat> data_;
 };
-} // namespace safe
+} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

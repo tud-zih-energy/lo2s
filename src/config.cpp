@@ -235,14 +235,14 @@ void parse_program_options(int argc, const char** argv)
     perf_metric_options.toggle("mperf", "Record the MPERF metric");
     perf_metric_options.toggle("aperf", "Record the APERF metric");
     perf_metric_options
-        .multi_option("safe-metric-event", "Record metrics for this perf event. (Slower, but might "
+        .multi_option("userspace-metric-event", "Record metrics for this perf event. (Slower, but might "
                                            "work for events for which --metric-event doesn't work)")
         .optional()
         .metavar("EVENT");
 
     perf_metric_options
-        .option("safe-readout-interval",
-                "Readout interval for metrics specified by --safe-metric-event")
+        .option("userspace-readout-interval",
+                "Readout interval for metrics specified by --userspace-metric-event")
         .metavar("MSEC")
         .default_value("100");
 
@@ -297,19 +297,19 @@ void parse_program_options(int argc, const char** argv)
     config.suppress_ip = arguments.given("no-ip");
     config.tracepoint_events = arguments.get_all("tracepoint");
     config.perf_group_events = arguments.get_all("metric-event");
-    config.perf_safe_events = arguments.get_all("safe-metric-event");
+    config.perf_userspace_events = arguments.get_all("userspace-metric-event");
     config.standard_metrics = arguments.given("standard-metrics");
     config.use_x86_energy = arguments.given("x86-energy");
     config.command = arguments.positionals();
 
     if (arguments.given("mperf"))
     {
-        config.perf_safe_events.emplace_back("msr/mperf/");
+        config.perf_userspace_events.emplace_back("msr/mperf/");
     }
 
     if (arguments.given("aperf"))
     {
-        config.perf_safe_events.emplace_back("msr/aperf/");
+        config.perf_userspace_events.emplace_back("msr/aperf/");
     }
 
     if (arguments.given("help"))
@@ -410,7 +410,7 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    for (const auto& event : config.perf_safe_events)
+    for (const auto& event : config.perf_userspace_events)
     {
         auto it =
             std::find(config.perf_group_events.begin(), config.perf_group_events.end(), event);
@@ -418,7 +418,7 @@ void parse_program_options(int argc, const char** argv)
         if (it != config.perf_group_events.end())
         {
             Log::warn() << event
-                        << " given as both safe and grouped metric event only using it in safe "
+                        << " given as both userspace and grouped metric event only using it in userspace "
                            "measuring mode";
             config.perf_group_events.erase(it);
         }
@@ -511,8 +511,8 @@ void parse_program_options(int argc, const char** argv)
     config.read_interval =
         std::chrono::milliseconds(arguments.as<std::uint64_t>("readout-interval"));
 
-    config.safe_read_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("safe-readout-interval"));
+    config.userspace_read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
 
     if (arguments.provided("perf-readout-interval"))
     {

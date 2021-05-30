@@ -63,10 +63,10 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(group_counter_writer_->fd());
     }
 
-    if (!perf::counter::requested_safe_counters().counters.empty())
+    if (!perf::counter::requested_userspace_counters().counters.empty())
     {
-        safe_counter_writer_ = std::make_unique<perf::counter::safe::Writer>(scope, parent.trace());
-        add_fd(safe_counter_writer_->fd());
+        userspace_counter_writer_ = std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
+        add_fd(userspace_counter_writer_->fd());
     }
 
 #ifndef USE_PERF_RECORD_SWITCH
@@ -107,10 +107,10 @@ void ScopeMonitor::monitor(int fd)
     {
         group_counter_writer_->read();
     }
-    if (safe_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || safe_counter_writer_->fd() == fd))
+    if (userspace_counter_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
     {
-        safe_counter_writer_->read();
+        userspace_counter_writer_->read();
     }
 #ifndef USE_PERF_RECORD_SWITCH
     if (switch_writer_ && (fd == timer_pfd().fd || fd == stop_pfd.fd))

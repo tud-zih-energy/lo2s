@@ -20,8 +20,8 @@
  */
 
 #include <lo2s/error.hpp>
-#include <lo2s/perf/counter/safe/reader.hpp>
-#include <lo2s/perf/counter/safe/writer.hpp>
+#include <lo2s/perf/counter/userspace/reader.hpp>
+#include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/measurement_scope.hpp>
@@ -40,27 +40,27 @@ namespace perf
 {
 namespace counter
 {
-namespace safe
+namespace userspace
 {
 
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
-: counter_buffer_(requested_safe_counters().counters.size()),
-  data_(requested_safe_counters().counters.size())
+: counter_buffer_(requested_userspace_counters().counters.size()),
+  data_(requested_userspace_counters().counters.size())
 {
     struct itimerspec tspec;
     memset(&tspec, 0, sizeof(struct itimerspec));
     tspec.it_value.tv_nsec = 1;
 
     tspec.it_interval.tv_sec =
-        std::chrono::duration_cast<std::chrono::seconds>(config().safe_read_interval).count();
+        std::chrono::duration_cast<std::chrono::seconds>(config().userspace_read_interval).count();
 
-    tspec.it_interval.tv_nsec = (config().safe_read_interval % std::chrono::seconds(1)).count();
+    tspec.it_interval.tv_nsec = (config().userspace_read_interval % std::chrono::seconds(1)).count();
     timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 
     timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);
 
-    for (auto& event : requested_safe_counters().counters)
+    for (auto& event : requested_userspace_counters().counters)
     {
         counter_fds_.emplace_back(open_counter(scope.tid(), scope.cpuid(), event, -1));
     }
@@ -71,7 +71,7 @@ void Reader<T>::read()
 {
     for (std::size_t i = 0; i < counter_fds_.size(); i++)
     {
-        ::read(counter_fds_[i], &(data_[i]), sizeof(SafeReadFormat));
+        ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
     }
 
     static_cast<T*>(this)->handle(data_);
@@ -85,7 +85,7 @@ void Reader<T>::read()
 }
 
 template class Reader<Writer>;
-} // namespace safe
+} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

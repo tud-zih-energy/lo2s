@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2021,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,47 +19,46 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/userspace/writer.hpp>
+#include <lo2s/time/time.hpp>
 
-#include <lo2s/execution_scope.hpp>
-#include <lo2s/perf/counter/safe/safe_counter_buffer.hpp>
-#include <lo2s/trace/trace.hpp>
-
-#include <cstdint>
-
-#include <vector>
-
-#include <cstdlib>
 namespace lo2s
 {
 namespace perf
 {
 namespace counter
 {
-namespace safe
+namespace userspace
 {
-
-template <class T>
-class Reader
+Writer::Writer(ExecutionScope scope, trace::Trace& trace)
+: Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace)
 {
-public:
-    Reader(ExecutionScope scope);
+}
 
-    void read();
+bool Writer::handle(std::vector<UserspaceReadFormat>& data)
+{
+    // update event timestamp from sample
+    metric_event_.timestamp(lo2s::time::now());
 
-    int fd()
+    counter_buffer_.read(data);
+
+    otf2::event::metric::values& values = metric_event_.raw_values();
+
+    assert(counter_buffer_.size() <= values.size());
+
+    // read counter values into metric event
+    for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
-        return timer_fd_;
+        values[i] = counter_buffer_[i];
     }
 
-protected:
-    std::vector<int> counter_fds_;
-    SafeCounterBuffer counter_buffer_;
-    int timer_fd_;
+    writer_.write(metric_event_);
+    return false;
+}
 
-    std::vector<SafeReadFormat> data_;
-};
-} // namespace safe
+} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

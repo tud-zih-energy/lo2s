@@ -149,13 +149,13 @@ public:
             }
             return perf_group_metric_class_;
         }
-        else if (scope.type == MeasurementScopeType::SAFE_METRIC)
+        else if (scope.type == MeasurementScopeType::USERSPACE_METRIC)
         {
-            if (!perf_safe_metric_class_)
+            if (!perf_userspace_metric_class_)
             {
-                create_safe_metric_class();
+                create_userspace_metric_class();
             }
-            return perf_safe_metric_class_;
+            return perf_userspace_metric_class_;
         }
         throw std::runtime_error("metric_class can only be given for metric MeasurementScope.");
     }
@@ -253,17 +253,17 @@ private:
         }
     }
 
-    void create_safe_metric_class()
+    void create_userspace_metric_class()
     {
-        const auto& counter_collection_ = perf::counter::requested_safe_counters();
+        const auto& counter_collection_ = perf::counter::requested_userspace_counters();
 
-        perf_safe_metric_class_ = registry_.create<otf2::definition::metric_class>(
+        perf_userspace_metric_class_ = registry_.create<otf2::definition::metric_class>(
             otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
         if (!counter_collection_.counters.empty())
         {
             for (const auto& counter : counter_collection_.counters)
             {
-                perf_safe_metric_class_->add_member(metric_member(
+                perf_userspace_metric_class_->add_member(metric_member(
                     counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
                     otf2::common::type::Double, "#"));
             }
@@ -304,7 +304,7 @@ private:
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_group_metric_class_;
-    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_safe_metric_class_;
+    otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_userspace_metric_class_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 

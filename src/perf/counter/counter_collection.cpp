@@ -32,9 +32,9 @@ namespace perf
 namespace counter
 {
 
-CounterCollection collect_requested_safe_counters()
+CounterCollection collect_requested_userspace_counters()
 {
-    const auto& user_events = lo2s::config().perf_safe_events;
+    const auto& user_events = lo2s::config().perf_userspace_events;
 
     std::vector<perf::EventDescription> used_counters;
 
@@ -136,9 +136,9 @@ CounterCollection collect_requested_group_counters()
              std::move(used_counters) };
 }
 
-const CounterCollection& requested_safe_counters()
+const CounterCollection& requested_userspace_counters()
 {
-    static CounterCollection counters{ collect_requested_safe_counters() };
+    static CounterCollection counters{ collect_requested_userspace_counters() };
     return counters;
 }
 
