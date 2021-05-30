@@ -55,7 +55,8 @@ Reader<T>::Reader(ExecutionScope scope)
     tspec.it_interval.tv_sec =
         std::chrono::duration_cast<std::chrono::seconds>(config().userspace_read_interval).count();
 
-    tspec.it_interval.tv_nsec = (config().userspace_read_interval % std::chrono::seconds(1)).count();
+    tspec.it_interval.tv_nsec =
+        (config().userspace_read_interval % std::chrono::seconds(1)).count();
     timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 
     timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);

@@ -65,7 +65,8 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
 
     if (!perf::counter::requested_userspace_counters().counters.empty())
     {
-        userspace_counter_writer_ = std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
+        userspace_counter_writer_ =
+            std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
         add_fd(userspace_counter_writer_->fd());
     }
 

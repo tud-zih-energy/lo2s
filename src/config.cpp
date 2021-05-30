@@ -235,8 +235,9 @@ void parse_program_options(int argc, const char** argv)
     perf_metric_options.toggle("mperf", "Record the MPERF metric");
     perf_metric_options.toggle("aperf", "Record the APERF metric");
     perf_metric_options
-        .multi_option("userspace-metric-event", "Record metrics for this perf event. (Slower, but might "
-                                           "work for events for which --metric-event doesn't work)")
+        .multi_option("userspace-metric-event",
+                      "Record metrics for this perf event. (Slower, but might "
+                      "work for events for which --metric-event doesn't work)")
         .optional()
         .metavar("EVENT");
 
@@ -417,9 +418,10 @@ void parse_program_options(int argc, const char** argv)
 
         if (it != config.perf_group_events.end())
         {
-            Log::warn() << event
-                        << " given as both userspace and grouped metric event only using it in userspace "
-                           "measuring mode";
+            Log::warn()
+                << event
+                << " given as both userspace and grouped metric event only using it in userspace "
+                   "measuring mode";
             config.perf_group_events.erase(it);
         }
     }
