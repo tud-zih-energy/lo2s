@@ -159,23 +159,31 @@ static bool event_is_openable(EventDescription& ev)
     attr.type = ev.type;
     attr.config = ev.config;
     attr.config1 = ev.config1;
-    attr.exclude_kernel = 1;
 
     int proc_fd = perf_event_open(&attr, 0, -1, -1, 0);
     int sys_fd = perf_event_open(&attr, -1, 1, -1, 0);
     if (sys_fd == -1 && proc_fd == -1)
     {
-        switch (errno)
+        Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
+
+        attr.exclude_kernel = 1;
+        int proc_fd = perf_event_open(&attr, 0, -1, -1, 0);
+        int sys_fd = perf_event_open(&attr, -1, 1, -1, 0);
+
+        if (sys_fd == -1 && proc_fd == -1)
         {
-        case ENOTSUP:
-            Log::debug() << "perf event not supported by the running kernel: " << ev.name;
-            break;
-        default:
-            Log::debug() << "perf event " << ev.name
-                         << " not available: " << std::string(std::strerror(errno));
-            break;
+            switch (errno)
+            {
+            case ENOTSUP:
+                Log::debug() << "perf event not supported by the running kernel: " << ev.name;
+                break;
+            default:
+                Log::debug() << "perf event " << ev.name
+                             << " not available: " << std::string(std::strerror(errno));
+                break;
+            }
+            return false;
         }
-        return false;
     }
     else if (sys_fd == -1)
     {

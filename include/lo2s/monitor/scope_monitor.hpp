@@ -25,6 +25,8 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/perf/counter/group/writer.hpp>
+#include <lo2s/perf/counter/userspace/writer.hpp>
+
 #include <lo2s/perf/sample/writer.hpp>
 
 #include <array>
@@ -69,7 +71,8 @@ private:
     ExecutionScope scope_;
 
     std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::group::Writer> counter_writer_;
+    std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
+    std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
 #ifndef USE_PERF_RECORD_SWITCH
     std::unique_ptr<perf::tracepoint::SwitchWriter> switch_writer_;
 #endif

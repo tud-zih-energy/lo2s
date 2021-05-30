@@ -52,7 +52,8 @@ struct Config
     bool quiet;
     // Optional features
     std::vector<std::string> tracepoint_events;
-    std::vector<std::string> perf_events;
+    std::vector<std::string> perf_group_events;
+    std::vector<std::string> perf_userspace_events;
 #ifdef HAVE_X86_ADAPT
     std::vector<std::string> x86_adapt_knobs;
 #endif
@@ -70,6 +71,7 @@ struct Config
     bool disassemble;
     // Interval monitors
     std::chrono::nanoseconds read_interval;
+    std::chrono::nanoseconds userspace_read_interval;
     std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
     // Metrics
     bool metric_use_frequency;

@@ -49,7 +49,8 @@ void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool 
                                std::forward_as_tuple(pid, spawn));
     }
 
-    if (config().sampling || !perf::counter::requested_counters().counters.empty())
+    if (config().sampling || !perf::counter::requested_group_counters().counters.empty() ||
+        !perf::counter::requested_userspace_counters().counters.empty())
     {
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                          std::forward_as_tuple(ExecutionScope::thread(tid), *this, spawn));

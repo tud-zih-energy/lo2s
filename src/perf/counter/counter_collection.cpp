@@ -31,9 +31,32 @@ namespace perf
 {
 namespace counter
 {
-CounterCollection collect_requested_counters()
+
+CounterCollection collect_requested_userspace_counters()
 {
-    const auto& user_events = lo2s::config().perf_events;
+    const auto& user_events = lo2s::config().perf_userspace_events;
+
+    std::vector<perf::EventDescription> used_counters;
+
+    used_counters.reserve(user_events.size());
+    for (const auto& ev : user_events)
+    {
+        try
+        {
+            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+            used_counters.emplace_back(event_desc);
+        }
+        catch (const perf::EventProvider::InvalidEvent& e)
+        {
+            Log::warn() << "'" << ev
+                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
+        }
+    }
+    return { EventDescription(), used_counters };
+}
+CounterCollection collect_requested_group_counters()
+{
+    const auto& user_events = lo2s::config().perf_group_events;
 
     std::vector<perf::EventDescription> used_counters;
 
@@ -93,8 +116,7 @@ CounterCollection collect_requested_counters()
     if (used_counters.empty())
     {
         // if no events will be recorded, we make an early exit with a fake leader
-        return { EventDescription(std::string(), static_cast<perf_type_id>(-1), 0, 0),
-                 std::move(used_counters) };
+        return { EventDescription(), std::move(used_counters) };
     }
     if (config().metric_leader.empty())
     {
@@ -114,9 +136,15 @@ CounterCollection collect_requested_counters()
              std::move(used_counters) };
 }
 
-const CounterCollection& requested_counters()
+const CounterCollection& requested_userspace_counters()
 {
-    static CounterCollection counters{ collect_requested_counters() };
+    static CounterCollection counters{ collect_requested_userspace_counters() };
+    return counters;
+}
+
+const CounterCollection& requested_group_counters()
+{
+    static CounterCollection counters{ collect_requested_group_counters() };
     return counters;
 }
 
