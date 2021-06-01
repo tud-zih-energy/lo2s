@@ -36,14 +36,14 @@ namespace monitor
 class AbstractProcessMonitor
 {
 public:
-    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name,
+    virtual void insert_process(Process p, Process parent, std::string proc_name,
                                 bool spawn = false) = 0;
-    virtual void insert_thread(pid_t pid, pid_t tid, std::string name = "", bool spawn = false) = 0;
+    virtual void insert_thread(Process p, Thread t, std::string name = "", bool spawn = false) = 0;
 
-    virtual void exit_process(pid_t pid) = 0;
-    virtual void exit_thread(pid_t tid) = 0;
+    virtual void exit_process(Process p) = 0;
+    virtual void exit_thread(Thread t) = 0;
 
-    virtual void update_process_name(pid_t pid, const std::string& name) = 0;
+    virtual void update_process_name(Process p, const std::string& name) = 0;
 };
 } // namespace monitor
 } // namespace lo2s

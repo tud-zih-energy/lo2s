@@ -23,6 +23,9 @@
 #include <map>
 
 #include <fmt/core.h>
+
+#include <lo2s/types.hpp>
+
 namespace lo2s
 {
 
@@ -51,9 +54,9 @@ struct ExecutionScope
         return { ExecutionScopeType::CPU, cpuid };
     }
 
-    static ExecutionScope thread(pid_t pid)
+    static ExecutionScope thread(Thread t)
     {
-        return { ExecutionScopeType::THREAD, pid };
+        return { ExecutionScopeType::THREAD, t.as_pid_t() };
     }
 
     std::string name() const
@@ -69,9 +72,9 @@ struct ExecutionScope
         }
     }
 
-    pid_t tid() const
+    Thread thread() const
     {
-        return (type == ExecutionScopeType::THREAD ? id : -1);
+        return (type == ExecutionScopeType::THREAD ? Thread(id) : Thread(-1));
     }
     int cpuid() const
     {

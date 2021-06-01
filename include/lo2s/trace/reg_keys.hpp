@@ -75,12 +75,12 @@ using ByCpu = SimpleKeyType<int, ByCpuTag>;
 struct ByThreadTag
 {
 };
-using ByThread = SimpleKeyType<pid_t, ByThreadTag>;
+using ByThread = SimpleKeyType<Thread, ByThreadTag>;
 
 struct ByProcessTag
 {
 };
-using ByProcess = SimpleKeyType<pid_t, ByProcessTag>;
+using ByProcess = SimpleKeyType<Process, ByProcessTag>;
 
 struct ByStringTag
 {
