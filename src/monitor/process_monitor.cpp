@@ -33,49 +33,49 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_process(pid_t pid, pid_t ppid, std::string proc_name, bool spawn)
+void ProcessMonitor::insert_process(Process p, Process parent, std::string proc_name, bool spawn)
 {
-    trace_.add_process(pid, ppid, proc_name);
-    insert_thread(pid, pid, proc_name, spawn);
+    trace_.add_process(p, parent, proc_name);
+    insert_thread(p, p.as_thread(), proc_name, spawn);
 }
 
-void ProcessMonitor::insert_thread(pid_t pid, pid_t tid, std::string name, bool spawn)
+void ProcessMonitor::insert_thread(Process p, Thread t, std::string name, bool spawn)
 {
-    trace_.add_thread(tid, name);
+    trace_.add_thread(t, name);
 
     if (config().sampling)
     {
-        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                               std::forward_as_tuple(pid, spawn));
+        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(p),
+                               std::forward_as_tuple(p, spawn));
     }
 
     if (config().sampling || !perf::counter::requested_group_counters().counters.empty() ||
         !perf::counter::requested_userspace_counters().counters.empty())
     {
-        threads_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                         std::forward_as_tuple(ExecutionScope::thread(tid), *this, spawn));
+        threads_.emplace(std::piecewise_construct, std::forward_as_tuple(t),
+                         std::forward_as_tuple(ExecutionScope::thread(t), *this, spawn));
     }
 
-    trace_.update_thread_name(tid, name);
+    trace_.update_thread_name(t, name);
 }
 
-void ProcessMonitor::update_process_name(pid_t pid, const std::string& name)
+void ProcessMonitor::update_process_name(Process p, const std::string& name)
 {
-    trace_.update_process_name(pid, name);
+    trace_.update_process_name(p, name);
 }
 
-void ProcessMonitor::exit_process(pid_t pid)
+void ProcessMonitor::exit_process(Process p)
 {
-    exit_thread(pid);
+    exit_thread(p.as_thread());
 }
 
-void ProcessMonitor::exit_thread(pid_t tid)
+void ProcessMonitor::exit_thread(Thread t)
 {
-    if (threads_.count(tid) != 0)
+    if (threads_.count(t) != 0)
     {
-        threads_.at(tid).stop();
+        threads_.at(t).stop();
     }
-    threads_.erase(tid);
+    threads_.erase(t);
 }
 
 ProcessMonitor::~ProcessMonitor()

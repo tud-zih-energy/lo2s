@@ -71,6 +71,16 @@ public:
     explicit Process(pid_t pid) : PidWrapper(pid)
     {
     }
+
+    Thread as_thread()
+    {
+        return Thread(pid_);
+    }
+    
+    friend std::ostream &operator<<(std::ostream &os, const Process &process)
+    {
+        return os << "process " << process.pid_;
+    }
 };
 
 class Cpu

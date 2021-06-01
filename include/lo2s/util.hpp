@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/types.hpp>
 
 #include <filesystem>
 
@@ -99,5 +100,5 @@ std::unordered_map<pid_t, std::string> get_comms_for_running_processes();
 
 void try_pin_to_scope(ExecutionScope scope);
 
-pid_t gettid();
+Thread gettid();
 } // namespace lo2s

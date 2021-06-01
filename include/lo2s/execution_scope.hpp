@@ -59,6 +59,11 @@ struct ExecutionScope
         return { ExecutionScopeType::THREAD, t.as_pid_t() };
     }
 
+    static ExecutionScope thread(Process p)
+    {
+        return { ExecutionScopeType::THREAD, p.as_pid_t() };
+    }
+
     std::string name() const
     {
         switch (type)

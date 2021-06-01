@@ -228,31 +228,31 @@ Trace::~Trace()
     std::filesystem::create_symlink(trace_name_, symlink_path);
 }
 
-const otf2::definition::system_tree_node& Trace::intern_process_node(pid_t pid)
+const otf2::definition::system_tree_node& Trace::intern_process_node(Process p)
 {
-    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(pid)))
+    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(p)))
     {
-        return registry_.get<otf2::definition::system_tree_node>(ByProcess(pid));
+        return registry_.get<otf2::definition::system_tree_node>(ByProcess(p));
     }
     else
     {
-        Log::warn() << "Could not find system tree node for pid " << pid;
+        Log::warn() << "Could not find system tree node for  " << p;
         return system_tree_root_node_;
     }
 }
 
-void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
+void Trace::add_process(Process p, Process parent, const std::string& name)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(pid)))
+    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(p)))
     {
-        update_process_name(pid, name);
+        update_process_name(p, name);
         return;
     }
     else
     {
-        thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
+        thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(p.as_thread()),
                               std::forward_as_tuple(name));
 
         const auto& iname = intern(name);
@@ -260,41 +260,41 @@ void Trace::add_process(pid_t pid, pid_t parent, const std::string& name)
                                                                       intern_process_node(parent);
 
         const auto& ret = registry_.create<otf2::definition::system_tree_node>(
-            ByProcess(pid), iname, intern("process"), parent_node);
+            ByProcess(p), iname, intern("process"), parent_node);
 
         registry_.emplace<otf2::definition::location_group>(
-            ByExecutionScope(ExecutionScope::thread(pid)), iname,
+            ByExecutionScope(ExecutionScope::thread(p)), iname,
             otf2::definition::location_group::location_group_type::process, ret);
 
         const auto& comm_group = registry_.emplace<otf2::definition::comm_group>(
-            ByExecutionScope(ExecutionScope::thread(pid)), iname,
+            ByExecutionScope(ExecutionScope::thread(p)), iname,
             otf2::common::paradigm_type::pthread, otf2::common::group_flag_type::none);
 
-        registry_.emplace<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(pid)),
+        registry_.emplace<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(p)),
                                                   iname, comm_group);
     }
 }
 
-void Trace::update_process_name(pid_t pid, const std::string& name)
+void Trace::update_process_name(Process p, const std::string& name)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
     const auto& iname = intern(name);
     try
     {
-        registry_.get<otf2::definition::system_tree_node>(ByProcess(pid)).name(iname);
+        registry_.get<otf2::definition::system_tree_node>(ByProcess(p)).name(iname);
         registry_
-            .get<otf2::definition::location_group>(ByExecutionScope(ExecutionScope::thread(pid)))
+            .get<otf2::definition::location_group>(ByExecutionScope(ExecutionScope::thread(p)))
             .name(iname);
-        registry_.get<otf2::definition::comm_group>(ByExecutionScope(ExecutionScope::thread(pid)))
+        registry_.get<otf2::definition::comm_group>(ByExecutionScope(ExecutionScope::thread(p)))
             .name(iname);
-        registry_.get<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(pid)))
+        registry_.get<otf2::definition::comm>(ByExecutionScope(ExecutionScope::thread(p)))
             .name(iname);
 
-        update_thread_name(pid, name);
+        update_thread_name(p.as_thread(), name);
     }
     catch (const std::out_of_range&)
     {
-        Log::warn() << "Attempting to update name of unknown process " << pid << " (" << name
+        Log::warn() << "Attempting to update name of unknown " << p << " (" << name
                     << ")";
     }
 }

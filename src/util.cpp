@@ -1,6 +1,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
+#include <lo2s/types.hpp>
 
 #include <filesystem>
 
@@ -239,8 +240,8 @@ void try_pin_to_scope(ExecutionScope scope)
     }
 }
 
-pid_t gettid()
+Thread gettid()
 {
-    return syscall(SYS_gettid);
+    return Thread(syscall(SYS_gettid));
 }
 } // namespace lo2s
