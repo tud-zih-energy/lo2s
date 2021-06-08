@@ -144,11 +144,11 @@ void ProcessController::run()
 
         num_wakeups_++;
 
-        handle_signal(child, status);
+        handle_signal(Thread(child), status);
     }
 }
 
-void ProcessController::handle_ptrace_event(pid_t child, int event)
+void ProcessController::handle_ptrace_event(Thread child, int event)
 {
     Log::debug() << "PTRACE_EVENT-stop for child " << child << ": " << event;
     switch (event)
@@ -160,9 +160,9 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
         try
         {
             // we need the pid of the new process
-            pid_t new_pid = ptrace_geteventmsg(child);
-            std::string command = get_process_comm(new_pid);
-            Log::debug() << "New process " << new_pid << " (" << command << "): forked from "
+            Process new_process = Process(ptrace_geteventmsg(child));
+            std::string command = get_process_comm(new_process);
+            Log::debug() << "New " << new_process << " (" << command << "): forked from "
                          << child;
 
             // Register the newly created process for monitoring:
@@ -189,26 +189,26 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
         try
         {
             // we need the tid of the new process
-            pid_t new_tid = ptrace_geteventmsg(child);
+            Thread new_thread = Thread(ptrace_geteventmsg(child));
 
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
-            pid_t pid = groups_.get_group(ExecutionScope::thread(child)).tid();
-            std::string command = get_task_comm(pid, new_tid);
-            Log::info() << "New thread " << new_tid << " (" << command << "): cloned from " << child
-                        << " in process " << pid;
+            Process process = groups_.get_group(new_thread);
+            std::string command = get_task_comm(process, new_thread);
+            Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
+                        << " in " << process;
 
             // Register the newly created thread for monitoring:
             // (1) Keep track of the process the new thread was spawned in.
-            groups_.add_child(ExecutionScope::thread(new_tid), ExecutionScope::thread(pid));
+            groups_.add_child(new_thread, process);
             // (2) Tell the process monitor to watch the new thread.
-            monitor_.insert_thread(pid, new_tid, command);
+            monitor_.insert_thread(process, new_thread, command);
             // (3) Update our summary information.
             summary().add_thread();
         }
         catch (std::out_of_range& e)
         {
-            Log::error() << "Failed to get process containing monitored thread " << child;
+            Log::error() << "Failed to get process containing monitored " << child;
         }
         catch (std::system_error& e)
         {
@@ -231,14 +231,14 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
 
         try
         {
-            if (groups_.is_group(ExecutionScope::thread(child)))
+            if (groups_.is_group(process))
             {
-                Log::info() << "Process " << child << " is about to exit";
+                Log::info() << "Process " << child.as_pid_t() << " is about to exit";
                 monitor_.exit_process(child);
             }
             else
             {
-                Log::info() << "Thread  " << child << " is about to exit";
+                Log::info() << "Thread  " << child.as_pid_t() << " is about to exit";
                 monitor_.exit_thread(child);
             }
         }
@@ -253,20 +253,20 @@ void ProcessController::handle_ptrace_event(pid_t child, int event)
     }
 }
 
-void ProcessController::handle_signal(pid_t child, int status)
+void ProcessController::handle_signal(Thread child, int status)
 {
-    Log::debug() << "Handling signal " << status << " from child: " << child;
+    Log::debug() << "Handling signal " << status << " from " << child;
     if (WIFSTOPPED(status)) // signal-delivery-stop
     {
-        Log::debug() << "signal-delivery-stop from child " << child << ": " << WSTOPSIG(status);
+        Log::debug() << "signal-delivery-stop from " << child << ": " << WSTOPSIG(status);
 
         // Special handling for detaching, then we had just attached to a process
-        if (attached_pid != -1 && !running)
+        if (!attached_process && !running)
         {
-            Log::debug() << "Detaching from child: " << child;
+            Log::debug() << "Detaching from " << child;
 
             // Tracee is in signal-delivery-stop, so we can detach
-            ptrace(PTRACE_DETACH, child, 0, status);
+            ptrace(PTRACE_DETACH, child.as_pid_t(), 0, status);
 
             // exit if detached from first child (the original sampled process)
             if (child == first_child_)
@@ -280,10 +280,10 @@ void ProcessController::handle_signal(pid_t child, int status)
         {
         case SIGSTOP:
         {
-            Log::debug() << "Set ptrace options for process: " << child;
+            Log::debug() << "Set ptrace options for " << child;
 
             // we are only interested in fork/join events
-            ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
+            ptrace_setoptions(child.as_pid_t(), PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
                                          PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT |
                                          PTRACE_O_TRACEEXEC);
             // FIXME TODO continue this new thread/process ONLY if already registered in the

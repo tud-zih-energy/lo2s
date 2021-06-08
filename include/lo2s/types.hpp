@@ -53,6 +53,9 @@ protected:
     PidWrapper(pid_t pid) : pid_(pid)
     {
     }
+    PidWrapper() : pid_(-1)
+    {
+    }
 
     pid_t pid_;
 };

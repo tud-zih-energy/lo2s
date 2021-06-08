@@ -72,7 +72,7 @@ struct IpCctxEntry
     IpMap<IpCctxEntry> children;
 };
 
-using ThreadCctxRefMap = std::map<, ThreadCctxRefs>;
+using ThreadCctxRefMap = std::map<Thread, ThreadCctxRefs>;
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 

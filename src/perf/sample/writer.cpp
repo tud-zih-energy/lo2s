@@ -173,7 +173,7 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     return false;
 }
 
-void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_point tp)
+void Writer::update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp)
 {
     if (first_event_ && scope_.type == ExecutionScopeType::THREAD)
     {
@@ -181,7 +181,7 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
         first_event_ = false;
     }
 
-    if (current_thread_cctx_refs_ && current_thread_cctx_refs_->first == tid)
+    if (current_thread_cctx_refs_ && current_thread_cctx_refs_->first == thread)
     {
         // current thread is unchanged
         return;
@@ -193,8 +193,8 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
         otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
     }
     // thread has changed
-    auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                                        std::forward_as_tuple(pid, next_cctx_ref_));
+    auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                        std::forward_as_tuple(process, next_cctx_ref_));
     if (ret.second)
     {
         next_cctx_ref_++;
@@ -203,7 +203,7 @@ void Writer::update_current_thread(pid_t pid, pid_t tid, otf2::chrono::time_poin
     current_thread_cctx_refs_ = &(*ret.first);
 }
 
-void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
+void Writer::leave_current_thread(Thread thread, otf2::chrono::time_point tp)
 {
     if (current_thread_cctx_refs_ == nullptr)
     {
@@ -211,7 +211,7 @@ void Writer::leave_current_thread(pid_t tid, otf2::chrono::time_point tp)
         return;
     }
 
-    if (current_thread_cctx_refs_->first != tid)
+    if (current_thread_cctx_refs_->first != thread)
     {
         Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or later
     }
@@ -270,16 +270,16 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
     return false;
 }
 
-void Writer::update_calling_context(pid_t pid, pid_t tid, otf2::chrono::time_point tp,
+void Writer::update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                     bool switch_out)
 {
     if (switch_out)
     {
-        leave_current_thread(tid, tp);
+        leave_current_thread(thread, tp);
     }
     else
     {
-        update_current_thread(pid, tid, tp);
+        update_current_thread(process, thread, tp);
     }
 }
 #endif
@@ -293,17 +293,17 @@ bool Writer::handle(const Reader::RecordCommType* comm)
                      << " changed name to \"" << new_command << "\"";
 
         // update task name
-        trace_.update_thread_name(comm->tid, new_command);
+        trace_.update_thread_name(Thread(comm->tid), new_command);
 
         // only update name of process if the main thread changes its name
         if (comm->pid == comm->tid)
         {
-            trace_.update_process_name(comm->pid, new_command);
+            trace_.update_process_name(Process(comm->pid), new_command);
         }
     }
-    summary().register_process(comm->pid);
+    summary().register_process(Process(comm->pid));
 
-    comms_[comm->tid] = comm->comm;
+    comms_[Thread(comm->tid] = comm->comm;
 
     return false;
 }

@@ -46,9 +46,9 @@ public:
     void run();
 
 private:
-    void handle_ptrace_event(pid_t child, int event);
+    void handle_ptrace_event(Thread thread, int event);
 
-    void handle_signal(pid_t child, int status);
+    void handle_signal(Thread thread, int status);
 
     const pid_t first_child_;
     sighandler_t default_signal_handler;
