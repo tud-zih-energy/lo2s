@@ -160,18 +160,18 @@ struct RecordMmapType
 struct RawMemoryMapEntry
 {
     RawMemoryMapEntry(Address addr, Address end, Address pgoff, const std::string& filename)
-    : p(0), t(0), addr(addr), end(end), pgoff(pgoff), filename(filename)
+    : process(0), thread(0), addr(addr), end(end), pgoff(pgoff), filename(filename)
     {
     }
 
     RawMemoryMapEntry(const RecordMmapType* record)
-    : p(record->pid), t(record->tid), addr(record->addr), end(record->addr + record->len),
+    : process(record->pid), thread(record->tid), addr(record->addr), end(record->addr + record->len),
       pgoff(record->pgoff), filename(record->filename)
     {
     }
 
-    Process p;
-    Thread t;
+    Process process;
+    Thread thread;
     Address addr;
     Address end;
     Address pgoff;

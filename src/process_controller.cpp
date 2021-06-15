@@ -76,38 +76,38 @@ extern "C" void sig_handler(int signum)
 namespace lo2s
 {
 
-static void ptrace_checked_call(enum __ptrace_request request, pid_t pid, void* addr = nullptr,
+static void ptrace_checked_call(enum __ptrace_request request, Thread thread, void* addr = nullptr,
                                 void* data = nullptr)
 {
-    long retval = ptrace(request, pid, addr, data);
+    long retval = ptrace(request, thread.as_pid_t(), addr, data);
     if (retval == -1)
     {
         auto ex = make_system_error();
-        Log::info() << "Failed ptrace call: " << request << ", " << pid << ", " << addr << ", "
+        Log::info() << "Failed ptrace call: " << request << ", " << thread << ", " << addr << ", "
                     << data << ": " << ex.what();
         throw ex;
     }
 }
 
-static void ptrace_setoptions(pid_t pid, long options)
+static void ptrace_setoptions(Thread thread, long options)
 {
-    ptrace_checked_call(PTRACE_SETOPTIONS, pid, nullptr, (void*)options);
+    ptrace_checked_call(PTRACE_SETOPTIONS, thread, nullptr, (void*)options);
 }
 
-static unsigned long ptrace_geteventmsg(pid_t pid)
+static unsigned long ptrace_geteventmsg(Thread thread)
 {
     unsigned long msgval;
-    ptrace_checked_call(PTRACE_GETEVENTMSG, pid, nullptr, &msgval);
+    ptrace_checked_call(PTRACE_GETEVENTMSG, thread, nullptr, &msgval);
     return msgval;
 }
 
-static void ptrace_cont(pid_t pid, long signum = 0)
+static void ptrace_cont(Process process, long signum = 0)
 {
     // ptrace(2) mandates passing the signal number in the data parameter.
-    ptrace_checked_call(PTRACE_CONT, pid, nullptr, reinterpret_cast<void*>(signum));
+    ptrace_checked_call(PTRACE_CONT, process, nullptr, reinterpret_cast<void*>(signum));
 }
 
-ProcessController::ProcessController(pid_t child, const std::string& name, bool spawn,
+ProcessController::ProcessController(Process child, const std::string& name, bool spawn,
                                      monitor::AbstractProcessMonitor& monitor)
 : first_child_(child), default_signal_handler(signal(SIGINT, sig_handler)), monitor_(monitor),
   num_wakeups_(0), groups_(ExecutionScopeGroup::instance())
@@ -118,7 +118,7 @@ ProcessController::ProcessController(pid_t child, const std::string& name, bool 
     }
     else
     {
-        attached_pid = child;
+        attached_pid = child.as_pid_t();
     }
     running = true;
 
@@ -261,7 +261,7 @@ void ProcessController::handle_signal(Thread child, int status)
         Log::debug() << "signal-delivery-stop from " << child << ": " << WSTOPSIG(status);
 
         // Special handling for detaching, then we had just attached to a process
-        if (!attached_process && !running)
+        if (!attached_child && !running)
         {
             Log::debug() << "Detaching from " << child;
 
@@ -283,7 +283,7 @@ void ProcessController::handle_signal(Thread child, int status)
             Log::debug() << "Set ptrace options for " << child;
 
             // we are only interested in fork/join events
-            ptrace_setoptions(child.as_pid_t(), PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
+            ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
                                          PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT |
                                          PTRACE_O_TRACEEXEC);
             // FIXME TODO continue this new thread/process ONLY if already registered in the

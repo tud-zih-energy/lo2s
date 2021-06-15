@@ -50,7 +50,7 @@ namespace tracepoint
 class SwitchWriter : public Reader<SwitchWriter>
 {
 public:
-    SwitchWriter(int cpu, trace::Trace& trace);
+    SwitchWriter(Cpu cpu, trace::Trace& trace);
     ~SwitchWriter();
 
 public:

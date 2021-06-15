@@ -40,7 +40,7 @@ public:
     void show();
 
     void add_thread();
-    void register_process(Process p);
+    void register_process(Process process);
 
     void record_perf_wakeups(std::size_t num_wakeups);
 

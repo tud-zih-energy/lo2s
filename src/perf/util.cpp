@@ -28,10 +28,10 @@ int perf_event_paranoid()
     }
 }
 
-int perf_event_open(struct perf_event_attr* perf_attr, Thread thread, int cpu, int group_fd,
+int perf_event_open(struct perf_event_attr* perf_attr, Thread thread,Cpu cpu, int group_fd,
                     unsigned long flags)
 {
-    return syscall(__NR_perf_event_open, perf_attr, thread.as_pid_t(), cpu, group_fd, flags);
+    return syscall(__NR_perf_event_open, perf_attr, thread.as_pid_t(), cpu.as_int(), group_fd, flags);
 }
 
 // Default options we use in every perf_event_open call
@@ -84,7 +84,7 @@ void perf_check_disabled()
         throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
     }
 }
-int perf_try_event_open(struct perf_event_attr* perf_attr, Thread thread, int cpu, int group_fd,
+int perf_try_event_open(struct perf_event_attr* perf_attr, Thread thread, Cpu cpu, int group_fd,
                         unsigned long flags)
 {
     int fd = perf_event_open(perf_attr, thread, cpu, group_fd, flags);
@@ -97,7 +97,7 @@ int perf_try_event_open(struct perf_event_attr* perf_attr, Thread thread, int cp
     return fd;
 }
 
-int open_counter(Thread thread, int cpuid, const EventDescription& desc, int group_fd)
+int open_counter(Thread thread, Cpu cpu, const EventDescription& desc, int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
@@ -115,7 +115,7 @@ int open_counter(Thread thread, int cpuid, const EventDescription& desc, int gro
     perf_attr.clockid = config().clockid;
 #endif
 
-    int fd = perf_try_event_open(&perf_attr, thread, cpuid, group_fd, 0);
+    int fd = perf_try_event_open(&perf_attr, thread, cpu, group_fd, 0);
     if (fd < 0)
     {
         Log::error() << "perf_event_open for counter failed";

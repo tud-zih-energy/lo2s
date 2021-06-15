@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <iostream>
 
+#include <lo2s/execution_scope.hpp>
 namespace lo2s
 {
 
@@ -33,6 +34,11 @@ public:
     pid_t as_pid_t()
     {
         return pid_;
+    }
+
+    ExecutionScope as_scope()
+    {
+        return ExecutionScope::thread(pid_);
     }
     
     friend bool operator==(const PidWrapper& lhs, const PidWrapper& rhs)
@@ -92,9 +98,14 @@ class Cpu
         explicit Cpu(int cpuid) : cpu_(cpuid)
     {
     }
-        int as_cpuid()
+        int as_int()
         {
             return cpu_;
+        }
+
+        ExecutionScope as_scope()
+        {
+            return ExecutionScope::cpu(cpu_);
         }
 
         friend bool operator==(const Cpu& lhs, const Cpu& rhs)

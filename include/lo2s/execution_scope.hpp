@@ -83,7 +83,7 @@ struct ExecutionScope
     }
     int cpuid() const
     {
-        return (type == ExecutionScopeType::CPU ? id : -1);
+        return (type == ExecutionScopeType::CPU ? Cpu(id) : Cpu(-1));
     }
 
     // Needed becausse this is used as a Key in some Structures.
@@ -109,6 +109,7 @@ struct ExecutionScope
     {
         return lhs.type != rhs.type || lhs.id != rhs.id;
     }
+
 };
 
 class ExecutionScopeGroup

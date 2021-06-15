@@ -38,7 +38,7 @@ namespace lo2s
 class ProcessController
 {
 public:
-    ProcessController(pid_t child, const std::string& name, bool spawn,
+    ProcessController(Process child, const std::string& name, bool spawn,
                       monitor::AbstractProcessMonitor& monitor);
 
     ~ProcessController();
@@ -50,7 +50,7 @@ private:
 
     void handle_signal(Thread thread, int status);
 
-    const pid_t first_child_;
+    const Process first_child_;
     sighandler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_;
