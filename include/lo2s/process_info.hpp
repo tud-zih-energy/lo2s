@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    const Prcoess process_;
+    const Process process_;
     std::mutex mutex_;
     MemoryMap maps_;
 };

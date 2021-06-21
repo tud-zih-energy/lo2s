@@ -25,7 +25,6 @@
 #include <fmt/core.h>
 
 #include <lo2s/types.hpp>
-
 namespace lo2s
 {
 
@@ -54,14 +53,9 @@ struct ExecutionScope
         return { ExecutionScopeType::CPU, cpuid };
     }
 
-    static ExecutionScope thread(Thread t)
+    static ExecutionScope thread(pid_t pid)
     {
-        return { ExecutionScopeType::THREAD, t.as_pid_t() };
-    }
-
-    static ExecutionScope thread(Process p)
-    {
-        return { ExecutionScopeType::THREAD, p.as_pid_t() };
+        return { ExecutionScopeType::THREAD, pid };
     }
 
     std::string name() const
@@ -79,11 +73,11 @@ struct ExecutionScope
 
     Thread thread() const
     {
-        return (type == ExecutionScopeType::THREAD ? Thread(id) : Thread(-1));
+        return (type == ExecutionScopeType::THREAD ? Thread(id) : Thread::invalid());
     }
-    int cpuid() const
+    Cpu cpu() const
     {
-        return (type == ExecutionScopeType::CPU ? Cpu(id) : Cpu(-1));
+        return (type == ExecutionScopeType::CPU ? Cpu(id) : Cpu::invalid());
     }
 
     // Needed becausse this is used as a Key in some Structures.
@@ -109,7 +103,6 @@ struct ExecutionScope
     {
         return lhs.type != rhs.type || lhs.id != rhs.id;
     }
-
 };
 
 class ExecutionScopeGroup

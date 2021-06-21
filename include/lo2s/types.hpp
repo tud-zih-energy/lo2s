@@ -24,22 +24,16 @@
 #include <sys/types.h>
 #include <iostream>
 
-#include <lo2s/execution_scope.hpp>
 namespace lo2s
 {
+
+class ExecutionScope;
 
 class PidWrapper
 {
 public:
-    pid_t as_pid_t()
-    {
-        return pid_;
-    }
-
-    ExecutionScope as_scope()
-    {
-        return ExecutionScope::thread(pid_);
-    }
+    pid_t as_pid_t();
+    ExecutionScope as_scope();
     
     friend bool operator==(const PidWrapper& lhs, const PidWrapper& rhs)
     {
@@ -53,7 +47,7 @@ public:
 
         friend bool operator!(const PidWrapper& wrapper)
         {
-            return pid_ == -1;
+            return wrapper.pid_ == -1;
         }
 protected:
     PidWrapper(pid_t pid) : pid_(pid)
@@ -72,6 +66,15 @@ public:
     explicit Thread(pid_t tid) : PidWrapper(tid)
     {
     }
+    
+    static Thread invalid()
+    {
+        return Thread(-1);
+    }
+    friend std::ostream &operator<<(std::ostream &os, const Thread &thread)
+    {
+        return os << "thread " << thread.pid_;
+    }
 };
 
 class Process : public PidWrapper
@@ -81,11 +84,13 @@ public:
     {
     }
 
-    Thread as_thread()
+    static Process invalid()
     {
-        return Thread(pid_);
+        return Process(-1);
     }
-    
+
+    Thread as_thread();
+
     friend std::ostream &operator<<(std::ostream &os, const Process &process)
     {
         return os << "process " << process.pid_;
@@ -98,16 +103,13 @@ class Cpu
         explicit Cpu(int cpuid) : cpu_(cpuid)
     {
     }
-        int as_int()
-        {
-            return cpu_;
-        }
+        int as_int();
+        ExecutionScope as_scope();
 
-        ExecutionScope as_scope()
+        static Cpu invalid()
         {
-            return ExecutionScope::cpu(cpu_);
+            return Cpu(-1);
         }
-
         friend bool operator==(const Cpu& lhs, const Cpu& rhs)
         {
         return lhs.cpu_ == rhs.cpu_;

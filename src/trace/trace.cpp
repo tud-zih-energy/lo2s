@@ -630,6 +630,17 @@ void Trace::add_threads(const std::unordered_map<Thread, std::string>& thread_ma
     }
 }
 
+void Tracce::add_processes(const std::unordered_map<Process, std::string>& process_map)
+{
+    Log::debug() << "Adding " << process_map.size() << " monitored process(es) to the trace";
+
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
+    for (const auto& elem : process_map)
+    {
+        add_thread_exclusive(elem.first.as_thread(), elem.second, guard);
+    }
+}
+
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
 {
     return registry_.emplace<otf2::definition::source_code_location>(ByLineInfo(info),

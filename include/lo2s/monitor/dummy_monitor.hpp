@@ -42,13 +42,13 @@ public:
     {
     }
 
-    virtual void insert_process([[maybe_unused]] Process p, [[maybe_unused]] Process parent,
+    virtual void insert_process([[maybe_unused]] Process process, [[maybe_unused]] Process parent,
                                 [[maybe_unused]] std::string proc_name,
                                 [[maybe_unused]] bool spawn) override
     {
     }
 
-    virtual void insert_thread([[maybe_unused]] Process p, [[maybe_unused]] Thread t,
+    virtual void insert_thread([[maybe_unused]] Process process, [[maybe_unused]] Thread thread,
                                [[maybe_unused]] std::string name,
                                [[maybe_unused]] bool spawn) override
     {
@@ -58,11 +58,11 @@ public:
     {
     }
 
-    virtual void exit_thread([[maybe_unused]] Thread t) override
+    virtual void exit_thread([[maybe_unused]] Thread thread) override
     {
     }
 
-    virtual void update_process_name([[maybe_unused]] Thread t,
+    virtual void update_process_name([[maybe_unused]] Process process,
                                      [[maybe_unused]] const std::string& name) override
     {
     }

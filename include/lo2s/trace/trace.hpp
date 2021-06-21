@@ -92,14 +92,15 @@ public:
     void add_process(Process p, Process parent, const std::string& name = "");
 
     void add_thread(Thread t, const std::string& name);
-    void add_threads(const std::unordered_map<Thread, std::string>& tid_map);
+    void add_threads(const std::unordered_map<Thread, std::string>& thread_map);
+    void add_processes(const std::unordered_map<Process, std::string>& process_map);
 
     void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
 
     void update_process_name(Process p, const std::string& name);
     void update_thread_name(Thread t, const std::string& name);
 
-    otf2::definition::mapping_table merge_calling_contexts(Thread ThreadCctxRefMap& new_ips,
+    otf2::definition::mapping_table merge_calling_contexts(ThreadCctxRefMap& new_ips,
                                                            size_t num_ip_refs,
                                                            std::map<Process, ProcessInfo>& infos);
 

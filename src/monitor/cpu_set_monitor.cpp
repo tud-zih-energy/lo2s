@@ -43,7 +43,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_processes());
+    trace_.add_processes(get_comms_for_running_processes());
 
     for (const auto& cpu : Topology::instance().cpus())
     {
@@ -57,7 +57,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 void CpuSetMonitor::run()
 {
     sigset_t ss;
-    if (config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().process == Process::invalid())
     {
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
@@ -70,7 +70,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    if (config().command.empty() && config().pid == -1)
+    if (config().command.empty() && config().process == Process::invalid())
     {
         int sig;
         auto ret = sigwait(&ss, &sig);
@@ -95,7 +95,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_processes());
+    trace_.add_processes(get_comms_for_running_processes());
 
     for (auto& monitor_elem : monitors_)
     {
