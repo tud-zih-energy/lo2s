@@ -618,7 +618,7 @@ void Trace::add_monitoring_thread(Thread thread, const std::string& name, const 
     }
 }
 
-void Trace::add_threads(const std::unordered_map<Thread, std::string>& thread_map)
+void Trace::add_threads(const std::map<Thread, std::string>& thread_map)
 {
     Log::debug() << "Adding " << thread_map.size() << " monitored thread(s) to the trace";
 
@@ -630,7 +630,7 @@ void Trace::add_threads(const std::unordered_map<Thread, std::string>& thread_ma
     }
 }
 
-void Tracce::add_processes(const std::unordered_map<Process, std::string>& process_map)
+void Tracce::add_processes(const std::map<Process, std::string>& process_map)
 {
     Log::debug() << "Adding " << process_map.size() << " monitored process(es) to the trace";
 

@@ -97,7 +97,7 @@ private:
     trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 
     RawMemoryMapCache cached_mmap_events_;
-    std::unordered_map<Thread, std::string> comms_;
+    std::map<Thread, std::string> comms_;
 
     const time::Converter time_converter_;
 

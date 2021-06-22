@@ -104,7 +104,7 @@ static unsigned long ptrace_geteventmsg(Thread thread)
 static void ptrace_cont(Process process, long signum = 0)
 {
     // ptrace(2) mandates passing the signal number in the data parameter.
-    ptrace_checked_call(PTRACE_CONT, process, nullptr, reinterpret_cast<void*>(signum));
+    ptrace_checked_call(PTRACE_CONT, process.as_thread(), nullptr, reinterpret_cast<void*>(signum));
 }
 
 ProcessController::ProcessController(Process child, const std::string& name, bool spawn,
@@ -124,7 +124,7 @@ ProcessController::ProcessController(Process child, const std::string& name, boo
 
     groups_.add_parent(ExecutionScope::thread(child));
 
-    monitor_.insert_process(child, trace::Trace::NO_PARENT_PROCESS_PID, name, spawn);
+    monitor_.insert_process(child, Process(trace::Trace::NO_PARENT_PROCESS_PID), name, spawn);
 
     summary().add_thread();
 }
@@ -167,9 +167,9 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
 
             // Register the newly created process for monitoring:
             // (1) Associate a main thread with this process.
-            groups_.add_parent(ExecutionScope::thread(new_pid));
+            groups_.add_parent(new_process.as_scope());
             // (2) Tell the process monitor to watch a new process.
-            monitor_.insert_process(new_pid, child, command);
+            monitor_.insert_process(process, child, command);
             // (3) Update our summary information.
             summary().add_thread();
         }
@@ -193,7 +193,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
 
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
-            Process process = groups_.get_group(new_thread);
+            Process process = groups_.get_group(new_thread.as_scope());
             std::string command = get_task_comm(process, new_thread);
             Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
                         << " in " << process;

@@ -24,7 +24,7 @@
 namespace lo2s
 {
 
-pid_t PidWrapper::as_pid_t()
+pid_t PidWrapper::as_pid_t() const
 {
     return pid_;
 }

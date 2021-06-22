@@ -27,6 +27,8 @@ extern "C"
 #include <sys/types.h>
 }
 
+#include <lo2s/types.hpp>
+
 namespace lo2s
 {
 

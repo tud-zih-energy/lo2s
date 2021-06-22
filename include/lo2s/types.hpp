@@ -32,23 +32,9 @@ class ExecutionScope;
 class PidWrapper
 {
 public:
-    pid_t as_pid_t();
+    pid_t as_pid_t() const;
     ExecutionScope as_scope();
     
-    friend bool operator==(const PidWrapper& lhs, const PidWrapper& rhs)
-    {
-        return lhs.pid_ == rhs.pid_;
-    }
-
-        friend bool operator<(const PidWrapper& lhs, const PidWrapper& rhs)
-        {
-            return lhs.pid_ < rhs.pid_;
-        }
-
-        friend bool operator!(const PidWrapper& wrapper)
-        {
-            return wrapper.pid_ == -1;
-        }
 protected:
     PidWrapper(pid_t pid) : pid_(pid)
     {
@@ -67,6 +53,21 @@ public:
     {
     }
     
+    friend bool operator==(const Thread& lhs, const Thread& rhs)
+    {
+        return lhs.pid_ == rhs.pid_;
+    }
+
+        friend bool operator<(const Thread& lhs, const Thread& rhs)
+        {
+            return lhs.pid_ < rhs.pid_;
+        }
+        
+        friend bool operator!(const Thread& thread)
+        {
+            return thread.pid_ == -1;
+        }
+    
     static Thread invalid()
     {
         return Thread(-1);
@@ -83,6 +84,21 @@ public:
     explicit Process(pid_t pid) : PidWrapper(pid)
     {
     }
+    
+    friend bool operator==(const Process& lhs, const Process& rhs)
+    {
+        return lhs.pid_ == rhs.pid_;
+    }
+
+        friend bool operator<(const Process& lhs, const Process& rhs)
+        {
+            return lhs.pid_ < rhs.pid_;
+        }
+
+        friend bool operator!(const Process& process)
+        {
+            return process.pid_ == -1;
+        }
 
     static Process invalid()
     {

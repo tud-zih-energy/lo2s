@@ -11,7 +11,7 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
-#include <unordered_map>
+#include <map>
 
 #include <cstdint>
 #include <ctime>
@@ -164,10 +164,10 @@ const struct ::utsname& get_uname()
     return instance.uname;
 }
 
-std::unordered_map<Process, std::string> get_comms_for_running_processes()
+std::map<Process, std::string> get_comms_for_running_processes()
 {
     ExecutionScopeGroup& scope_group = ExecutionScopeGroup::instance();
-    std::unordered_map<Process, std::string> ret;
+    std::map<Process, std::string> ret;
     std::filesystem::path proc("/proc");
     for (auto& entry : std::filesystem::directory_iterator(proc))
     {

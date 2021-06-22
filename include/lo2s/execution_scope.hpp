@@ -58,6 +58,16 @@ struct ExecutionScope
         return { ExecutionScopeType::THREAD, pid };
     }
 
+    static ExecutionScope thread(Thread thread)
+    {
+        return { ExecutionScopeType::THREAD, thread.as_pid_t() };
+    }
+
+    static ExecutionScope thread(Process process)
+    {
+        return { ExecutionScopeType::THREAD, process.as_pid_t() };
+    }
+
     std::string name() const
     {
         switch (type)
@@ -71,11 +81,11 @@ struct ExecutionScope
         }
     }
 
-    Thread thread() const
+    Thread as_thread() const
     {
         return (type == ExecutionScopeType::THREAD ? Thread(id) : Thread::invalid());
     }
-    Cpu cpu() const
+    Cpu as_cpu() const
     {
         return (type == ExecutionScopeType::CPU ? Cpu(id) : Cpu::invalid());
     }
@@ -105,6 +115,9 @@ struct ExecutionScope
     }
 };
 
+// This class tracks the relation ship between locations for which we can measure things and the group they belong to.
+// For Threads the location group is the process they belong to.
+// CPUs are their own group (for now)
 class ExecutionScopeGroup
 {
 public:
@@ -124,17 +137,25 @@ public:
         return it->second == scope;
     }
 
+    //for now every cpu is a group of its own
+    bool is_group(const Cpu& cpu)
+    {
+        return true;
+    }
+
     ExecutionScope get_group(const ExecutionScope& scope)
     {
         return groups_.at(scope);
     }
 
-    void add_child(ExecutionScope child, ExecutionScope parent)
+    //If we only know the parent thread, try to find the parent process.
+    void add_child(Thread thread, Thread parent)
     {
         const auto& real_parent = groups_.find(parent);
         if (real_parent == groups_.end())
         {
-            groups_.emplace(child, parent);
+            Log::debug() << "No parent process found for " << child << " using " << parent << "as a parent instead";
+            groups_.emplace(child, Process(parent.as_pid_t));
         }
         else
         {
@@ -142,9 +163,14 @@ public:
         }
     }
 
-    void add_parent(ExecutionScope parent)
+    void add_parent(Thread thread, Process parent)
     {
-        groups_.emplace(parent, parent);
+        groups_.emplac
+    }
+
+    void add_parent(Process parent)
+    {
+        groups_.emplace(parent.as_thread, parent);
     }
 
 private:
@@ -155,7 +181,7 @@ private:
     ~ExecutionScopeGroup()
     {
     }
-    std::map<ExecutionScope, ExecutionScope> groups_;
+    std::map<Thread, Parent> groups_;
 };
 
 } // namespace lo2s

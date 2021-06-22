@@ -33,7 +33,6 @@
 
 #include <map>
 #include <mutex>
-#include <unordered_map>
 
 namespace lo2s
 {
@@ -92,8 +91,8 @@ public:
     void add_process(Process p, Process parent, const std::string& name = "");
 
     void add_thread(Thread t, const std::string& name);
-    void add_threads(const std::unordered_map<Thread, std::string>& thread_map);
-    void add_processes(const std::unordered_map<Process, std::string>& process_map);
+    void add_threads(const std::map<Thread, std::string>& thread_map);
+    void add_processes(const std::map<Process, std::string>& process_map);
 
     void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
 

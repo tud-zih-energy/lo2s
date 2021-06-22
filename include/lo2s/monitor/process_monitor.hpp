@@ -43,13 +43,13 @@ class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
 public:
     ProcessMonitor();
     ~ProcessMonitor();
-    void insert_process(Process p, Process parent, std::string proc_name, bool spawn = false) override;
-    void insert_thread(Process p, Thread t, std::string name, bool spawn = false) override;
+    void insert_process(Process process, Process parent, std::string proc_name, bool spawn = false) override;
+    void insert_thread(Process process, Thread thread, std::string name, bool spawn = false) override;
 
-    void exit_process(Process p) override;
-    void exit_thread(Thread t) override;
+    void exit_process(Process process) override;
+    void exit_thread(Thread thread) override;
 
-    void update_process_name(Thread t, const std::string& name) override;
+    void update_process_name(Process process, const std::string& name) override;
 
 private:
     std::map<Thread, ScopeMonitor> threads_;

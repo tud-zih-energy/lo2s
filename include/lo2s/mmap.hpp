@@ -33,7 +33,6 @@
 #include <mutex>
 #include <sstream>
 #include <stdexcept>
-#include <unordered_map>
 
 extern "C"
 {

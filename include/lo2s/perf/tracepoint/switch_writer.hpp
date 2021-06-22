@@ -34,8 +34,6 @@
 #include <otf2xx/definition/location.hpp>
 #include <otf2xx/writer/local.hpp>
 
-#include <unordered_map>
-
 extern "C"
 {
 #include <sys/types.h>
