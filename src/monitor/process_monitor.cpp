@@ -33,20 +33,21 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_process(Process process, Process parent, std::string proc_name, bool spawn)
+void ProcessMonitor::insert_process(Process process, Thread parent, std::string proc_name,
+                                    bool spawn)
 {
     trace_.add_process(process, parent, proc_name);
-    insert_thread(process, process.as_thread(), proc_name, spawn);
+    insert_thread(process.as_thread(), process, proc_name, spawn);
 }
 
-void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn)
+void ProcessMonitor::insert_thread(Thread thread, Process parent, std::string name, bool spawn)
 {
     trace_.add_thread(thread, name);
 
     if (config().sampling)
     {
-        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(process),
-                               std::forward_as_tuple(process, spawn));
+        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(parent),
+                               std::forward_as_tuple(parent, spawn));
     }
 
     if (config().sampling || !perf::counter::requested_group_counters().counters.empty() ||
@@ -62,11 +63,6 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
     trace_.update_process_name(process, name);
-}
-
-void ProcessMonitor::exit_process(Process process)
-{
-    exit_thread(process.as_thread());
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

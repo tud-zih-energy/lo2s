@@ -44,7 +44,7 @@ namespace tracepoint
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(int cpu, const EventFormat& event, trace::Trace& trace,
+    Writer(Cpu cpu, const EventFormat& event, trace::Trace& trace,
            const otf2::definition::metric_class& metric_class);
 
     Writer(const Writer& other) = delete;

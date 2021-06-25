@@ -33,7 +33,7 @@ Summary::Summary()
 
 void Summary::register_process(Process process)
 {
-    std::lock_guard<std::mutex> lock(process_mutex_);
+    std::lock_guard<std::mutex> lock(processes_mutex_);
     processes_.emplace(process);
 }
 

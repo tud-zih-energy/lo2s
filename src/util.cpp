@@ -1,7 +1,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/util.hpp>
 #include <lo2s/types.hpp>
+#include <lo2s/util.hpp>
 
 #include <filesystem>
 
@@ -68,7 +68,7 @@ std::string get_process_exe(Process process)
 
     if (ret == -1)
     {
-        Log::error() << "Failed to retrieve exe name for " << process << "!";
+        Log::error() << "Failed to retrieve exe name for " << process.name() << "!";
         throw std::runtime_error{ "Failed to retrive process exe from procfs" };
     }
 
@@ -104,23 +104,23 @@ std::string get_process_comm(Process process)
     }
     catch (const std::ios::failure&)
     {
-        Log::warn() << "Failed to get name for " << process;
+        Log::warn() << "Failed to get name for " << process.name();
         return fmt::format("[process {}]", process.as_pid_t());
     }
 }
 
 std::string get_task_comm(Process process, Thread thread)
 {
-    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) / "task" /
-                     std::to_string(task) / "comm";
+    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) /
+                     "task" / std::to_string(thread.as_pid_t()) / "comm";
     try
     {
         return read_file(task_comm);
     }
     catch (const std::ios::failure&)
     {
-        Log::warn() << "Failed to get name for task " << task << " in " << process;
-        return fmt::format("[thread {}]", task);
+        Log::warn() << "Failed to get name for " << thread.name() << " in " << process.name();
+        return fmt::format("[thread {}]", thread.as_pid_t());
     }
 }
 
@@ -164,17 +164,17 @@ const struct ::utsname& get_uname()
     return instance.uname;
 }
 
-std::map<Process, std::string> get_comms_for_running_processes()
+std::map<Thread, std::string> get_comms_for_running_threads()
 {
     ExecutionScopeGroup& scope_group = ExecutionScopeGroup::instance();
-    std::map<Process, std::string> ret;
+    std::map<Thread, std::string> ret;
     std::filesystem::path proc("/proc");
     for (auto& entry : std::filesystem::directory_iterator(proc))
     {
         Process process;
         try
         {
-            Process = Process(std::stoi(entry.path().filename().string()));
+            process = Process(std::stoi(entry.path().filename().string()));
         }
         catch (const std::logic_error&)
         {
@@ -182,10 +182,10 @@ std::map<Process, std::string> get_comms_for_running_processes()
         }
         std::string name = get_process_comm(process);
 
-        scope_group.add_parent(process.as_scope());
+        scope_group.add_process(process);
 
         Log::trace() << "mapping from /proc/" << process.as_pid_t() << ": " << name;
-        ret.emplace(process, name);
+        ret.emplace(process.as_thread(), name);
         try
         {
             std::filesystem::path task(fmt::format("/proc/{}/task", process.as_pid_t()));
@@ -194,21 +194,22 @@ std::map<Process, std::string> get_comms_for_running_processes()
                 Thread thread;
                 try
                 {
-                    thread = std::stoi(entry_task.path().filename().string());
+                    thread = Thread(std::stoi(entry_task.path().filename().string()));
                 }
                 catch (const std::logic_error&)
                 {
                     continue;
                 }
-                if (Thread == Process)
+                if (thread == process.as_thread())
                 {
                     continue;
                 }
 
-                scope_group.add_child(thread.as_scope(), process.as_scope());
+                scope_group.add_thread(thread, process);
 
                 name = get_task_comm(process, thread);
-                Log::trace() << "mapping from /proc/" << process.as_pid_t() << "/" << thread.as_scope() << ": " << name;
+                Log::trace() << "mapping from /proc/" << process.as_pid_t() << "/"
+                             << thread.as_pid_t() << ": " << name;
                 ret.emplace(thread, name);
             }
         }

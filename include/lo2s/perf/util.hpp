@@ -13,14 +13,14 @@ namespace perf
 {
 
 int perf_event_paranoid();
-int perf_event_open(struct perf_event_attr* perf_attr, Thread thread, Cpu cpu, int group_fd,
+int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                     unsigned long flags);
 struct perf_event_attr common_perf_event_attrs();
 void perf_warn_paranoid();
 void perf_check_disabled();
 
-int open_counter(Thread thread, int cpuid, const EventDescription& desc, int group_fd);
-int perf_try_event_open(struct perf_event_attr* perf_attr, Thread thread, Cpu cpu, int group_fd,
+int open_counter(ExecutionScope scope, const EventDescription& desc, int group_fd);
+int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                         unsigned long flags);
 
 } // namespace perf

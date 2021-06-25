@@ -38,11 +38,11 @@ namespace monitor
 class AbstractProcessMonitor
 {
 public:
-    virtual void insert_process(Process process, Process parent, std::string proc_name,
+    virtual void insert_process(Process process, Thread parent, std::string proc_name,
                                 bool spawn = false) = 0;
-    virtual void insert_thread(Process process, Thread thread, std::string name = "", bool spawn = false) = 0;
+    virtual void insert_thread(Thread thread, Process parent, std::string name = "",
+                               bool spawn = false) = 0;
 
-    virtual void exit_process(Process process) = 0;
     virtual void exit_thread(Thread thread) = 0;
 
     virtual void update_process_name(Process process, const std::string& name) = 0;

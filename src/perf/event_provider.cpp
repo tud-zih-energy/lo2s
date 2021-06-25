@@ -21,6 +21,7 @@
 
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
@@ -160,15 +161,15 @@ static bool event_is_openable(EventDescription& ev)
     attr.config = ev.config;
     attr.config1 = ev.config1;
 
-    int proc_fd = perf_event_open(&attr, 0, -1, -1, 0);
-    int sys_fd = perf_event_open(&attr, -1, 1, -1, 0);
+    int proc_fd = perf_event_open(&attr, ExecutionScope::thread(0), -1, 0);
+    int sys_fd = perf_event_open(&attr, ExecutionScope::cpu(1), -1, 0);
     if (sys_fd == -1 && proc_fd == -1)
     {
         Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
 
         attr.exclude_kernel = 1;
-        int proc_fd = perf_event_open(&attr, 0, -1, -1, 0);
-        int sys_fd = perf_event_open(&attr, -1, 1, -1, 0);
+        int proc_fd = perf_event_open(&attr, ExecutionScope::thread(0), -1, 0);
+        int sys_fd = perf_event_open(&attr, ExecutionScope::cpu(1), -1, 0);
 
         if (sys_fd == -1 && proc_fd == -1)
         {

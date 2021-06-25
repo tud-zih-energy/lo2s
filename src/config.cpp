@@ -453,7 +453,7 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.pid == -1 &&
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.process == Process::invalid() &&
         config.command.empty())
     {
         lo2s::Log::fatal() << "No process to monitor provided. "

@@ -120,13 +120,13 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-        fd_ = perf_event_open(&attr, Thread::invalid(), cpu_, -1, 0);
+        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0);
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
+        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_.name() << " with id "
                      << event_id;
 
         try

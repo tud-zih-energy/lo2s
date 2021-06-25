@@ -164,8 +164,8 @@ struct RawMemoryMapEntry
     }
 
     RawMemoryMapEntry(const RecordMmapType* record)
-    : process(record->pid), thread(record->tid), addr(record->addr), end(record->addr + record->len),
-      pgoff(record->pgoff), filename(record->filename)
+    : process(record->pid), thread(record->tid), addr(record->addr),
+      end(record->addr + record->len), pgoff(record->pgoff), filename(record->filename)
     {
     }
 

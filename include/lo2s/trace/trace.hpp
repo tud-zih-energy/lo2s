@@ -54,7 +54,8 @@ struct IpRefEntry
 
 struct ThreadCctxRefs
 {
-    ThreadCctxRefs(Process p, otf2::definition::calling_context::reference_type r) : process(p), entry(r)
+    ThreadCctxRefs(Process p, otf2::definition::calling_context::reference_type r)
+    : process(p), entry(r)
     {
     }
     Process process;
@@ -88,11 +89,10 @@ public:
     otf2::chrono::time_point record_from() const;
     otf2::chrono::time_point record_to() const;
 
-    void add_process(Process p, Process parent, const std::string& name = "");
+    void add_process(Process process, Thread parent, const std::string& name = "");
 
     void add_thread(Thread t, const std::string& name);
     void add_threads(const std::map<Thread, std::string>& thread_map);
-    void add_processes(const std::map<Process, std::string>& process_map);
 
     void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
 
@@ -166,9 +166,9 @@ public:
     {
         return interrupt_generator_;
     }
-    const otf2::definition::system_tree_node& system_tree_cpu_node(int cpuid) const
+    const otf2::definition::system_tree_node& system_tree_cpu_node(Cpu cpu) const
     {
-        return registry_.get<otf2::definition::system_tree_node>(ByCpu(cpuid));
+        return registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu));
     }
 
     const otf2::definition::system_tree_node& system_tree_core_node(int coreid, int packageid) const
@@ -186,10 +186,10 @@ public:
         return system_tree_root_node_;
     }
 
-    otf2::definition::comm& process_comm(ExecutionScope scope)
+    otf2::definition::comm& process_comm(Thread thread)
     {
         std::lock_guard<std::recursive_mutex> guard(mutex_);
-        return registry_.get<otf2::definition::comm>(ByExecutionScope(groups_.get_group(scope)));
+        return registry_.get<otf2::definition::comm>(ByProcess(groups_.get_process(thread)));
     }
 
     const otf2::definition::location& location(const ExecutionScope& scope)
@@ -199,14 +199,16 @@ public:
         const auto& intern_location = registry_.emplace<otf2::definition::location>(
             ByMeasurementScope(sample_scope), intern(sample_scope.name()),
             registry_.get<otf2::definition::location_group>(
-                ByExecutionScope(groups_.get_group(scope))),
+                ByExecutionScope(groups_.get_parent(scope))),
             otf2::definition::location::location_type::cpu_thread);
 
         comm_locations_group_.add_member(intern_location);
 
-        if (registry_.has<otf2::definition::comm_group>(ByExecutionScope(groups_.get_group(scope))))
+        if (groups_.get_parent(scope).is_process())
         {
-            registry_.get<otf2::definition::comm_group>(ByExecutionScope(groups_.get_group(scope)))
+            registry_
+                .get<otf2::definition::comm_group>(
+                    ByProcess(groups_.get_process(scope.as_thread())))
                 .add_member(intern_location);
         }
         return intern_location;
@@ -218,7 +220,7 @@ private:
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #add_threads.
      **/
-    void add_thread_exclusive(Thread t, const std::string& name,
+    void add_thread_exclusive(Thread thread, const std::string& name,
                               const std::lock_guard<std::recursive_mutex>&);
 
     void merge_ips(IpRefMap& new_children, IpCctxMap& children,
@@ -274,7 +276,7 @@ private:
 
     const otf2::definition::region& intern_region(const LineInfo&);
 
-    const otf2::definition::system_tree_node& intern_process_node(Process p);
+    const otf2::definition::system_tree_node& intern_process_node(Process process);
 
     const otf2::definition::string& intern(const std::string&);
 

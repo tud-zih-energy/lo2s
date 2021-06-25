@@ -50,7 +50,7 @@ private:
 
     void handle_signal(Thread thread, int status);
 
-    const Process first_child_;
+    const Thread first_child_;
     sighandler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_;

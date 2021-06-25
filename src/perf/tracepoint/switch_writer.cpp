@@ -100,7 +100,7 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     }
     current_process_ = next_process;
 
-    current_calling_context_ = thread_calling_context_ref(Thread(current_process_.as_pid_t));
+    current_calling_context_ = thread_calling_context_ref(current_process.as_thread());
     otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
 
     last_time_point_ = tp;

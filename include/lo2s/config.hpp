@@ -27,7 +27,6 @@
 
 #include <cstdint>
 
-
 #include <lo2s/types.hpp>
 
 extern "C"

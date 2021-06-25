@@ -125,7 +125,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
-    update_current_thread(sample->pid, sample->tid, tp);
+    update_current_thread(Process(sample->pid), Thread(sample->tid), tp);
 
     cpuid_metric_event_.timestamp(tp);
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
@@ -177,7 +177,7 @@ void Writer::update_current_thread(Process process, Thread thread, otf2::chrono:
 {
     if (first_event_ && scope_.type == ExecutionScopeType::THREAD)
     {
-        otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(scope_), -1);
+        otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(scope_.as_thread()), -1);
         first_event_ = false;
     }
 
@@ -239,7 +239,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
-    update_calling_context(context_switch->pid, context_switch->tid, tp,
+    update_calling_context(Process(context_switch->pid), Thread(context_switch->tid), tp,
                            context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT);
 
     return false;
@@ -251,7 +251,7 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
-    update_calling_context(context_switch->pid, context_switch->tid, tp,
+    update_calling_context(Process(context_switch->pid), Thread(context_switch->tid), tp,
                            context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT);
 
     if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
@@ -303,7 +303,7 @@ bool Writer::handle(const Reader::RecordCommType* comm)
     }
     summary().register_process(Process(comm->pid));
 
-    comms_[Thread(comm->tid] = comm->comm;
+    comms_[Thread(comm->tid)] = comm->comm;
 
     return false;
 }
@@ -323,14 +323,15 @@ void Writer::end()
             // the call to time::now() from above.  If any samples were written,
             // the required check has occured in handle() above.
             otf2_writer_ << otf2::event::thread_begin(first_time_point_,
-                                                      trace_.process_comm(scope_), -1);
+                                                      trace_.process_comm(scope_.as_thread()), -1);
         }
 
         // At this point, transitivity and monotonicity (of lo2s::time::now())
         // ensure that first_time_point_ <= last_time_point_, therefore samples
         // on this scope span a non-negative amount of time between the
         // thread_begin and thread_end event.
-        otf2_writer_ << otf2::event::thread_end(last_time_point_, trace_.process_comm(scope_), -1);
+        otf2_writer_ << otf2::event::thread_end(last_time_point_,
+                                                trace_.process_comm(scope_.as_thread()), -1);
     }
 
     trace_.add_threads(comms_);

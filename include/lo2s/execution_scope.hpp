@@ -20,10 +20,12 @@
  */
 #pragma once
 
+#include <cassert>
 #include <map>
 
 #include <fmt/core.h>
 
+#include <lo2s/log.hpp>
 #include <lo2s/types.hpp>
 namespace lo2s
 {
@@ -31,10 +33,13 @@ namespace lo2s
 enum class ExecutionScopeType
 {
     THREAD,
+    PROCESS,
     CPU,
     UNKNOWN
 };
 
+// This is a wrapper around Cpus Threads and Processes. This allows us to simplify the middle-end of
+// lo2s as almost all of it doesn't care if it deals with processes, threads or cpus.
 struct ExecutionScope
 {
     ExecutionScopeType type;
@@ -58,14 +63,18 @@ struct ExecutionScope
         return { ExecutionScopeType::THREAD, pid };
     }
 
+    static ExecutionScope process(pid_t pid)
+    {
+        return { ExecutionScopeType::PROCESS, pid };
+    }
     static ExecutionScope thread(Thread thread)
     {
         return { ExecutionScopeType::THREAD, thread.as_pid_t() };
     }
 
-    static ExecutionScope thread(Process process)
+    static ExecutionScope process(Process process)
     {
-        return { ExecutionScopeType::THREAD, process.as_pid_t() };
+        return { ExecutionScopeType::PROCESS, process.as_pid_t() };
     }
 
     std::string name() const
@@ -74,6 +83,8 @@ struct ExecutionScope
         {
         case ExecutionScopeType::THREAD:
             return fmt::format("thread {}", id);
+        case ExecutionScopeType::PROCESS:
+            return fmt::format("process {}");
         case ExecutionScopeType::CPU:
             return fmt::format("cpu {}", id);
         default:
@@ -83,14 +94,35 @@ struct ExecutionScope
 
     Thread as_thread() const
     {
-        return (type == ExecutionScopeType::THREAD ? Thread(id) : Thread::invalid());
+        assert(type == ExecutionScope::THREAD);
+        return Thread(id);
+    }
+    Process as_process() const
+    {
+        assert(type == ExecutionScope::PROCESS);
+        return Process(id);
     }
     Cpu as_cpu() const
     {
-        return (type == ExecutionScopeType::CPU ? Cpu(id) : Cpu::invalid());
+        assert(type == ExecutionScope::CPU);
+        return Cpu(id);
     }
 
-    // Needed becausse this is used as a Key in some Structures.
+    bool is_process() const
+    {
+        return type == ExecutionScopeType::PROCESS;
+    }
+
+    bool is_thread() const
+    {
+        return type == ExecutionScopeType::THREAD;
+    }
+
+    bool is_cpu() const
+    {
+        return type == ExecutionScopeType::CPU;
+    }
+    // Needed because this is used as a Key in some Structures.
     // Simply order (arbitrarly) by type first, then by scope
     friend bool operator<(const ExecutionScope& lhs, const ExecutionScope& rhs)
     {
@@ -115,9 +147,9 @@ struct ExecutionScope
     }
 };
 
-// This class tracks the relation ship between locations for which we can measure things and the group they belong to.
-// For Threads the location group is the process they belong to.
-// CPUs are their own group (for now)
+// This class tracks the relation ship between locations for which we can measure things and the
+// group they belong to. For Threads the location group is the process they belong to. CPUs are
+// their own group (for now)
 class ExecutionScopeGroup
 {
 public:
@@ -127,7 +159,7 @@ public:
         return group;
     }
 
-    bool is_group(const ExecutionScope& scope)
+    bool is_group(const ExecutionScope& scope) const
     {
         const auto& it = groups_.find(scope);
         if (it == groups_.end())
@@ -137,40 +169,52 @@ public:
         return it->second == scope;
     }
 
-    //for now every cpu is a group of its own
-    bool is_group(const Cpu& cpu)
+    bool is_process(const Thread& thread) const
     {
-        return true;
+        return is_group(thread.as_scope());
     }
 
-    ExecutionScope get_group(const ExecutionScope& scope)
+    ExecutionScope get_parent(const ExecutionScope& scope) const
     {
         return groups_.at(scope);
     }
 
-    //If we only know the parent thread, try to find the parent process.
-    void add_child(Thread thread, Thread parent)
+    Process get_process(Thread thread) const
     {
-        const auto& real_parent = groups_.find(parent);
+        return groups_.at(thread.as_scope()).as_process();
+    }
+
+    void add_process(Process process)
+    {
+        groups_.emplace(process.as_thread().as_scope(), process.as_scope());
+    }
+
+    void add_thread(Thread thread, Process process)
+    {
+        groups_.emplace(thread.as_scope(), process.as_scope());
+    }
+
+    // If we only know the parent thread, try to find the parent process.
+    void add_thread(Thread child, Thread parent)
+    {
+        const auto& real_parent = groups_.find(parent.as_scope());
         if (real_parent == groups_.end())
         {
-            Log::debug() << "No parent process found for " << child << " using " << parent << "as a parent instead";
-            groups_.emplace(child, Process(parent.as_pid_t));
+            // Per convention, the parent process always has to be a process, so convert here
+            // accordinglt
+            Log::debug() << "No parent process found for " << child.name() << " using "
+                         << parent.name() << "as a parent instead";
+            groups_.emplace(child.as_scope(), parent.as_process().as_scope());
         }
         else
         {
-            groups_.emplace(child, real_parent->second);
+            groups_.emplace(child.as_scope(), real_parent->second);
         }
     }
 
-    void add_parent(Thread thread, Process parent)
+    void add_cpu(Cpu cpu)
     {
-        groups_.emplac
-    }
-
-    void add_parent(Process parent)
-    {
-        groups_.emplace(parent.as_thread, parent);
+        groups_.emplace(cpu.as_scope(), cpu.as_scope());
     }
 
 private:
@@ -181,7 +225,7 @@ private:
     ~ExecutionScopeGroup()
     {
     }
-    std::map<Thread, Parent> groups_;
+    std::map<ExecutionScope, ExecutionScope> groups_;
 };
 
 } // namespace lo2s

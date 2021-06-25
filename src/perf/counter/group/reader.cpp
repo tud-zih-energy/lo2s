@@ -52,8 +52,6 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 : counter_buffer_(requested_group_counters().counters.size() + 1)
 {
     const CounterCollection counter_collection = requested_group_counters();
-    Cpu cpu = Cpu(scope.cpuid());
-    Thread thread = Thread(scope.tid());
 
     perf_event_attr leader_attr = common_perf_event_attrs();
 
@@ -81,7 +79,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
     leader_attr.enable_on_exec = enable_on_exec;
 
-    group_leader_fd_ = perf_try_event_open(&leader_attr, thread, cpu, -1, 0);
+    group_leader_fd_ = perf_try_event_open(&leader_attr, scope, -1, 0);
     if (group_leader_fd_ < 0)
     {
         Log::error() << "perf_event_open for counter group leader failed";
@@ -95,7 +93,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         try
         {
-            counter_fds_.emplace_back(open_counter(thread, cpu, description, group_leader_fd_));
+            counter_fds_.emplace_back(open_counter(scope, description, group_leader_fd_));
         }
         catch (const std::system_error& e)
         {

@@ -103,7 +103,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         // TODO Attach to all threads in a process
         if (ptrace(PTRACE_ATTACH, process.as_pid_t(), NULL, NULL) == -1)
         {
-            Log::error() << "Could not attach to " << process
+            Log::error() << "Could not attach to " << process.name()
                          << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
             throw_errno();
         }
