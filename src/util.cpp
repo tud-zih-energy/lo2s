@@ -1,5 +1,6 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/types.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>
@@ -10,7 +11,7 @@
 #include <iomanip>
 #include <ios>
 #include <iostream>
-#include <unordered_map>
+#include <map>
 
 #include <cstdint>
 #include <ctime>
@@ -59,15 +60,15 @@ std::chrono::duration<double> get_cpu_time()
     return std::chrono::seconds(time.tv_sec) + std::chrono::microseconds(time.tv_usec);
 }
 
-std::string get_process_exe(pid_t pid)
+std::string get_process_exe(Process process)
 {
-    auto proc_exe_filename = fmt::format("/proc/{}/exe", pid);
+    auto proc_exe_filename = fmt::format("/proc/{}/exe", process.as_pid_t());
     char exe_cstr[PATH_MAX + 1];
     auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
 
     if (ret == -1)
     {
-        Log::error() << "Failed to retrieve exe name for pid=" << pid << "!";
+        Log::error() << "Failed to retrieve exe name for " << process.name() << "!";
         throw std::runtime_error{ "Failed to retrive process exe from procfs" };
     }
 
@@ -94,32 +95,32 @@ static std::string read_file(const std::filesystem::path& path)
     }
 }
 
-std::string get_process_comm(pid_t pid)
+std::string get_process_comm(Process process)
 {
-    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(pid) / "comm";
+    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) / "comm";
     try
     {
         return read_file(proc_comm);
     }
     catch (const std::ios::failure&)
     {
-        Log::warn() << "Failed to get name for process " << pid;
-        return fmt::format("[process {}]", pid);
+        Log::warn() << "Failed to get name for " << process.name();
+        return fmt::format("[process {}]", process.as_pid_t());
     }
 }
 
-std::string get_task_comm(pid_t pid, pid_t task)
+std::string get_task_comm(Process process, Thread thread)
 {
-    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(pid) / "task" /
-                     std::to_string(task) / "comm";
+    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) /
+                     "task" / std::to_string(thread.as_pid_t()) / "comm";
     try
     {
         return read_file(task_comm);
     }
     catch (const std::ios::failure&)
     {
-        Log::warn() << "Failed to get name for task " << task << " in process " << pid;
-        return fmt::format("[thread {}]", task);
+        Log::warn() << "Failed to get name for " << thread.name() << " in " << process.name();
+        return fmt::format("[thread {}]", thread.as_pid_t());
     }
 }
 
@@ -163,53 +164,53 @@ const struct ::utsname& get_uname()
     return instance.uname;
 }
 
-std::unordered_map<pid_t, std::string> get_comms_for_running_processes()
+std::map<Thread, std::string> get_comms_for_running_threads()
 {
     ExecutionScopeGroup& scope_group = ExecutionScopeGroup::instance();
-    std::unordered_map<pid_t, std::string> ret;
+    std::map<Thread, std::string> ret;
     std::filesystem::path proc("/proc");
     for (auto& entry : std::filesystem::directory_iterator(proc))
     {
-        pid_t pid;
+        Process process;
         try
         {
-            pid = std::stoi(entry.path().filename().string());
+            process = Process(std::stoi(entry.path().filename().string()));
         }
         catch (const std::logic_error&)
         {
             continue;
         }
-        std::string name = get_process_comm(pid);
+        std::string name = get_process_comm(process);
 
-        ExecutionScope process_scope = ExecutionScope::thread(pid);
-        scope_group.add_parent(process_scope);
+        scope_group.add_process(process);
 
-        Log::trace() << "mapping from /proc/" << pid << ": " << name;
-        ret.emplace(pid, name);
+        Log::trace() << "mapping from /proc/" << process.as_pid_t() << ": " << name;
+        ret.emplace(process.as_thread(), name);
         try
         {
-            std::filesystem::path task(fmt::format("/proc/{}/task", pid));
+            std::filesystem::path task(fmt::format("/proc/{}/task", process.as_pid_t()));
             for (auto& entry_task : std::filesystem::directory_iterator(task))
             {
-                pid_t tid;
+                Thread thread;
                 try
                 {
-                    tid = std::stoi(entry_task.path().filename().string());
+                    thread = Thread(std::stoi(entry_task.path().filename().string()));
                 }
                 catch (const std::logic_error&)
                 {
                     continue;
                 }
-                if (tid == pid)
+                if (thread == process.as_thread())
                 {
                     continue;
                 }
 
-                scope_group.add_child(ExecutionScope::thread(tid), process_scope);
+                scope_group.add_thread(thread, process);
 
-                name = get_task_comm(pid, tid);
-                Log::trace() << "mapping from /proc/" << pid << "/" << tid << ": " << name;
-                ret.emplace(tid, name);
+                name = get_task_comm(process, thread);
+                Log::trace() << "mapping from /proc/" << process.as_pid_t() << "/"
+                             << thread.as_pid_t() << ": " << name;
+                ret.emplace(thread, name);
             }
         }
         catch (...)
@@ -239,8 +240,8 @@ void try_pin_to_scope(ExecutionScope scope)
     }
 }
 
-pid_t gettid()
+Thread gettid()
 {
-    return syscall(SYS_gettid);
+    return Thread(syscall(SYS_gettid));
 }
 } // namespace lo2s

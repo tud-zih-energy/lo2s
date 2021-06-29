@@ -24,12 +24,13 @@
 #include <atomic>
 #include <chrono>
 #include <mutex>
-#include <unordered_set>
-
+#include <set>
 extern "C"
 {
 #include <sys/types.h>
 }
+
+#include <lo2s/types.hpp>
 
 namespace lo2s
 {
@@ -40,7 +41,7 @@ public:
     void show();
 
     void add_thread();
-    void register_process(pid_t pid);
+    void register_process(Process process);
 
     void record_perf_wakeups(std::size_t num_wakeups);
 
@@ -57,8 +58,8 @@ private:
     std::atomic<std::size_t> num_wakeups_;
     std::atomic<std::size_t> thread_count_;
 
-    std::unordered_set<pid_t> pids_;
-    std::mutex pids_mutex_;
+    std::set<Process> processes_;
+    std::mutex processes_mutex_;
 
     std::string trace_dir_;
 

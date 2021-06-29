@@ -27,6 +27,8 @@ extern "C"
 #include <sys/types.h>
 }
 
+#include <lo2s/types.hpp>
+
 namespace lo2s
 {
 
@@ -36,14 +38,14 @@ namespace monitor
 class AbstractProcessMonitor
 {
 public:
-    virtual void insert_process(pid_t pid, pid_t ppid, std::string proc_name,
+    virtual void insert_process(Process process, Thread parent, std::string proc_name,
                                 bool spawn = false) = 0;
-    virtual void insert_thread(pid_t pid, pid_t tid, std::string name = "", bool spawn = false) = 0;
+    virtual void insert_thread(Thread thread, Process parent, std::string name = "",
+                               bool spawn = false) = 0;
 
-    virtual void exit_process(pid_t pid) = 0;
-    virtual void exit_thread(pid_t tid) = 0;
+    virtual void exit_thread(Thread thread) = 0;
 
-    virtual void update_process_name(pid_t pid, const std::string& name) = 0;
+    virtual void update_process_name(Process process, const std::string& name) = 0;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -90,29 +90,30 @@ namespace monitor
 void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
-    auto pid = config().pid;
-    assert(pid != 0);
-    bool spawn = (pid == -1);
+    auto process = config().process;
+    assert(process.as_pid_t() != 0);
+    bool spawn = (config().process == Process::invalid());
+
     if (spawn)
     {
-        pid = fork();
+        process = Process(fork());
     }
     else
     {
         // TODO Attach to all threads in a process
-        if (ptrace(PTRACE_ATTACH, pid, NULL, NULL) == -1)
+        if (ptrace(PTRACE_ATTACH, process.as_pid_t(), NULL, NULL) == -1)
         {
-            Log::error() << "Could not attach to pid " << pid
+            Log::error() << "Could not attach to " << process.name()
                          << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
             throw_errno();
         }
     }
-    if (pid == -1)
+    if (process == Process::invalid())
     {
         Log::error() << "Fork failed.";
         throw_errno();
     }
-    else if (pid == 0)
+    else if (process.as_pid_t() == 0)
     {
         assert(spawn);
         run_command(config().command);
@@ -126,10 +127,10 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         }
         else
         {
-            proc_name = get_process_comm(pid);
+            proc_name = get_process_comm(process);
         }
 
-        ProcessController controller(pid, proc_name, spawn, monitor);
+        ProcessController controller(process, proc_name, spawn, monitor);
         controller.run();
     }
 }

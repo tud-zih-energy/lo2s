@@ -32,6 +32,7 @@
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types.hpp>
 
 #include <memory>
 #include <vector>
@@ -55,7 +56,7 @@ public:
 
     void insert_cached_mmap_events(const RawMemoryMapCache& cached_events);
 
-    std::map<pid_t, ProcessInfo>& get_process_infos()
+    std::map<Process, ProcessInfo>& get_process_infos()
     {
         return process_infos_;
     }
@@ -63,7 +64,7 @@ public:
 protected:
     trace::Trace trace_;
 
-    std::map<pid_t, ProcessInfo> process_infos_;
+    std::map<Process, ProcessInfo> process_infos_;
     metric::plugin::Metrics metrics_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 #ifdef HAVE_X86_ADAPT

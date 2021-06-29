@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016-2018,
+ * Copyright (c) 2018,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,39 +21,28 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
-#include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/perf/counter/metric_writer.hpp>
+#include <lo2s/perf/counter/userspace/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <map>
-#include <string>
-
-extern "C"
-{
-#include <signal.h>
-}
-
+#include <vector>
 namespace lo2s
 {
-
-class ProcessController
+namespace perf
+{
+namespace counter
+{
+namespace userspace
+{
+class Writer : public Reader<Writer>, MetricWriter
 {
 public:
-    ProcessController(Process child, const std::string& name, bool spawn,
-                      monitor::AbstractProcessMonitor& monitor);
+    Writer(ExecutionScope scope, trace::Trace& trace);
 
-    ~ProcessController();
-
-    void run();
-
-private:
-    void handle_ptrace_event(Thread thread, int event);
-
-    void handle_signal(Thread thread, int status);
-
-    const Thread first_child_;
-    sighandler_t default_signal_handler;
-    monitor::AbstractProcessMonitor& monitor_;
-    std::size_t num_wakeups_;
-    ExecutionScopeGroup& groups_;
+    bool handle(std::vector<UserspaceReadFormat>& data);
 };
+} // namespace userspace
+} // namespace counter
+} // namespace perf
 } // namespace lo2s

@@ -49,6 +49,12 @@ struct EventDescription
     {
     }
 
+    EventDescription()
+    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0),
+      availability(Availability::UNAVAILABLE)
+    {
+    }
+
     std::string name;
     perf_type_id type;
     std::uint64_t config;

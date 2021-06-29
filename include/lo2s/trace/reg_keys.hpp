@@ -70,17 +70,17 @@ using ByPackage = SimpleKeyType<int, ByPackageTag>;
 struct ByCpuTag
 {
 };
-using ByCpu = SimpleKeyType<int, ByCpuTag>;
+using ByCpu = SimpleKeyType<Cpu, ByCpuTag>;
 
 struct ByThreadTag
 {
 };
-using ByThread = SimpleKeyType<pid_t, ByThreadTag>;
+using ByThread = SimpleKeyType<Thread, ByThreadTag>;
 
 struct ByProcessTag
 {
 };
-using ByProcess = SimpleKeyType<pid_t, ByProcessTag>;
+using ByProcess = SimpleKeyType<Process, ByProcessTag>;
 
 struct ByStringTag
 {
@@ -122,8 +122,8 @@ struct Holder<otf2::definition::system_tree_node>
 template <>
 struct Holder<otf2::definition::regions_group>
 {
-    using type =
-        otf2::lookup_definition_holder<otf2::definition::regions_group, ByString, ByExecutionScope>;
+    using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString,
+                                                ByProcess, ByThread>;
 };
 template <>
 struct Holder<otf2::definition::metric_class>
@@ -164,12 +164,12 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByExecutionScope>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess>;
 };
 template <>
 struct Holder<otf2::definition::comm_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByExecutionScope>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByProcess>;
 };
 } // namespace trace
 } // namespace lo2s
