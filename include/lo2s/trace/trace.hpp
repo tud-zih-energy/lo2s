@@ -141,6 +141,9 @@ public:
 
     otf2::definition::metric_class perf_metric_class(MeasurementScope scope)
     {
+        assert(scope.type == MeasuerementScopeType::GROUP_METRIC ||
+               scope.type == MeasurementScopeType::USERSPACE_METRIC);
+
         if (scope.type == MeasurementScopeType::GROUP_METRIC)
         {
             if (!perf_group_metric_class_)
@@ -149,15 +152,12 @@ public:
             }
             return perf_group_metric_class_;
         }
-        else if (scope.type == MeasurementScopeType::USERSPACE_METRIC)
+
+        if (!perf_userspace_metric_class_)
         {
-            if (!perf_userspace_metric_class_)
-            {
-                create_userspace_metric_class();
-            }
-            return perf_userspace_metric_class_;
+            create_userspace_metric_class();
         }
-        throw std::runtime_error("metric_class can only be given for metric MeasurementScope.");
+        return perf_userspace_metric_class_;
     }
 
     otf2::definition::metric_class& tracepoint_metric_class(const std::string& event_name);

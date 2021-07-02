@@ -95,7 +95,8 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         try
         {
-            counter_fds_.emplace_back(open_counter(tid, cpuid, description, group_leader_fd_));
+            counter_fds_.emplace_back(
+                perf_event_description_open(tid, cpuid, description, group_leader_fd_));
         }
         catch (const std::system_error& e)
         {

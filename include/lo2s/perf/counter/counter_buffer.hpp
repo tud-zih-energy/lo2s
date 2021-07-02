@@ -73,6 +73,9 @@ protected:
             {
                 accumulated_[i] += diff_value;
             }
+            // Due to a perf bug diff_enabled and diff_running may be swapped
+            // diff_enabled is always smaller than diff_running so swap them if diff_enabled >
+            // diff_running
             else if (diff_enabled > diff_running)
             {
                 accumulated_[i] += (static_cast<double>(diff_enabled) / diff_running) * diff_value;

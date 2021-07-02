@@ -232,8 +232,6 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("EVENT");
 
-    perf_metric_options.toggle("mperf", "Record the MPERF metric");
-    perf_metric_options.toggle("aperf", "Record the APERF metric");
     perf_metric_options
         .multi_option("userspace-metric-event",
                       "Record metrics for this perf event. (Slower, but might "
@@ -302,16 +300,6 @@ void parse_program_options(int argc, const char** argv)
     config.standard_metrics = arguments.given("standard-metrics");
     config.use_x86_energy = arguments.given("x86-energy");
     config.command = arguments.positionals();
-
-    if (arguments.given("mperf"))
-    {
-        config.perf_userspace_events.emplace_back("msr/mperf/");
-    }
-
-    if (arguments.given("aperf"))
-    {
-        config.perf_userspace_events.emplace_back("msr/aperf/");
-    }
 
     if (arguments.given("help"))
     {

@@ -63,7 +63,8 @@ Reader<T>::Reader(ExecutionScope scope)
 
     for (auto& event : requested_userspace_counters().counters)
     {
-        counter_fds_.emplace_back(open_counter(scope.tid(), scope.cpuid(), event, -1));
+        counter_fds_.emplace_back(
+            perf_event_description_open(scope.tid(), scope.cpuid(), event, -1));
     }
 }
 

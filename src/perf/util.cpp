@@ -97,7 +97,7 @@ int perf_try_event_open(struct perf_event_attr* perf_attr, pid_t tid, int cpu, i
     return fd;
 }
 
-int open_counter(pid_t tid, int cpuid, const EventDescription& desc, int group_fd)
+int perf_event_description_open(pid_t tid, int cpuid, const EventDescription& desc, int group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
