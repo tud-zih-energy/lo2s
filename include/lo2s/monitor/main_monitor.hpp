@@ -30,6 +30,7 @@
 #endif
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
+#include <lo2s/monitor/bpf-python_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
@@ -66,6 +67,7 @@ protected:
 
     std::map<Process, ProcessInfo> process_infos_;
     metric::plugin::Metrics metrics_;
+    BpfPythonMonitor python_monitor_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;

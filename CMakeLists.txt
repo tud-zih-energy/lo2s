@@ -49,7 +49,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -lbcc")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")

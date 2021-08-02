@@ -21,31 +21,11 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/format.hpp>
-
-#include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/util.hpp>
-
-#include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/util.hpp>
-
-#include <filesystem>
-
-#include <ios>
-
-#include <cstddef>
-
-extern "C"
-{
-#include <fcntl.h>
-#include <linux/perf_event.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-}
+#include <lo2s/perf/bpf-python/writer.hpp>
 
 #include <bcc/BPF.h>
 #include <bpf/libbpf.h>
+
 
 namespace lo2s
 {
@@ -97,74 +77,61 @@ const std::string BPF_PROGRAM = R"(
  })";
 
 
- struct python_event
- {
-     bool type;
-     int cpu;
-     uint64_t time;
-     char filename[32];
-     char funcname[16];
- };
-
 class Reader
 {
 public:
-    Reader()
+    Reader(trace::Trace &trace) : 
+            stop_(false), writer_(trace)
     {
-	ebpf::USDT u1(PY_BIN, "python", "function__entry", "on_function__entry");
-     ebpf::USDT u2(PY_BIN, "python", "function__return", "on_function__return");
+	 ebpf::USDT u1(config().python_binary, "python", "function__entry", "on_function__entry");
+     ebpf::USDT u2(config().python_binary, "python", "function__return", "on_function__return");
      ebpf::BPF* bpf = new ebpf::BPF();
 
      auto init_res = bpf->init(BPF_PROGRAM, {}, { u1, u2 });
      if (init_res.code() != 0)
      {
          std::cerr << init_res.msg() << std::endl;
-         return 1;
      }
 
      auto attach_res = bpf->attach_usdt_all();
      if (attach_res.code() != 0)
      {
          std::cerr << attach_res.msg() << std::endl;
-         return 1;
      }
 
-     int err = 0;
-     struct ring_buffer* rb = NULL;
-
-     rb = ring_buffer__new(bpf->get_table("events").get_fd(), handle_output, NULL, NULL);
+     rb = ring_buffer__new(bpf->get_table("events").get_fd(), Reader::handle_output, &writer_, NULL);
      if (!rb)
      {
-         err = -1;
          fprintf(stderr, "Failed to create ring buffer\n");
-         goto cleanup;
      }
-
-     fd = ring_buffer__epoll_fd(rb);
 
     }
     
-    ~Reader()
+    static int handle_output(void *ctx, void *data, size_t data_size)
     {
-        if (fd_ != -1)
+        static_cast<Writer*>(ctx)->write(data);
+
+        return 0;
+    }
+    
+    void start()
+    {
+        std::cerr << "MEEPOE\n";
+        while(!stop_)
         {
-            close(fd_);
+            ring_buffer__poll(rb, 100);
         }
     }
 
-    int fd()
+    void stop()
     {
-        return fd;
-    }
-
-    void read()
-    {
-        ring_buffer__consume(rb);
+        stop_ = true;
     }
 
 private:
+    bool stop_;
+    Writer writer_;
     struct ring_buffer *rb;
-    int fd_ = -1;
 };
 } // namespace tracepoint
 } // namespace perf

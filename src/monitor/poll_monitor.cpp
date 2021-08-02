@@ -34,7 +34,7 @@ namespace lo2s
 namespace monitor
 {
 PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
-                         std::chrono::nanoseconds read_interval)
+                         std::chrono::nanoseconds read_interval = std::chrono::nanoseconds(0))
 : ThreadedMonitor(trace, name)
 {
     pfds_.resize(2);

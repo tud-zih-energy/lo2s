@@ -90,6 +90,7 @@ struct Config
     clockid_t clockid;
     // x86_energy
     bool use_x86_energy;
+    std::string python_binary;
 };
 
 const Config& config();

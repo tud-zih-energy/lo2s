@@ -30,6 +30,7 @@ enum class MeasurementScopeType
     GROUP_METRIC,
     USERSPACE_METRIC,
     SWITCH,
+    PYTHON,
     UNKNOWN
 };
 
@@ -66,6 +67,11 @@ struct MeasurementScope
         return { MeasurementScopeType::SWITCH, s };
     }
 
+    static MeasurementScope python(Cpu c)
+    {
+        return { MeasurementScopeType::PYTHON, ExecutionScope::cpu(c.as_int())};
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -94,6 +100,8 @@ struct MeasurementScope
             return fmt::format("samples for {}", scope.name());
         case MeasurementScopeType::SWITCH:
             return fmt::format("context switches for {}", scope.name());
+        case MeasurementScopeType::PYTHON:
+            return fmt::format("python samples for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

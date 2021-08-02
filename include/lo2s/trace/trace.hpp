@@ -106,6 +106,7 @@ public:
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& switch_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
+    std::vector<otf2::writer::local*>  python_writer();
     otf2::writer::local& create_metric_writer(const std::string& name);
 
     otf2::definition::metric_member

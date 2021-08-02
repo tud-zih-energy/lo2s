@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/writer.hpp>
+#include <lo2s/perf/bpf-python/reader.hpp>
 
-#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <map>
@@ -34,17 +34,31 @@ namespace lo2s
 namespace monitor
 {
 
-class BpfPythonMonitor : public PollMonitor
+class BpfPythonMonitor : public ThreadedMonitor
 {
 public:
-    BpfPythonMonitor(trace::Trace& trace);
+    BpfPythonMonitor(trace::Trace& trace) : ThreadedMonitor(trace, ""), reader_(trace)
+    {
+    }
 
-private:
-    void monitor(int fd) override;
+    void stop() override
+    {
+        reader_.stop();
+        thread_.join();
+    }
+protected:
+    void monitor() override {
+    }
+
+    void run() override
+    {
+        reader_.start();
+    }
+
 
     std::string group() const override
     {
-        return "tracepoint::TracepointMonitor";
+        return "bpf-python::BpfPythonMonitor";
     }
 
 private:

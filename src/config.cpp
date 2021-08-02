@@ -202,6 +202,7 @@ void parse_program_options(int argc, const char** argv)
         .short_name("c")
         .default_value("11010113")
         .metavar("N");
+    sampling_options.option("python", "Enable python sampling and specify python binary (has to be compiled with --with-dtrace)").metavar("PYTHON_BINARY");
 
     sampling_options.toggle("call-graph", "Record call stack of instruction samples.")
         .short_name("g");
@@ -285,7 +286,8 @@ void parse_program_options(int argc, const char** argv)
         parser.usage();
         std::exit(EXIT_FAILURE);
     }
-
+    
+    config.python_binary = arguments.get("python");
     config.trace_path = arguments.get("output-trace");
     config.quiet = arguments.given("quiet");
     config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
