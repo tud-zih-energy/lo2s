@@ -100,6 +100,8 @@ public:
     void update_thread_name(Thread t, const std::string& name);
 
     otf2::definition::calling_context& python_cctx(Thread python_thread);
+    otf2::definition::calling_context& python_func_cctx(Thread python_thread, char* filename,
+                                                        char* funcname);
     otf2::definition::mapping_table merge_calling_contexts(ThreadCctxRefMap& new_ips,
                                                            size_t num_ip_refs,
                                                            std::map<Process, ProcessInfo>& infos);

@@ -21,6 +21,7 @@
 #pragma once
 
 #include <lo2s/config.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <cstdint>
@@ -76,11 +77,22 @@ private:
     {
         enter_python_thread(cpu, python_thread, tp);
         current_call_level_[cpu]++;
+
+        otf2::definition::calling_context& function_cctx =
+            trace_.python_func_cctx(python_thread, filename, funcname);
+
+        *writers_[cpu] << otf2::event::calling_context_enter(tp, function_cctx,
+                                                             current_call_level_[cpu]);
     }
 
     void leave_python_function(Cpu cpu, Thread python_thread, otf2::chrono::time_point& tp,
                                char* filename, char* funcname)
     {
+        otf2::definition::calling_context& function_cctx =
+            trace_.python_func_cctx(python_thread, filename, funcname);
+
+        *writers_[cpu] << otf2::event::calling_context_leave(tp, function_cctx);
+
         current_call_level_[cpu]--;
         if (current_call_level_[cpu] < 1)
         {

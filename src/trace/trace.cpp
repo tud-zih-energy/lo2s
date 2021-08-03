@@ -477,6 +477,16 @@ otf2::definition::calling_context& Trace::python_cctx(Thread python_thread)
     return registry_.get<otf2::definition::calling_context>(ByThread(python_thread));
 }
 
+otf2::definition::calling_context& Trace::python_func_cctx(Thread python_thread, char* filename,
+                                                           char* funcname)
+{
+    const auto& parent_cctx = python_cctx(python_thread);
+
+    const auto line_info = LineInfo::for_function(filename, funcname, 0, config().python_binary);
+
+    return registry_.create<otf2::definition::calling_context>(intern_region(line_info),
+                                                               intern_scl(line_info), parent_cctx);
+}
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
                       otf2::definition::calling_context& parent,
