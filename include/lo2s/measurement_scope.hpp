@@ -69,7 +69,7 @@ struct MeasurementScope
 
     static MeasurementScope python(Cpu c)
     {
-        return { MeasurementScopeType::PYTHON, ExecutionScope::cpu(c.as_int())};
+        return { MeasurementScopeType::PYTHON, ExecutionScope::cpu(c.as_int()) };
     }
 
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)

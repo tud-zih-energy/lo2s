@@ -29,8 +29,8 @@
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
 #include <lo2s/mmap.hpp>
-#include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/monitor/bpf-python_monitor.hpp>
+#include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>

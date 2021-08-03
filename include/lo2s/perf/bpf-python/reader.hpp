@@ -26,7 +26,6 @@
 #include <bcc/BPF.h>
 #include <bpf/libbpf.h>
 
-
 namespace lo2s
 {
 namespace perf
@@ -41,6 +40,7 @@ const std::string BPF_PROGRAM = R"(
  struct event_t {
      bool type;
      int cpu;
+     u32 tid;
      u64 time;
      char filename[32];
      char funcname[32];
@@ -68,6 +68,7 @@ const std::string BPF_PROGRAM = R"(
    event.type = true;
    bpf_usdt_readarg(1, ctx, &filename_ptr);
    bpf_usdt_readarg(2, ctx, &funcname_ptr);
+   event.tid = bpf_get_current_pid_tgid();
    bpf_probe_read_user_str(event.filename, 32, filename_ptr);
    bpf_probe_read_user_str(event.funcname, 32, funcname_ptr);
    event.time = bpf_ktime_get_ns();
@@ -76,48 +77,46 @@ const std::string BPF_PROGRAM = R"(
    return 0;
  })";
 
-
 class Reader
 {
 public:
-    Reader(trace::Trace &trace) : 
-            stop_(false), writer_(trace)
+    Reader(trace::Trace& trace) : stop_(false), writer_(trace)
     {
-	 ebpf::USDT u1(config().python_binary, "python", "function__entry", "on_function__entry");
-     ebpf::USDT u2(config().python_binary, "python", "function__return", "on_function__return");
-     ebpf::BPF* bpf = new ebpf::BPF();
+        ebpf::USDT u1(config().python_binary, "python", "function__entry", "on_function__entry");
+        ebpf::USDT u2(config().python_binary, "python", "function__return", "on_function__return");
+        ebpf::BPF* bpf = new ebpf::BPF();
 
-     auto init_res = bpf->init(BPF_PROGRAM, {}, { u1, u2 });
-     if (init_res.code() != 0)
-     {
-         std::cerr << init_res.msg() << std::endl;
-     }
+        auto init_res = bpf->init(BPF_PROGRAM, {}, { u1, u2 });
+        if (init_res.code() != 0)
+        {
+            std::cerr << init_res.msg() << std::endl;
+        }
 
-     auto attach_res = bpf->attach_usdt_all();
-     if (attach_res.code() != 0)
-     {
-         std::cerr << attach_res.msg() << std::endl;
-     }
+        auto attach_res = bpf->attach_usdt_all();
+        if (attach_res.code() != 0)
+        {
+            std::cerr << attach_res.msg() << std::endl;
+        }
 
-     rb = ring_buffer__new(bpf->get_table("events").get_fd(), Reader::handle_output, &writer_, NULL);
-     if (!rb)
-     {
-         fprintf(stderr, "Failed to create ring buffer\n");
-     }
-
+        rb = ring_buffer__new(bpf->get_table("events").get_fd(), Reader::handle_output, &writer_,
+                              NULL);
+        if (!rb)
+        {
+            fprintf(stderr, "Failed to create ring buffer\n");
+        }
     }
-    
-    static int handle_output(void *ctx, void *data, size_t data_size)
+
+    static int handle_output(void* ctx, void* data, size_t data_size)
     {
         static_cast<Writer*>(ctx)->write(data);
 
         return 0;
     }
-    
+
     void start()
     {
         std::cerr << "MEEPOE\n";
-        while(!stop_)
+        while (!stop_)
         {
             ring_buffer__poll(rb, 100);
         }
@@ -131,8 +130,8 @@ public:
 private:
     bool stop_;
     Writer writer_;
-    struct ring_buffer *rb;
+    struct ring_buffer* rb;
 };
-} // namespace tracepoint
+} // namespace bpf_python
 } // namespace perf
 } // namespace lo2s

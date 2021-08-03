@@ -99,6 +99,7 @@ public:
     void update_process_name(Process p, const std::string& name);
     void update_thread_name(Thread t, const std::string& name);
 
+    otf2::definition::calling_context& python_cctx(Thread python_thread);
     otf2::definition::mapping_table merge_calling_contexts(ThreadCctxRefMap& new_ips,
                                                            size_t num_ip_refs,
                                                            std::map<Process, ProcessInfo>& infos);
@@ -106,7 +107,7 @@ public:
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& switch_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
-    std::vector<otf2::writer::local*>  python_writer();
+    std::map<Cpu, otf2::writer::local*> python_writer();
     otf2::writer::local& create_metric_writer(const std::string& name);
 
     otf2::definition::metric_member

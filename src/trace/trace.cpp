@@ -352,21 +352,25 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
-std::vector<otf2::writer::local*> Trace::python_writer()
+std::map<Cpu, otf2::writer::local*> Trace::python_writer()
 {
-    std::vector <otf2::writer::local*> ret_;
+    std::map<Cpu, otf2::writer::local*> ret_;
 
-    const auto& location_group = registry_.create<otf2::definition::location_group>(intern("Python location group"), otf2::definition::location_group::location_group_type::process, system_tree_root_node_);
+    const auto& location_group = registry_.create<otf2::definition::location_group>(
+        intern("Python location group"),
+        otf2::definition::location_group::location_group_type::process, system_tree_root_node_);
 
     const auto& sys = Topology::instance();
     for (const auto& cpu : sys.cpus())
     {
         const auto python_scope = MeasurementScope::python(Cpu(cpu.id));
-        const auto& intern_location = registry_.emplace<otf2::definition::location>(ByMeasurementScope(python_scope), intern(python_scope.name()), location_group, otf2::definition::location::location_type::cpu_thread);
-        
-        ret_.push_back(&archive_(intern_location));
+        const auto& intern_location = registry_.emplace<otf2::definition::location>(
+            ByMeasurementScope(python_scope), intern(python_scope.name()), location_group,
+            otf2::definition::location::location_type::cpu_thread);
+
+        ret_.emplace(Cpu(cpu.id), &archive_(intern_location));
     }
-    
+
     return ret_;
 }
 
@@ -461,6 +465,16 @@ otf2::definition::metric_class& Trace::metric_class()
 {
     return registry_.create<otf2::definition::metric_class>(otf2::common::metric_occurence::async,
                                                             otf2::common::recorder_kind::abstract);
+}
+
+otf2::definition::calling_context& Trace::python_cctx(Thread python_thread)
+{
+    if (!registry_.has<otf2::definition::calling_context>(ByThread(python_thread)))
+    {
+        add_thread(python_thread, config().python_binary);
+    }
+
+    return registry_.get<otf2::definition::calling_context>(ByThread(python_thread));
 }
 
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,

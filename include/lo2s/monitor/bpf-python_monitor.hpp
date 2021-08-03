@@ -46,15 +46,16 @@ public:
         reader_.stop();
         thread_.join();
     }
+
 protected:
-    void monitor() override {
+    void monitor() override
+    {
     }
 
     void run() override
     {
         reader_.start();
     }
-
 
     std::string group() const override
     {
