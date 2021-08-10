@@ -67,7 +67,7 @@ protected:
 
     std::map<Process, ProcessInfo> process_infos_;
     metric::plugin::Metrics metrics_;
-    BpfPythonMonitor python_monitor_;
+    std::unique_ptr<BpfPythonMonitor> python_monitor_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;

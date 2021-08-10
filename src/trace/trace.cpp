@@ -150,6 +150,8 @@ Trace::Trace()
 
         groups_.add_cpu(Cpu(cpu.id));
     }
+
+    groups_.add_process(Process(NO_PARENT_PROCESS_PID));
 }
 
 void Trace::begin_record()

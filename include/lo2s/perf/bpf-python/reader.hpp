@@ -26,6 +26,8 @@
 #include <bcc/BPF.h>
 #include <bpf/libbpf.h>
 
+#include <cassert>
+
 namespace lo2s
 {
 namespace perf
@@ -33,49 +35,9 @@ namespace perf
 namespace bpf_python
 {
 
-const std::string BPF_PROGRAM = R"(
- #include <linux/sched.h>
-
- #include <uapi/linux/ptrace.h>
- struct event_t {
-     bool type;
-     int cpu;
-     u32 tid;
-     u64 time;
-     char filename[32];
-     char funcname[32];
- };
- BPF_RINGBUF_OUTPUT(events, 8);
- int on_function__entry(struct pt_regs *ctx) {
-   struct event_t event = {};
-   char *filename_ptr;
-   char *funcname_ptr;
-   event.type = false;
-   bpf_usdt_readarg(1, ctx, &filename_ptr);
-   bpf_usdt_readarg(2, ctx, &funcname_ptr);
-   bpf_probe_read_user_str(event.filename, 32, filename_ptr);
-   bpf_probe_read_user_str(event.funcname, 32, funcname_ptr);
-   event.time = bpf_ktime_get_ns();
-   event.cpu = ((struct task_struct *)bpf_get_current_task())->cpu;
-   events.ringbuf_output(&event, sizeof(event), 0);
-   return 0;
- }
-
- int on_function__return(struct pt_regs *ctx) {
-   struct event_t event = {};
-   char *filename_ptr;
-   char *funcname_ptr;
-   event.type = true;
-   bpf_usdt_readarg(1, ctx, &filename_ptr);
-   bpf_usdt_readarg(2, ctx, &funcname_ptr);
-   event.tid = bpf_get_current_pid_tgid();
-   bpf_probe_read_user_str(event.filename, 32, filename_ptr);
-   bpf_probe_read_user_str(event.funcname, 32, funcname_ptr);
-   event.time = bpf_ktime_get_ns();
-   event.cpu = ((struct task_struct *)bpf_get_current_task())->cpu;
-   events.ringbuf_output(&event, sizeof(event), 0);
-   return 0;
- })";
+const std::string BPF_PROGRAM =
+#include <lo2s/perf/bpf-python/bpf-program.h>
+    ;
 
 class Reader
 {
@@ -106,8 +68,10 @@ public:
         }
     }
 
-    static int handle_output(void* ctx, void* data, size_t data_size)
+    static int handle_output(void* ctx, void* data, [[maybe_unused]] size_t data_size)
     {
+        assert(data_size == sizeof(struct python_event));
+
         static_cast<Writer*>(ctx)->write(data);
 
         return 0;

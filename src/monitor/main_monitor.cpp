@@ -31,9 +31,14 @@ namespace lo2s
 {
 namespace monitor
 {
-MainMonitor::MainMonitor() : trace_(), metrics_(trace_), python_monitor_(trace_)
+MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
-    python_monitor_.start();
+    if (config().python_sampling)
+    {
+        python_monitor_ = std::make_unique<BpfPythonMonitor>(trace_);
+        python_monitor_->start();
+    }
+
     if (config().sampling)
     {
         perf::time::Converter::instance();
@@ -137,8 +142,10 @@ MainMonitor::~MainMonitor()
     trace_.end_record();
 
     metrics_.stop();
-
-    python_monitor_.stop();
+    if (python_monitor_)
+    {
+        python_monitor_->stop();
+    }
 }
 } // namespace monitor
 } // namespace lo2s

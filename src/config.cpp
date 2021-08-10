@@ -203,9 +203,14 @@ void parse_program_options(int argc, const char** argv)
         .default_value("11010113")
         .metavar("N");
     sampling_options
-        .option("python", "Enable python sampling and specify python binary (has to be compiled "
-                          "with --with-dtrace)")
-        .metavar("PYTHON_BINARY");
+        .option("python-binary",
+                "Specifiy which python binary to use for sampling (has to be compiled "
+                "with --with-dtrace)")
+        .metavar("PYTHON_BINARY")
+        .default_value("/usr/bin/python")
+        .optional();
+    sampling_options.toggle("enable-python-sampling", "Enables python sampling (requires root)")
+        .default_value(false);
 
     sampling_options.toggle("call-graph", "Record call stack of instruction samples.")
         .short_name("g");
@@ -290,7 +295,8 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
-    config.python_binary = arguments.get("python");
+    config.python_binary = arguments.get("python-binary");
+    config.python_sampling = arguments.given("enable-python-sampling");
     config.trace_path = arguments.get("output-trace");
     config.quiet = arguments.given("quiet");
     config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
