@@ -22,6 +22,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <cstdint>

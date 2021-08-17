@@ -486,8 +486,8 @@ otf2::definition::calling_context& Trace::python_func_cctx(Thread python_thread,
 
     const auto line_info = LineInfo::for_function(filename, funcname, 0, config().python_binary);
 
-    return registry_.create<otf2::definition::calling_context>(intern_region(line_info),
-                                                               intern_scl(line_info), parent_cctx);
+    return registry_.emplace<otf2::definition::calling_context>(
+        ByLineInfo(line_info), intern_region(line_info), intern_scl(line_info), parent_cctx);
 }
 void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
