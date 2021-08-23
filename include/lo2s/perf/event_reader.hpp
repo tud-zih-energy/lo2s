@@ -30,6 +30,7 @@
 #include <lo2s/util.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cinttypes>
 #include <cstddef>
@@ -97,6 +98,14 @@ public:
         uint64_t lost;
         // struct sample_id		sample_id;
     };
+
+    struct RecordLostSamplesType
+    {
+        struct perf_event_header header;
+        uint64_t lost;
+        // struct sample_id      sample_id;
+    };
+
     struct RecordForkType
     {
         struct perf_event_header header;
@@ -240,9 +249,18 @@ public:
                 {
                     auto lost = (const RecordLostType*)event_header_p;
                     lost_samples += lost->lost;
-                    Log::info() << "Lost " << lost->lost << " samples during this chunk.";
+                    Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
                     break;
                 }
+#ifdef HAVE_PERF_RECORD_LOST_SAMPLES
+                case PERF_RECORD_LOST_SAMPLES:
+                {
+                    auto lost = (const RecordLostSamplesType*)event_header_p;
+                    lost_samples += lost->lost;
+                    Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
+                    break;
+                }
+#endif
                 case PERF_RECORD_EXIT:
                     // Ignore, it should only come when attr.task = 1
                     break;
@@ -291,23 +309,25 @@ private:
         return (struct perf_event_mmap_page*)base;
     }
 
+    // Regarding the issue of memory barriers:
+    // we simply use the same barriers as perf (see linux/tools/include/linux/ring_buffer.h)
     uint64_t data_head() const
     {
         auto head = header()->data_head;
+        std::atomic_thread_fence(std::memory_order_acq_rel);
         return head;
     }
 
     void data_tail(uint64_t tail)
     {
-        /* ensure all reads are done before we write the tail out. */
-        rmb();
+        std::atomic_thread_fence(std::memory_order_acq_rel);
         header()->data_tail = tail;
     }
 
     uint64_t data_tail() const
     {
         auto tail = header()->data_tail;
-        // TODO do we need a rmb here?
+        std::atomic_thread_fence(std::memory_order_acq_rel);
         return tail;
     }
 
