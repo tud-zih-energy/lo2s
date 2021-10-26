@@ -142,7 +142,7 @@ public:
 
     otf2::definition::metric_class perf_metric_class(MeasurementScope scope)
     {
-        assert(scope.type == MeasuerementScopeType::GROUP_METRIC ||
+        assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
                scope.type == MeasurementScopeType::USERSPACE_METRIC);
 
         if (scope.type == MeasurementScopeType::GROUP_METRIC)

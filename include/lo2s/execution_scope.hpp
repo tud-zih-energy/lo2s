@@ -80,17 +80,17 @@ public:
 
     Thread as_thread() const
     {
-        assert(type == ExecutionScope::THREAD);
+        assert(type == ExecutionScopeType::THREAD);
         return Thread(id);
     }
     Process as_process() const
     {
-        assert(type == ExecutionScope::PROCESS);
+        assert(type == ExecutionScopeType::PROCESS);
         return Process(id);
     }
     Cpu as_cpu() const
     {
-        assert(type == ExecutionScope::CPU);
+        assert(type == ExecutionScopeType::CPU);
         return Cpu(id);
     }
 
