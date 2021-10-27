@@ -10,50 +10,49 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        build-type: [Debug, RelWithDebInfo]
         os: [ubuntu-20.04]
-        compiler: [g++-9, g++-10, clang++-12, clang++-10, clang++-11]
+        compiler: [g++-9, g++-10, clang++-10, clang++-11, clang++-12]
         include:
-          - os: ubuntu-16.04
-            compiler: g++-9
           - os: ubuntu-18.04
             compiler: g++-9
+            build-type: Debug
           - os: ubuntu-18.04
             compiler: g++-10
-          - os: ubuntu-20.04
-            compiler: clang++-12
+            build-type: Debug
 
     runs-on: ${{ matrix.os }}
-          
+
     steps:
-    - uses: actions/checkout@v2
-    - name: Install dependencies
-      run: |
-        sudo apt-get install binutils-dev libiberty-dev
-        sudo pip install git-archive-all
-    - name: Cache OTF2
-      id: cache-otf2
-      uses: actions/cache@v2
-      with:
-        path: /opt/otf2/
-        key: ${{ matrix.os }}-otf2
-    - name: Install OTF2
-      if: steps.cache-otf2.outputs.cache-hit != 'true'
-      run: | 
-        wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
-        tar -xf otf2-${OTF2_VERSION}.tar.gz
-        cd otf2-${OTF2_VERSION}
-        ./configure --prefix=/opt/otf2
-        make -j2 install
-    - name: Run CMake configure
-      env:
-        CXX: ${{ matrix.compiler }}
-      run: cmake .
-    - name: Build
-      run: make -j
-    - name: Create source tarball
-      if: matrix.compiler == 'g++-10'
-      run: make dist
-    - uses: actions/upload-artifact@v2
-      if: matrix.compiler == 'g++-10'
-      with:
-        path: lo2s*.tar.bz2
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get install binutils-dev libiberty-dev
+          sudo pip install git-archive-all
+      - name: Cache OTF2
+        id: cache-otf2
+        uses: actions/cache@v2
+        with:
+          path: /opt/otf2/
+          key: ${{ matrix.os }}-otf2
+      - name: Install OTF2
+        if: steps.cache-otf2.outputs.cache-hit != 'true'
+        run: |
+          wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+          tar -xf otf2-${OTF2_VERSION}.tar.gz
+          cd otf2-${OTF2_VERSION}
+          ./configure --prefix=/opt/otf2
+          make -j2 install
+      - name: Run CMake configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+      - name: Build
+        run: make -j
+      - name: Create source tarball
+        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'Release' }}
+        run: make dist
+      - uses: actions/upload-artifact@v2
+        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'Release' }}
+        with:
+          path: lo2s*.tar.bz2
