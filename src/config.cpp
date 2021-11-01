@@ -465,6 +465,7 @@ void parse_program_options(int argc, const char** argv)
 
     // time synchronization
     config.use_clockid = false;
+    config.use_pebs = false;
     try
     {
         std::string requested_clock_name = arguments.get("clockid");
