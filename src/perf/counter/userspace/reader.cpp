@@ -72,8 +72,9 @@ void Reader<T>::read()
 {
     for (std::size_t i = 0; i < counter_fds_.size(); i++)
     {
-        [[maybe_unused]] auto bytes_read = ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
-        
+        [[maybe_unused]] auto bytes_read =
+            ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
+
         assert(bytes_read == sizeof(UserspaceReadFormat));
     }
 
