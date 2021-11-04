@@ -12,6 +12,7 @@
 #include <ios>
 #include <iostream>
 #include <map>
+#include <regex>
 
 #include <cstdint>
 #include <ctime>
@@ -21,6 +22,7 @@ extern "C"
 #include <limits.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -243,5 +245,97 @@ void try_pin_to_scope(ExecutionScope scope)
 Thread gettid()
 {
     return Thread(syscall(SYS_gettid));
+}
+
+std::vector<BlockDevice> get_block_devices()
+{
+    std::vector<BlockDevice> result;
+    std::filesystem::path sys_dev_path("/sys/dev/block");
+
+    const std::regex devname_regex("DEVNAME=(\\S+)");
+    const std::regex devtype_regex("DEVTYPE=(\\S+)");
+    const std::regex major_regex("MAJOR=(\\S+)");
+    const std::regex minor_regex("MINOR=(\\S+)");
+
+    std::smatch devname_match;
+    std::smatch devtype_match;
+    std::smatch major_match;
+    std::smatch minor_match;
+
+    for (const std::filesystem::directory_entry& dir_entry :
+         std::filesystem::directory_iterator(sys_dev_path))
+    {
+        std::string path_str = dir_entry.path().string();
+        std::string devname = "unknown device";
+        uint32_t major = 0;
+        uint32_t minor = 0;
+        std::string devtype = "partition";
+
+        std::filesystem::path uevent_path = dir_entry.path() / "uevent";
+        std::ifstream uevent_file(uevent_path);
+
+        while (uevent_file.good())
+        {
+            std::string line;
+            uevent_file >> line;
+            if (std::regex_match(line, devname_match, devname_regex))
+            {
+                devname = fmt::format("/dev/{}", devname_match[1].str());
+            }
+            else if (std::regex_match(line, devtype_match, devtype_regex))
+            {
+                devtype = devtype_match[1].str();
+            }
+            else if (std::regex_match(line, major_match, major_regex))
+            {
+                major = std::stoi(major_match[1].str());
+            }
+            else if (std::regex_match(line, minor_match, minor_regex))
+            {
+                minor = std::stoi(minor_match[1].str());
+            }
+        }
+
+        uint32_t parent_major = 0;
+        uint32_t parent_minor = 0;
+        if (devtype == "partition")
+        {
+            std::filesystem::path parent_dev("/sys");
+
+            // Because someone at Linux has a serious glue-sniffing problem these symlinks are
+            // relative paths and not absolute. Solution: delete the relative part "../../" from the
+            // beginning and make it absolute
+            parent_dev =
+                parent_dev /
+                (std::filesystem::read_symlink(dir_entry.path()).parent_path().string().substr(6));
+
+            std::ifstream parent_uevent_file(parent_dev / "uevent");
+            while (parent_uevent_file.good())
+            {
+                std::string line;
+                parent_uevent_file >> line;
+
+                if (std::regex_match(line, major_match, major_regex))
+                {
+                    parent_major = std::stoi(major_match[1].str());
+                }
+                else if (std::regex_match(line, minor_match, minor_regex))
+                {
+                    parent_minor = std::stoi(minor_match[1].str());
+                }
+            }
+        }
+
+        if (devtype == "partition")
+        {
+            result.push_back(BlockDevice::partition(makedev(major, minor), devname,
+                                                    makedev(parent_major, parent_minor)));
+        }
+        else
+        {
+            result.push_back(BlockDevice::disk(makedev(major, minor), devname));
+        }
+    }
+    return result;
 }
 } // namespace lo2s

@@ -90,6 +90,9 @@ struct Config
     clockid_t clockid;
     // x86_energy
     bool use_x86_energy;
+    // block I/O
+    bool use_block_io;
+    size_t block_io_cache_size;
 };
 
 const Config& config();

@@ -133,6 +133,7 @@ set(SOURCE_FILES
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
+    src/monitor/bio_monitor.cpp
     src/process_controller.cpp
 
     src/perf/event_provider.cpp
@@ -148,6 +149,7 @@ set(SOURCE_FILES
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
+    src/perf/bio/event_cacher.cpp
 
     src/time/time.cpp
 

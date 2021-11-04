@@ -82,6 +82,11 @@ struct ByProcessTag
 };
 using ByProcess = SimpleKeyType<Process, ByProcessTag>;
 
+struct ByDevTag
+{
+};
+using ByDev = SimpleKeyType<dev_t, ByDevTag>;
+
 struct ByStringTag
 {
 };
@@ -112,12 +117,11 @@ struct Holder
 {
     using type = typename otf2::get_default_holder<Definition>::type;
 };
-
 template <>
 struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
-                                                ByProcess, ByCpu, ByPackage>;
+                                                ByProcess, ByDev, ByCpu, ByPackage>;
 };
 template <>
 struct Holder<otf2::definition::regions_group>
@@ -131,6 +135,16 @@ struct Holder<otf2::definition::metric_class>
     using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString>;
 };
 template <>
+struct Holder<otf2::definition::io_handle>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByDev>;
+};
+template <>
+struct Holder<otf2::definition::io_regular_file>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByDev>;
+};
+template <>
 struct Holder<otf2::definition::string>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::string, ByString>;
@@ -138,13 +152,14 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByExecutionScope>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::location_group, ByExecutionScope, ByDev>;
 };
 template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope>;
+                                                ByMeasurementScope, ByDev>;
 };
 template <>
 struct Holder<otf2::definition::region>
@@ -164,7 +179,7 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByDev>;
 };
 template <>
 struct Holder<otf2::definition::comm_group>

@@ -27,6 +27,8 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
+#include <thread>
+
 namespace lo2s
 {
 namespace monitor
@@ -61,6 +63,21 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         catch (std::exception& e)
         {
             Log::warn() << "Failed to initialize tracepoint events: " << e.what();
+        }
+    }
+
+    if (config().use_block_io)
+    {
+        for (auto& entry : get_block_devices())
+        {
+            writers_.emplace(
+                std::piecewise_construct, std::forward_as_tuple(entry.id),
+                std::forward_as_tuple(std::make_unique<perf::bio::Writer>(trace_, entry)));
+        }
+        for (const auto& cpu : Topology::instance().cpus())
+        {
+            bio_monitors_.emplace_back(std::make_unique<BioMonitor>(trace_, Cpu(cpu.id), writers_))
+                ->start();
         }
     }
 
@@ -128,6 +145,22 @@ MainMonitor::~MainMonitor()
         for (auto& tracepoint_monitor : tracepoint_monitors_)
         {
             tracepoint_monitor->stop();
+        }
+    }
+    if (config().use_block_io)
+    {
+        for (auto& bio_monitor : bio_monitors_)
+        {
+            bio_monitor->stop();
+        }
+        std::vector<std::thread> bio_workers;
+        for (auto& writer_ : writers_)
+        {
+            bio_workers.emplace_back(&perf::bio::Writer::write_events, std::ref(*writer_.second));
+        }
+        for (auto& worker : bio_workers)
+        {
+            worker.join();
         }
     }
 

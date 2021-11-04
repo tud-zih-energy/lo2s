@@ -107,7 +107,10 @@ public:
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& switch_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
+    otf2::writer::local& bio_writer(BlockDevice& device);
     otf2::writer::local& create_metric_writer(const std::string& name);
+
+    otf2::definition::io_handle& block_io_handle(BlockDevice& device);
 
     otf2::definition::metric_member
     metric_member(const std::string& name, const std::string& description,
@@ -256,6 +259,18 @@ private:
         }
     }
 
+    const otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
+    {
+        if (device.type == BlockDeviceType::PARTITION)
+        {
+            if (registry_.has<otf2::definition::system_tree_node>(ByDev(device.parent)))
+            {
+                return registry_.get<otf2::definition::system_tree_node>(ByDev(device.parent));
+            }
+        }
+        return bio_system_tree_node_;
+    }
+
     void create_userspace_metric_class()
     {
         const auto& counter_collection_ = perf::counter::requested_userspace_counters();
@@ -303,11 +318,16 @@ private:
     std::map<Thread, IpCctxEntry> calling_context_tree_;
 
     otf2::definition::comm_locations_group& comm_locations_group_;
+    otf2::definition::comm_locations_group& hardware_comm_locations_group_;
     otf2::definition::regions_group& lo2s_regions_group_;
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_group_metric_class_;
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> perf_userspace_metric_class_;
+
+    otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> bio_system_tree_node_;
+    otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> bio_paradigm_;
+    otf2::definition::detail::weak_ref<otf2::definition::comm_group> bio_comm_group_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 

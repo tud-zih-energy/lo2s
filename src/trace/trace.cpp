@@ -82,8 +82,12 @@ Trace::Trace()
   interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
       intern("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
       otf2::common::base_type::decimal, 0, config().sampling_period)),
+
   comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
       intern("All pthread locations"), otf2::common::paradigm_type::pthread,
+      otf2::common::group_flag_type::none)),
+  hardware_comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
+      intern("All hardware locations"), otf2::common::paradigm_type::hardware,
       otf2::common::group_flag_type::none)),
   lo2s_regions_group_(registry_.create<otf2::definition::regions_group>(
       intern("lo2s"), otf2::common::paradigm_type::user, otf2::common::group_flag_type::none)),
@@ -154,6 +158,32 @@ Trace::Trace()
     }
 
     groups_.add_process(NO_PARENT_PROCESS);
+
+    if (config().use_block_io)
+    {
+        bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
+            intern("block devices"), intern("hardware"), system_tree_root_node_);
+
+        const std::vector<otf2::common::io_paradigm_property_type> properties;
+        const std::vector<otf2::attribute_value> values;
+        bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
+            intern("block_io"), intern("block layer I/O"),
+            otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
+            properties, values);
+
+        bio_comm_group_ = registry_.create<otf2::definition::comm_group>(
+            intern("block devices"), otf2::common::paradigm_type::hardware,
+            otf2::common::group_flag_type::none);
+
+        for (auto& device : get_block_devices())
+        {
+            if (device.type == BlockDeviceType::DISK)
+            {
+                block_io_handle(device);
+                bio_writer(device);
+            }
+        }
+    }
 }
 
 void Trace::begin_record()
@@ -206,6 +236,11 @@ Trace::~Trace()
 
             regions_group.add_member(thread_region);
         }
+    }
+
+    if (starting_time_ > stopping_time_)
+    {
+        stopping_time_ = starting_time_;
     }
 
     archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_);
@@ -362,6 +397,26 @@ otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
     return archive_(intern_location);
 }
 
+otf2::writer::local& Trace::bio_writer(BlockDevice& device)
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    const auto& name = intern(fmt::format("block I/O events for {}", device.name));
+
+    const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
+        ByDev(device.id), intern(device.name), intern("block device"), bio_system_tree_node_);
+
+    const auto& bio_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByDev(device.id), name, otf2::common::location_group_type::process, node);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByDev(device.id), name, bio_location_group,
+        otf2::definition::location::location_type::cpu_thread);
+
+    hardware_comm_locations_group_.add_member(intern_location);
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::switch_writer(const ExecutionScope& writer_scope)
 {
     MeasurementScope scope = MeasurementScope::context_switch(writer_scope);
@@ -385,6 +440,47 @@ otf2::writer::local& Trace::create_metric_writer(const std::string& name)
             ByExecutionScope(ExecutionScope(Thread(METRIC_PID)))),
         otf2::definition::location::location_type::metric);
     return archive_(location);
+}
+
+otf2::definition::io_handle& Trace::block_io_handle(BlockDevice& device)
+{
+
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    // io_pre_created_handle can not be emplaced because it has no ref.
+    // So we have to check if we already created everything
+    if (registry_.has<otf2::definition::io_handle>(ByDev(device.id)))
+    {
+        return registry_.get<otf2::definition::io_handle>(ByDev(device.id));
+    }
+
+    const auto& device_name = intern(device.name);
+
+    const otf2::definition::system_tree_node& parent = bio_parent_node(device);
+
+    std::string device_class = (device.type == BlockDeviceType::PARTITION) ? "partition" : "disk";
+
+    const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
+        ByDev(device.id), device_name, intern(device_class), parent);
+
+    const auto& file =
+        registry_.emplace<otf2::definition::io_regular_file>(ByDev(device.id), device_name, node);
+
+    const auto& block_comm =
+        registry_.emplace<otf2::definition::comm>(ByDev(device.id), device_name, bio_comm_group_,
+                                                  otf2::definition::comm::comm_flag_type::none);
+
+    // we could have io handle parents and childs here (block device being the parent (sda),
+    // partition being the child (sda1)) but that seems like it would be overkill.
+    auto& handle = registry_.emplace<otf2::definition::io_handle>(
+        ByDev(device.id), device_name, file, bio_paradigm_,
+        otf2::common::io_handle_flag_type::pre_created, block_comm);
+
+    // todo: set status flags accordingly
+    registry_.create<otf2::definition::io_pre_created_handle_state>(
+        handle, otf2::common::io_access_mode_type::read_write,
+        otf2::common::io_status_flag_type::none);
+    return handle;
 }
 
 otf2::definition::metric_member

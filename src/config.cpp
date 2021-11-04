@@ -120,6 +120,7 @@ void parse_program_options(int argc, const char** argv)
     auto& kernel_tracepoint_options = parser.group("Kernel tracepoint options");
     auto& x86_adapt_options = parser.group("x86_adapt options");
     auto& x86_energy_options = parser.group("x86_energy options");
+    auto& io_options = parser.group("I/O recording options");
 
     lo2s::Config config;
 
@@ -274,6 +275,12 @@ void parse_program_options(int argc, const char** argv)
 
     x86_energy_options.toggle("x86-energy", "Add x86_energy recordings.").short_name("X");
 
+    io_options.toggle("block-io",
+                      "Enable recording of block I/O events (requires access to debugfs)");
+    io_options.option("block-io-cache-size", "Size (in events) of the block I/O event cache")
+        .optional()
+        .metavar("NUM")
+        .default_value("1000");
     nitro::options::arguments arguments;
     try
     {
@@ -300,6 +307,8 @@ void parse_program_options(int argc, const char** argv)
     config.perf_userspace_events = arguments.get_all("userspace-metric-event");
     config.standard_metrics = arguments.given("standard-metrics");
     config.use_x86_energy = arguments.given("x86-energy");
+    config.use_block_io = arguments.given("block-io");
+    config.block_io_cache_size = arguments.as<std::size_t>("block-io-cache-size");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
