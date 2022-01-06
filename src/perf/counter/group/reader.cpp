@@ -79,7 +79,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
     leader_attr.enable_on_exec = enable_on_exec;
 
-    group_leader_fd_ = perf_try_event_open(&leader_attr, scope, -1, 0);
+    group_leader_fd_ = perf_try_event_open(&leader_attr, scope, -1, 0, config().cgroup_fd);
     if (group_leader_fd_ < 0)
     {
         Log::error() << "perf_event_open for counter group leader failed";

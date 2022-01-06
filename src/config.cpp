@@ -22,6 +22,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/build_config.hpp>
+
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
@@ -42,11 +43,14 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <ctime>   // for CLOCK_* macros
+#include <cstring>
+#include <ctime> // for CLOCK_* macros
+#include <filesystem>
 #include <iomanip> // for std::setw
 
 extern "C"
 {
+#include <fcntl.h>
 #include <unistd.h>
 }
 
@@ -175,6 +179,12 @@ void parse_program_options(int argc, const char** argv)
     general_options.toggle("list-tracepoints", "List available kernel tracepoint events.");
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
+
+    general_options
+        .option("cgroup",
+                "Only record perf events for the given cgroup. Can only be used in system-mode")
+        .metavar("NAME")
+        .optional();
 
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
@@ -439,9 +449,55 @@ void parse_program_options(int argc, const char** argv)
         {
             config.sampling = true;
         }
+
+        if (arguments.provided("cgroup"))
+        {
+            std::ifstream mtab("/proc/mounts");
+
+            // This regex does not work when cgroupfs is mounted on a path containing whitespaces
+            // But i think people that mount important Linux filesystems on paths containing
+            // whitespaces should not be let anywhere near lo2s anyways
+            // /proc/mounts format:
+            // device mountpoint fs_type options freq passno
+            std::regex cgroup_regex(R"((\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+))");
+            std::smatch cgroup_match;
+            std::string line;
+            while (std::getline(mtab, line))
+            {
+                if (std::regex_match(line, cgroup_match, cgroup_regex))
+                {
+                    // For the ancient cgroupfs mount point we have to use the one with perf_event
+                    // in the options
+                    if (cgroup_match[3].str() != "cgroup" ||
+                        cgroup_match[4].str().find("perf_event"))
+                    {
+                        std::filesystem::path cgroup_path =
+                            std::filesystem::path(cgroup_match[2].str()) / arguments.get("cgroup");
+                        config.cgroup_fd = open(cgroup_path.c_str(), O_RDONLY);
+
+                        if (config.cgroup_fd != -1)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (config.cgroup_fd == -1)
+            {
+                Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
+                std::exit(EXIT_FAILURE);
+            }
+        }
     }
     else
     {
+        if (arguments.provided("cgroup"))
+        {
+            Log::fatal() << "cgroup filtering can only be used in system-wide monitoring mode";
+            std::exit(EXIT_FAILURE);
+        }
+
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
 

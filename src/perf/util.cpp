@@ -29,12 +29,17 @@ int perf_event_paranoid()
 }
 
 int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                    unsigned long flags)
+                    unsigned long flags, int cgroup_fd)
 {
     int cpuid = -1;
     pid_t pid = -1;
     if (scope.is_cpu())
     {
+        if (cgroup_fd != -1)
+        {
+            pid = cgroup_fd;
+            flags |= PERF_FLAG_PID_CGROUP;
+        }
         cpuid = scope.as_cpu().as_int();
     }
     else
@@ -95,14 +100,14 @@ void perf_check_disabled()
     }
 }
 int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                        unsigned long flags)
+                        unsigned long flags, int cgroup_fd)
 {
-    int fd = perf_event_open(perf_attr, scope, group_fd, flags);
+    int fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
     if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
     {
         perf_attr->exclude_kernel = 1;
         perf_warn_paranoid();
-        fd = perf_event_open(perf_attr, scope, group_fd, flags);
+        fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
     }
     return fd;
 }
@@ -125,7 +130,7 @@ int perf_event_description_open(ExecutionScope scope, const EventDescription& de
     perf_attr.clockid = config().clockid;
 #endif
 
-    int fd = perf_try_event_open(&perf_attr, scope, group_fd, 0);
+    int fd = perf_try_event_open(&perf_attr, scope, group_fd, 0, config().cgroup_fd);
     if (fd < 0)
     {
         Log::error() << "perf_event_open for counter failed";
