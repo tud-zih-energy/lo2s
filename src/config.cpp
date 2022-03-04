@@ -452,36 +452,7 @@ void parse_program_options(int argc, const char** argv)
 
         if (arguments.provided("cgroup"))
         {
-            std::ifstream mtab("/proc/mounts");
-
-            // This regex does not work when cgroupfs is mounted on a path containing whitespaces
-            // But i think people that mount important Linux filesystems on paths containing
-            // whitespaces should not be let anywhere near lo2s anyways
-            // /proc/mounts format:
-            // device mountpoint fs_type options freq passno
-            std::regex cgroup_regex(R"((\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+))");
-            std::smatch cgroup_match;
-            std::string line;
-            while (std::getline(mtab, line))
-            {
-                if (std::regex_match(line, cgroup_match, cgroup_regex))
-                {
-                    // For the ancient cgroupfs mount point we have to use the one with perf_event
-                    // in the options
-                    if (cgroup_match[3].str() != "cgroup" ||
-                        cgroup_match[4].str().find("perf_event"))
-                    {
-                        std::filesystem::path cgroup_path =
-                            std::filesystem::path(cgroup_match[2].str()) / arguments.get("cgroup");
-                        config.cgroup_fd = open(cgroup_path.c_str(), O_RDONLY);
-
-                        if (config.cgroup_fd != -1)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
+            config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
 
             if (config.cgroup_fd == -1)
             {
