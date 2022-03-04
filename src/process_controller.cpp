@@ -265,6 +265,7 @@ void ProcessController::handle_signal(Thread child, int status)
             // exit if detached from first child (the original sampled process)
             if (child == first_child_)
             {
+                std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]" << std::endl;
                 Log::info() << "Exiting monitor with status " << 0;
                 throw std::system_error(0, std::system_category());
             }
@@ -307,6 +308,7 @@ void ProcessController::handle_signal(Thread child, int status)
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
+            std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]" << std::endl;
             summary().set_exit_code(WEXITSTATUS(status));
             throw std::system_error(0, std::system_category());
         }
@@ -318,6 +320,7 @@ void ProcessController::handle_signal(Thread child, int status)
         // exit if first child (the original sampled process) is dead
         if (child == first_child_)
         {
+            std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]" << std::endl;
             throw std::system_error(0, std::system_category());
         }
         return;
