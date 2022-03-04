@@ -63,7 +63,8 @@ namespace monitor
 
     std::vector<char*> tmp;
     std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
-                   [](const std::string& s) {
+                   [](const std::string& s)
+                   {
                        char* pc = new char[s.size() + 1];
                        std::strcpy(pc, s.c_str());
                        return pc;

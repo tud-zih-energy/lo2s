@@ -97,15 +97,15 @@ void Summary::show()
 
     std::filesystem::recursive_directory_iterator it(trace_dir_), end;
 
-    trace_size =
-        std::accumulate(it, end, static_cast<size_t>(0),
-                        [](std::size_t sum, const std::filesystem::directory_entry& entry) {
-                            if (!std::filesystem::is_directory(entry))
-                            {
-                                return sum + std::filesystem::file_size(entry);
-                            }
-                            return sum;
-                        });
+    trace_size = std::accumulate(it, end, static_cast<size_t>(0),
+                                 [](std::size_t sum, const std::filesystem::directory_entry& entry)
+                                 {
+                                     if (!std::filesystem::is_directory(entry))
+                                     {
+                                         return sum + std::filesystem::file_size(entry);
+                                     }
+                                     return sum;
+                                 });
 
     if (config().monitor_type == lo2s::MonitorType::PROCESS)
     {

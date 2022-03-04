@@ -74,7 +74,8 @@ void CpuSetMonitor::run()
     {
         int sig;
         auto ret = sigwait(&ss, &sig);
-        std::cout << "[ lo2s: Encountered SIGINT. Stopping measurements and closing trace ]" << std::endl;
+        std::cout << "[ lo2s: Encountered SIGINT. Stopping measurements and closing trace ]"
+                  << std::endl;
         if (ret)
         {
             throw make_system_error();
