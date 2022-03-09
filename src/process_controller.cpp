@@ -267,7 +267,6 @@ void ProcessController::handle_signal(Thread child, int status)
             {
                 std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
                           << std::endl;
-                Log::info() << "Exiting monitor with status " << 0;
                 throw std::system_error(0, std::system_category());
             }
         }
