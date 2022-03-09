@@ -273,7 +273,8 @@ void Trace::add_process(Process parent, Process process, const std::string& name
             ByProcess(process), iname, otf2::common::paradigm_type::pthread,
             otf2::common::group_flag_type::none);
 
-        registry_.emplace<otf2::definition::comm>(ByProcess(process), iname, comm_group);
+        registry_.emplace<otf2::definition::comm>(ByProcess(process), iname, comm_group,
+                                                  otf2::definition::comm::comm_flag_type::none);
     }
 }
 

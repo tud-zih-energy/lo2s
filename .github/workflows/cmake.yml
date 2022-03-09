@@ -3,7 +3,7 @@ name: Build
 on: [push, pull_request]
 
 env:
-  OTF2_VERSION: 2.2
+  OTF2_VERSION: "3.0"
 
 jobs:
   build:
@@ -39,7 +39,7 @@ jobs:
       - name: Install OTF2
         if: steps.cache-otf2.outputs.cache-hit != 'true'
         run: |
-          wget https://www.vi-hps.org/cms/upload/packages/otf2/otf2-${OTF2_VERSION}.tar.gz
+          wget https://perftools.pages.jsc.fz-juelich.de/cicd/otf2/tags/otf2-${OTF2_VERSION}/otf2-${OTF2_VERSION}.tar.gz
           tar -xf otf2-${OTF2_VERSION}.tar.gz
           cd otf2-${OTF2_VERSION}
           ./configure --prefix=/opt/otf2
