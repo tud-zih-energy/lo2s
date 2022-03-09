@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /opt/otf2/
-          key: ${{ matrix.os }}-otf2
+          key: ${{ matrix.os }}-otf2-${OTF2_VERSION}
       - name: Install OTF2
         if: steps.cache-otf2.outputs.cache-hit != 'true'
         run: |
@@ -49,7 +49,7 @@ jobs:
           CXX: ${{ matrix.compiler }}
         run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
       - name: Build
-        run: make -j
+        run: make -j 2
       - name: Create source tarball
         if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' }}
         run: make dist
