@@ -335,6 +335,20 @@ Record L<x86_energy.h(3)> values.
 
 =back
 
+=head2 B<Block I/O> options
+
+=over
+
+=item B<--block-io>
+
+Record block I/O events using the block:block_rq_insert tracepoint for begin events and block:block_rq_complete tracepoint for end events specifically.
+
+=item B<--block-io-cache-size> I<NUM>
+
+Size of the per-CPU cache in number-of-events. A larger cache size might increase performance but comes at the cost of a higher memory footprint.
+
+=back
+
 =head2 Arguments to options
 
 =over

@@ -30,6 +30,7 @@ enum class MeasurementScopeType
     GROUP_METRIC,
     USERSPACE_METRIC,
     SWITCH,
+    BIO,
     UNKNOWN
 };
 
@@ -66,6 +67,11 @@ struct MeasurementScope
         return { MeasurementScopeType::SWITCH, s };
     }
 
+    static MeasurementScope bio(ExecutionScope s)
+    {
+        return { MeasurementScopeType::BIO, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -94,6 +100,8 @@ struct MeasurementScope
             return fmt::format("samples for {}", scope.name());
         case MeasurementScopeType::SWITCH:
             return fmt::format("context switches for {}", scope.name());
+        case MeasurementScopeType::BIO:
+            return fmt::format("block layer I/O events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

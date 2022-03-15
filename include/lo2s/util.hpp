@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/types.hpp>
 
 #include <filesystem>
@@ -32,6 +33,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <cstdint>
 #include <ctime>
@@ -59,12 +61,7 @@ public:
     T& operator[](const std::string& name)
     {
         std::lock_guard<std::mutex> guard(mutex_);
-        if (elements_.count(name) == 0)
-        {
-            elements_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                              std::forward_as_tuple(name));
-        }
-        return elements_.at(name);
+        return elements_.try_emplace(name, name).first->second;
     }
 
 private:
@@ -102,4 +99,6 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 void try_pin_to_scope(ExecutionScope scope);
 
 Thread gettid();
+
+std::vector<BlockDevice> get_block_devices();
 } // namespace lo2s
