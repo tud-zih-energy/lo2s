@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/types.hpp>
 
 #include <filesystem>
@@ -60,49 +61,12 @@ public:
     T& operator[](const std::string& name)
     {
         std::lock_guard<std::mutex> guard(mutex_);
-        if (elements_.count(name) == 0)
-        {
-            elements_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
-                              std::forward_as_tuple(name));
-        }
-        return elements_.at(name);
+        return elements_.try_emplace(name, name).first->second;
     }
 
 private:
     std::unordered_map<std::string, T> elements_;
     std::mutex mutex_;
-};
-
-enum class BlockDeviceType
-{
-    PARTITION,
-    DISK
-};
-struct BlockDevice
-{
-    BlockDevice() : id(0), name(), type(BlockDeviceType::PARTITION), parent(0)
-    {
-    }
-
-    BlockDevice(dev_t id, const std::string& name, BlockDeviceType type, dev_t parent)
-    : id(id), name(name), type(type), parent(parent)
-    {
-    }
-
-    static BlockDevice partition(dev_t id, const std::string& name, dev_t parent)
-    {
-        return BlockDevice(id, name, BlockDeviceType::PARTITION, parent);
-    }
-
-    static BlockDevice disk(dev_t id, std::string name)
-    {
-        return BlockDevice(id, name, BlockDeviceType::DISK, 0);
-    }
-
-    dev_t id;
-    std::string name;
-    BlockDeviceType type;
-    dev_t parent;
 };
 
 std::size_t get_page_size();
@@ -135,5 +99,6 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 void try_pin_to_scope(ExecutionScope scope);
 
 Thread gettid();
+
 std::vector<BlockDevice> get_block_devices();
 } // namespace lo2s

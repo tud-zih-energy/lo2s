@@ -52,12 +52,12 @@ public:
         uint8_t common_preempt_count; // 4
         int32_t common_pid;           // 8
 
-        uint32_t dev; // 12
-        char padding[4];
+        uint32_t dev;    // 12
+        char padding[4]; // 16
         uint64_t sector; // 24
 
-        uint32_t nr_sector; // 28
-        int32_t error_or_bytes;
+        uint32_t nr_sector;     // 28
+        int32_t error_or_bytes; // 32
 
         char rwbs[8]; // 40
     };
@@ -73,7 +73,7 @@ public:
 
     bool handle(const Reader::RecordSampleType* sample);
 
-    void end()
+    void finalize()
     {
         for (auto& events : events_)
         {

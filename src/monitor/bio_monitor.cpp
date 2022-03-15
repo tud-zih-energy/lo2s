@@ -41,6 +41,7 @@ BioMonitor::BioMonitor(trace::Trace& trace, Cpu cpu,
     add_fd(bio_issue_cacher_.fd());
     add_fd(bio_complete_cacher_.fd());
 }
+
 void BioMonitor::initialize_thread()
 {
     try_pin_to_scope(cpu_.as_scope());
@@ -48,10 +49,11 @@ void BioMonitor::initialize_thread()
 
 void BioMonitor::finalize_thread()
 {
-    bio_insert_cacher_.end();
-    bio_issue_cacher_.end();
-    bio_complete_cacher_.end();
+    bio_insert_cacher_.finalize();
+    bio_issue_cacher_.finalize();
+    bio_complete_cacher_.finalize();
 }
+
 void BioMonitor::monitor(int fd)
 {
     if (fd == timer_pfd().fd)

@@ -55,6 +55,7 @@ struct BioEvent
     : device(device), sector(sector), time(time), type(type), mode(mode), nr_sector(nr_sector)
     {
     }
+
     dev_t device;
     uint64_t sector;
     uint64_t time;
@@ -80,10 +81,10 @@ public:
     {
     }
 
-    void submit_events(const std::vector<BioEvent>& new_events_)
+    void submit_events(const std::vector<BioEvent>& new_events)
     {
         std::lock_guard<std::mutex> guard(lock_);
-        for (auto& event : new_events_)
+        for (auto& event : new_events)
         {
             events_.emplace(event);
         }
@@ -93,13 +94,17 @@ public:
     {
         if (events_.empty())
         {
+            // early exit, so we don't create unnecessary definitions
             return;
         }
+
         otf2::writer::local& writer = trace_.bio_writer(device_);
         otf2::definition::io_handle& handle = trace_.block_io_handle(device_);
+
         while (!events_.empty())
         {
             const BioEvent& event = events_.top();
+
             if (event.type == BioEventType::INSERT)
             {
                 writer << otf2::event::io_operation_begin(
@@ -117,6 +122,7 @@ public:
                 writer << otf2::event::io_operation_complete(time_converter_(event.time), handle,
                                                              event.nr_sector, event.sector);
             }
+
             events_.pop();
         }
     }

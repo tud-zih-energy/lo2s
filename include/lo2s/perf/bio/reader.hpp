@@ -64,6 +64,7 @@ public:
         uint32_t tp_data_size;
         char tp_data[1];
     };
+
     Reader(Cpu cpu, BioEventType type) : type_(type), cpu_(cpu)
     {
         struct perf_event_attr attr = common_perf_event_attrs();
@@ -90,12 +91,11 @@ public:
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
+
         Log::debug() << "Opened block_rq_insert_tracing";
 
         try
         {
-            // asynchronous delivery
-            // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
             if (fcntl(fd_, F_SETFL, O_NONBLOCK))
             {
                 throw_errno();

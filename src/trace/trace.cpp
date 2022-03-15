@@ -26,6 +26,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
