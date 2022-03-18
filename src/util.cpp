@@ -358,7 +358,8 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
         {
             // For the ancient cgroupfs mount point we have to use the one with perf_event
             // in the options
-            if (cgroup_match[3].str() != "cgroup" || cgroup_match[4].str().find("perf_event"))
+            if (cgroup_match[3].str() == "cgroup2" ||
+                (cgroup_match[3].str() == "cgroup" && cgroup_match[4].str().find("perf_event")))
             {
                 std::filesystem::path cgroup_path =
                     std::filesystem::path(cgroup_match[2].str()) / cgroup;
