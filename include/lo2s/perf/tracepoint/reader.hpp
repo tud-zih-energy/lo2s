@@ -120,7 +120,7 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0);
+        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0, config().cgroup_fd);
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";

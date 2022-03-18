@@ -184,6 +184,10 @@ Beyond standard clocks lo2s also supports a special "pebs" clock, which will
 give the same timestamps as "monotonic-raw", but is set up in a slightly different
 way to support the large PEBS feature of newer (Skylake+) Intel processors
 
+=item B<--cgroup> I<NAME>
+
+If set, only perf events for processes in the I<NAME> cgroup are recorded.
+
 =item B<--list-clockids>
 
 List the names of clocks that can be used as I<CLOCKID> argument.

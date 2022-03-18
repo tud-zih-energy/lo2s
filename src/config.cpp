@@ -22,6 +22,7 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/build_config.hpp>
+
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_provider.hpp>
@@ -42,11 +43,14 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <ctime>   // for CLOCK_* macros
+#include <cstring>
+#include <ctime> // for CLOCK_* macros
+#include <filesystem>
 #include <iomanip> // for std::setw
 
 extern "C"
 {
+#include <fcntl.h>
 #include <unistd.h>
 }
 
@@ -175,6 +179,12 @@ void parse_program_options(int argc, const char** argv)
     general_options.toggle("list-tracepoints", "List available kernel tracepoint events.");
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
+
+    general_options
+        .option("cgroup",
+                "Only record perf events for the given cgroup. Can only be used in system-mode")
+        .metavar("NAME")
+        .optional();
 
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
@@ -439,9 +449,26 @@ void parse_program_options(int argc, const char** argv)
         {
             config.sampling = true;
         }
+
+        if (arguments.provided("cgroup"))
+        {
+            config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
+
+            if (config.cgroup_fd == -1)
+            {
+                Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
+                std::exit(EXIT_FAILURE);
+            }
+        }
     }
     else
     {
+        if (arguments.provided("cgroup"))
+        {
+            Log::fatal() << "cgroup filtering can only be used in system-wide monitoring mode";
+            std::exit(EXIT_FAILURE);
+        }
+
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
 

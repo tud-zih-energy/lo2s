@@ -146,7 +146,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = perf_event_open(&perf_attr, scope, -1, 0);
+            fd_ = perf_event_open(&perf_attr, scope, -1, 0, config().cgroup_fd);
 
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {
