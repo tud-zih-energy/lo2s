@@ -1,4 +1,4 @@
-![Build](https://github.com/tud-zih-energy/lo2s/workflows/Build/badge.svg)
+[![Build](https://github.com/tud-zih-energy/lo2s/actions/workflows/cmake.yml/badge.svg)](https://github.com/tud-zih-energy/lo2s/actions/workflows/cmake.yml)
 
 # `lo2s` - Lightweight Node-Level Performance Monitoring
 
@@ -31,7 +31,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 # Build Requirements
 
  * Linux<sup>1</sup>
- * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 2.2)
+ * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 3.0)
  * libbfd
  * libiberty
  * CMake (>= 3.11)
