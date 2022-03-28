@@ -24,8 +24,6 @@
 #include <lo2s/line_info.hpp>
 #include <lo2s/log.hpp>
 
-#include <boost/dll/runtime_symbol_info.hpp>
-
 #include <iomanip>
 #include <thread>
 
@@ -33,16 +31,21 @@ namespace lo2s
 {
 namespace java
 {
-JVMSymbols::JVMSymbols(pid_t jvm_pid) : pid_(jvm_pid)
+JVMSymbols::JVMSymbols(Process jvm_pid) : pid_(jvm_pid)
 {
     attach();
     fifo_ = std::make_unique<ipc::Fifo>(pid_, "jvmti");
+
+    std::thread reader{ [this]() { this->read_symbols(); } };
+    reader.detach();
 }
 
 std::unique_ptr<JVMSymbols> JVMSymbols::instance;
 
 LineInfo JVMSymbols::lookup(Address addr) const
 {
+    std::lock_guard<std::mutex> lock(mutex_);
+
     // on purpose now fallback to an unknown line info
     return LineInfo::for_java_symbol(symbols_.at(addr));
 }
@@ -53,14 +56,14 @@ void JVMSymbols::attach()
 
     ipc::Fifo::create(pid_, "jvmti");
 
-    auto path = boost::dll::program_location().parent_path();
+    auto path = std::filesystem::canonical("/proc/self/exe").parent_path();
     auto location = path / "lo2s-agent.jar";
 
     Log::debug() << "lo2s JVM agent jar: " << location;
 
     std::string command("$JAVA_HOME/bin/java -cp " + location.string() +
                         ":$JAVA_HOME/lib/tools.jar de.tudresden.zih.lo2s.AttachOnce " +
-                        std::to_string(pid_) + " " + path.string());
+                        std::to_string(pid_.as_pid_t()) + " " + path.string());
     std::thread attacher_([command]() { system(command.c_str()); });
 
     attacher_.detach();
@@ -68,16 +71,13 @@ void JVMSymbols::attach()
 
 void JVMSymbols::read_symbols()
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    Log::warn() << "read symbols called";
 
     try
     {
-        while (true)
+        while (running_)
         {
-            if (!fifo_->has_data())
-            {
-                break;
-            }
+            fifo_->await_data();
 
             std::uint64_t address;
 
@@ -85,22 +85,34 @@ void JVMSymbols::read_symbols()
 
             int len;
 
+            fifo_->await_data();
             fifo_->read(len);
 
             std::string symbol;
 
+            fifo_->await_data();
             fifo_->read(symbol);
 
-            Log::info() << "Read java symbol from fifo: 0x" << std::hex << address << " " << symbol;
-
-            auto res =
-                symbols_.emplace(std::piecewise_construct, std::make_tuple(address, address + len),
-                                 std::make_tuple(symbol));
-
-            if (!res.second)
+            Log::debug() << "Read java symbol from fifo: 0x" << std::hex << address << " "
+                         << symbol;
+            try
             {
-                Log::warn() << "Didn't inserted 0x" << std::hex << address << "-0x" << address + len
-                            << ": " << symbol;
+                std::lock_guard<std::mutex> lock(mutex_);
+
+                auto res = symbols_.emplace(std::piecewise_construct,
+                                            std::make_tuple(address, address + len),
+                                            std::make_tuple(symbol));
+
+                if (!res.second)
+                {
+                    Log::warn() << "Didn't inserted 0x" << std::hex << address << "-0x"
+                                << address + len << ": " << symbol;
+                }
+            }
+            catch (std::exception& e)
+            {
+                // eof in the fifo will throw, so this is fine... sorta
+                Log::error() << "Inserting symbol failed: " << e.what();
             }
         }
     }
@@ -109,6 +121,8 @@ void JVMSymbols::read_symbols()
         // eof in the fifo will throw, so this is fine... sorta
         Log::error() << "Fifo read failed: " << e.what();
     }
+
+    Log::warn() << "read symbols ended";
 }
 } // namespace java
 } // namespace lo2s

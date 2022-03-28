@@ -85,8 +85,7 @@ void MemoryMap::mmap(const RawMemoryMapEntry& entry)
     if (entry.filename.empty() || std::string("//anon") == entry.filename ||
         std::string("/dev/zero") == entry.filename ||
         std::string("/anon_hugepage") == entry.filename ||
-        nitro::lang::starts_with(entry.filename, "/SYSV") ||
-        nitro::lang::ends_with(entry.filename, ".jsa"))
+        nitro::lang::starts_with(entry.filename, "/SYSV") || entry.filename.ends_with(".jsa"))
     {
         Log::debug() << "mmap: skipping dso: " << entry.filename << " (known non-library)";
         return;
@@ -173,7 +172,6 @@ LineInfo MemoryMap::lookup_line_info(Address ip) const
         {
             // This will just happen a lot in practice
             Log::trace() << "Trying to resolve " << ip << " with Java symbols";
-            java::JVMSymbols::instance->read_symbols();
             return java::JVMSymbols::instance->lookup(ip);
         }
         catch (...)

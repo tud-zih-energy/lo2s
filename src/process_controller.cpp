@@ -237,7 +237,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
         // Child is about to exit. Signal its monitor to stop, then clean up.
         try
         {
-            Log::info() << "Thread  " << child << " is about to exit";
+            Log::info() << child << " is about to exit";
             monitor_.exit_thread(child);
         }
         catch (std::out_of_range&)
@@ -269,7 +269,7 @@ ProcessController::SignalHandlingState ProcessController::handle_signal(Thread c
             // exit if detached from first child (the original sampled process)
             if (child == first_child_)
             {
-                java::JVMSymbols::instance->read_symbols();
+                java::JVMSymbols::instance->stop();
                 std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
                           << std::endl;
                 return SignalHandlingState::Stop;

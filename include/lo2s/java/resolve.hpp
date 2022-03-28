@@ -25,7 +25,9 @@
 #include <lo2s/ipc/fifo.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/types.hpp>
 
+#include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -42,17 +44,23 @@ class JVMSymbols
 public:
     static std::unique_ptr<JVMSymbols> instance;
 
-    JVMSymbols(pid_t jvm_pid);
+    JVMSymbols(Process jvm_pid);
 
     LineInfo lookup(Address addr) const;
     void read_symbols();
 
+    void stop()
+    {
+        running_ = false;
+    }
+
 private:
     void attach();
 
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
+    std::atomic<bool> running_ = true;
 
-    pid_t pid_;
+    Process pid_;
     std::unique_ptr<ipc::Fifo> fifo_;
     std::map<Range, std::string> symbols_;
 };

@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/log.hpp>
+#include <lo2s/types.hpp>
 
 #include <fstream>
 #include <mutex>
@@ -35,15 +36,15 @@ namespace ipc
 class Fifo
 {
 public:
-    static void create(pid_t pid, const std::string& suffix = "default");
+    static void create(Process pid, const std::string& suffix = "default");
 
 public:
-    Fifo(pid_t pid, const std::string& suffix = "default");
+    Fifo(Process pid, const std::string& suffix = "default");
 
     template <typename T>
     void write(const T& data)
     {
-        static_assert(std::is_pod<T>::value, "Can only write POD types");
+        static_assert(std::is_trivial<T>::value, "Can only write POD types");
 
         write(reinterpret_cast<const char*>(&data), sizeof(data));
     }
@@ -58,7 +59,7 @@ public:
     template <typename T>
     void read(T& data)
     {
-        static_assert(std::is_pod<T>::value, "Can only write POD types");
+        static_assert(std::is_trivial<T>::value, "Can only read POD types");
 
         read(reinterpret_cast<char*>(&data), sizeof(T));
     }
@@ -68,18 +69,15 @@ public:
         std::size_t size;
         read(size);
 
-        if (has_data())
-        {
-            result.resize(size);
-            read(&result[0], size);
-        }
-        else
-        {
-            throw std::runtime_error("no data available now, this looks bad. :C");
-        }
+        await_data();
+
+        result.resize(size);
+        read(&result[0], size);
     }
 
     bool has_data();
+
+    void await_data();
 
 public:
     void write(const char* data, std::size_t size);
@@ -88,7 +86,7 @@ public:
 public:
     std::string path() const;
 
-    static std::string path(pid_t pid, const std::string& suffix);
+    static std::string path(Process pid, const std::string& suffix);
 
 public:
     int fd() const
@@ -97,7 +95,7 @@ public:
     }
 
 private:
-    pid_t pid_;
+    Process pid_;
     std::string suffix_;
     int fd_;
     std::mutex mutex_;

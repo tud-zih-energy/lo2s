@@ -93,9 +93,9 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
         jvmti->Deallocate((unsigned char*)signature_ptr);
     }
 
-    Log::info() << "cbCompiledMethodLoad: 0x" << std::hex
-                << reinterpret_cast<std::uint64_t>(address) << " " << std::dec << code_size << ": "
-                << symbol_name;
+    Log::debug() << "cbCompiledMethodLoad: 0x" << std::hex
+                 << reinterpret_cast<std::uint64_t>(address) << " " << std::dec << code_size << ": "
+                 << symbol_name;
 
     if (!symbol_name.empty())
     {
@@ -129,8 +129,8 @@ void JNICALL cbDynamicCodeGenerated(jvmtiEnv* jvmti, const char* name, const voi
         fifo->write(reinterpret_cast<std::uint64_t>(address));
         fifo->write(len);
         fifo->write(name_str);
-        Log::info() << "cbDynamicCodeGenerated: 0x" << std::hex
-                    << reinterpret_cast<std::uint64_t>(address) << " " << len << ": " << name_str;
+        Log::debug() << "cbDynamicCodeGenerated: 0x" << std::hex
+                     << reinterpret_cast<std::uint64_t>(address) << " " << len << ": " << name_str;
     }
     catch (...)
     {
@@ -144,21 +144,72 @@ static void JNICALL cbClassPrepare(jvmtiEnv* jvmti, JNIEnv*, jthread, jclass cls
     {
         char* class_signature_ptr;
         jvmti->GetClassSignature(cls, &class_signature_ptr, nullptr);
-        class_str = class_signature_ptr;
+        class_str = lo2s::java::parse_type(class_signature_ptr);
         jvmti->Deallocate((unsigned char*)class_signature_ptr);
     }
 
     Log::info() << "class loaded: " << class_str;
 
     jint method_count;
-    jmethod* methods_ptr;
+    jmethodID* methods_ptr;
 
     jvmti->GetClassMethods(cls, &method_count, &methods_ptr);
 
     for (jint i = 0; i < method_count; ++i)
     {
-        std::string me
+        char* name_ptr;
+        char* signature_ptr;
+
+        jvmti->GetMethodName(methods_ptr[i], &name_ptr, &signature_ptr, nullptr);
+
+        std::string name_str(class_str);
+        name_str += std::string("::") + name_ptr + lo2s::java::parse_signature(signature_ptr);
+
+        std::uint64_t address;
+
+        jlocation begin;
+        jlocation end;
+
+        jvmti->GetMethodLocation(methods_ptr[i], &begin, &end);
+        int len = end - begin;
+        ;
+
+        if (begin == 0)
+        {
+            // only got bytecode offsets, so use them instead
+            jint count;
+            unsigned char* bytecodes;
+
+            jvmti->GetBytecodes(methods_ptr[i], &count, &bytecodes);
+
+            address = reinterpret_cast<std::uint64_t>(bytecodes);
+        }
+        else
+        {
+            address = static_cast<std::uint64_t>(begin);
+        }
+
+        if (len == 0)
+        {
+            continue;
+        }
+
+        try
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+
+            fifo->write(address);
+            fifo->write(len);
+            fifo->write(name_str);
+            Log::debug() << "cbClassPrepare: 0x" << std::hex << address << " " << len << ": "
+                         << name_str;
+        }
+        catch (...)
+        {
+        }
     }
+
+    Log::info() << "class load finished: " << class_str;
 }
 
 jvmtiError enable_capabilities(jvmtiEnv* jvmti)
@@ -173,6 +224,7 @@ jvmtiError enable_capabilities(jvmtiEnv* jvmti)
     capabilities.can_get_line_numbers = 1;
     capabilities.can_generate_vm_object_alloc_events = 1;
     capabilities.can_generate_compiled_method_load_events = 1;
+    capabilities.can_get_bytecodes = 1;
 
     // Request these capabilities for this JVM TI environment.
     return jvmti->AddCapabilities(&capabilities);
@@ -200,10 +252,11 @@ extern "C"
 {
     JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM* vm, char*, void*)
     {
-        Log::info() << "Loading JNI lo2s plugin";
+        Log::info() << "Attaching JNI lo2s plugin";
+        lo2s::logging::set_min_severity_level(nitro::log::severity_level::info);
         try
         {
-            fifo = std::make_unique<lo2s::ipc::Fifo>(getpid(), "jvmti");
+            fifo = std::make_unique<lo2s::ipc::Fifo>(lo2s::Process{ getpid() }, "jvmti");
         }
         catch (...)
         {
@@ -225,9 +278,10 @@ extern "C"
     JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM* vm, char*, void*)
     {
         Log::info() << "Loading JNI lo2s plugin";
+        lo2s::logging::set_min_severity_level(nitro::log::severity_level::info);
         try
         {
-            fifo = std::make_unique<lo2s::ipc::Fifo>(getpid(), "jvmti");
+            fifo = std::make_unique<lo2s::ipc::Fifo>(lo2s::Process{ getpid() }, "jvmti");
         }
         catch (...)
         {

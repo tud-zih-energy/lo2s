@@ -24,6 +24,8 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 
+#include <iomanip>
+
 #include <cassert>
 
 extern "C"
@@ -40,12 +42,12 @@ namespace lo2s
 namespace ipc
 {
 
-void Fifo::create(pid_t pid, const std::string& suffix)
+void Fifo::create(Process pid, const std::string& suffix)
 {
     check_errno(mkfifo(path(pid, suffix).c_str(), 0666));
 }
 
-Fifo::Fifo(pid_t pid, const std::string& suffix) : pid_(pid), suffix_(suffix)
+Fifo::Fifo(Process pid, const std::string& suffix) : pid_(pid), suffix_(suffix)
 {
     fd_ = open(path().c_str(), O_RDWR);
     if (fd_ == -1)
@@ -79,7 +81,10 @@ void Fifo::read(char* data, std::size_t size)
     {
         auto res = ::read(fd_, data + size - remaining, remaining);
 
-        Log::info() << "read " << res << " bytes: " << std::string(data, data + size);
+        auto logLine = Log::trace() << "read " << res << " bytes: ";
+        for (int i = 0; i < res; ++i)
+            logLine << std::setfill('0') << std::setw(2)
+                    << static_cast<unsigned>(data[i + size - remaining]) << "#";
 
         if (res == -1)
         {
@@ -112,14 +117,29 @@ bool Fifo::has_data()
     return res != 0;
 }
 
+void Fifo::await_data()
+{
+    pollfd pfd;
+
+    pfd.fd = fd_;
+    pfd.events = POLLIN;
+
+    auto res = ::poll(&pfd, 1, -1);
+
+    if (res == -1)
+    {
+        throw_errno();
+    }
+}
+
 std::string Fifo::path() const
 {
     return path(pid_, suffix_);
 }
 
-std::string Fifo::path(pid_t pid, const std::string& suffix)
+std::string Fifo::path(Process pid, const std::string& suffix)
 {
-    return "/tmp/lo2s-Fifo-" + std::to_string(pid) + "-" + suffix;
+    return "/tmp/lo2s-Fifo-" + std::to_string(pid.as_pid_t()) + "-" + suffix;
 }
 } // namespace ipc
 
