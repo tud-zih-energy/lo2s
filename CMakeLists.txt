@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.11)
+
 project(lo2s VERSION 1.5.0)
+set(LO2S_COPYRIGHT_YEAR "2022")
+
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
@@ -240,7 +243,6 @@ if(IN_GIT)
 else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
-set(LO2S_COPYRIGHT_YEAR "2020")
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
 # check for version dependent features and generate a build config
