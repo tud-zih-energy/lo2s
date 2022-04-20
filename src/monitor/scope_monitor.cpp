@@ -71,8 +71,13 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
     }
 
 #ifndef USE_PERF_RECORD_SWITCH
-    switch_writer_ = std::make_unique<perf::tracepoint::SwitchWriter>(scope, parent.trace());
+    if (scope.is_cpu())
+    {
+        switch_writer_ =
+            std::make_unique<perf::tracepoint::SwitchWriter>(scope.as_cpu(), parent.trace());
+    }
 #endif
+
     /* setup the sampling counter(s) and start a monitoring thread */
     start();
 }
