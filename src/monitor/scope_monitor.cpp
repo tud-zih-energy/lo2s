@@ -114,7 +114,7 @@ void ScopeMonitor::monitor(int fd)
         userspace_counter_writer_->read();
     }
 #ifndef USE_PERF_RECORD_SWITCH
-    if (switch_writer_ && (fd == timer_pfd().fd || fd == stop_pfd.fd))
+    if (switch_writer_ && (fd == timer_pfd().fd || fd == stop_pfd().fd))
     {
         switch_writer_->read();
     }
