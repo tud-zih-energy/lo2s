@@ -13,6 +13,9 @@ jobs:
         os: [ubuntu-20.04]
         compiler: [g++-9, g++-10, clang++-10, clang++-11, clang++-12]
         build-type: [Debug, RelWithDebInfo]
+        hw_breakpoint: [ON, OFF]
+        perf_record_switch: [ON, OFF]
+        perf_clockid: [ON, OFF]
         include:
           - os: ubuntu-18.04
             compiler: g++-9
@@ -47,7 +50,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }}
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPONT_COMPAT=${{ matrix.hw_breakpoint }} -DUSE_PERF_CLOCKID=${{ matrix.perf_clockid }} -DUSE_PERF_RECORD_SWITCH=${{ matrix.perf_record_switch }}
       - name: Build
         run: make -j 2
       - name: Create source tarball
