@@ -107,6 +107,11 @@ public:
         return lhs.pid_ == rhs.pid_;
     }
 
+    friend bool operator!=(const Process& lhs, const Process& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     friend bool operator<(const Process& lhs, const Process& rhs)
     {
         return lhs.pid_ < rhs.pid_;
@@ -120,6 +125,11 @@ public:
     static Process invalid()
     {
         return Process(-1);
+    }
+
+    static Process idle()
+    {
+        return Process(0);
     }
 
     pid_t as_pid_t() const
