@@ -29,6 +29,10 @@
 
 #include <lo2s/perf/sample/writer.hpp>
 
+#ifndef USE_PERF_RECORD_SWITCH
+#include <lo2s/perf/tracepoint/switch_writer.hpp>
+#endif
+
 #include <array>
 #include <chrono>
 #include <thread>

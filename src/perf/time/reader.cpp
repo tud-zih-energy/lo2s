@@ -77,6 +77,11 @@ Reader::Reader()
     try
     {
         fd_ = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
+        if (fd_ == -1)
+        {
+            throw_errno();
+        }
+
         init_mmap(fd_);
 
         if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
@@ -95,6 +100,11 @@ Reader::Reader()
     if (pid == 0)
     {
         abort();
+    }
+    else if (pid == -1)
+    {
+        close(fd_);
+        throw_errno();
     }
     waitpid(pid, NULL, 0);
 #endif

@@ -31,6 +31,7 @@
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types.hpp>
 
 namespace lo2s
 {
@@ -45,8 +46,8 @@ static const EventFormat& get_sched_switch_event()
     return evt;
 }
 
-SwitchWriter::SwitchWriter(int cpu, trace::Trace& trace)
-try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.cpu_switch_writer(cpu)),
+SwitchWriter::SwitchWriter(Cpu cpu, trace::Trace& trace)
+try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.switch_writer(cpu.as_scope())),
     trace_(trace), time_converter_(time::Converter::instance()),
     prev_pid_field_(get_sched_switch_event().field("prev_pid")),
     next_pid_field_(get_sched_switch_event().field("next_pid")),
@@ -88,7 +89,7 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     Process next_process = Process(sample->raw_data.get(next_pid_field_));
     if (!current_calling_context_.is_undefined())
     {
-        if (prev_process != current_procesws_)
+        if (prev_process != current_process_)
         {
             Log::warn() << "Conflicting processes: previous: " << prev_process
                         << " != current: " << current_process_
@@ -98,12 +99,12 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     }
     current_process_ = next_process;
 
-    current_calling_context_ = thread_calling_context_ref(current_process.as_thread());
+    current_calling_context_ = thread_calling_context_ref(current_process_.as_thread());
     otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
 
     last_time_point_ = tp;
 
-    if (next_process != 0)
+    if (next_process != Process::idle())
     {
         summary().register_process(next_process);
     }
@@ -115,7 +116,7 @@ SwitchWriter::thread_calling_context_ref(Thread thread)
 {
     auto ret = thread_calling_context_refs_.emplace(
         std::piecewise_construct, std::forward_as_tuple(thread),
-        std::forward_as_tuple(-1, thread_calling_context_refs_.size()));
+        std::forward_as_tuple(Process::invalid(), thread_calling_context_refs_.size()));
     return ret.first->second.entry.ref;
 }
 } // namespace tracepoint

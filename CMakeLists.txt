@@ -8,6 +8,7 @@ include(CMakeDependentOption)
 include(CheckIncludeFiles)
 include(CheckStructHasMember)
 include(CheckFunctionExists)
+include(FeatureSummary)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
@@ -105,10 +106,14 @@ CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_eve
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
+add_feature_info("USE_PERF_CLOCKID" USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events")
 CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
+add_feature_info("USE_PERF_RECORD_SWITCH" USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution")
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
+add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -202,6 +207,7 @@ if(X86Adapt_FOUND)
     )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
 endif()
+add_feature_info("x86_adapt" X86Adapt_FOUND "Provide additional hardware metrics using x86_adapt")
 
 # handle x86_energy dependency
 if(x86_energy_FOUND)
@@ -216,6 +222,7 @@ if(x86_energy_FOUND)
         target_link_libraries(lo2s PRIVATE x86_energy::x86_energy)
     endif()
 endif()
+add_feature_info("x86_energy" x86_energy_FOUND "Provide additional power measurements using x86_energy")
 
 # handle radare dependency
 if (USE_RADARE)
@@ -363,3 +370,5 @@ if(GIT_ARCHIVE_ALL)
 else()
     message(STATUS "Couldn't find git-archive-all. The target `make dist` will not be available. Use 'pip install git-archive-all' to install.")
 endif()
+
+feature_summary(WHAT ENABLED_FEATURES DISABLED_FEATURES)
