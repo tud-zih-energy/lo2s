@@ -100,6 +100,7 @@ find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
+find_package(Sensors)
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
@@ -114,6 +115,8 @@ add_feature_info("USE_PERF_RECORD_SWITCH" USE_PERF_RECORD_SWITCH "Uses PERF_RECO
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
+CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
+add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -234,6 +237,18 @@ if (USE_RADARE)
         )
     else()
         message(SEND_ERROR "Radare not found but requested.")
+    endif()
+endif()
+
+if (USE_SENSORS)
+    if (Sensors_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_SENSORS)
+        target_link_libraries(lo2s PRIVATE Sensors::sensors)
+        target_sources(lo2s PRIVATE
+            src/metric/sensors/recorder.cpp
+        )
+    else()
+        message(SEND_ERROR "Sensors not found but requested.")
     endif()
 endif()
 
