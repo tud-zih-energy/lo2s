@@ -16,13 +16,6 @@ jobs:
         hw_breakpoint: [ON, OFF]
         perf_record_switch: [ON, OFF]
         perf_clockid: [ON, OFF]
-        include:
-          - os: ubuntu-18.04
-            compiler: g++-9
-            build-type: Debug
-          - os: ubuntu-18.04
-            compiler: g++-10
-            build-type: Debug
 
     runs-on: ${{ matrix.os }}
 
