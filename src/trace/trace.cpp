@@ -29,11 +29,11 @@
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/summary.hpp>
+#include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
-
 #include <nitro/env/get.hpp>
 #include <nitro/env/hostname.hpp>
 #include <nitro/lang/string.hpp>
@@ -388,6 +388,20 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
+otf2::writer::local& Trace::syscall_writer(const Cpu& cpu)
+{
+    MeasurementScope scope = MeasurementScope::syscall(cpu.as_scope());
+
+    const auto& syscall_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByMeasurementScope(scope), intern(scope.name()), otf2::common::location_group_type::process,
+        registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu)));
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(scope), intern(scope.name()), syscall_location_group,
+        otf2::definition::location::location_type::cpu_thread);
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
 {
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
@@ -656,6 +670,32 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         otf2::definition::mapping_table::mapping_type_type::calling_context, mappings);
 }
 
+otf2::definition::mapping_table
+Trace::merge_syscall_contexts(const std::set<int64_t>& used_syscalls)
+{
+    std::vector<uint32_t> mappings(syscall_names().size());
+
+    for (const auto& syscall_nr : used_syscalls)
+    {
+        const auto& syscall_name = intern_syscall_str(syscall_nr);
+
+        const auto& intern_region = registry_.emplace<otf2::definition::region>(
+            BySyscall(syscall_nr), syscall_name, syscall_name, syscall_name,
+            otf2::common::role_type::function, otf2::common::paradigm_type::user,
+            otf2::common::flags_type::none, syscall_name, 0, 0);
+
+        const auto& intern_scl = registry_.emplace<otf2::definition::source_code_location>(
+            BySyscall(syscall_nr), syscall_name, 0);
+
+        const auto& ctx = registry_.emplace<otf2::definition::calling_context>(
+            BySyscall(syscall_nr), intern_region, intern_scl);
+        mappings.at(syscall_nr) = ctx.ref();
+    }
+
+    return otf2::definition::mapping_table(otf2::common::mapping_type_type::calling_context,
+                                           mappings);
+}
+
 void Trace::add_thread_exclusive(Thread thread, const std::string& name,
                                  const std::lock_guard<std::recursive_mutex>&)
 {
@@ -726,6 +766,18 @@ void Trace::add_threads(const std::unordered_map<Thread, std::string>& thread_ma
     }
 }
 
+const otf2::definition::string& Trace::intern_syscall_str(int64_t syscall_nr)
+{
+    auto syscall_entry = syscall_names().find(syscall_nr);
+    if (syscall_entry != syscall_names().end())
+    {
+        return intern(syscall_entry->second);
+    }
+    else
+    {
+        return intern(fmt::format("syscall {}", syscall_nr));
+    }
+}
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
 {
     return registry_.emplace<otf2::definition::source_code_location>(ByLineInfo(info),

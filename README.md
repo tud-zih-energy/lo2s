@@ -17,6 +17,7 @@ The traces can contain any of the following information:
    * CPU power measurements (x86_energy)
    * Microarchitecture specific metrics (x86_adapt, per package or per core)
    * Arbitrary metrics through plugins (Score-P compatible)
+   * Syscall activity
 
 In general `lo2s` operates either in **process monitoring** or **system monitoring** mode.
 
@@ -52,7 +53,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
    `sudo sysctl kernel.perf_event_paranoid=1`
 
- * Tracepoints and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
+ * Tracepoints, block I/O, syscalls and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
  Grant permissions at your own discretion.
 
    `sudo mount -t debugfs none /sys/kernel/debug`

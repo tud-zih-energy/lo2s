@@ -16,6 +16,7 @@ include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
+include(cmake/GenerateSyscallHeader.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -105,6 +106,11 @@ find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 
+GEN_SYSCALLS_HEADER(HEADER_GENERATED)
+
+if(NOT HEADER_GENERATED)
+    message(SEND_ERROR "Could not parse syscall names from <sys/syscall.h>.")
+endif()
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
 # configurable options
@@ -137,6 +143,8 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSI
 # prepare list of source files
 set(SOURCE_FILES
     src/types.cpp
+     ${CMAKE_CURRENT_BINARY_DIR}/src/syscalls.cpp
+
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
 
     src/monitor/cpu_set_monitor.cpp
@@ -163,6 +171,7 @@ set(SOURCE_FILES
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
+    src/perf/syscall/writer.cpp
     src/perf/bio/event_cacher.cpp
 
     src/time/time.cpp
@@ -269,6 +278,7 @@ else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
+
 
 # check for version dependent features and generate a build config
 

@@ -26,6 +26,7 @@ S<[B<--metric-leader> I<EVENT>]>
 S<[B<--metric-count> I<N> | B<--metric-frequency> I<HZ>]>
 S<[B<-x> I<KNOB>]>
 S<[B<-X>]>
+S<[B<-s SYSCALL>]>
 S<{ I<PROCESS_MONITORING> | I<SYSTEM_MONITORING> }>
 
 =item I<PROCESS_MONITORING> := { I<COMMAND> | B<--> I<COMMAND> [I<ARGS>...] | B<-p> I<PID> }
@@ -302,6 +303,15 @@ This can only be used in conjunction with B<--metric-leader>
 
 This is used to set the frequency in time interval based metric recording, i.e. one readout every 1/I<HZ> seconds.
 Can not be used in conjunction with B<--metric-leader>
+
+=item B<--syscall> I<SYSCALLS>
+
+Record syscall activity for the given syscall or "all" to record all syscalls.
+Can be given multiple times to record multiple syscalls at once. 
+Argument may either be a syscall name, like "read", or a syscall number.
+Note that due to the high event-rate of many syscalls it is advised to keep the number of recorded syscalls limited.
+
+This is only available in system-wide measurement mode
 
 =back
 
