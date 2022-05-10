@@ -33,6 +33,8 @@ extern "C"
 #include <sensors/sensors.h>
 }
 
+#include <cstring>
+
 namespace lo2s
 {
 namespace metric
@@ -80,17 +82,31 @@ Recorder::Recorder(trace::Trace& trace)
     for (auto chip = sensors_get_detected_chips(nullptr, &chip_id); chip != nullptr;
          chip = sensors_get_detected_chips(nullptr, &chip_id))
     {
-        char chip_name[100];
-        // TODO: check return value... Yes, I'm lazy. Deal with it. (⌐■_■)
-        sensors_snprintf_chip_name(chip_name, sizeof(chip_name), chip);
+        int chip_name_size = sensors_snprintf_chip_name(nullptr, 0, chip);
+        assert(chip_name_size > 0);
+
+        std::string chip_name;
+        chip_name.resize(chip_name_size);
+        int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size(), chip);
+
+        if (res < 0)
+        {
+            Log::error() << "Failed to get chip name for: " << chip->path << ". Skipping.";
+            continue;
+        }
 
         int feature_id = 0;
         for (auto feature = sensors_get_features(chip, &feature_id); feature != nullptr;
              feature = sensors_get_features(chip, &feature_id))
         {
-            // TODO check for nullptr returned from this little fuck.
             std::unique_ptr<char, memory::MallocDelete<char>> label{ sensors_get_label(chip,
                                                                                        feature) };
+
+            if (!label)
+            {
+                // SHUT THE FRIDGE! There's no std::strdup? (ﾉ °益°)ﾉ 彡 ┻━┻
+                label.reset(::strdup(feature->name));
+            }
 
             int sub_feature_id = 0;
             for (auto sub_feature = sensors_get_all_subfeatures(chip, feature, &sub_feature_id);
