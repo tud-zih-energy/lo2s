@@ -95,6 +95,9 @@ struct Config
     // block I/O
     bool use_block_io;
     size_t block_io_cache_size;
+    // syscalls
+    bool use_syscalls;
+    std::vector<int64_t> syscall_filter;
 };
 
 const Config& config();

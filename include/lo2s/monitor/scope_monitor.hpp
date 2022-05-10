@@ -28,6 +28,7 @@
 #include <lo2s/perf/counter/userspace/writer.hpp>
 
 #include <lo2s/perf/sample/writer.hpp>
+#include <lo2s/perf/syscall/writer.hpp>
 
 #ifndef USE_PERF_RECORD_SWITCH
 #include <lo2s/perf/tracepoint/switch_writer.hpp>
@@ -73,7 +74,7 @@ public:
 
 private:
     ExecutionScope scope_;
-
+    std::unique_ptr<perf::syscall::Writer> syscall_writer_;
     std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;

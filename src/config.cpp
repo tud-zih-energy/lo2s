@@ -28,6 +28,7 @@
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
@@ -42,11 +43,13 @@
 #include <nitro/options/parser.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <cstring>
 #include <ctime> // for CLOCK_* macros
 #include <filesystem>
 #include <iomanip> // for std::setw
+#include <iterator>
 
 extern "C"
 {
@@ -97,6 +100,43 @@ static inline void print_version(std::ostream& os)
        << "This is free software; see the source for copying conditions.  There is NO\n"
        << "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
     // clang-format on
+}
+
+std::vector<int64_t> parse_syscall_names(std::vector<std::string> requested_syscalls)
+{
+    std::vector<int64_t> syscall_nrs;
+    for (const auto& requested_syscall : requested_syscalls)
+    {
+        int syscall_nr;
+        try
+        {
+            syscall_nr = std::stoi(requested_syscall);
+            if (syscall_names().count(syscall_nr) != 0)
+            {
+                syscall_nrs.emplace_back(syscall_nr);
+            }
+            else
+            {
+                Log::fatal() << "Recording of unknown syscall " << syscall_nr << " requested";
+                std::exit(EXIT_FAILURE);
+            }
+        }
+        catch (std::invalid_argument& e)
+        {
+            const auto& syscall_elem =
+                std::find_if(cbegin(syscall_names()), cend(syscall_names()),
+                             [&requested_syscall](const std::pair<int64_t, std::string>& syscall)
+                             { return syscall.second == requested_syscall; });
+            if (syscall_elem == syscall_names().end())
+            {
+                Log::fatal() << "Recording of unknown syscall " << requested_syscall
+                             << " requested";
+                std::exit(EXIT_FAILURE);
+            }
+            syscall_nrs.emplace_back(syscall_elem->first);
+        }
+    }
+    return syscall_nrs;
 }
 
 static nitro::lang::optional<Config> instance;
@@ -276,6 +316,13 @@ void parse_program_options(int argc, const char** argv)
                 "Number of metric buffer reads per second. Can not be used with --metric-leader")
         .metavar("HZ")
         .default_value("10");
+
+    perf_metric_options
+        .multi_option("syscall",
+                      "Record syscall events for given syscall. \"all\" to record all syscalls")
+        .short_name("s")
+        .metavar("SYSCALL")
+        .optional();
 
     x86_adapt_options
         .multi_option("x86-adapt-knob",
@@ -464,6 +511,18 @@ void parse_program_options(int argc, const char** argv)
                 std::exit(EXIT_FAILURE);
             }
         }
+
+        if (arguments.provided("syscall"))
+        {
+            std::vector<std::string> requested_syscalls = arguments.get_all("syscall");
+            config.use_syscalls = true;
+
+            if (std::find(requested_syscalls.begin(), requested_syscalls.end(), "all") ==
+                requested_syscalls.end())
+            {
+                config.syscall_filter = parse_syscall_names(requested_syscalls);
+            }
+        }
     }
     else
     {
@@ -473,6 +532,11 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
         }
 
+        if (arguments.provided("syscalls"))
+        {
+            Log::fatal() << "Syscall recording is only available in system-wide monitoring mode";
+            std::exit(EXIT_FAILURE);
+        }
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
 

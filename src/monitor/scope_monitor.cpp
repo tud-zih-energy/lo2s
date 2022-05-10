@@ -56,6 +56,12 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(sample_writer_->fd());
     }
 
+    if (scope.is_cpu() && config().use_syscalls)
+    {
+        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope.as_cpu(), parent.trace());
+        add_fd(syscall_writer_->fd());
+    }
+
     if (!perf::counter::requested_group_counters().counters.empty())
     {
         group_counter_writer_ =
@@ -102,6 +108,11 @@ void ScopeMonitor::monitor(int fd)
         try_pin_to_scope(scope_);
     }
 
+    if (syscall_writer_ &&
+        (fd == timer_pfd().fd || fd == stop_pfd().fd || syscall_writer_->fd() == fd))
+    {
+        syscall_writer_->read();
+    }
     if (sample_writer_ &&
         (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
     {
