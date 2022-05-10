@@ -69,6 +69,7 @@ public:
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
     bool handle(const Reader::RecordSwitchType* context_switch);
 #endif
+    bool handle(const Reader::RecordTracepointType* tracepoint_event);
 
     void end();
 
@@ -107,6 +108,9 @@ private:
     bool first_event_ = true;
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_;
+
+    int64_t last_syscall_nr_ = -1;
+    otf2::definition::calling_context& ctx_;
 };
 } // namespace sample
 } // namespace perf

@@ -56,11 +56,11 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(sample_writer_->fd());
     }
 
-    if (scope.is_cpu())
-    {
-        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope.as_cpu(), parent.trace());
-        add_fd(syscall_writer_->fd());
-    }
+    // if (scope.is_cpu())
+    // {
+    //     syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope.as_cpu(),
+    //     parent.trace()); add_fd(syscall_writer_->fd());
+    // }
     if (!perf::counter::requested_group_counters().counters.empty())
     {
         group_counter_writer_ =

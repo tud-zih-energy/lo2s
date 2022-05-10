@@ -42,7 +42,10 @@
 
 extern "C"
 {
+#include <fcntl.h>
 #include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
 }
 
 namespace lo2s
@@ -60,7 +63,7 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
                                                otf2_writer_.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
-  last_time_point_(first_time_point_)
+  last_time_point_(first_time_point_), ctx_(trace.syscall_context(0))
 {
 }
 
@@ -95,6 +98,7 @@ trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& c
     }
     return ret.first;
 }
+
 otf2::definition::calling_context::reference_type
 Writer::cctx_ref(const Reader::RecordSampleType* sample)
 {
@@ -122,6 +126,12 @@ Writer::cctx_ref(const Reader::RecordSampleType* sample)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
+    if (sample->header.type == PERF_TYPE_TRACEPOINT || sample->id == (uint64_t)sys_enter_id ||
+        sample->id == (uint64_t)sys_exit_id)
+    {
+        return handle(reinterpret_cast<const Reader::RecordTracepointType*>(sample));
+    }
+
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
@@ -152,6 +162,39 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     // we write the ugly raw ref-only events here due to performance reasons
     otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), unwind_distance,
                                               trace_.interrupt_generator().ref());
+
+    return false;
+}
+
+bool Writer::handle(const Reader::RecordTracepointType* sample)
+{
+    try
+    {
+        auto tp = time_converter_(sample->time);
+        if (sample->id == (uint64_t)sys_enter_id)
+        {
+            if (last_syscall_nr_ != -1)
+            {
+                otf2_writer_.write_calling_context_leave(
+                    tp, trace_.syscall_context(last_syscall_nr_).ref());
+            }
+            last_syscall_nr_ = sample->syscall_nr;
+            otf2_writer_.write_calling_context_enter(
+                tp, trace_.syscall_context(last_syscall_nr_).ref(), 2);
+        }
+        else
+        {
+            if (last_syscall_nr_ == sample->syscall_nr)
+            {
+                otf2_writer_.write_calling_context_leave(
+                    tp, trace_.syscall_context(last_syscall_nr_).ref());
+            }
+            last_syscall_nr_ = -1;
+        }
+    }
+    catch (...)
+    {
+    }
 
     return false;
 }

@@ -21,11 +21,6 @@
 
 #pragma once
 
-#include <lo2s/perf/event_provider.hpp>
-#include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
-
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
@@ -38,13 +33,7 @@
 
 extern "C"
 {
-#include <fcntl.h>
-#include <unistd.h>
-
-#include <linux/perf_event.h>
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
+#include <cupti.h>
 }
 
 namespace lo2s
@@ -55,46 +44,10 @@ namespace perf
 namespace sample
 {
 template <class T>
-class Reader : public EventReader<T>
+class Reader
 {
 public:
-    struct RecordSampleType
-    {
-        // BAD things happen if you try this
-        RecordSampleType() = delete;
-        RecordSampleType(const RecordSampleType&) = delete;
-        RecordSampleType& operator=(const RecordSampleType&) = delete;
-        RecordSampleType(RecordSampleType&&) = delete;
-        RecordSampleType& operator=(RecordSampleType&&) = delete;
-
-        struct perf_event_header header;
-        uint64_t id;
-        uint64_t ip;
-        uint32_t pid, tid;
-        uint64_t time;
-        uint32_t cpu, res;
-        /* only relevant for has_cct_ / PERF_SAMPLE_CALLCHAIN */
-        uint64_t nr;
-        uint64_t ips[1]; // ISO C++ forbits zero-size array
-    };
-
-    struct __attribute__((__packed__)) RecordTracepointType
-    {
-        struct perf_event_header header;
-        uint64_t id;
-        uint64_t time;
-        uint32_t size;
-        uint16_t common_type;
-        uint8_t common_flags;
-        uint8_t common_preempt_count;
-        uint32_t common_pid;
-        int64_t syscall_nr;
-        uint64_t args[6];
-    };
-
 protected:
-    using EventReader<T>::init_mmap;
-
     Reader(ExecutionScope scope, bool enable_on_exec) : has_cct_(config().enable_cct)
     {
         Log::debug() << "initializing event_reader for:" << scope.name()
@@ -150,8 +103,8 @@ protected:
         }
 
         // TODO see if we can remove remove tid
-        perf_attr.sample_type = PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME |
-                                PERF_SAMPLE_CPU | PERF_SAMPLE_IDENTIFIER;
+        perf_attr.sample_type =
+            PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_CPU;
         if (has_cct_)
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
@@ -195,37 +148,6 @@ protected:
         }
         Log::debug() << "Using precise_ip level: " << perf_attr.precise_ip;
 
-        Log::warn() << "Setting up tracepoints";
-
-        struct perf_event_attr attr = common_perf_event_attrs();
-        attr.type = PERF_TYPE_TRACEPOINT;
-        attr.config = tracepoint::EventFormat("raw_syscalls:sys_enter").id();
-        attr.sample_period = 1;
-        attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME | PERF_SAMPLE_IDENTIFIER;
-
-        int one_fd = perf_event_open(&attr, scope, -1, 0, config().cgroup_fd);
-        if (one_fd < 0)
-        {
-            Log::error() << "perf_event_open for raw tracepoint failed.";
-            ::close(fd_);
-            throw_errno();
-        }
-
-        ioctl(one_fd, PERF_EVENT_IOC_ID, &sys_enter_id);
-
-        attr.config = tracepoint::EventFormat("raw_syscalls:sys_exit").id();
-        int other_fd = perf_event_open(&attr, scope, -1, 0, config().cgroup_fd);
-        if (other_fd < 0)
-        {
-
-            Log::error() << "perf_event_open for raw tracepoint failed.";
-            ::close(fd_);
-            ::close(one_fd);
-            throw_errno();
-        }
-
-        ioctl(other_fd, PERF_EVENT_IOC_ID, &sys_exit_id);
-
         // Exception safe, so much wow!
         try
         {
@@ -239,37 +161,10 @@ protected:
             init_mmap(fd_);
             Log::debug() << "mmap initialized";
 
-            if (ioctl(one_fd, PERF_EVENT_IOC_SET_OUTPUT, fd_) == -1)
-            {
-                throw_errno();
-            }
-
-            if (ioctl(other_fd, PERF_EVENT_IOC_SET_OUTPUT, fd_) == -1)
-            {
-                throw_errno();
-            }
-
             if (!enable_on_exec)
             {
-                ioctl(fd_, PERF_EVENT_IOC_RESET);
                 auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
                 Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
-                if (ret == -1)
-                {
-                    throw_errno();
-                }
-
-                ret = ioctl(one_fd, PERF_EVENT_IOC_ENABLE);
-                Log::debug() << "perf_tracepoint_reader ioctl(one_fd, PERF_EVENT_IOC_ENABLE) = "
-                             << ret;
-                if (ret == -1)
-                {
-                    throw_errno();
-                }
-
-                ret = ioctl(other_fd, PERF_EVENT_IOC_ENABLE);
-                Log::debug() << "perf_tracepoint_reader ioctl(other_fd, PERF_EVENT_IOC_ENABLE) = "
-                             << ret;
                 if (ret == -1)
                 {
                     throw_errno();
@@ -278,8 +173,6 @@ protected:
         }
         catch (...)
         {
-            ::close(one_fd);
-            ::close(other_fd);
             close();
             throw;
         }
@@ -321,10 +214,6 @@ protected:
 
 private:
     int fd_ = -1;
-
-protected:
-    int sys_enter_id = -1;
-    int sys_exit_id = -1;
 };
 } // namespace sample
 } // namespace perf
