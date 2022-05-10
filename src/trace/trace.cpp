@@ -388,6 +388,16 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
+otf2::writer::local& Trace::syscall_writer(const Cpu& cpu)
+{
+    MeasurementScope m_scope = MeasurementScope::syscall(cpu.as_scope());
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(m_scope), intern(m_scope.name()),
+            registry_.get<otf2::definition::location_group>(ByExecutionScope(groups_.get_parent(m_scope.scope))),
+            otf2::definition::location::location_type::metric);
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
 {
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
@@ -441,6 +451,17 @@ otf2::writer::local& Trace::create_metric_writer(const std::string& name)
             ByExecutionScope(ExecutionScope(Thread(METRIC_PID)))),
         otf2::definition::location::location_type::metric);
     return archive_(location);
+}
+
+otf2::definition::calling_context& Trace::syscall_context(int64_t syscall_nr)
+{
+    const auto& syscall_name = intern(fmt::format("syscall {}", syscall_nr));
+
+    const auto& intern_region = registry_.emplace<otf2::definition::region>(BySyscall(syscall_nr), syscall_name, syscall_name, syscall_name, otf2::common::role_type::function, otf2::common::paradigm_type::user, otf2::common::flags_type::none, syscall_name, 0,0);
+
+    const auto& intern_scl = registry_.emplace<otf2::definition::source_code_location>(BySyscall(syscall_nr), syscall_name, 0);
+    
+    return registry_.emplace<otf2::definition::calling_context>(BySyscall(syscall_nr), intern_region, intern_scl);
 }
 
 otf2::definition::io_handle& Trace::block_io_handle(BlockDevice& device)

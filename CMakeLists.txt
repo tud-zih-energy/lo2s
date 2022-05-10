@@ -157,6 +157,7 @@ set(SOURCE_FILES
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
+    src/perf/syscall/writer.cpp
     src/perf/bio/event_cacher.cpp
 
     src/time/time.cpp

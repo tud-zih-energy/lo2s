@@ -31,6 +31,7 @@ enum class MeasurementScopeType
     USERSPACE_METRIC,
     SWITCH,
     BIO,
+    SYSCALL,
     UNKNOWN
 };
 
@@ -71,6 +72,10 @@ struct MeasurementScope
     {
         return { MeasurementScopeType::BIO, s };
     }
+    static MeasurementScope syscall(ExecutionScope s)
+    {
+        return { MeasurementScopeType::SYSCALL, s};
+    }
 
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
@@ -102,6 +107,8 @@ struct MeasurementScope
             return fmt::format("context switches for {}", scope.name());
         case MeasurementScopeType::BIO:
             return fmt::format("block layer I/O events for {}", scope.name());
+        case MeasurementScopeType::SYSCALL:
+            return fmt::format("syscall events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

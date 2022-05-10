@@ -92,6 +92,10 @@ struct ByStringTag
 };
 using ByString = SimpleKeyType<std::string, ByStringTag>;
 
+struct BySyscallTag
+{
+};
+using BySyscall = SimpleKeyType<int64_t, BySyscallTag>;
 struct ByAddressTag
 {
 };
@@ -164,17 +168,17 @@ struct Holder<otf2::definition::location>
 template <>
 struct Holder<otf2::definition::region>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo>;
+    using type = otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo, BySyscall>;
 };
 template <>
 struct Holder<otf2::definition::calling_context>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread>;
+    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread, BySyscall>;
 };
 template <>
 struct Holder<otf2::definition::source_code_location>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::source_code_location, ByLineInfo>;
+    using type = otf2::lookup_definition_holder<otf2::definition::source_code_location, ByLineInfo, BySyscall>;
 };
 template <>
 struct Holder<otf2::definition::comm>
