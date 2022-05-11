@@ -26,6 +26,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/util.hpp>
 
 #include <otf2xx/chrono/duration.hpp>
 
@@ -114,9 +115,8 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
     {
         Log::debug() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
 
-        auto info =
-            std::unique_ptr<wrapper::Properties, wrapper::MallocDelete<wrapper::Properties>>(
-                plugin_.get_event_info(token.c_str()));
+        auto info = std::unique_ptr<wrapper::Properties, memory::MallocDelete<wrapper::Properties>>(
+            plugin_.get_event_info(token.c_str()));
 
         parse_properties(channels_, info.get(), trace);
     }
@@ -161,7 +161,7 @@ void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
 
         wrapper::TimeValuePair* tv_list;
         auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
-        std::unique_ptr<wrapper::TimeValuePair, wrapper::MallocDelete<wrapper::TimeValuePair>>
+        std::unique_ptr<wrapper::TimeValuePair, memory::MallocDelete<wrapper::TimeValuePair>>
             tv_list_owner(tv_list);
 
         Log::info() << "In plugin: " << plugin_name_ << " received for channel '" << channel.name()

@@ -47,6 +47,17 @@ extern "C"
 
 namespace lo2s
 {
+namespace memory
+{
+template <class T>
+struct MallocDelete
+{
+    void operator()(T* ptr) const
+    {
+        free(ptr);
+    }
+};
+} // namespace memory
 
 template <typename T>
 class StringCache

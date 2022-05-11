@@ -35,15 +35,6 @@ namespace plugin
 namespace wrapper
 {
 
-template <class T>
-struct MallocDelete
-{
-    void operator()(T* ptr) const
-    {
-        free(ptr);
-    }
-};
-
 enum class Mode
 {
     ACCUMULATED_START = 0,

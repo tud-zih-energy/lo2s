@@ -111,6 +111,21 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         }
     }
 #endif
+
+#ifdef HAVE_SENSORS
+    if (config().use_sensors)
+    {
+        try
+        {
+            sensors_recorder_ = std::make_unique<metric::sensors::Recorder>(trace_);
+            sensors_recorder_->start();
+        }
+        catch (std::exception& e)
+        {
+            Log::warn() << "Failed to initialize sensors metrics: " << e.what();
+        }
+    }
+#endif
 }
 
 void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
@@ -126,6 +141,15 @@ void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_even
 
 MainMonitor::~MainMonitor()
 {
+    // Note: call stop() in reverse order than start() in constructor
+
+#ifdef HAVE_SENSORS
+    if (config().use_sensors)
+    {
+        sensors_recorder_->stop();
+    }
+#endif
+
 #ifdef HAVE_X86_ENERGY
     if (x86_energy_metrics_)
     {
@@ -140,13 +164,6 @@ MainMonitor::~MainMonitor()
     }
 #endif
 
-    if (!tracepoint_monitors_.empty())
-    {
-        for (auto& tracepoint_monitor : tracepoint_monitors_)
-        {
-            tracepoint_monitor->stop();
-        }
-    }
     if (config().use_block_io)
     {
         for (auto& bio_monitor : bio_monitors_)
@@ -161,6 +178,14 @@ MainMonitor::~MainMonitor()
         for (auto& worker : bio_workers)
         {
             worker.join();
+        }
+    }
+
+    if (!tracepoint_monitors_.empty())
+    {
+        for (auto& tracepoint_monitor : tracepoint_monitors_)
+        {
+            tracepoint_monitor->stop();
         }
     }
 

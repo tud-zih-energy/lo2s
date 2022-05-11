@@ -43,6 +43,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -53,6 +54,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -64,6 +66,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -100,6 +103,7 @@ find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
+find_package(Sensors)
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
@@ -114,6 +118,8 @@ add_feature_info("USE_PERF_RECORD_SWITCH" USE_PERF_RECORD_SWITCH "Uses PERF_RECO
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
+CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
+add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -234,6 +240,18 @@ if (USE_RADARE)
         )
     else()
         message(SEND_ERROR "Radare not found but requested.")
+    endif()
+endif()
+
+if (USE_SENSORS)
+    if (Sensors_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_SENSORS)
+        target_link_libraries(lo2s PRIVATE Sensors::sensors)
+        target_sources(lo2s PRIVATE
+            src/metric/sensors/recorder.cpp
+        )
+    else()
+        message(SEND_ERROR "Sensors not found but requested.")
     endif()
 endif()
 

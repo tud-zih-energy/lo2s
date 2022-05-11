@@ -16,13 +16,6 @@ jobs:
         hw_breakpoint: [ON, OFF]
         perf_record_switch: [ON, OFF]
         perf_clockid: [ON, OFF]
-        include:
-          - os: ubuntu-18.04
-            compiler: g++-9
-            build-type: Debug
-          - os: ubuntu-18.04
-            compiler: g++-10
-            build-type: Debug
 
     runs-on: ${{ matrix.os }}
 
@@ -31,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install binutils-dev libiberty-dev
+          sudo apt-get install binutils-dev libiberty-dev libsensors-dev
           sudo pip install git-archive-all
       - name: Cache OTF2
         id: cache-otf2

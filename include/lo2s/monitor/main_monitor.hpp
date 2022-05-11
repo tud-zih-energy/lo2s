@@ -28,6 +28,9 @@
 #ifdef HAVE_X86_ENERGY
 #include <lo2s/metric/x86_energy/metrics.hpp>
 #endif
+#ifdef HAVE_SENSORS
+#include <lo2s/metric/sensors/recorder.hpp>
+#endif
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/bio_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
@@ -75,6 +78,9 @@ protected:
 #endif
 #ifdef HAVE_X86_ENERGY
     std::unique_ptr<metric::x86_energy::Metrics> x86_energy_metrics_;
+#endif
+#ifdef HAVE_SENSORS
+    std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
 #endif
 };
 } // namespace monitor
