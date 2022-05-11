@@ -164,7 +164,7 @@ F</proc/sys/kernel/perf_event_mlock_kb>.
 
 =item B<-i>, B<--readout-interval> I<MSEC> (default: C<100>)
 
-Wake up interval based monitors (i.e. x86_adapt, x86_energy) every I<MSEC> milliseconds to read event buffers
+Wake up interval based monitors (i.e. x86_adapt, x86_energy, sensors) every I<MSEC> milliseconds to read event buffers
 
 =item B<-I>, B<--perf-readout-interval> I<MSEC> (default: C<0>)
 
@@ -350,6 +350,16 @@ Record block I/O events using the block:block_rq_insert tracepoint for begin eve
 =item B<--block-io-cache-size> I<NUM>
 
 Size of the per-CPU cache in number-of-events. A larger cache size might increase performance but comes at the cost of a higher memory footprint.
+
+=back
+
+=head2 B<sensors> options
+
+=over
+
+=item B<-S>, B<--sensors>
+
+Record measurements for each sensor found by L<sensors(1)>.
 
 =back
 
