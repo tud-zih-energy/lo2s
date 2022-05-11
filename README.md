@@ -44,6 +44,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
  * libradare for disassembled instruction strings
+ * libsensors for sensor readings
 
 # Runtime Requirements
 
