@@ -43,6 +43,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -53,6 +54,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -64,6 +66,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
+    set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
