@@ -498,6 +498,29 @@ that allow only the C<SCOREP> prefix.
 
 =back
 
+=head1 PERFORMANCE OPTIMIZATIONS
+
+Performance problems in lo2s may lead to information missing in the trace due to event loss and skewed results due to excessive lo2s activity perturbating the recorded metrics. lo2s contains several knobs that may be used to optimize its performance.
+
+=head2 Memory allocated to perf buffers
+
+B<--mmap-pages> governs the amount of memory that is allocated to each perf event-reading buffer. For measuring modes that use the perf interface to collect data (e.g. sampling, metrics, tracepoints or block I/O) this is the most effective tuning knob, as larger buffer result in longer time until buffer overflow and less lo2s activity during measurement.
+
+Because pages used by perf need to be locked into memory - thus, these pages cannot be swapped out - the values that can be used for B<--mmap-pages> are limited by B<RLIMIT_MEMLOCK> and B<perf_event_mlock_kb>.
+
+B<perf_event_mlock_kb> governs the amount of memory a user can lock per-CPU specifically for use with perf. The current B<perf_event_mlock_kb> limit can be read or set from F</proc/sys/kernel/perf_event_mlock_kb>.
+
+If the user wants to lock more memory than the B<perf_event_mlock_kb> limit allows, the pool B<RLIMIT_MEMLOCK> is used, which is shared between all processes that lock memory. B<RLIMIT_MEMLOCK> can be read or set via the B<ulimit -l> command.
+
+Priviliged users, user posessing the CAP_IPC_LOCK capability, or users running on system with perf_event_paranoid set to -1 can lock unlimited amounts of memory and are thus not limited in the value that can be set for B<--mmap-pages>
+
+As the number of active perf buffers can vary wildly between different lo2s use-cases no general rule for adjusting B<--mmap-pages> according to the B<RLIMIT_MEMLOCK> and B<perf_event_mlock_kb> limits can be given. The user is advised to discover the ideal value for B<--mmap-pages> through trial-and-error, as lo2s will report mmap buffer creation related failures early during startup.
+
+=head2 Memory allocated to block I/O caches
+
+Block I/O events are cached per-CPU before they are written into a global block I/O cache.
+B<--block-io-cache-size> governs the number of elements the per-CPU block I/O cache holds. Increasing the number of elements in the block I/O cache reduces the number of lo2s wake-ups spent on merging block I/O caches.
+
 =head1 SEE ALSO
 
 L<perf(1)>, L<perf_event_open(2)>
