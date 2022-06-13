@@ -35,6 +35,18 @@ struct CounterCollection
 {
     EventDescription leader;
     std::vector<EventDescription> counters;
+
+    double get_scale(int index) const
+    {
+        if (index == 0)
+        {
+            return leader.scale;
+        }
+        else
+        {
+            return counters[index - 1].scale;
+        }
+    }
 };
 
 const CounterCollection& requested_userspace_counters();

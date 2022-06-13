@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/reader.hpp>
 #include <lo2s/perf/counter/metric_writer.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -41,6 +42,9 @@ public:
 
     using Reader<Writer>::handle;
     bool handle(const RecordSampleType* sample);
+
+private:
+    const CounterCollection& counters_;
 };
 } // namespace group
 } // namespace counter

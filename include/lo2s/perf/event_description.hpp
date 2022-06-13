@@ -43,14 +43,14 @@ enum class Availability
 struct EventDescription
 {
     EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                     std::uint64_t config1 = 0)
-    : name(name), type(type), config(config), config1(config1),
+                     std::uint64_t config1 = 0, double scale = 1, std::string unit = "#")
+    : name(name), type(type), config(config), config1(config1), scale(scale), unit(unit),
       availability(Availability::UNAVAILABLE)
     {
     }
 
     EventDescription()
-    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0),
+    : name(""), type(static_cast<perf_type_id>(-1)), config(0), config1(0), scale(1), unit("#"),
       availability(Availability::UNAVAILABLE)
     {
     }
@@ -59,6 +59,8 @@ struct EventDescription
     perf_type_id type;
     std::uint64_t config;
     std::uint64_t config1;
+    double scale;
+    std::string unit;
     Availability availability;
 };
 } // namespace perf
