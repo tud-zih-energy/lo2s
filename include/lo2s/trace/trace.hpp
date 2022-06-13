@@ -243,15 +243,16 @@ private:
             otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
         if (!counter_collection_.counters.empty())
         {
-            perf_group_metric_class_->add_member(metric_member(
-                counter_collection_.leader.name, counter_collection_.leader.name,
-                otf2::common::metric_mode::accumulated_start, otf2::common::type::Double, "#"));
+            perf_group_metric_class_->add_member(
+                metric_member(counter_collection_.leader.name, counter_collection_.leader.name,
+                              otf2::common::metric_mode::accumulated_start,
+                              otf2::common::type::Double, counter_collection_.leader.unit));
 
             for (const auto& counter : counter_collection_.counters)
             {
                 perf_group_metric_class_->add_member(metric_member(
                     counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
-                    otf2::common::type::Double, "#"));
+                    otf2::common::type::Double, counter.unit));
             }
 
             perf_group_metric_class_->add_member(metric_member(

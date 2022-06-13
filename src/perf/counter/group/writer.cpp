@@ -32,7 +32,8 @@ namespace counter
 namespace group
 {
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace)
+: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace),
+  counters_(requested_group_counters())
 {
 }
 
@@ -50,7 +51,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     // read counter values into metric event
     for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
-        values[i] = counter_buffer_[i];
+        values[i] = counter_buffer_[i] * counters_.get_scale(i);
     }
 
     auto index = counter_buffer_.size();

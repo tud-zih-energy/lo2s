@@ -33,7 +33,8 @@ namespace counter
 namespace userspace
 {
 Writer::Writer(ExecutionScope scope, trace::Trace& trace)
-: Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace)
+: Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace),
+  counters_(requested_userspace_counters())
 {
 }
 
@@ -49,9 +50,10 @@ bool Writer::handle(std::vector<UserspaceReadFormat>& data)
     assert(counter_buffer_.size() <= values.size());
 
     // read counter values into metric event
+
     for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
-        values[i] = counter_buffer_[i];
+        values[i] = counter_buffer_[i] * counters_.get_scale(i);
     }
 
     writer_.write(metric_event_);

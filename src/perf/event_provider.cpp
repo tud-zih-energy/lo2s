@@ -473,7 +473,8 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
 
     // read event configuration
     std::string ev_cfg;
-    std::ifstream event_stream(pmu_path / "events" / event_name);
+    std::filesystem::path event_path = pmu_path / "events" / event_name;
+    std::ifstream event_stream(event_path);
     event_stream >> ev_cfg;
     if (!event_stream)
     {
@@ -535,6 +536,20 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
     Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
+
+    std::ifstream scale_stream(event_path.string() + ".scale");
+    scale_stream >> event.scale;
+    if (scale_stream.fail())
+    {
+        event.scale = 1;
+    }
+
+    std::ifstream unit_stream(event_path.string() + ".unit");
+    unit_stream >> event.unit;
+    if (scale_stream.fail())
+    {
+        event.unit = "#";
+    }
 
     if (!event_is_openable(event))
     {

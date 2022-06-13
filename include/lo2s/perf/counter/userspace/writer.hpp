@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/metric_writer.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -41,6 +42,9 @@ public:
     Writer(ExecutionScope scope, trace::Trace& trace);
 
     bool handle(std::vector<UserspaceReadFormat>& data);
+
+private:
+    const CounterCollection& counters_;
 };
 } // namespace userspace
 } // namespace counter
