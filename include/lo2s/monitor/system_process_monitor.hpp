@@ -21,6 +21,7 @@
 #pragma once
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/trace/trace.hpp>
 
 #include <string>
 
@@ -35,33 +36,25 @@ namespace lo2s
 namespace monitor
 {
 
-class DummyMonitor : public AbstractProcessMonitor
+class SystemProcessMonitor : public AbstractProcessMonitor
 {
 public:
-    DummyMonitor()
+    SystemProcessMonitor(lo2s::trace::Trace& trace) : trace_(trace)
     {
     }
 
-    virtual void insert_process([[maybe_unused]] Process parent, [[maybe_unused]] Process process,
-                                [[maybe_unused]] std::string proc_name,
-                                [[maybe_unused]] bool spawn) override
-    {
-    }
+    virtual void insert_process(Process parent, Process process, std::string proc_name,
+                                bool spawn) override;
 
-    virtual void insert_thread([[maybe_unused]] Process process, [[maybe_unused]] Thread thread,
-                               [[maybe_unused]] std::string name,
-                               [[maybe_unused]] bool spawn) override
-    {
-    }
+    virtual void insert_thread(Process process, Thread thread, std::string name,
+                               bool spawn) override;
 
-    virtual void exit_thread([[maybe_unused]] Thread thread) override
-    {
-    }
+    virtual void exit_thread(Thread thread) override;
 
-    virtual void update_process_name([[maybe_unused]] Process process,
-                                     [[maybe_unused]] const std::string& name) override
-    {
-    }
+    virtual void update_process_name(Process process, const std::string& name) override;
+
+private:
+    lo2s::trace::Trace& trace_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -151,6 +151,7 @@ set(SOURCE_FILES
     src/monitor/poll_monitor.cpp
     src/monitor/main_monitor.cpp
     src/monitor/process_monitor.cpp
+    src/monitor/system_process_monitor.cpp
     src/monitor/process_monitor_main.cpp
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
