@@ -96,7 +96,7 @@ struct Config
     bool use_block_io;
     size_t block_io_cache_size;
     // syscalls
-    bool use_syscalls;
+    bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;
 };
 
