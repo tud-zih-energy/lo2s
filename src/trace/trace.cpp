@@ -92,6 +92,9 @@ Trace::Trace()
       otf2::common::group_flag_type::none)),
   lo2s_regions_group_(registry_.create<otf2::definition::regions_group>(
       intern("lo2s"), otf2::common::paradigm_type::user, otf2::common::group_flag_type::none)),
+  syscall_regions_group_(registry_.create<otf2::definition::regions_group>(
+      intern("<syscalls>"), otf2::common::paradigm_type::user,
+      otf2::common::group_flag_type::none)),
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
       intern(nitro::env::hostname()), intern("machine"))),
   groups_(ExecutionScopeGroup::instance())
@@ -689,6 +692,9 @@ Trace::merge_syscall_contexts(const std::set<int64_t>& used_syscalls)
 
         const auto& ctx = registry_.emplace<otf2::definition::calling_context>(
             BySyscall(syscall_nr), intern_region, intern_scl);
+
+        syscall_regions_group_.add_member(intern_region);
+
         mappings.at(syscall_nr) = ctx.ref();
     }
 
