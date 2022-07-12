@@ -48,7 +48,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     assert(counter_buffer_.size() <= values.size());
 
     // read counter values into metric event
-    for (std::size_t i = 0; i <= counter_buffer_.size(); i++)
+    for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
         values[i] = counter_buffer_[i];
     }
