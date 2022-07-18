@@ -102,7 +102,7 @@ In the effort to keep compatible with older kernels, several quirks have been ad
 # Working with traces
 
 Traces can be visualized with [Vampir](https://vampir.eu).
-You can use [OTF2](https://www.vi-hps.org/projects/score-p/) or any of its tools.
+You can use [OTF2](https://score-p.org/) or any of its tools.
 Native interfaces are available for C and Python
 
 # Acknowledgements
