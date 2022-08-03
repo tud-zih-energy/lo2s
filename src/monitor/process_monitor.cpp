@@ -43,6 +43,7 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
 void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn)
 {
     trace_.add_thread(thread, name);
+    trace_.update_thread_name(thread, name);
 
     if (config().sampling)
     {
@@ -56,8 +57,6 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
                          std::forward_as_tuple(ExecutionScope(thread), *this, spawn));
     }
-
-    trace_.update_thread_name(thread, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)

@@ -213,8 +213,23 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
             // Register the newly created thread for monitoring:
             // (1) Keep track of the process the new thread was spawned in.
             groups_.add_thread(new_thread, process);
+
             // (2) Tell the process monitor to watch the new thread.
-            monitor_.insert_thread(process, new_thread, command);
+            try
+            {
+                // If the cloned thread is very short lived, we might be light to the party and the
+                // thread is already gone. Hence, just try to set it up. It will be fine.
+                monitor_.insert_thread(process, new_thread, command);
+            }
+            catch (std::system_error& e)
+            {
+                if (e.code() == std::errc::no_such_process)
+                {
+                    Log::error() << "Failed to set up monitoring for cloned thread from " << child
+                                 << ": " << e.what();
+                }
+            }
+
             // (3) Update our summary information.
             summary().add_thread();
         }
