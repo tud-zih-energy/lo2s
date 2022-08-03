@@ -195,7 +195,18 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
             auto process = groups_.get_process(child);
-            std::string command = get_task_comm(process, new_thread);
+            std::string command = "<unknown>";
+
+            try
+            {
+                command = get_task_comm(process, new_thread);
+            }
+            catch (std::system_error& e)
+            {
+                // very short living threads may be already gone at this point.
+                // It will be fine.
+            }
+
             Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
                         << " in " << process;
 
