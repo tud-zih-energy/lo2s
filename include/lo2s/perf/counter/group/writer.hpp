@@ -38,7 +38,7 @@ namespace group
 class Writer : public Reader<Writer>, MetricWriter
 {
 public:
-    Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+    Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec, CounterCollection counters);
 
     using Reader<Writer>::handle;
     bool handle(const RecordSampleType* sample);

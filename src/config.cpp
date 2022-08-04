@@ -363,7 +363,6 @@ void parse_program_options(int argc, const char** argv)
     config.enable_cct = arguments.given("call-graph");
     config.suppress_ip = arguments.given("no-ip");
     config.tracepoint_events = arguments.get_all("tracepoint");
-    config.perf_group_events = arguments.get_all("metric-event");
     config.perf_userspace_events = arguments.get_all("userspace-metric-event");
     config.standard_metrics = arguments.given("standard-metrics");
     config.use_x86_energy = arguments.given("x86-energy");
@@ -467,21 +466,6 @@ void parse_program_options(int argc, const char** argv)
             std::cerr << "lo2s was built without support for x86_adapt; cannot read knobs.\n";
             std::exit(EXIT_FAILURE);
 #endif
-        }
-    }
-
-    for (const auto& event : config.perf_userspace_events)
-    {
-        auto it =
-            std::find(config.perf_group_events.begin(), config.perf_group_events.end(), event);
-
-        if (it != config.perf_group_events.end())
-        {
-            Log::warn()
-                << event
-                << " given as both userspace and grouped metric event only using it in userspace "
-                   "measuring mode";
-            config.perf_group_events.erase(it);
         }
     }
 
@@ -633,6 +617,49 @@ void parse_program_options(int argc, const char** argv)
 #endif
     }
 
+    
+       if (config().standard_metrics)
+       {
+           try
+           {
+   
+               for (const auto& description : platform::get_mem_events())
+               {
+                   if (description.name != config().perf_group_events.metric_leader)
+                   {
+                       used_counters.emplace_back(description);
+                   }
+               }
+   
+               if ("instructions" != config().perf_group_events.metric_leader)
+               {
+                   used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
+               }
+   
+               if ("cpu-cycles" != config().metric_leader)
+               {
+                   used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+               }
+           }
+           catch (const perf::EventProvider::InvalidEvent&)
+           {
+               Log::error() << "Failed to add an event requested as part of the standard metrics.";
+               throw;
+           }
+       }
+       
+    if (arguments.provided("metric-event"))
+    {
+        std::vector<std::string> group_events = arguments.get_all("metric-event");
+        const std::regex group_regex("{(events)}");
+        std::smatch events_match;
+
+        if (std::regex_match(group_events[0], events_match, group_regex))
+        {
+            std::cout << events[1];
+        }
+    }
+/*
     if (arguments.provided("metric-count") && !arguments.provided("metric-leader"))
     {
         Log::fatal() << "--metric-count can only be used in conjunction with a --metric-leader";
@@ -644,7 +671,7 @@ void parse_program_options(int argc, const char** argv)
         Log::fatal() << "--metric-frequency can only be used with the default --metric-leader";
         std::exit(EXIT_FAILURE);
     }
-
+*/
     // Use time interval based metric recording as a default
     if (!arguments.provided("metric-leader"))
     {
@@ -655,24 +682,6 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
         }
 
-        Log::debug() << "checking if cpu-clock is available...";
-        try
-        {
-            config.metric_leader = perf::EventProvider::get_event_by_name("cpu-clock").name;
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "cpu-clock isn't available, trying to use a fallback event";
-            try
-            {
-                config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
-            }
-            catch (const perf::EventProvider::InvalidEvent& e)
-            {
-                // Will be handled later in collect_requested_group_counters
-                config.metric_leader.clear();
-            }
-        }
         config.metric_use_frequency = true;
         config.metric_frequency = arguments.as<std::uint64_t>("metric-frequency");
     }

@@ -44,7 +44,7 @@ public:
     bool handle(std::vector<UserspaceReadFormat>& data);
 
 private:
-    const CounterCollection& counters_;
+    const std::vector<EventDescription>& counters_;
 };
 } // namespace userspace
 } // namespace counter

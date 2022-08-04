@@ -44,6 +44,12 @@ enum class MonitorType
     CPU_SET
 };
 
+struct EventGroup
+{
+    std::string metric_leader;
+    std::vector<std::string> events;
+};
+
 struct Config
 {
     // General
@@ -54,8 +60,8 @@ struct Config
     bool quiet;
     // Optional features
     std::vector<std::string> tracepoint_events;
-    std::vector<std::string> perf_group_events;
-    std::vector<std::string> perf_userspace_events;
+    std::vector<EventGroup> perf_group_events;
+    EventGroup perf_userspace_events;
 #ifdef HAVE_X86_ADAPT
     std::vector<std::string> x86_adapt_knobs;
 #endif

@@ -237,18 +237,20 @@ private:
 
     void create_group_metric_class()
     {
-        auto counter_collection_ = perf::counter::requested_group_counters();
+        auto counter_collections = perf::counter::requested_group_counters();
 
         perf_group_metric_class_ = registry_.create<otf2::definition::metric_class>(
             otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
-        if (!counter_collection_.counters.empty())
+        for (auto counter_collection : counter_collections)
+        {
+        if (!counter_collection.counters.empty())
         {
             perf_group_metric_class_->add_member(
-                metric_member(counter_collection_.leader.name, counter_collection_.leader.name,
+                metric_member(counter_collection.leader.name, counter_collection.leader.name,
                               otf2::common::metric_mode::accumulated_start,
-                              otf2::common::type::Double, counter_collection_.leader.unit));
+                              otf2::common::type::Double, counter_collection.leader.unit));
 
-            for (const auto& counter : counter_collection_.counters)
+            for (const auto& counter : counter_collection.counters)
             {
                 perf_group_metric_class_->add_member(metric_member(
                     counter.name, counter.name, otf2::common::metric_mode::accumulated_start,
@@ -261,6 +263,8 @@ private:
             perf_group_metric_class_->add_member(metric_member(
                 "time_running", "time event on CPU", otf2::common::metric_mode::accumulated_start,
                 otf2::common::type::uint64, "ns"));
+            }
+        
         }
     }
 
@@ -278,13 +282,13 @@ private:
 
     void create_userspace_metric_class()
     {
-        const auto& counter_collection_ = perf::counter::requested_userspace_counters();
+        const auto& userspace_events = perf::counter::requested_userspace_counters();
 
         perf_userspace_metric_class_ = registry_.create<otf2::definition::metric_class>(
             otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
-        if (!counter_collection_.counters.empty())
+        if (!userspace_events.empty())
         {
-            for (const auto& counter : counter_collection_.counters)
+            for (const auto& counter : userspace_events)
             {
                 perf_userspace_metric_class_->add_member(metric_member(
                     counter.name, counter.name, otf2::common::metric_mode::accumulated_start,

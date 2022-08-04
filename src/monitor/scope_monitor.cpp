@@ -62,14 +62,14 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(syscall_writer_->fd());
     }
 
-    if (!perf::counter::requested_group_counters().counters.empty())
+    for(auto counter_collection : perf::counter::requested_group_counters())
     {
-        group_counter_writer_ =
-            std::make_unique<perf::counter::group::Writer>(scope, parent.trace(), enable_on_exec);
-        add_fd(group_counter_writer_->fd());
+
+        group_counter_writers_.emplace_back(std::make_unique<perf::counter::group::Writer>(scope, parent.trace(), enable_on_exec, counter_collection));
+        add_fd(group_counter_writers_.back()->fd());
     }
 
-    if (!perf::counter::requested_userspace_counters().counters.empty())
+    if (!perf::counter::requested_userspace_counters().empty())
     {
         userspace_counter_writer_ =
             std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
@@ -119,11 +119,14 @@ void ScopeMonitor::monitor(int fd)
         sample_writer_->read();
     }
 
-    if (group_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || group_counter_writer_->fd() == fd))
+    for( auto &group_counter_writer : group_counter_writers_)
     {
-        group_counter_writer_->read();
+        if(fd == timer_pfd().fd || fd == stop_pfd().fd || group_counter_writer->fd() == fd)
+        {
+            group_counter_writer->read();  
+        }
     }
+
     if (userspace_counter_writer_ &&
         (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
     {

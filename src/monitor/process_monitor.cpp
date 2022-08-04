@@ -50,8 +50,8 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
                                std::forward_as_tuple(process, spawn));
     }
 
-    if (config().sampling || !perf::counter::requested_group_counters().counters.empty() ||
-        !perf::counter::requested_userspace_counters().counters.empty())
+    if (config().sampling || !perf::counter::requested_group_counters().empty() ||
+        !perf::counter::requested_userspace_counters().empty())
     {
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
                          std::forward_as_tuple(ExecutionScope(thread), *this, spawn));

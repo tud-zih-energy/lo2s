@@ -31,9 +31,9 @@ namespace counter
 {
 namespace group
 {
-Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace),
-  counters_(requested_group_counters())
+Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec, CounterCollection counters)
+: Reader(scope, enable_on_exec, counters), MetricWriter(MeasurementScope::group_metric(scope), trace),
+  counters_(counters)
 {
 }
 

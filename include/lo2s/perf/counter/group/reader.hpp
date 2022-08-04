@@ -48,7 +48,7 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(ExecutionScope scope, bool enable_on_exec);
+    Reader(ExecutionScope scope, bool enable_on_exec, CounterCollection counters);
 
     struct RecordSampleType
     {

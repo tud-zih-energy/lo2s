@@ -45,8 +45,8 @@ namespace userspace
 
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
-: counter_buffer_(requested_userspace_counters().counters.size()),
-  data_(requested_userspace_counters().counters.size())
+: counter_buffer_(requested_userspace_counters().size()),
+  data_(requested_userspace_counters().size())
 {
     struct itimerspec tspec;
     memset(&tspec, 0, sizeof(struct itimerspec));
@@ -61,7 +61,7 @@ Reader<T>::Reader(ExecutionScope scope)
 
     timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);
 
-    for (auto& event : requested_userspace_counters().counters)
+    for (auto& event : requested_userspace_counters())
     {
         counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
     }

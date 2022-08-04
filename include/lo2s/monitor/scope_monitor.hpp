@@ -76,7 +76,7 @@ private:
     ExecutionScope scope_;
     std::unique_ptr<perf::syscall::Writer> syscall_writer_;
     std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
+    std::vector<std::unique_ptr<perf::counter::group::Writer>> group_counter_writers_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
 #ifndef USE_PERF_RECORD_SWITCH
     std::unique_ptr<perf::tracepoint::SwitchWriter> switch_writer_;

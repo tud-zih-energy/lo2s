@@ -49,8 +49,8 @@ struct CounterCollection
     }
 };
 
-const CounterCollection& requested_userspace_counters();
-const CounterCollection& requested_group_counters();
+const std::vector<EventDescription>& requested_userspace_counters();
+const std::vector<CounterCollection>& requested_group_counters();
 
 } // namespace counter
 } // namespace perf

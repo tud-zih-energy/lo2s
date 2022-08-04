@@ -48,16 +48,14 @@ namespace group
 {
 
 template <class T>
-Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
-: counter_buffer_(requested_group_counters().counters.size() + 1)
+Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec, CounterCollection counters)
+: counter_buffer_(counters.counters.size() + 1)
 {
-    const CounterCollection counter_collection = requested_group_counters();
-
     perf_event_attr leader_attr = common_perf_event_attrs();
 
-    leader_attr.type = counter_collection.leader.type;
-    leader_attr.config = counter_collection.leader.config;
-    leader_attr.config1 = counter_collection.leader.config1;
+    leader_attr.type = counters.leader.type;
+    leader_attr.config = counters.leader.config;
+    leader_attr.config1 = counters.leader.config1;
 
     leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
     leader_attr.freq = config().metric_use_frequency;
@@ -88,8 +86,8 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 
     Log::debug() << "counter::Reader: leader event: '" << config().metric_leader << "'";
 
-    counter_fds_.reserve(counter_collection.counters.size());
-    for (auto& description : counter_collection.counters)
+    counter_fds_.reserve(counters.counters.size());
+    for (auto& description : counters.counters)
     {
         try
         {
@@ -104,7 +102,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
             if (e.code().value() == EINVAL)
             {
                 Log::error()
-                    << "opening " << counter_collection.counters.size()
+                    << "opening " << counters.counters.size()
                     << " counters at once might exceed the hardware limit of simultaneously "
                        "openable counters.";
             }

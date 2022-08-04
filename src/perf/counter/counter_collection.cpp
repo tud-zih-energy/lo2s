@@ -32,7 +32,7 @@ namespace perf
 namespace counter
 {
 
-CounterCollection collect_requested_userspace_counters()
+std::vector<EventDescription> collect_requested_userspace_counters()
 {
     const auto& user_events = lo2s::config().perf_userspace_events;
 
@@ -52,99 +52,66 @@ CounterCollection collect_requested_userspace_counters()
                         << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
         }
     }
-    return { EventDescription(), used_counters };
+    return used_counters;
 }
-CounterCollection collect_requested_group_counters()
+std::vector<CounterCollection> collect_requested_group_counters()
 {
-    const auto& user_events = lo2s::config().perf_group_events;
-
-    std::vector<perf::EventDescription> used_counters;
-
-    used_counters.reserve(user_events.size());
-    for (const auto& ev : user_events)
+    std::vector<CounterCollection> collections;
+    
+    for(const auto& event_group : lo2s::config().perf_group_events)
     {
-        // skip event if it has already been declared as group leader
-        if (ev == config().metric_leader)
+        std::vector<perf::EventDescription> used_counters;
+        
+        used_counters.reserve(event_group.events.size());
+        for (const auto& ev : event_group.events)
         {
-            Log::info() << "'" << ev
-                        << "' has been requested as both the metric leader event and a regular "
+            // skip event if it has already been declared as group leader
+            if (ev == event_group.metric_leader)
+            {
+                Log::info() << "'" << ev
+                            << "' has been requested as both the metric leader event and a regular "
                            "metric event. Will treat it as the leader.";
-            continue;
-        }
-        try
-        {
-            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
-            used_counters.emplace_back(event_desc);
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "'" << ev
-                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
-        }
-    }
-
-    if (config().standard_metrics)
-    {
-        try
-        {
-
-            for (const auto& description : platform::get_mem_events())
-            {
-                if (description.name != config().metric_leader)
-                {
-                    used_counters.emplace_back(description);
-                }
+                continue;
             }
-
-            if ("instructions" != config().metric_leader)
+            try
             {
-                used_counters.emplace_back(perf::EventProvider::get_event_by_name("instructions"));
+                const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+                used_counters.emplace_back(event_desc);
             }
-
-            if ("cpu-cycles" != config().metric_leader)
+            catch (const perf::EventProvider::InvalidEvent& e)
             {
-                used_counters.emplace_back(perf::EventProvider::get_event_by_name("cpu-cycles"));
+                Log::warn() << "'" << ev
+                            << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
             }
         }
-        catch (const perf::EventProvider::InvalidEvent&)
+
+        EventDescription leader_event;
+
+        if(event_group.metric_leader == "")
         {
-            Log::error() << "Failed to add an event requested as part of the standard metrics.";
-            throw;
+            leader_event = EventProvider::get_default_metric_leader_event;
         }
-    }
+        else
+        {
+            leader_event = EventProvider::get_event_by_name(event_group.metric_leader);
+        }
 
-    if (used_counters.empty())
-    {
-        // if no events will be recorded, we make an early exit with a fake leader
-        return { EventDescription(), std::move(used_counters) };
-    }
-    if (config().metric_leader.empty())
-    {
-        Log::error() << "Failed to determine a suitable metric leader event";
-        Log::error() << "Try manually specifying one with --metric-leader.";
-        throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
-    }
+        collections.emplace_back(CounterCollection{ leader_event,
+             std::move(used_counters) });
 
-    if (!perf::EventProvider::has_event(lo2s::config().metric_leader))
-    {
-        lo2s::Log::error() << "event '" << lo2s::config().metric_leader
-                           << "' is not available as a metric leader!";
-        throw perf::EventProvider::InvalidEvent(lo2s::config().metric_leader);
     }
-
-    return { perf::EventProvider::get_event_by_name(config().metric_leader),
-             std::move(used_counters) };
+    return collections;
 }
 
-const CounterCollection& requested_userspace_counters()
+const std::vector<EventDescription>& requested_userspace_counters()
 {
-    static CounterCollection counters{ collect_requested_userspace_counters() };
+    static std::vector<EventDescription> counters{ collect_requested_userspace_counters() };
     return counters;
 }
 
-const CounterCollection& requested_group_counters()
+const std::vector<CounterCollection>& requested_group_counters()
 {
-    static CounterCollection counters{ collect_requested_group_counters() };
+    static std::vector<CounterCollection> counters{ collect_requested_group_counters() };
     return counters;
 }
 
