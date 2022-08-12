@@ -81,27 +81,23 @@ Metrics::Metrics(trace::Trace& trace)
 
         for (auto index = 0; index < architecture_.size(granularity); index++)
         {
-            int cpuid = -1;
-            int packageid = -1;
-            int coreid = -1;
+            Cpu cpu = Cpu::invalid();
 
-            for (const auto& cpu : lo2s::Topology::instance().cpus())
+            for (const auto& installed_cpu : lo2s::Topology::instance().cpus())
             {
-                auto node = architecture_.get_arch_for_cpu(granularity, cpu.id);
+                auto node = architecture_.get_arch_for_cpu(granularity, installed_cpu.as_int());
                 if (node.id() == index)
                 {
-                    cpuid = cpu.id;
-                    packageid = cpu.package_id;
-                    coreid = cpu.core_id;
+                    cpu = installed_cpu;
                     break;
                 }
             }
 
-            if (cpuid == -1)
+            if (cpu == Cpu::invalid())
             {
                 Log::warn() << "Cannot determine a cpu to pin the measurement thread for the "
                             << counter << " counter " << index << " Using cpu 0 instead.";
-                cpuid = 0;
+                cpu = Cpu(0);
             }
 
             otf2::definition::system_tree_node stn;
@@ -114,13 +110,13 @@ Metrics::Metrics(trace::Trace& trace)
             case xe::Granularity::SOCKET:
             case xe::Granularity::DIE:
             case xe::Granularity::MODULE:
-                stn = trace.system_tree_package_node(packageid);
+                stn = trace.system_tree_package_node(Topology::instance().package_of(cpu));
                 break;
             case xe::Granularity::CORE:
-                stn = trace.system_tree_core_node(coreid, packageid);
+                stn = trace.system_tree_core_node(Topology::instance().core_of(cpu));
                 break;
             case xe::Granularity::THREAD:
-                stn = trace.system_tree_cpu_node(Cpu(cpuid));
+                stn = trace.system_tree_cpu_node(cpu);
                 break;
             default:
                 Log::warn() << "Cannot determine a suitable system tree node for the " << counter
@@ -128,8 +124,8 @@ Metrics::Metrics(trace::Trace& trace)
                 stn = trace.system_tree_root_node();
             }
 
-            recorders_.emplace_back(std::make_unique<Monitor>(active_source->get(counter, index),
-                                                              Cpu(cpuid), trace, mc, stn));
+            recorders_.emplace_back(
+                std::make_unique<Monitor>(active_source->get(counter, index), cpu, trace, mc, stn));
         }
     }
 }

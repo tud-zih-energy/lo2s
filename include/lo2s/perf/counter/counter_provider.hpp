@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2021,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,47 +21,45 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
-#include <lo2s/trace/trace.hpp>
-
-#include <cstdint>
+#include <lo2s/perf/event_description.hpp>
 
 #include <vector>
 
-#include <cstdlib>
 namespace lo2s
 {
 namespace perf
 {
 namespace counter
 {
-namespace userspace
-{
-
-template <class T>
-class Reader
+class CounterProvider
 {
 public:
-    Reader(ExecutionScope scope);
-
-    void read();
-
-    int fd()
+    CounterProvider()
     {
-        return timer_fd_;
     }
 
-protected:
-    std::vector<int> counter_fds_;
-    CounterCollection counter_collection_;
-    UserspaceCounterBuffer counter_buffer_;
-    int timer_fd_;
+    static CounterProvider& instance()
+    {
+        static CounterProvider provider;
+        return provider;
+    }
 
-    std::vector<UserspaceReadFormat> data_;
+    void initialize_group_counters(const std::string& leader,
+                                   const std::vector<std::string>& counters);
+    void initialize_userspace_counters(const std::vector<std::string>& counters);
+
+    bool has_group_counters(ExecutionScope scope);
+    bool has_userspace_counters(ExecutionScope scope);
+
+    CounterCollection collection_for(MeasurementScope scope);
+
+private:
+    EventDescription group_leader_;
+    std::vector<EventDescription> group_events_;
+    std::vector<EventDescription> userspace_events_;
 };
-} // namespace userspace
 } // namespace counter
 } // namespace perf
 } // namespace lo2s

@@ -21,6 +21,7 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
+#include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
 
 namespace lo2s
@@ -50,8 +51,9 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
                                std::forward_as_tuple(process, spawn));
     }
 
-    if (config().sampling || !perf::counter::requested_group_counters().counters.empty() ||
-        !perf::counter::requested_userspace_counters().counters.empty())
+    if (config().sampling ||
+        perf::counter::CounterProvider::instance().has_group_counters(ExecutionScope(thread)) ||
+        perf::counter::CounterProvider::instance().has_userspace_counters(ExecutionScope(thread)))
     {
         threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
                          std::forward_as_tuple(ExecutionScope(thread), *this, spawn));

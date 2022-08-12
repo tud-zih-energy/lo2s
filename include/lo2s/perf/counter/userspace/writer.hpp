@@ -42,9 +42,6 @@ public:
     Writer(ExecutionScope scope, trace::Trace& trace);
 
     bool handle(std::vector<UserspaceReadFormat>& data);
-
-private:
-    const CounterCollection& counters_;
 };
 } // namespace userspace
 } // namespace counter

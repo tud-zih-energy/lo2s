@@ -27,7 +27,7 @@
 
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
-#include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/perf/counter/counter_provider.hpp>
 
 #include <filesystem>
 
@@ -68,10 +68,10 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        Log::debug() << "Create cstate recorder for cpu #" << cpu.id;
+        Log::debug() << "Create cstate recorder for cpu #" << cpu.as_int();
 
-        monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu.id),
-                          std::forward_as_tuple(ExecutionScope(Cpu(cpu.id)), *this, false));
+        monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
+                          std::forward_as_tuple(ExecutionScope(cpu), *this, false));
     }
 }
 

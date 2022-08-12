@@ -25,8 +25,9 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/perf/event_description.hpp>
 #include <lo2s/util.hpp>
-
 #include <otf2xx/otf2.hpp>
 
 #include <string>
@@ -51,21 +52,16 @@ struct SimpleKeyType
     }
 };
 
-struct ByCore
-{
-    using key_type = typename std::pair<int, int>;
-    key_type key;
-
-    ByCore(int core, int package) : key(std::make_pair(core, package))
-    {
-    }
-};
-
 // Can i haz strong typedef
+struct ByCoreTag
+{
+};
+using ByCore = SimpleKeyType<Core, ByCoreTag>;
+
 struct ByPackageTag
 {
 };
-using ByPackage = SimpleKeyType<int, ByPackageTag>;
+using ByPackage = SimpleKeyType<Package, ByPackageTag>;
 
 struct ByCpuTag
 {
@@ -116,6 +112,17 @@ struct ByMeasurementScopeTag
 };
 using ByMeasurementScope = SimpleKeyType<MeasurementScope, ByMeasurementScopeTag>;
 
+struct ByEventDescriptionTag
+{
+};
+using ByEventDescription = SimpleKeyType<perf::EventDescription, ByEventDescriptionTag>;
+
+struct ByCounterCollectionTag
+{
+};
+
+using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -136,7 +143,15 @@ struct Holder<otf2::definition::regions_group>
 template <>
 struct Holder<otf2::definition::metric_class>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString>;
+    using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString,
+                                                ByCounterCollection>;
+};
+
+template <>
+struct Holder<otf2::definition::metric_member>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::metric_member, ByString,
+                                                ByEventDescription>;
 };
 template <>
 struct Holder<otf2::definition::io_handle>

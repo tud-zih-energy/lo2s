@@ -31,6 +31,7 @@
 #include <fstream>
 #include <map>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -114,4 +115,7 @@ int get_cgroup_mountpoint_fd(std::string cgroup);
 Thread gettid();
 
 std::vector<BlockDevice> get_block_devices();
+
+std::set<std::uint32_t> parse_list(std::string list);
+std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);
 } // namespace lo2s

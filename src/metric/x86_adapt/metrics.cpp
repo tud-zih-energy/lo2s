@@ -59,14 +59,14 @@ Metrics::Metrics(trace::Trace& trace, const std::vector<std::string>& item_names
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        recorders_.emplace_back(
-            std::make_unique<Monitor>(x86_adapt_.cpu(cpu.id), cpu_configuration_items, trace, mc));
+        recorders_.emplace_back(std::make_unique<Monitor>(x86_adapt_.cpu(cpu.as_int()),
+                                                          cpu_configuration_items, trace, mc));
     }
 
     for (const auto& package : Topology::instance().packages())
     {
         node_recorders_.emplace_back(std::make_unique<NodeMonitor>(
-            x86_adapt_.node(package.id), node_configuration_items, trace, node_mc));
+            x86_adapt_.node(package.as_int()), node_configuration_items, trace, node_mc));
     }
 }
 

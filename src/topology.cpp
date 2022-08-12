@@ -1,57 +1,13 @@
 #include <lo2s/topology.hpp>
+#include <lo2s/util.hpp>
 
 namespace lo2s
 {
 const std::filesystem::path Topology::base_path = "/sys/devices/system/cpu";
 
-namespace detail
-{
-static auto parse_list(std::string list) -> std::set<uint32_t>
-{
-    std::stringstream s;
-    s << list;
-
-    std::set<uint32_t> res;
-
-    std::string part;
-    while (std::getline(s, part, ','))
-    {
-        auto pos = part.find('-');
-        if (pos != std::string::npos)
-        {
-            // is a range
-            uint32_t from = std::stoi(part.substr(0, pos));
-            uint32_t to = std::stoi(part.substr(pos + 1));
-
-            for (auto i = from; i <= to; ++i)
-                res.insert(i);
-        }
-        else
-        {
-            // single value
-            res.insert(std::stoi(part));
-        }
-    }
-
-    return res;
-}
-} // namespace detail
-
 void Topology::read_proc()
 {
-    std::string online_list;
-    std::string present_list;
-
-    {
-        std::ifstream cpu_online(base_path / "online");
-        std::getline(cpu_online, online_list);
-
-        std::ifstream cpu_present(base_path / "present");
-        std::getline(cpu_present, present_list);
-    }
-
-    auto online = detail::parse_list(online_list);
-    auto present = detail::parse_list(present_list);
+    auto online = parse_list_from_file(base_path / "online");
 
     for (auto cpu_id : online)
     {
@@ -65,51 +21,24 @@ void Topology::read_proc()
         package_stream >> package_id;
         core_stream >> core_id;
 
-        auto insert_package = packages_.insert(std::make_pair(package_id, Package(package_id)));
-        auto& package = insert_package.first->second;
-        if (package.id != package_id)
-        {
-            throw std::runtime_error("Inconsistent package ids in topology.");
-        }
-        package.core_ids.insert(core_id);
-        package.cpu_ids.insert(cpu_id);
-
-        auto insert_core = cores_.insert(
-            std::make_pair(std::make_tuple(package_id, core_id), Core(core_id, package_id)));
-        auto& core = insert_core.first->second;
-        if (core.id != core_id || core.package_id != package_id)
-        {
-            throw std::runtime_error("Inconsistent package/core ids in topology.");
-        }
-        core.cpu_ids.insert(cpu_id);
-
-        auto insert_cpu = cpus_.insert(std::make_pair(cpu_id, Cpu(cpu_id, core_id, package_id)));
-        [[maybe_unused]] auto& cpu = insert_cpu.first->second;
-
-        if (cpu.id != cpu_id || cpu.core_id != core_id || cpu.package_id != package_id)
-        {
-            throw std::runtime_error("Inconsistent cpu/package/core ids in topology.");
-        }
-        if (!insert_cpu.second)
-        {
-            throw std::runtime_error("Duplicate cpu_id when reading the topology.");
-        }
+        cpus_.emplace(cpu_id);
+        packages_.emplace(package_id);
+        cpu_to_core_.emplace(Cpu(cpu_id), Core(core_id, package_id));
+        cpu_to_package_.emplace(Cpu(cpu_id), Package(package_id));
     }
 
-    {
-        std::string line;
-        std::ifstream cpuinfo("/proc/cpuinfo");
+    std::string line;
+    std::ifstream cpuinfo("/proc/cpuinfo");
 
-        while (std::getline(cpuinfo, line))
+    while (std::getline(cpuinfo, line))
+    {
+        // if only C++14 had starts_with :(
+        if (line.find("flags") == 0)
         {
-            // if only C++14 had starts_with :(
-            if (line.find("flags") == 0)
+            if (line.find("hypervisor") != std::string::npos)
             {
-                if (line.find("hypervisor") != std::string::npos)
-                {
-                    hypervised_ = true;
-                    break;
-                }
+                hypervised_ = true;
+                break;
             }
         }
     }

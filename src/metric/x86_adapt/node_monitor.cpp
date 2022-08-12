@@ -21,7 +21,7 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device,
   device_(std::move(device)), otf2_writer_(trace.create_metric_writer(name())),
   configuration_items_(configuration_items),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(),
-                                         trace.system_tree_package_node(device_.id()))),
+                                         trace.system_tree_package_node(Package(device_.id())))),
   event_(otf2::chrono::genesis(), metric_instance_)
 {
     assert(device_.type() == X86_ADAPT_DIE);
@@ -29,8 +29,8 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device,
 
 void NodeMonitor::initialize_thread()
 {
-    auto package = lo2s::Topology::instance().packages().at(device_.id());
-    try_pin_to_scope(ExecutionScope(Cpu(*(package.cpu_ids.begin()))));
+    try_pin_to_scope(
+        ExecutionScope(Topology::instance().measuring_cpu_for_package(Package(device_.id()))));
 }
 
 void NodeMonitor::monitor([[maybe_unused]] int fd)
