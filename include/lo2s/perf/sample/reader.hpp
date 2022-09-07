@@ -166,8 +166,6 @@ protected:
 
         if (fd_ < 0)
         {
-            // TODO if there is a EACCESS, we should retry without the kernel flag!
-            // Test if it then works with paranoid=2
             Log::error() << "perf_event_open for sampling failed";
 #ifdef USE_PERF_CLOCKID
             if (perf_attr.use_clockid)
