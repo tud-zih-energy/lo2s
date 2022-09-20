@@ -91,6 +91,11 @@ Reader::Reader()
     }
     catch (...)
     {
+#ifndef USE_HW_BREAKPOINT_COMPAT
+        Log::error() << "time synchronization with hardware breakpoints failed, try rebuilding lo2s with -DUSE_HW_BREAKPOINT_COMPAT=ON";
+#else
+        Log::error() << "opening the perf event for HW_BREAKPOINT_COMPAT time synchronization failed";
+#endif
         close(fd_);
         throw;
     }
