@@ -144,7 +144,10 @@ void ProcessController::run()
 
         num_wakeups_++;
 
-        handle_signal(Thread(child), status);
+        if (handle_signal(Thread(child), status) != SignalHandlingState::KeepRunning)
+        {
+            break;
+        }
     }
 }
 
@@ -247,7 +250,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
     }
 }
 
-void ProcessController::handle_signal(Thread child, int status)
+ProcessController::SignalHandlingState ProcessController::handle_signal(Thread child, int status)
 {
     Log::debug() << "Handling signal " << status << " from " << child;
     if (WIFSTOPPED(status)) // signal-delivery-stop
@@ -267,7 +270,7 @@ void ProcessController::handle_signal(Thread child, int status)
             {
                 std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
                           << std::endl;
-                throw std::system_error(0, std::system_category());
+                return SignalHandlingState::Stop;
             }
         }
 
@@ -298,7 +301,7 @@ void ProcessController::handle_signal(Thread child, int status)
         default:
             Log::debug() << "Forwarding signal for " << child << ": " << WSTOPSIG(status);
             ptrace_cont(child, WSTOPSIG(status));
-            return;
+            return SignalHandlingState::KeepRunning;
         }
     }
     else if (WIFEXITED(status))
@@ -311,9 +314,9 @@ void ProcessController::handle_signal(Thread child, int status)
             std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
                       << std::endl;
             summary().set_exit_code(WEXITSTATUS(status));
-            throw std::system_error(0, std::system_category());
+            return SignalHandlingState::Stop;
         }
-        return;
+        return SignalHandlingState::KeepRunning;
     }
     else if (WIFSIGNALED(status))
     {
@@ -323,9 +326,9 @@ void ProcessController::handle_signal(Thread child, int status)
         {
             std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
                       << std::endl;
-            throw std::system_error(0, std::system_category());
+            return SignalHandlingState::Stop;
         }
-        return;
+        return SignalHandlingState::KeepRunning;
     }
     else
     {
@@ -347,5 +350,7 @@ void ProcessController::handle_signal(Thread child, int status)
             throw e;
         }
     }
+
+    return SignalHandlingState::KeepRunning;
 }
 } // namespace lo2s
