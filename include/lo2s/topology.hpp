@@ -29,13 +29,13 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 #include <cstdint>
 
 #include <filesystem>
+
+#include <lo2s/types.hpp>
 
 using namespace std::literals::string_literals;
 
@@ -44,46 +44,9 @@ namespace lo2s
 class Topology
 {
 
+private:
     void read_proc();
 
-public:
-    struct Cpu
-    {
-        uint32_t id;
-        uint32_t core_id;
-        uint32_t package_id;
-
-        Cpu(uint32_t id, uint32_t core_id, uint32_t package_id)
-        : id(id), core_id(core_id), package_id(package_id)
-        {
-        }
-    };
-
-    struct Core
-    {
-        uint32_t id;
-        uint32_t package_id;
-
-        Core(uint32_t id, uint32_t package_id) : id(id), package_id(package_id)
-        {
-        }
-
-        std::set<uint32_t> cpu_ids;
-    };
-
-    struct Package
-    {
-        uint32_t id;
-
-        Package(uint32_t id) : id(id)
-        {
-        }
-
-        std::set<uint32_t> core_ids;
-        std::set<uint32_t> cpu_ids;
-    };
-
-private:
     Topology()
     {
         read_proc();
@@ -102,42 +65,43 @@ public:
         return hypervised_;
     }
 
-    std::size_t num_cores() const
+    const std::set<Cpu>& cpus() const
     {
-        return cores_.size();
+        return cpus_;
     }
 
-    std::size_t num_packages() const
+    Core core_of(Cpu cpu) const
     {
-        return packages_.size();
+        return cpu_to_core_.at(cpu);
     }
 
-    std::vector<Cpu> cpus() const
+    const std::set<Package>& packages() const
     {
-        std::vector<Cpu> r;
-        std::transform(cpus_.begin(), cpus_.end(), std::back_inserter(r),
-                       [](const auto& elem) { return elem.second; });
-        return r;
+        return packages_;
     }
-    std::vector<Core> cores() const
+
+    Package package_of(Cpu cpu) const
     {
-        std::vector<Core> r;
-        std::transform(cores_.begin(), cores_.end(), std::back_inserter(r),
-                       [](const auto& elem) { return elem.second; });
-        return r;
+        return cpu_to_package_.at(cpu);
     }
-    std::vector<Package> packages() const
+
+    Cpu measuring_cpu_for_package(Package package) const
     {
-        std::vector<Package> r;
-        std::transform(packages_.begin(), packages_.end(), std::back_inserter(r),
-                       [](const auto& elem) { return elem.second; });
-        return r;
+        auto package_it = std::find_if(cpu_to_package_.begin(), cpu_to_package_.end(),
+                                       [package](auto elem) { return elem.second == package; });
+
+        if (package_it != cpu_to_package_.end())
+        {
+            return package_it->first;
+        }
+        return Cpu::invalid();
     }
 
 private:
-    std::map<int, Cpu> cpus_;
-    std::map<std::tuple<int, int>, Core> cores_;
-    std::map<int, Package> packages_;
+    std::set<Cpu> cpus_;
+    std::set<Package> packages_;
+    std::map<Cpu, Core> cpu_to_core_;
+    std::map<Cpu, Package> cpu_to_package_;
 
     bool hypervised_ = false;
 

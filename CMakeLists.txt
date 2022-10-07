@@ -161,7 +161,7 @@ set(SOURCE_FILES
 
     src/perf/event_provider.cpp
 
-    src/perf/counter/counter_collection.cpp
+    src/perf/counter/counter_provider.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
 

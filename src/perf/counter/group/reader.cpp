@@ -49,15 +49,15 @@ namespace group
 
 template <class T>
 Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
-: counter_buffer_(requested_group_counters().counters.size() + 1)
+: counter_collection_(
+      CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
+  counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    const CounterCollection counter_collection = requested_group_counters();
-
     perf_event_attr leader_attr = common_perf_event_attrs();
 
-    leader_attr.type = counter_collection.leader.type;
-    leader_attr.config = counter_collection.leader.config;
-    leader_attr.config1 = counter_collection.leader.config1;
+    leader_attr.type = counter_collection_.leader.type;
+    leader_attr.config = counter_collection_.leader.config;
+    leader_attr.config1 = counter_collection_.leader.config1;
 
     leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
     leader_attr.freq = config().metric_use_frequency;
@@ -86,29 +86,32 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         throw_errno();
     }
 
-    Log::debug() << "counter::Reader: leader event: '" << config().metric_leader << "'";
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name << "'";
 
-    counter_fds_.reserve(counter_collection.counters.size());
-    for (auto& description : counter_collection.counters)
+    counter_fds_.reserve(counter_collection_.counters.size());
+    for (auto& description : counter_collection_.counters)
     {
-        try
+        if (description.is_supported_in(scope))
         {
-            counter_fds_.emplace_back(
-                perf_event_description_open(scope, description, group_leader_fd_));
-        }
-        catch (const std::system_error& e)
-        {
-            Log::error() << "failed to add counter '" << description.name
-                         << "': " << e.code().message();
-
-            if (e.code().value() == EINVAL)
+            try
             {
-                Log::error()
-                    << "opening " << counter_collection.counters.size()
-                    << " counters at once might exceed the hardware limit of simultaneously "
-                       "openable counters.";
+                counter_fds_.emplace_back(
+                    perf_event_description_open(scope, description, group_leader_fd_));
             }
-            throw e;
+            catch (const std::system_error& e)
+            {
+                Log::error() << "failed to add counter '" << description.name
+                             << "': " << e.code().message();
+
+                if (e.code().value() == EINVAL)
+                {
+                    Log::error()
+                        << "opening " << counter_collection_.counters.size()
+                        << " counters at once might exceed the hardware limit of simultaneously "
+                           "openable counters.";
+                }
+                throw e;
+            }
         }
     }
 

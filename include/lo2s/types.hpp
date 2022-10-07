@@ -28,6 +28,10 @@ extern "C"
 
 #include <fmt/core.h>
 
+#include <vector>
+
+#include <cstdint>
+
 namespace lo2s
 {
 
@@ -189,6 +193,77 @@ public:
 private:
     int cpu_;
 };
+
+class Core
+{
+public:
+    Core(int core_id, int package_id) : core_id_(core_id), package_id_(package_id)
+    {
+    }
+
+    static Core invalid()
+    {
+        return Core(-1, -1);
+    }
+
+    friend bool operator==(const Core& lhs, const Core& rhs)
+    {
+        return (lhs.core_id_ == rhs.core_id_) && (lhs.package_id_ == rhs.package_id_);
+    }
+
+    friend bool operator<(const Core& lhs, const Core& rhs)
+    {
+        if (lhs.package_id_ == rhs.package_id_)
+        {
+            return lhs.core_id_ < rhs.core_id_;
+        }
+        return lhs.package_id_ < rhs.package_id_;
+    }
+
+    int core_as_int() const
+    {
+        return core_id_;
+    }
+
+    int package_as_int() const
+    {
+        return package_id_;
+    }
+
+private:
+    int core_id_;
+    int package_id_;
+};
+
+class Package
+{
+public:
+    explicit Package(int id) : id_(id)
+    {
+    }
+
+    static Package invalid()
+    {
+        return Package(-1);
+    }
+
+    friend bool operator==(const Package& lhs, const Package& rhs)
+    {
+        return lhs.id_ == rhs.id_;
+    }
+    friend bool operator<(const Package& lhs, const Package& rhs)
+    {
+        return lhs.id_ < rhs.id_;
+    }
+
+    int as_int() const
+    {
+        return id_;
+    }
+
+private:
+    int id_;
+};
 } // namespace lo2s
 
 namespace std
@@ -201,4 +276,5 @@ struct hash<lo2s::Thread>
         return ((std::hash<pid_t>()(t.as_pid_t())));
     }
 };
+
 } // namespace std

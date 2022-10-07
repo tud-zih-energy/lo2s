@@ -54,8 +54,6 @@ struct Config
     bool quiet;
     // Optional features
     std::vector<std::string> tracepoint_events;
-    std::vector<std::string> perf_group_events;
-    std::vector<std::string> perf_userspace_events;
 #ifdef HAVE_X86_ADAPT
     std::vector<std::string> x86_adapt_knobs;
 #endif
@@ -82,9 +80,6 @@ struct Config
 
     std::uint64_t metric_count;
     std::uint64_t metric_frequency;
-
-    std::string metric_leader;
-    bool standard_metrics;
 
     // time synchronization
     bool use_clockid;

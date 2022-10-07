@@ -35,7 +35,6 @@ struct CounterCollection
 {
     EventDescription leader;
     std::vector<EventDescription> counters;
-
     double get_scale(int index) const
     {
         if (index == 0)
@@ -47,10 +46,24 @@ struct CounterCollection
             return counters[index - 1].scale;
         }
     }
-};
+    friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
+    {
+        if (lhs.leader == rhs.leader)
+        {
+            return lhs.counters == rhs.counters;
+        }
+        return false;
+    }
 
-const CounterCollection& requested_userspace_counters();
-const CounterCollection& requested_group_counters();
+    friend bool operator<(const CounterCollection& lhs, const CounterCollection& rhs)
+    {
+        if (lhs.leader == rhs.leader)
+        {
+            return lhs.counters < rhs.counters;
+        }
+        return lhs.leader < rhs.leader;
+    }
+};
 
 } // namespace counter
 } // namespace perf

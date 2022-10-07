@@ -26,13 +26,17 @@
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/topology.hpp>
+#include <lo2s/util.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <limits>
 #include <regex>
+#include <set>
 #include <sstream>
+#include <vector>
 
 #include <cstring>
 
@@ -162,14 +166,14 @@ static bool event_is_openable(EventDescription& ev)
     attr.config1 = ev.config1;
 
     int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-    int sys_fd = perf_event_open(&attr, ExecutionScope(Cpu(0)), -1, 0);
+    int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
     if (sys_fd == -1 && proc_fd == -1)
     {
         Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
 
         attr.exclude_kernel = 1;
         int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-        int sys_fd = perf_event_open(&attr, ExecutionScope(Cpu(0)), -1, 0);
+        int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
 
         if (sys_fd == -1 && proc_fd == -1)
         {
@@ -290,7 +294,7 @@ std::vector<EventDescription> EventProvider::get_pmu_events()
     return events;
 }
 
-const EventDescription& EventProvider::get_default_metric_leader_event()
+const EventDescription& EventProvider::fallback_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
@@ -467,7 +471,12 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
     }
-    EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0);
+
+    std::set<Cpu> cpus;
+    auto cpuids = parse_list_from_file(pmu_path / "cpus");
+    std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
+                   [](uint32_t cpuid) { return Cpu(cpuid); });
+    EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus);
 
     // Parse event configuration from sysfs //
 

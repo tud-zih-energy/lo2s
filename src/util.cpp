@@ -13,6 +13,7 @@
 #include <iostream>
 #include <map>
 #include <regex>
+#include <set>
 
 #include <cstdint>
 #include <ctime>
@@ -373,5 +374,49 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
         }
     }
     return -1;
+}
+
+std::set<std::uint32_t> parse_list(std::string list)
+{
+    std::stringstream s;
+    s << list;
+
+    std::set<uint32_t> res;
+
+    std::string part;
+    while (std::getline(s, part, ','))
+    {
+        auto pos = part.find('-');
+        if (pos != std::string::npos)
+        {
+            // is a range
+            uint32_t from = std::stoi(part.substr(0, pos));
+            uint32_t to = std::stoi(part.substr(pos + 1));
+
+            for (auto i = from; i <= to; ++i)
+                res.insert(i);
+        }
+        else
+        {
+            // single value
+            res.insert(std::stoi(part));
+        }
+    }
+
+    return res;
+}
+
+std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
+{
+    std::ifstream list_stream(file);
+    std::string list_string;
+    list_stream >> list_string;
+
+    if (list_stream)
+    {
+        return parse_list(list_string);
+    }
+
+    return std::set<std::uint32_t>();
 }
 } // namespace lo2s

@@ -62,14 +62,14 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(syscall_writer_->fd());
     }
 
-    if (!perf::counter::requested_group_counters().counters.empty())
+    if (perf::counter::CounterProvider::instance().has_group_counters(scope))
     {
         group_counter_writer_ =
             std::make_unique<perf::counter::group::Writer>(scope, parent.trace(), enable_on_exec);
         add_fd(group_counter_writer_->fd());
     }
 
-    if (!perf::counter::requested_userspace_counters().counters.empty())
+    if (perf::counter::CounterProvider::instance().has_userspace_counters(scope))
     {
         userspace_counter_writer_ =
             std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());

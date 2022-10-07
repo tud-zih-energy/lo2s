@@ -119,46 +119,51 @@ Trace::Trace()
     registry_.create<otf2::definition::system_tree_node_domain>(
         system_tree_root_node_, otf2::common::system_tree_node_domain::shared_memory);
     const auto& sys = Topology::instance();
-    for (auto& package : sys.packages())
-    {
-        Log::debug() << "Registering package " << package.id;
-        const auto& res = registry_.create<otf2::definition::system_tree_node>(
-            ByPackage(package.id), intern(std::to_string(package.id)), intern("package"),
-            system_tree_root_node_);
-
-        registry_.create<otf2::definition::system_tree_node_domain>(
-            res, otf2::common::system_tree_node_domain::socket);
-    }
-    for (auto& core : sys.cores())
-    {
-        Log::debug() << "Registering core " << core.id << "@" << core.package_id;
-
-        const auto& res = registry_.create<otf2::definition::system_tree_node>(
-            ByCore(core.id, core.package_id),
-            intern(std::to_string(core.package_id) + ":" + std::to_string(core.id)), intern("core"),
-            registry_.get<otf2::definition::system_tree_node>(ByPackage(core.package_id)));
-
-        registry_.create<otf2::definition::system_tree_node_domain>(
-            res, otf2::common::system_tree_node_domain::core);
-    }
     for (auto& cpu : sys.cpus())
     {
-        const auto& name = intern(Cpu(cpu.id).name());
+        Core core = sys.core_of(cpu);
+        Package package = sys.package_of(cpu);
 
-        Log::debug() << "Registering cpu " << cpu.id << "@" << cpu.core_id << ":" << cpu.package_id;
-        const auto& res = registry_.create<otf2::definition::system_tree_node>(
-            ByCpu(Cpu(cpu.id)), name, intern("cpu"),
-            registry_.get<otf2::definition::system_tree_node>(ByCore(cpu.core_id, cpu.package_id)));
+        auto& package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
+
+        if (!package_node)
+        {
+            package_node = registry_.emplace<otf2::definition::system_tree_node>(
+                ByPackage(package), intern(std::to_string(package.as_int())), intern("package"),
+                system_tree_root_node_);
+
+            registry_.create<otf2::definition::system_tree_node_domain>(
+                package_node, otf2::common::system_tree_node_domain::socket);
+        }
+
+        auto& core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
+
+        if (!core_node)
+        {
+            registry_.emplace<otf2::definition::system_tree_node>(
+                ByCore(core),
+                intern(std::to_string(package.as_int()) + ":" + std::to_string(core.core_as_int())),
+                intern("core"), package_node);
+
+            registry_.create<otf2::definition::system_tree_node_domain>(
+                core_node, otf2::common::system_tree_node_domain::core);
+        }
+        const auto& name = intern(cpu.name());
+
+        Log::debug() << "Registering cpu " << cpu.as_int() << "@" << core.core_as_int() << ":"
+                     << package.as_int();
+
+        const auto& cpu_node = registry_.create<otf2::definition::system_tree_node>(
+            ByCpu(cpu), name, intern("cpu"), core_node);
 
         registry_.create<otf2::definition::system_tree_node_domain>(
-            res, otf2::common::system_tree_node_domain::pu);
+            cpu_node, otf2::common::system_tree_node_domain::pu);
 
         registry_.create<otf2::definition::location_group>(
-            ByExecutionScope(Cpu(cpu.id).as_scope()), name,
-            otf2::definition::location_group::location_group_type::process,
-            registry_.get<otf2::definition::system_tree_node>(ByCpu(Cpu(cpu.id))));
+            ByExecutionScope(cpu.as_scope()), name,
+            otf2::definition::location_group::location_group_type::process, cpu_node);
 
-        groups_.add_cpu(Cpu(cpu.id));
+        groups_.add_cpu(cpu);
     }
 
     groups_.add_process(NO_PARENT_PROCESS);

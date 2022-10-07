@@ -25,9 +25,11 @@
 
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/platform.hpp>
 #include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
@@ -67,7 +69,7 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::EventDescription> events)
+                                      const std::vector<perf::EventDescription>& events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
@@ -76,18 +78,26 @@ static inline void print_availability(std::ostream& os, const std::string& descr
         {
             continue;
         }
-        else if (ev.availability == perf::Availability::PROCESS_MODE)
+
+        std::string availability = "";
+        std::string cpu = "";
+        if (ev.availability == perf::Availability::PROCESS_MODE)
         {
-            event_names.push_back(ev.name + " *");
+            availability = " *";
         }
         else if (ev.availability == perf::Availability::SYSTEM_MODE)
         {
-            event_names.push_back(ev.name + " #");
+            availability = " #";
         }
-        else
+        if (ev.supported_cpus() != Topology::instance().cpus())
         {
-            event_names.push_back(ev.name);
+            const auto& cpus = ev.supported_cpus();
+            cpu =
+                fmt::format(" [ CPUs {}-{} ]", std::min_element(cpus.begin(), cpus.end())->as_int(),
+                            std::max_element(cpus.begin(), cpus.end())->as_int());
         }
+
+        event_names.push_back(ev.name + availability + cpu);
     }
     list_arguments_sorted(os, description, event_names);
 }
@@ -303,6 +313,7 @@ void parse_program_options(int argc, const char** argv)
         .option("metric-leader", "The leading metric event. This event is used as an interval "
                                  "giver for the other metric events.")
         .optional()
+        .default_value("")
         .metavar("EVENT");
 
     perf_metric_options
@@ -363,9 +374,6 @@ void parse_program_options(int argc, const char** argv)
     config.enable_cct = arguments.given("call-graph");
     config.suppress_ip = arguments.given("no-ip");
     config.tracepoint_events = arguments.get_all("tracepoint");
-    config.perf_group_events = arguments.get_all("metric-event");
-    config.perf_userspace_events = arguments.get_all("userspace-metric-event");
-    config.standard_metrics = arguments.given("standard-metrics");
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
@@ -470,18 +478,20 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    for (const auto& event : config.perf_userspace_events)
-    {
-        auto it =
-            std::find(config.perf_group_events.begin(), config.perf_group_events.end(), event);
+    std::vector<std::string> perf_group_events = arguments.get_all("metric-event");
+    std::vector<std::string> perf_userspace_events = arguments.get_all("userspace-metric-event");
 
-        if (it != config.perf_group_events.end())
+    for (const auto& event : perf_userspace_events)
+    {
+        auto it = std::find(perf_group_events.begin(), perf_group_events.end(), event);
+
+        if (it != perf_group_events.end())
         {
             Log::warn()
                 << event
                 << " given as both userspace and grouped metric event only using it in userspace "
                    "measuring mode";
-            config.perf_group_events.erase(it);
+            perf_group_events.erase(it);
         }
     }
 
@@ -655,30 +665,11 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
         }
 
-        Log::debug() << "checking if cpu-clock is available...";
-        try
-        {
-            config.metric_leader = perf::EventProvider::get_event_by_name("cpu-clock").name;
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "cpu-clock isn't available, trying to use a fallback event";
-            try
-            {
-                config.metric_leader = perf::EventProvider::get_default_metric_leader_event().name;
-            }
-            catch (const perf::EventProvider::InvalidEvent& e)
-            {
-                // Will be handled later in collect_requested_group_counters
-                config.metric_leader.clear();
-            }
-        }
         config.metric_use_frequency = true;
         config.metric_frequency = arguments.as<std::uint64_t>("metric-frequency");
     }
     else
     {
-        config.metric_leader = arguments.get("metric-leader");
 
         if (!arguments.provided("metric-count") || arguments.as<int>("metric-count") == 0)
         {
@@ -690,6 +681,20 @@ void parse_program_options(int argc, const char** argv)
         config.metric_use_frequency = false;
         config.metric_count = arguments.as<std::uint64_t>("metric-count");
     }
+
+    if (arguments.given("standard-metrics"))
+    {
+        for (const auto& mem_event : platform::get_mem_events())
+        {
+            perf_group_events.emplace_back(mem_event.name);
+        }
+        perf_group_events.emplace_back("instructions");
+        perf_group_events.emplace_back("cpu-cycles");
+    }
+
+    perf::counter::CounterProvider::instance().initialize_group_counters(
+        arguments.get("metric-leader"), perf_group_events);
+    perf::counter::CounterProvider::instance().initialize_userspace_counters(perf_userspace_events);
 
     config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
 

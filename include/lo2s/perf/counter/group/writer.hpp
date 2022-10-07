@@ -42,9 +42,6 @@ public:
 
     using Reader<Writer>::handle;
     bool handle(const RecordSampleType* sample);
-
-private:
-    const CounterCollection& counters_;
 };
 } // namespace group
 } // namespace counter

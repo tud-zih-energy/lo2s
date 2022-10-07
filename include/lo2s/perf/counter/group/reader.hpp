@@ -24,6 +24,7 @@
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
 #include <lo2s/perf/event_reader.hpp>
+
 #include <vector>
 
 extern "C"
@@ -72,6 +73,7 @@ public:
 protected:
     int group_leader_fd_;
     std::vector<int> counter_fds_;
+    CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };
 } // namespace group

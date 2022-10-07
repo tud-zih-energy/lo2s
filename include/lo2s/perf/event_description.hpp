@@ -21,6 +21,10 @@
 
 #pragma once
 
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/topology.hpp>
+
+#include <set>
 #include <string>
 
 extern "C"
@@ -43,9 +47,11 @@ enum class Availability
 struct EventDescription
 {
     EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
-                     std::uint64_t config1 = 0, double scale = 1, std::string unit = "#")
+                     std::uint64_t config1 = 0, std::set<Cpu> cpus = std::set<Cpu>(),
+                     double scale = 1, std::string unit = "#",
+                     Availability availability = Availability::UNAVAILABLE)
     : name(name), type(type), config(config), config1(config1), scale(scale), unit(unit),
-      availability(Availability::UNAVAILABLE)
+      availability(availability), cpus_(cpus)
     {
     }
 
@@ -55,6 +61,39 @@ struct EventDescription
     {
     }
 
+    const std::set<Cpu>& supported_cpus() const
+    {
+        if (cpus_.empty())
+        {
+            return Topology::instance().cpus();
+        }
+        return cpus_;
+    }
+
+    bool is_supported_in(ExecutionScope scope) const
+    {
+        // per-process should always work. the counter will just not count if the process is
+        // scheduled on a core that is not supprted by that counter
+        return scope.is_thread() || cpus_.empty() || cpus_.count(scope.as_cpu());
+    }
+
+    friend bool operator==(const EventDescription& lhs, const EventDescription& rhs)
+    {
+        return (lhs.type == rhs.type) && (lhs.config == rhs.config) && (lhs.config1 == rhs.config1);
+    }
+
+    friend bool operator<(const EventDescription& lhs, const EventDescription& rhs)
+    {
+        if (lhs.type == rhs.type)
+        {
+            if (lhs.config == rhs.config)
+            {
+                return lhs.config1 < rhs.config1;
+            }
+            return lhs.config < rhs.config;
+        }
+        return lhs.type < rhs.type;
+    }
     std::string name;
     perf_type_id type;
     std::uint64_t config;
@@ -62,6 +101,9 @@ struct EventDescription
     double scale;
     std::string unit;
     Availability availability;
+
+private:
+    std::set<Cpu> cpus_;
 };
 } // namespace perf
 } // namespace lo2s

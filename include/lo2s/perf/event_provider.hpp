@@ -89,7 +89,7 @@ public:
     static std::vector<EventDescription> get_predefined_events();
     static std::vector<EventDescription> get_pmu_events();
 
-    static const EventDescription& get_default_metric_leader_event();
+    static const EventDescription& fallback_metric_leader_event();
 
     class InvalidEvent : public std::runtime_error
     {
