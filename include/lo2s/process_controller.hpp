@@ -37,6 +37,12 @@ namespace lo2s
 
 class ProcessController
 {
+    enum class SignalHandlingState
+    {
+        KeepRunning,
+        Stop
+    };
+
 public:
     ProcessController(Process child, const std::string& name, bool spawn,
                       monitor::AbstractProcessMonitor& monitor);
@@ -48,7 +54,7 @@ public:
 private:
     void handle_ptrace_event(Thread thread, int event);
 
-    void handle_signal(Thread thread, int status);
+    SignalHandlingState handle_signal(Thread thread, int status);
 
     const Thread first_child_;
     sighandler_t default_signal_handler;
