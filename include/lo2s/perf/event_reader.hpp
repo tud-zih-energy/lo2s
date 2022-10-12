@@ -178,124 +178,127 @@ protected:
 public:
     void read()
     {
+        int64_t read_samples = 0;
+        while (!empty())
+        {
+            auto event_header_p = get();
+            read_samples++;
+            bool stop = false;
+            auto crtp_this = static_cast<CRTP*>(this);
+
+            switch (event_header_p->type)
+            {
+            case PERF_RECORD_MMAP:
+                stop = crtp_this->handle((const RecordMmapType*)event_header_p);
+                break;
+            case PERF_RECORD_MMAP2:
+                stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
+                break;
+#ifdef USE_PERF_RECORD_SWITCH
+            case PERF_RECORD_SWITCH:
+                stop = crtp_this->handle((const RecordSwitchType*)event_header_p);
+                break;
+            case PERF_RECORD_SWITCH_CPU_WIDE:
+                stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
+                break;
+#endif
+            case PERF_RECORD_THROTTLE: /* fall-through */
+            case PERF_RECORD_UNTHROTTLE:
+                throttle_samples++;
+                break;
+            case PERF_RECORD_LOST:
+            {
+                auto lost = (const RecordLostType*)event_header_p;
+                lost_samples += lost->lost;
+                Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
+                break;
+            }
+#ifdef HAVE_PERF_RECORD_LOST_SAMPLES
+            case PERF_RECORD_LOST_SAMPLES:
+            {
+                auto lost = (const RecordLostSamplesType*)event_header_p;
+                lost_samples += lost->lost;
+                Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
+                break;
+            }
+#endif
+            case PERF_RECORD_EXIT:
+                // We might get those as a side effect of time synchronization,
+                // when using HW_BREAKPOINT_COMPAT, so ignore
+                break;
+            case PERF_RECORD_FORK:
+                stop = crtp_this->handle((const RecordForkType*)event_header_p);
+                break;
+            case PERF_RECORD_SAMPLE:
+            {
+                // Use CRTP here because the struct type depends on the perf attr
+                using ActualSampleType = typename CRTP::RecordSampleType;
+                stop = crtp_this->handle((const ActualSampleType*)event_header_p);
+                break;
+            }
+            case PERF_RECORD_COMM:
+                stop = crtp_this->handle((const RecordCommType*)event_header_p);
+                break;
+            default:
+                stop = crtp_this->handle((const RecordUnknownType*)event_header_p);
+            }
+            pop();
+            if (stop)
+            {
+                break;
+            }
+        }
+        Log::trace() << "read " << read_samples << " samples.";
+    }
+
+    void pop()
+    {
+        auto* ev = get();
+        data_tail(data_tail() + ev->size);
+    }
+
+    bool empty()
+    {
+        return data_head() == data_tail();
+    }
+
+    perf_event_header* get()
+    {
         auto cur_head = data_head();
         auto cur_tail = data_tail();
 
+        assert(cur_tail <= cur_head);
         Log::trace() << "head: " << cur_head << ", tail: " << cur_tail;
 
-        /* if the ring buffer has been filled to fast, we skip the current entries*/
-        auto diff = cur_head - cur_tail;
-        assert(cur_tail <= cur_head);
-        if (diff > data_size())
-        {
-            Log::error() << "perf ring buffer overflow. "
-                            "The trace is missing events. "
-                            "Increase the buffer size or the sampling period";
-        }
-        else
-        {
-            auto d = data();
-            int64_t read_samples = 0;
-            while (cur_tail < cur_head)
-            {
-                auto index = cur_tail % data_size();
-                auto event_header_p = (struct perf_event_header*)(d + index);
-                auto len = event_header_p->size;
-                if (cur_tail + len > cur_head)
-                {
-                    Log::warn() << "perf_event goes beyond tail. skipping.";
-                    break;
-                }
-                read_samples++;
-                total_samples++;
-                // Event spans the wrap-around of the ring buffer
-                if (index + len > data_size())
-                {
-                    std::byte* dst = event_copy;
-                    do
-                    {
-                        auto cpy = std::min<std::size_t>(data_size() - index, len);
-                        memcpy(dst, d + index, cpy);
-                        index = (index + cpy) % data_size();
-                        dst += cpy;
-                        len -= cpy;
-                    } while (len);
-                    event_header_p = (struct perf_event_header*)(event_copy);
-                }
+        // Unless there is a serious kernel bug, the kernel will
+        // always throw away
+        // events on overflow and write PERF_RECORD_LOST events
+        assert(cur_head - cur_tail <= data_size());
 
-                bool stop = false;
-                auto crtp_this = static_cast<CRTP*>(this);
-                switch (event_header_p->type)
-                {
-                case PERF_RECORD_MMAP:
-                    stop = crtp_this->handle((const RecordMmapType*)event_header_p);
-                    break;
-                case PERF_RECORD_MMAP2:
-                    stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
-                    break;
-#ifdef USE_PERF_RECORD_SWITCH
-                case PERF_RECORD_SWITCH:
-                    stop = crtp_this->handle((const RecordSwitchType*)event_header_p);
-                    break;
-                case PERF_RECORD_SWITCH_CPU_WIDE:
-                    stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
-                    break;
-#endif
-                case PERF_RECORD_THROTTLE: /* fall-through */
-                case PERF_RECORD_UNTHROTTLE:
-                    throttle_samples++;
-                    break;
-                case PERF_RECORD_LOST:
-                {
-                    auto lost = (const RecordLostType*)event_header_p;
-                    lost_samples += lost->lost;
-                    Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
-                    break;
-                }
-#ifdef HAVE_PERF_RECORD_LOST_SAMPLES
-                case PERF_RECORD_LOST_SAMPLES:
-                {
-                    auto lost = (const RecordLostSamplesType*)event_header_p;
-                    lost_samples += lost->lost;
-                    Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
-                    break;
-                }
-#endif
-                case PERF_RECORD_EXIT:
-                    // Ignore, it should only come when attr.task = 1
-                    break;
-                case PERF_RECORD_FORK:
-                    stop = crtp_this->handle((const RecordForkType*)event_header_p);
-                    break;
-                case PERF_RECORD_SAMPLE:
-                {
-                    // Use CRTP here because the struct type depends on the perf attr
-                    using ActualSampleType = typename CRTP::RecordSampleType;
-                    stop = crtp_this->handle((const ActualSampleType*)event_header_p);
-                    break;
-                }
-                case PERF_RECORD_COMM:
-                    stop = crtp_this->handle((const RecordCommType*)event_header_p);
-                    break;
-                default:
-                    stop = crtp_this->handle((const RecordUnknownType*)event_header_p);
-                }
-                cur_tail += event_header_p->size;
-                if (stop)
-                {
-                    break;
-                }
-            }
-            diff = data_head() - cur_tail;
-            if (diff > data_size())
+        auto d = data();
+
+        auto index = cur_tail % data_size();
+        auto event_header_p = (struct perf_event_header*)(d + index);
+        auto len = event_header_p->size;
+
+        assert(cur_tail + len <= cur_head);
+
+        // Event spans the wrap-around of the ring buffer
+        if (index + len > data_size())
+        {
+            std::byte* dst = event_copy;
+            do
             {
-                Log::error() << "perf ring buffer overflow occurred while reading. "
-                                "The trace may be garbage. "
-                                "Increase the buffer size or the sampling period";
-            }
-            Log::trace() << "read " << read_samples << " samples.";
+                auto cpy = std::min<std::size_t>(data_size() - index, len);
+                memcpy(dst, d + index, cpy);
+                index = (index + cpy) % data_size();
+                dst += cpy;
+                len -= cpy;
+            } while (len);
+            event_header_p = (struct perf_event_header*)(event_copy);
         }
-        data_tail(cur_tail);
+
+        return event_header_p;
     }
 
 private:
@@ -377,5 +380,11 @@ private:
     void* base;
     std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
+
+class DummyCRTPWriter
+{
+};
+
+using PullReader = EventReader<DummyCRTPWriter>;
 } // namespace perf
 } // namespace lo2s

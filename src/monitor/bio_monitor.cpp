@@ -30,28 +30,24 @@ namespace lo2s
 namespace monitor
 {
 
-BioMonitor::BioMonitor(trace::Trace& trace, Cpu cpu,
-                       std::map<dev_t, std::unique_ptr<perf::bio::Writer>>& writers)
-: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu),
-  bio_insert_cacher_(cpu, writers, perf::bio::BioEventType::INSERT),
-  bio_issue_cacher_(cpu, writers, perf::bio::BioEventType::ISSUE),
-  bio_complete_cacher_(cpu, writers, perf::bio::BioEventType::COMPLETE)
-{
-    add_fd(bio_insert_cacher_.fd());
-    add_fd(bio_issue_cacher_.fd());
-    add_fd(bio_complete_cacher_.fd());
-}
+BioMonitor::BioMonitor(trace::Trace& trace)
+: monitor::PollMonitor(trace, "", config().perf_read_interval), multi_reader_(trace)
 
-void BioMonitor::initialize_thread()
 {
-    try_pin_to_scope(cpu_.as_scope());
+    for (const auto& cpu : Topology::instance().cpus())
+    {
+        add_fd(multi_reader_.addReader(
+            perf::bio::Reader::IdentityType(perf::bio::BioEventType::INSERT, cpu)));
+        add_fd(multi_reader_.addReader(
+            perf::bio::Reader::IdentityType(perf::bio::BioEventType::ISSUE, cpu)));
+        add_fd(multi_reader_.addReader(
+            perf::bio::Reader::IdentityType(perf::bio::BioEventType::COMPLETE, cpu)));
+    }
 }
 
 void BioMonitor::finalize_thread()
 {
-    bio_insert_cacher_.finalize();
-    bio_issue_cacher_.finalize();
-    bio_complete_cacher_.finalize();
+    multi_reader_.finalize();
 }
 
 void BioMonitor::monitor(int fd)
@@ -60,23 +56,9 @@ void BioMonitor::monitor(int fd)
     {
         return;
     }
-    else if (fd == bio_insert_cacher_.fd())
-    {
-        bio_insert_cacher_.read();
-    }
-    else if (fd == bio_issue_cacher_.fd())
-    {
-        bio_issue_cacher_.read();
-    }
-    else if (fd == bio_complete_cacher_.fd())
-    {
-        bio_complete_cacher_.read();
-    }
     else
     {
-        bio_insert_cacher_.read();
-        bio_issue_cacher_.read();
-        bio_complete_cacher_.read();
+        multi_reader_.read();
     }
 }
 } // namespace monitor

@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/types.hpp>
 
 #include <filesystem>
@@ -113,8 +112,6 @@ void try_pin_to_scope(ExecutionScope scope);
 int get_cgroup_mountpoint_fd(std::string cgroup);
 
 Thread gettid();
-
-std::vector<BlockDevice> get_block_devices();
 
 std::set<std::uint32_t> parse_list(std::string list);
 std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);

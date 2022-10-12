@@ -162,6 +162,8 @@ set(SOURCE_FILES
 
     src/perf/event_provider.cpp
 
+    src/perf/bio/block_device.cpp
+    src/perf/multi_reader.cpp
     src/perf/counter/counter_provider.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
@@ -174,7 +176,6 @@ set(SOURCE_FILES
     src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
     src/perf/syscall/writer.cpp
-    src/perf/bio/event_cacher.cpp
 
     src/time/time.cpp
 

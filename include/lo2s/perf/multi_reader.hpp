@@ -31,6 +31,7 @@
 #include <otf2xx/event/metric.hpp>
 #include <otf2xx/writer/local.hpp>
 
+#include <queue>
 #include <unordered_map>
 #include <vector>
 
@@ -38,54 +39,57 @@ namespace lo2s
 {
 namespace perf
 {
-namespace bio
-{
-// Note, this cannot be protected for CRTP reasons...
 
-class EventCacher : public Reader<EventCacher>
+template <class Reader, class Writer>
+class MultiReader
 {
 public:
-    struct __attribute((__packed__)) RecordBlock
-    {
-        uint16_t common_type;         // 2
-        uint8_t common_flag;          // 3
-        uint8_t common_preempt_count; // 4
-        int32_t common_pid;           // 8
+    MultiReader(trace::Trace& trace);
 
-        uint32_t dev;    // 12
-        char padding[4]; // 16
-        uint64_t sector; // 24
+    MultiReader(const MultiReader& other) = delete;
+    MultiReader& operator=(const MultiReader&) = delete;
 
-        uint32_t nr_sector;     // 28
-        int32_t error_or_bytes; // 32
-
-        char rwbs[8]; // 40
-    };
-
-    EventCacher(Cpu cpu, std::map<dev_t, std::unique_ptr<Writer>>& writers, BioEventType type);
-
-    EventCacher(const EventCacher& other) = delete;
-
-    EventCacher(EventCacher&& other) = default;
+    MultiReader(MultiReader&& other) = default;
+    MultiReader& operator=(MultiReader&&) = default;
+    ~MultiReader() = default;
 
 public:
-    using Reader<EventCacher>::handle;
-
-    bool handle(const Reader::RecordSampleType* sample);
+    void read();
 
     void finalize()
     {
-        for (auto& events : events_)
+        for (auto& reader : readers_)
         {
-            writers_[events.first]->submit_events(events.second);
+            reader.second.stop();
         }
+        // Flush the event buffer one last time
+        read();
     }
+    using ReaderIdentity = typename Reader::IdentityType;
+    int addReader(ReaderIdentity identity);
 
 private:
-    std::map<dev_t, std::unique_ptr<Writer>>& writers_;
-    std::unordered_map<dev_t, std::vector<BioEvent>> events_;
+    struct ReaderState
+    {
+        ReaderState(uint64_t time, ReaderIdentity identity) : time(time), identity(identity)
+        {
+        }
+
+        uint64_t time;
+        ReaderIdentity identity;
+
+        friend bool operator>(const ReaderState& lhs, const ReaderState& rhs)
+        {
+            return lhs.time > rhs.time;
+        }
+    };
+
+    Writer writer_;
+    std::map<ReaderIdentity, Reader> readers_;
+    uint64_t highest_written_ = 0;
+    std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
+        earliest_available_;
 };
 
-} // namespace bio
 } // namespace perf
 } // namespace lo2s
