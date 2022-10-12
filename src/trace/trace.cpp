@@ -186,10 +186,10 @@ Trace::Trace()
 
         for (auto& device : get_block_devices())
         {
-            if (device.type == BlockDeviceType::DISK)
+            if (device.second.type == BlockDeviceType::DISK)
             {
-                block_io_handle(device);
-                bio_writer(device);
+                block_io_handle(device.second);
+                bio_writer(device.second);
             }
         }
     }
@@ -425,20 +425,25 @@ otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::bio_writer(BlockDevice& device)
+otf2::writer::local& Trace::bio_writer(BlockDevice dev)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    const auto& name = intern(fmt::format("block I/O events for {}", device.name));
+    if (registry_.has<otf2::definition::location>(ByBlockDevice(dev)))
+    {
+        return archive_(registry_.get<otf2::definition::location>(ByBlockDevice(dev)));
+    }
+
+    const auto& name = intern(fmt::format("block I/O events for {}", dev.name));
 
     const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
-        ByDev(device.id), intern(device.name), intern("block device"), bio_system_tree_node_);
+        ByBlockDevice(dev), intern(dev.name), intern("block dev"), bio_system_tree_node_);
 
     const auto& bio_location_group = registry_.emplace<otf2::definition::location_group>(
-        ByDev(device.id), name, otf2::common::location_group_type::process, node);
+        ByBlockDevice(dev), name, otf2::common::location_group_type::process, node);
 
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByDev(device.id), name, bio_location_group,
+        ByBlockDevice(dev), name, bio_location_group,
         otf2::definition::location::location_type::cpu_thread);
 
     hardware_comm_locations_group_.add_member(intern_location);
@@ -470,38 +475,38 @@ otf2::writer::local& Trace::create_metric_writer(const std::string& name)
     return archive_(location);
 }
 
-otf2::definition::io_handle& Trace::block_io_handle(BlockDevice& device)
+otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)
 {
 
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     // io_pre_created_handle can not be emplaced because it has no ref.
     // So we have to check if we already created everything
-    if (registry_.has<otf2::definition::io_handle>(ByDev(device.id)))
+    if (registry_.has<otf2::definition::io_handle>(ByBlockDevice(dev)))
     {
-        return registry_.get<otf2::definition::io_handle>(ByDev(device.id));
+        return registry_.get<otf2::definition::io_handle>(ByBlockDevice(dev));
     }
 
-    const auto& device_name = intern(device.name);
+    const auto& device_name = intern(dev.name);
 
-    const otf2::definition::system_tree_node& parent = bio_parent_node(device);
+    const otf2::definition::system_tree_node& parent = bio_parent_node(dev);
 
-    std::string device_class = (device.type == BlockDeviceType::PARTITION) ? "partition" : "disk";
+    std::string device_class = (dev.type == BlockDeviceType::PARTITION) ? "partition" : "disk";
 
     const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
-        ByDev(device.id), device_name, intern(device_class), parent);
+        ByBlockDevice(dev), device_name, intern(device_class), parent);
 
     const auto& file =
-        registry_.emplace<otf2::definition::io_regular_file>(ByDev(device.id), device_name, node);
+        registry_.emplace<otf2::definition::io_regular_file>(ByBlockDevice(dev), device_name, node);
 
     const auto& block_comm =
-        registry_.emplace<otf2::definition::comm>(ByDev(device.id), device_name, bio_comm_group_,
+        registry_.emplace<otf2::definition::comm>(ByBlockDevice(dev), device_name, bio_comm_group_,
                                                   otf2::definition::comm::comm_flag_type::none);
 
-    // we could have io handle parents and childs here (block device being the parent (sda),
+    // we could have io handle parents and childs here (block dev being the parent (sda),
     // partition being the child (sda1)) but that seems like it would be overkill.
     auto& handle = registry_.emplace<otf2::definition::io_handle>(
-        ByDev(device.id), device_name, file, bio_paradigm_,
+        ByBlockDevice(dev), device_name, file, bio_paradigm_,
         otf2::common::io_handle_flag_type::pre_created, block_comm);
 
     // todo: set status flags accordingly

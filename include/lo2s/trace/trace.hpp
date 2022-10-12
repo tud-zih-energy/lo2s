@@ -132,10 +132,10 @@ public:
     otf2::writer::local& switch_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const Cpu& cpu);
-    otf2::writer::local& bio_writer(BlockDevice& device);
+    otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
 
-    otf2::definition::io_handle& block_io_handle(BlockDevice& device);
+    otf2::definition::io_handle& block_io_handle(BlockDevice dev);
 
     otf2::definition::metric_member
     metric_member(const std::string& name, const std::string& description,
@@ -290,9 +290,11 @@ private:
     {
         if (device.type == BlockDeviceType::PARTITION)
         {
-            if (registry_.has<otf2::definition::system_tree_node>(ByDev(device.parent)))
+            if (registry_.has<otf2::definition::system_tree_node>(
+                    ByBlockDevice(BlockDevice::block_device_for(device.parent))))
             {
-                return registry_.get<otf2::definition::system_tree_node>(ByDev(device.parent));
+                return registry_.get<otf2::definition::system_tree_node>(
+                    ByBlockDevice(BlockDevice::block_device_for(device.parent)));
             }
         }
         return bio_system_tree_node_;

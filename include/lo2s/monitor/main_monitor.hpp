@@ -71,8 +71,7 @@ protected:
     metric::plugin::Metrics metrics_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 
-    std::map<dev_t, std::unique_ptr<perf::bio::Writer>> writers_;
-    std::vector<std::unique_ptr<BioMonitor>> bio_monitors_;
+    std::unique_ptr<BioMonitor> bio_monitor_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif

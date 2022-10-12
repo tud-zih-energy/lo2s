@@ -67,17 +67,8 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 
     if (config().use_block_io)
     {
-        for (auto& entry : get_block_devices())
-        {
-            writers_.emplace(
-                std::piecewise_construct, std::forward_as_tuple(entry.id),
-                std::forward_as_tuple(std::make_unique<perf::bio::Writer>(trace_, entry)));
-        }
-        for (const auto& cpu : Topology::instance().cpus())
-        {
-            bio_monitors_.emplace_back(std::make_unique<BioMonitor>(trace_, cpu, writers_))
-                ->start();
-        }
+        bio_monitor_ = std::make_unique<BioMonitor>(trace_);
+        bio_monitor_->start();
     }
 
 #ifdef HAVE_X86_ADAPT
@@ -165,19 +156,7 @@ MainMonitor::~MainMonitor()
 
     if (config().use_block_io)
     {
-        for (auto& bio_monitor : bio_monitors_)
-        {
-            bio_monitor->stop();
-        }
-        std::vector<std::thread> bio_workers;
-        for (auto& writer_ : writers_)
-        {
-            bio_workers.emplace_back(&perf::bio::Writer::write_events, std::ref(*writer_.second));
-        }
-        for (auto& worker : bio_workers)
-        {
-            worker.join();
-        }
+        bio_monitor_->stop();
     }
 
     if (!tracepoint_monitors_.empty())

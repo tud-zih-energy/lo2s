@@ -21,8 +21,9 @@
 
 #pragma once
 
-#include <lo2s/perf/bio/event_cacher.hpp>
+#include <lo2s/perf/bio/reader.hpp>
 #include <lo2s/perf/bio/writer.hpp>
+#include <lo2s/perf/multi_reader.hpp>
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -38,12 +39,10 @@ namespace monitor
 class BioMonitor : public PollMonitor
 {
 public:
-    BioMonitor(trace::Trace& trace, Cpu cpu,
-               std::map<dev_t, std::unique_ptr<perf::bio::Writer>>& writers_);
+    BioMonitor(trace::Trace& trace);
 
 private:
     void monitor(int fd) override;
-    void initialize_thread() override;
     void finalize_thread() override;
 
     std::string group() const override
@@ -52,10 +51,8 @@ private:
     }
 
 private:
-    Cpu cpu_;
-    perf::bio::EventCacher bio_insert_cacher_;
-    perf::bio::EventCacher bio_issue_cacher_;
-    perf::bio::EventCacher bio_complete_cacher_;
+    perf::MultiReader<perf::bio::Reader, perf::bio::Writer> multi_reader_;
 };
+
 } // namespace monitor
 } // namespace lo2s

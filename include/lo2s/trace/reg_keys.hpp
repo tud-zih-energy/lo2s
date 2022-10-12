@@ -25,6 +25,7 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/util.hpp>
@@ -78,10 +79,10 @@ struct ByProcessTag
 };
 using ByProcess = SimpleKeyType<Process, ByProcessTag>;
 
-struct ByDevTag
+struct ByBlockDeviceTag
 {
 };
-using ByDev = SimpleKeyType<dev_t, ByDevTag>;
+using ByBlockDevice = SimpleKeyType<BlockDevice, ByBlockDeviceTag>;
 
 struct ByStringTag
 {
@@ -132,7 +133,7 @@ template <>
 struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
-                                                ByProcess, ByDev, ByCpu, ByPackage>;
+                                                ByProcess, ByBlockDevice, ByCpu, ByPackage>;
 };
 template <>
 struct Holder<otf2::definition::regions_group>
@@ -156,12 +157,12 @@ struct Holder<otf2::definition::metric_member>
 template <>
 struct Holder<otf2::definition::io_handle>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByDev>;
+    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::io_regular_file>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByDev>;
+    using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::string>
@@ -171,14 +172,15 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location_group,
-                                                ByMeasurementScope, ByExecutionScope, ByDev>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::location_group, ByMeasurementScope,
+                                       ByExecutionScope, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope, ByDev>;
+                                                ByMeasurementScope, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::region>
@@ -201,7 +203,7 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByDev>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::comm_group>

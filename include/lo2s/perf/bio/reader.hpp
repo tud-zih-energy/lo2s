@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
@@ -52,28 +51,70 @@ namespace perf
 {
 namespace bio
 {
+enum class BioEventType
+{
+    INSERT,
+    ISSUE,
+    COMPLETE
+};
 
-template <class T>
-class Reader : public EventReader<T>
+struct __attribute((__packed__)) RecordBlock
+{
+    uint16_t common_type;         // 2
+    uint8_t common_flag;          // 3
+    uint8_t common_preempt_count; // 4
+    int32_t common_pid;           // 8
+
+    uint32_t dev;    // 12
+    char padding[4]; // 16
+    uint64_t sector; // 24
+
+    uint32_t nr_sector;     // 28
+    int32_t error_or_bytes; // 32
+
+    char rwbs[8]; // 40
+};
+
+struct RecordBlockSampleType
+{
+    struct perf_event_header header;
+    uint64_t time;
+    uint32_t tp_data_size;
+    RecordBlock blk;
+};
+
+class Reader : public PullReader
 {
 public:
-    struct RecordSampleType
+    struct IdentityType
     {
-        struct perf_event_header header;
-        uint64_t time;
-        uint32_t tp_data_size;
-        char tp_data[1];
+        IdentityType(BioEventType type, Cpu cpu) : type(type), cpu(cpu)
+        {
+        }
+
+        BioEventType type;
+        Cpu cpu;
+
+        friend bool operator<(const IdentityType& lhs, const IdentityType& rhs)
+        {
+            if (lhs.cpu == rhs.cpu)
+            {
+                return lhs.type < rhs.type;
+            }
+
+            return lhs.cpu < rhs.cpu;
+        }
     };
 
-    Reader(Cpu cpu, BioEventType type) : type_(type), cpu_(cpu)
+    Reader(IdentityType identity) : type_(identity.type), cpu_(identity.cpu)
     {
         struct perf_event_attr attr = common_perf_event_attrs();
         attr.type = PERF_TYPE_TRACEPOINT;
-        if (type == BioEventType::INSERT)
+        if (type_ == BioEventType::INSERT)
         {
             attr.config = tracepoint::EventFormat("block:block_rq_insert").id();
         }
-        else if (type == BioEventType::ISSUE)
+        else if (type_ == BioEventType::ISSUE)
         {
             attr.config = tracepoint::EventFormat("block:block_rq_issue").id();
         }
@@ -84,7 +125,6 @@ public:
 
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
-
         fd_ = perf_event_open(&attr, cpu_.as_scope(), -1, 0);
         if (fd_ < 0)
         {
@@ -119,12 +159,6 @@ public:
         }
     }
 
-    Reader(Reader&& other)
-    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
-    {
-        std::swap(fd_, other.fd_);
-    }
-
     ~Reader()
     {
         if (fd_ != -1)
@@ -141,11 +175,37 @@ public:
         {
             throw_errno();
         }
-        this->read();
+    }
+
+    RecordBlockSampleType* top()
+    {
+        return reinterpret_cast<RecordBlockSampleType*>(get());
+    }
+
+    int fd() const
+    {
+        return fd_;
+    }
+
+    Reader& operator=(const Reader&) = delete;
+    Reader(const Reader& other) = delete;
+
+    Reader& operator=(Reader&& other)
+    {
+        PullReader::operator=(std::move(other));
+        std::swap(cpu_, other.cpu_);
+        std::swap(fd_, other.fd_);
+        std::swap(type_, other.type_);
+
+        return *this;
+    }
+
+    Reader(Reader&& other) : PullReader(std::move(other)), type_(other.type_), cpu_(other.cpu_)
+    {
+        std::swap(fd_, other.fd_);
     }
 
 protected:
-    using EventReader<T>::init_mmap;
     BioEventType type_;
 
 private:
