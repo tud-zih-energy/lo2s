@@ -70,8 +70,11 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     {
         Log::debug() << "Create cstate recorder for cpu #" << cpu.as_int();
 
-        monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
-                          std::forward_as_tuple(ExecutionScope(cpu), *this, false));
+        auto inserted = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
+                                          std::forward_as_tuple(ExecutionScope(cpu), *this, false));
+        assert(inserted.second);
+        // directly start the measurement thread
+        inserted.first->second.start();
     }
 }
 
