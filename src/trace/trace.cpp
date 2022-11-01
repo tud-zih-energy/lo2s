@@ -124,7 +124,7 @@ Trace::Trace()
         Core core = sys.core_of(cpu);
         Package package = sys.package_of(cpu);
 
-        auto& package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
+        auto package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
 
         if (!package_node)
         {
@@ -136,7 +136,7 @@ Trace::Trace()
                 package_node, otf2::common::system_tree_node_domain::socket);
         }
 
-        auto& core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
+        const auto& core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
 
         if (!core_node)
         {
