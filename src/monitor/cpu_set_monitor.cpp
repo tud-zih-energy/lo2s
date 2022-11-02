@@ -66,12 +66,31 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 
     trace_.add_threads(get_comms_for_running_threads());
 
-    for (const auto& cpu : Topology::instance().cpus())
+    try
     {
-        Log::debug() << "Create cstate recorder for cpu #" << cpu.as_int();
+        for (const auto& cpu : Topology::instance().cpus())
+        {
+            Log::debug() << "Create cstate recorder for cpu #" << cpu.as_int();
 
-        monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
-                          std::forward_as_tuple(ExecutionScope(cpu), *this, false));
+            auto inserted = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
+                                            std::forward_as_tuple(ExecutionScope(cpu), *this, false));
+            assert(inserted.second);
+            // directly start the measurement thread
+            inserted.first->second.start();
+        }
+    }
+    catch (...)
+    {
+        Log::error() << "Failed to create/start all CPU monitors ("
+                     << monitors_.size() << " out of "
+                     << Topology::instance().cpus().size() << " suceeded): remove already existing monitors";
+
+        // clean up existing thread
+        for (auto& monitor_map_it : monitors_) {
+            monitor_map_it.second.stop();
+        }
+
+        throw;
     }
 }
 

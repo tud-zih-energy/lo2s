@@ -84,8 +84,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
     }
 #endif
 
-    /* setup the sampling counter(s) and start a monitoring thread */
-    start();
+    // note: start() can now be called
 }
 
 void ScopeMonitor::initialize_thread()
