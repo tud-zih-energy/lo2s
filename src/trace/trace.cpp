@@ -643,14 +643,23 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
         {
             if (thread != Thread(0))
             {
-                auto thread_name = thread_names_.find(thread);
-                if (thread_name == thread_names_.end())
+
+                if (auto thread_name = thread_names_.find(thread);
+                    thread_name != thread_names_.end())
                 {
-                    add_thread(thread, "<unknown thread>");
+                    add_thread(thread, thread_name->second);
                 }
                 else
                 {
-                    add_thread(thread, thread_name->second);
+                    if (auto process_name = thread_names_.find(process.as_thread());
+                        process_name != thread_names_.end())
+                    {
+                        add_thread(thread, process_name->second);
+                    }
+                    else
+                    {
+                        add_thread(thread, "<unknown thread>");
+                    }
                 }
             }
             else
