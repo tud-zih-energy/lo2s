@@ -26,7 +26,7 @@ extern "C"
 #include <sys/types.h>
 }
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <vector>
 
@@ -76,14 +76,10 @@ public:
     {
         return Thread(-1);
     }
-    std::string name() const
-    {
-        return fmt::format("thread {}", tid_);
-    }
 
     friend std::ostream& operator<<(std::ostream& stream, const Thread& thread)
     {
-        return stream << thread.name();
+        return stream << fmt::format("{}", thread);
     }
 
     pid_t as_pid_t() const
@@ -143,14 +139,10 @@ public:
 
     Thread as_thread() const;
     ExecutionScope as_scope() const;
-    std::string name() const
-    {
-        return fmt::format("process {}", pid_);
-    }
 
     friend std::ostream& operator<<(std::ostream& stream, const Process& process)
     {
-        return stream << process.name();
+        return stream << fmt::format("{}", process);
     }
 
 private:
@@ -182,12 +174,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)
     {
-        return stream << cpu.name();
-    }
-
-    std::string name() const
-    {
-        return fmt::format("cpu {}", cpu_);
+        return stream << fmt::format("{}", cpu);
     }
 
 private:
@@ -265,6 +252,63 @@ private:
     int id_;
 };
 } // namespace lo2s
+
+namespace fmt
+{
+template <>
+struct formatter<lo2s::Thread>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        if (ctx.begin() != ctx.end())
+            throw format_error("invalid format");
+
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::Thread& thread, FormatContext& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "thread {}", thread.as_pid_t());
+    }
+};
+
+template <>
+struct formatter<lo2s::Process>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        if (ctx.begin() != ctx.end())
+            throw format_error("invalid format");
+
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::Process& process, FormatContext& ctx)
+    {
+        return fmt::format_to(ctx.out(), "process {}", process.as_pid_t());
+    }
+};
+
+template <>
+struct formatter<lo2s::Cpu>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        if (ctx.begin() != ctx.end())
+            throw format_error("invalid format");
+
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::Cpu& cpu, FormatContext& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "cpu {}", cpu.as_int());
+    }
+};
+} // namespace fmt
 
 namespace std
 {

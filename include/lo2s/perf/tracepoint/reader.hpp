@@ -126,7 +126,7 @@ public:
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_.name() << " with id "
+        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
                      << event_id;
 
         try

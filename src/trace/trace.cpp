@@ -141,14 +141,13 @@ Trace::Trace()
         if (!core_node)
         {
             registry_.emplace<otf2::definition::system_tree_node>(
-                ByCore(core),
-                intern(std::to_string(package.as_int()) + ":" + std::to_string(core.core_as_int())),
+                ByCore(core), intern(fmt::format("{}:{}", package.as_int(), core.core_as_int())),
                 intern("core"), package_node);
 
             registry_.create<otf2::definition::system_tree_node_domain>(
                 core_node, otf2::common::system_tree_node_domain::core);
         }
-        const auto& name = intern(cpu.name());
+        const auto& name = intern(fmt::format("{}", cpu));
 
         Log::debug() << "Registering cpu " << cpu.as_int() << "@" << core.core_as_int() << ":"
                      << package.as_int();
