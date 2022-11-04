@@ -260,10 +260,13 @@ struct formatter<lo2s::Thread>
 {
     constexpr auto parse(format_parse_context& ctx)
     {
-        if (ctx.begin() != ctx.end())
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+        {
             throw format_error("invalid format");
+        }
 
-        return ctx.end();
+        return it;
     }
 
     template <typename FormatContext>
@@ -278,10 +281,13 @@ struct formatter<lo2s::Process>
 {
     constexpr auto parse(format_parse_context& ctx)
     {
-        if (ctx.begin() != ctx.end())
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+        {
             throw format_error("invalid format");
+        }
 
-        return ctx.end();
+        return it;
     }
 
     template <typename FormatContext>
@@ -296,10 +302,13 @@ struct formatter<lo2s::Cpu>
 {
     constexpr auto parse(format_parse_context& ctx)
     {
-        if (ctx.begin() != ctx.end())
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+        {
             throw format_error("invalid format");
+        }
 
-        return ctx.end();
+        return it;
     }
 
     template <typename FormatContext>
