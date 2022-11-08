@@ -5,6 +5,8 @@
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
+#include <fmt/format.h>
+
 #include <string>
 
 namespace lo2s
@@ -17,8 +19,8 @@ namespace x86_energy
 Monitor::Monitor(::x86_energy::SourceCounter counter, Cpu cpu, trace::Trace& trace,
                  const otf2::definition::metric_class& metric_class,
                  const otf2::definition::system_tree_node& stn)
-: PollMonitor(trace, cpu.name(), config().read_interval), counter_(std::move(counter)), cpu_(cpu),
-  otf2_writer_(trace.create_metric_writer(name())),
+: PollMonitor(trace, fmt::format("{}", cpu), config().read_interval), counter_(std::move(counter)),
+  cpu_(cpu), otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(), stn)),
   metric_event_(otf2::chrono::genesis(), metric_instance_)
 // (WOW this is (almost) better than LISP)
