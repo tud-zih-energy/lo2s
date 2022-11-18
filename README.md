@@ -46,6 +46,8 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
  * libradare for disassembled instruction strings
  * libsensors for sensor readings
+ * [pod2man](https://www.eyrie.org/~eagle/software/podlators/) to generate the man pages (typically distributed as part of `perl`)
+ * `gzip` to compress the man pages
 
 # Runtime Requirements
 
