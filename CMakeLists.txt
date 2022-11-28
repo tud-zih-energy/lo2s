@@ -16,7 +16,6 @@ include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
-include(cmake/GenerateSyscallHeader.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -105,12 +104,13 @@ find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
+find_package(PkgConfig)
 
-GEN_SYSCALLS_HEADER(HEADER_GENERATED)
-
-if(NOT HEADER_GENERATED)
-    message(SEND_ERROR "Could not parse syscall names from <sys/syscall.h>.")
+if(PkgConfig_FOUND)
+    pkg_check_modules(Audit audit)
 endif()
+
+
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
 # configurable options
@@ -126,6 +126,8 @@ option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
 CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
 add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
+CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" ON Audit_FOUND OFF)
+add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -143,7 +145,6 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSI
 # prepare list of source files
 set(SOURCE_FILES
     src/types.cpp
-     ${CMAKE_CURRENT_BINARY_DIR}/src/syscalls.cpp
 
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
 
@@ -185,6 +186,7 @@ set(SOURCE_FILES
     src/mmap.cpp
     src/util.cpp
     src/perf/util.cpp
+    src/syscalls.cpp
     src/summary.cpp
 )
 
@@ -262,6 +264,15 @@ if (USE_SENSORS)
         )
     else()
         message(SEND_ERROR "Sensors not found but requested.")
+    endif()
+endif()
+
+if (USE_LIBAUDIT)
+    if (Audit_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_LIBAUDIT)
+        target_link_libraries(lo2s PRIVATE ${Audit_LIBRARIES})
+    else()
+        message(SEND_ERROR "Libaudit not found but requested.")
     endif()
 endif()
 

@@ -26,7 +26,6 @@
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
-#include <lo2s/syscalls.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>

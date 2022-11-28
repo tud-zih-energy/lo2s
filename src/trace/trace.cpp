@@ -689,7 +689,8 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& 
 otf2::definition::mapping_table
 Trace::merge_syscall_contexts(const std::set<int64_t>& used_syscalls)
 {
-    std::vector<uint32_t> mappings(syscall_names().size());
+    std::vector<uint32_t> mappings(
+        *std::max_element(config().syscall_filter.begin(), config().syscall_filter.end()) + 1);
 
     for (const auto& syscall_nr : used_syscalls)
     {
@@ -787,15 +788,7 @@ void Trace::add_threads(const std::unordered_map<Thread, std::string>& thread_ma
 
 const otf2::definition::string& Trace::intern_syscall_str(int64_t syscall_nr)
 {
-    auto syscall_entry = syscall_names().find(syscall_nr);
-    if (syscall_entry != syscall_names().end())
-    {
-        return intern(syscall_entry->second);
-    }
-    else
-    {
-        return intern(fmt::format("syscall {}", syscall_nr));
-    }
+    return intern(syscall_name_for_nr(syscall_nr));
 }
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
 {
