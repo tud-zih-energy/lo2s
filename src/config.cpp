@@ -117,34 +117,18 @@ std::vector<int64_t> parse_syscall_names(std::vector<std::string> requested_sysc
     std::vector<int64_t> syscall_nrs;
     for (const auto& requested_syscall : requested_syscalls)
     {
-        int syscall_nr;
-        try
+        int syscall_nr = syscall_nr_for_name(requested_syscall);
+        if (syscall_nr == -1)
         {
-            syscall_nr = std::stoi(requested_syscall);
-            if (syscall_names().count(syscall_nr) != 0)
-            {
-                syscall_nrs.emplace_back(syscall_nr);
-            }
-            else
-            {
-                Log::fatal() << "Recording of unknown syscall " << syscall_nr << " requested";
-                std::exit(EXIT_FAILURE);
-            }
+#ifdef HAVE_LIBAUDIT
+            Log::warn() << "syscall: " << requested_syscall << " not recognized!";
+#else
+            Log::warn() << "lo2s was compiled without libaudit support and can thus not resolve "
+                           "syscall names, try the syscall number instead";
+#endif
+            std::exit(EXIT_FAILURE);
         }
-        catch (std::invalid_argument& e)
-        {
-            const auto& syscall_elem =
-                std::find_if(cbegin(syscall_names()), cend(syscall_names()),
-                             [&requested_syscall](const std::pair<int64_t, std::string>& syscall)
-                             { return syscall.second == requested_syscall; });
-            if (syscall_elem == syscall_names().end())
-            {
-                Log::fatal() << "Recording of unknown syscall " << requested_syscall
-                             << " requested";
-                std::exit(EXIT_FAILURE);
-            }
-            syscall_nrs.emplace_back(syscall_elem->first);
-        }
+        syscall_nrs.emplace_back(syscall_nr);
     }
     return syscall_nrs;
 }

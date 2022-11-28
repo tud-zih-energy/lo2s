@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2022,
+ * Copyright (c) 2016,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -22,10 +22,13 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <string>
 
 namespace lo2s
 {
-const std::map<int64_t, std::string>& syscall_names();
-}
+
+std::string syscall_name_for_nr(int64_t syscall_nr);
+
+int64_t syscall_nr_for_name(const std::string name);
+
+} // namespace lo2s
