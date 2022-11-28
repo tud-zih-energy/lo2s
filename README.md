@@ -123,6 +123,8 @@ Thomas Ilsche, Marcus Hähnel, Robert Schöne, Mario Bielert and Daniel Hackenbe
 
 Thomas Ilsche, Robert Schöne, Philipp Joram, Mario Bielert and Andreas Gocht: "System Monitoring with lo2s: Power and Runtime Impact of C-State Transitions" In: 2018 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW), DOI: [10.1109/IPDPSW.2018.00114](https://doi.org/10.1109/IPDPSW.2018.00114)
 
+Thomas Ilsche, Mario Bielert, Christian von Elm: "Bridging the Gap between Application Performance Analysis and System Monitoring" In: 2022 IEEE International Conference on Cluster Computing (CLUSTER), DOI: [10.1109/CLUSTER51413.2022.00080](https://doi.org/10.1109/CLUSTER51413.2022.00080)
+
 # Name
 
 The name `lo2s` is an acronym for **L**inux **O**TF**2** **S**ampling
