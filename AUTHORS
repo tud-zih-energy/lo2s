@@ -1,14 +1,19 @@
 MAINTAINERS
 ===========
 Current maintainers:
- * Thomas Ilsche (TU Dresden, ZIH) - thomas.ilsche@tu-dresden.de
  * Mario Bielert (TU Dresden, ZIH) - mario.bielert@tu-dresden.de
+ * Christian von Elm (TU Dresden, ZIH) - christian.von_elm@tu-dresden.de
+ * Thomas Ilsche (TU Dresden, ZIH) - thomas.ilsche@tu-dresden.de
  * Robert Schoene (TU Dresden, ZIH) - robert.schoene@tu-dresden.de
 
 
 ACKNOWLEDGEMENTS
 ================
-This software was developed with support from the following projects:
+This software is developed with support from the following projects:
+
+     The german National High Performance Computing (NHR@TUD).
+     Visit https://tu-dresden.de/zih/hochleistungsrechnen/nhr-center
+     for more information.
 
      HAEC - Highly Adaptive Energy-Efficient Computing
      Phase II (2015-2019)
