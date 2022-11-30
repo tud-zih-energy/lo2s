@@ -79,6 +79,8 @@ To monitor all activity on a system run
 
  * `lo2s -a` (stop the recording with ctrl+c)
 
+For a full documentation of options see [the manpage](https://github.com/tud-zih-energy/lo2s/blob/master/man/lo2s.1.pod).
+
 ## Usage with MPI
 
 You can record simple traces from MPI programs, but `lo2s` does not record MPI communication.
