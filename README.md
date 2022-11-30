@@ -111,7 +111,7 @@ Native interfaces are available for C and Python
 
 # Acknowledgements
 
-This work is supported by the German Research Foundation (DFG) within the CRC 912 - HAEC.
+This work is supported in part by the German Research Foundation (DFG) within the CRC 912 - HAEC and the german National High Performance Computing (NHR@TUD).
 
 # Primary Reference
 
