@@ -1,4 +1,5 @@
 [![Build](https://github.com/tud-zih-energy/lo2s/actions/workflows/cmake.yml/badge.svg)](https://github.com/tud-zih-energy/lo2s/actions/workflows/cmake.yml)
+[![manpage](https://img.shields.io/badge/manpage-master-blue)](https://github.com/tud-zih-energy/lo2s/blob/master/man/lo2s.1.pod)
 
 # `lo2s` - Lightweight Node-Level Performance Monitoring
 
