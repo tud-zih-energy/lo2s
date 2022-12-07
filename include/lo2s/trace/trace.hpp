@@ -29,9 +29,12 @@
 #include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
+#include <lo2s/types.hpp>
 
 #include <otf2xx/otf2.hpp>
 
+#include <atomic>
+#include <deque>
 #include <map>
 #include <mutex>
 #include <set>
@@ -41,6 +44,7 @@ namespace lo2s
 {
 namespace trace
 {
+class MainMonitor;
 
 template <typename RefMap>
 using IpMap = std::map<Address, RefMap>;
@@ -75,7 +79,21 @@ struct IpCctxEntry
     IpMap<IpCctxEntry> children;
 };
 
-using ThreadCctxRefMap = std::map<Thread, ThreadCctxRefs>;
+/*
+ * Stores calling context information for each sample writer / monitoring thread.
+ * While the `Trace` always owns this data, the `sample::Writer` should have exclusive access to
+ * this data during its lifetime. Only afterwards, the `writer` and `refcount` are set by the
+ * `sample::Writer`.
+ */
+struct ThreadCctxRefMap
+{
+    std::map<Thread, ThreadCctxRefs> map;
+    std::atomic<otf2::writer::local*> writer = nullptr;
+    std::atomic<size_t> ref_count;
+
+    using value_type = std::map<Thread, ThreadCctxRefs>::value_type;
+};
+
 using IpRefMap = IpMap<IpRefEntry>;
 using IpCctxMap = IpMap<IpCctxEntry>;
 
@@ -102,9 +120,11 @@ public:
     void update_process_name(Process p, const std::string& name);
     void update_thread_name(Thread t, const std::string& name);
 
-    otf2::definition::mapping_table merge_calling_contexts(ThreadCctxRefMap& new_ips,
+    ThreadCctxRefMap& create_cctx_refs();
+    otf2::definition::mapping_table merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips,
                                                            size_t num_ip_refs,
-                                                           std::map<Process, ProcessInfo>& infos);
+                                                           const std::map<Process, ProcessInfo>& infos);
+    void merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos);
 
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
@@ -262,9 +282,9 @@ private:
     void add_thread_exclusive(Thread thread, const std::string& name,
                               const std::lock_guard<std::recursive_mutex>&);
 
-    void merge_ips(IpRefMap& new_children, IpCctxMap& children,
+    void merge_ips(const IpRefMap& new_children, IpCctxMap& children,
                    std::vector<uint32_t>& mapping_table, otf2::definition::calling_context& parent,
-                   std::map<Process, ProcessInfo>& infos, Process p);
+                   const std::map<Process, ProcessInfo>& infos, Process p);
 
     const otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
     {
@@ -327,6 +347,8 @@ private:
     const otf2::definition::system_tree_node& system_tree_root_node_;
 
     ExecutionScopeGroup& groups_;
+
+    std::deque<ThreadCctxRefMap> cctx_refs_;
 };
 } // namespace trace
 } // namespace lo2s

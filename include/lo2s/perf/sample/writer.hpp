@@ -94,7 +94,7 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    trace::ThreadCctxRefMap local_cctx_refs_;
+    trace::ThreadCctxRefMap& local_cctx_refs_;
     size_t next_cctx_ref_ = 0;
 
     trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;

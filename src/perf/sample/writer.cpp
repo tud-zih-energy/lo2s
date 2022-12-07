@@ -59,6 +59,7 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer_.location(),
                                                otf2_writer_.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  local_cctx_refs_(trace.create_cctx_refs()),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -71,12 +72,9 @@ Writer::~Writer()
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
                                                  current_thread_cctx_refs_->second.entry.ref);
     }
-    if (next_cctx_ref_ > 0)
-    {
-        const auto& mapping = trace_.merge_calling_contexts(local_cctx_refs_, next_cctx_ref_,
-                                                            monitor_.get_process_infos());
-        otf2_writer_ << mapping;
-    }
+    local_cctx_refs_.ref_count = next_cctx_ref_;
+    // set writer last, because it is used as sentry to confirm that the cctx refs are properly finalized.
+    local_cctx_refs_.writer = &otf2_writer_;
 }
 
 trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
@@ -192,7 +190,7 @@ void Writer::update_current_thread(Process process, Thread thread, otf2::chrono:
         otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
     }
     // thread has changed
-    auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+    auto ret = local_cctx_refs_.map.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
                                         std::forward_as_tuple(process, next_cctx_ref_));
     if (ret.second)
     {

@@ -48,7 +48,7 @@ public:
         maps_.mmap(entry);
     }
 
-    MemoryMap maps()
+    MemoryMap maps() const
     {
         std::lock_guard<std::mutex> lock(mutex_);
         // Yes, this is correct as per 6.6.3 The Return Statement
@@ -57,7 +57,7 @@ public:
 
 private:
     const Process process_;
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     MemoryMap maps_;
 };
 } // namespace lo2s

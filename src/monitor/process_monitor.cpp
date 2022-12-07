@@ -47,8 +47,7 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
 
     if (config().sampling)
     {
-        process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(process),
-                               std::forward_as_tuple(process, spawn));
+        process_infos_.try_emplace(process, process, spawn);
     }
 
     if (config().sampling ||
