@@ -121,9 +121,9 @@ public:
     void update_thread_name(Thread t, const std::string& name);
 
     ThreadCctxRefMap& create_cctx_refs();
-    otf2::definition::mapping_table merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips,
-                                                           size_t num_ip_refs,
-                                                           const std::map<Process, ProcessInfo>& infos);
+    otf2::definition::mapping_table
+    merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, size_t num_ip_refs,
+                           const std::map<Process, ProcessInfo>& infos);
     void merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos);
 
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
@@ -349,6 +349,8 @@ private:
     ExecutionScopeGroup& groups_;
 
     std::deque<ThreadCctxRefMap> cctx_refs_;
+    // Mutex is only used for accessing the cctx_refs_
+    std::mutex cctx_refs_mutex_;
     // I wanted to use atomic_flag, but I need test and that's a C++20 exclusive.
     std::atomic_bool cctx_refs_finalized_ = false;
 };

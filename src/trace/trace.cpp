@@ -838,8 +838,7 @@ const otf2::definition::string& Trace::intern(const std::string& name)
 
 ThreadCctxRefMap& Trace::create_cctx_refs()
 {
-    // TODO use better mutex
-    std::lock_guard<std::recursive_mutex> guard(mutex_);
+    std::lock_guard<std::mutex> guard(cctx_refs_mutex_);
 
     return cctx_refs_.emplace_back();
     if (cctx_refs_finalized_)
