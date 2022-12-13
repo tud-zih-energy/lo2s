@@ -840,12 +840,9 @@ ThreadCctxRefMap& Trace::create_cctx_refs()
 {
     std::lock_guard<std::mutex> guard(cctx_refs_mutex_);
 
+    assert(!cctx_refs_finalized_);
+
     return cctx_refs_.emplace_back();
-    if (cctx_refs_finalized_)
-    {
-        Log::error() << "create_cctx_refs called after finalized."
-                        "Please report this bug to the developers";
-    }
 }
 
 void Trace::merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos)

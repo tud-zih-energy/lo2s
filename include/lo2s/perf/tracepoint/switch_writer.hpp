@@ -25,8 +25,8 @@
 
 #include <lo2s/perf/tracepoint/format.hpp>
 
+#include <lo2s/perf/calling_context_manager.hpp>
 #include <lo2s/perf/time/converter.hpp>
-
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/trace/trace.hpp>
 
@@ -57,19 +57,12 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    otf2::definition::calling_context::reference_type thread_calling_context_ref(Thread thread);
-
-private:
     otf2::writer::local& otf2_writer_;
     trace::Trace& trace_;
     const time::Converter time_converter_;
 
-    using calling_context_ref = otf2::definition::calling_context::reference_type;
-    trace::ThreadCctxRefMap thread_calling_context_refs_;
-    Process current_process_;
-    calling_context_ref current_calling_context_ = calling_context_ref::undefined();
+    CallingContextManager cctx_manager_;
 
-    EventField prev_pid_field_;
     EventField next_pid_field_;
     EventField prev_state_field_;
 

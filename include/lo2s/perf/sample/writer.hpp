@@ -23,6 +23,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/perf/calling_context_manager.hpp>
 
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -73,12 +74,7 @@ public:
     void end();
 
 private:
-    otf2::definition::calling_context::reference_type
-    cctx_ref(const Reader::RecordSampleType* sample);
-    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children);
-
     void update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp);
-    void leave_current_thread(Thread thread, otf2::chrono::time_point tp);
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
 
@@ -94,11 +90,7 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    trace::ThreadCctxRefMap& local_cctx_refs_;
-    size_t next_cctx_ref_ = 0;
-
-    trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
-
+    CallingContextManager cctx_manager_;
     RawMemoryMapCache cached_mmap_events_;
     std::unordered_map<Thread, std::string> comms_;
 
