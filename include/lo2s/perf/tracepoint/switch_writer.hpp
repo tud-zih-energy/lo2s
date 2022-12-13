@@ -58,7 +58,6 @@ public:
 
 private:
     otf2::writer::local& otf2_writer_;
-    trace::Trace& trace_;
     const time::Converter time_converter_;
 
     CallingContextManager cctx_manager_;

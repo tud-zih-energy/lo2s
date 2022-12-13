@@ -48,7 +48,7 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(Cpu cpu, trace::Trace& trace)
 try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.switch_writer(cpu.as_scope())),
-    trace_(trace), time_converter_(time::Converter::instance()), cctx_manager_(trace, otf2_writer_),
+    time_converter_(time::Converter::instance()), cctx_manager_(trace, otf2_writer_),
     next_pid_field_(get_sched_switch_event().field("next_pid")),
     prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
