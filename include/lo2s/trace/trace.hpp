@@ -349,6 +349,8 @@ private:
     ExecutionScopeGroup& groups_;
 
     std::deque<ThreadCctxRefMap> cctx_refs_;
+    // I wanted to use atomic_flag, but I need test and that's a C++20 exclusive.
+    std::atomic_bool cctx_refs_finalized_ = false;
 };
 } // namespace trace
 } // namespace lo2s
