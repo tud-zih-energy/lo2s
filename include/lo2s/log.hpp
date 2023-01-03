@@ -74,6 +74,11 @@ inline void set_min_severity_level(nitro::log::severity_level sev)
     Lo2sFilter<Record>::set_severity(sev);
 }
 
+inline nitro::log::severity_level get_min_severity_level()
+{
+    return Lo2sFilter<Record>::min_severity();
+}
+
 inline void set_min_severity_level(std::string verbosity)
 {
     set_min_severity_level(
