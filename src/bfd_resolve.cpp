@@ -20,11 +20,13 @@
  */
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
+#include <lo2s/log.hpp>
 
 #include <filesystem>
 
 #include <system_error>
 
+#include <cstdarg>
 #include <cstdlib>
 
 namespace lo2s
@@ -57,6 +59,11 @@ static std::filesystem::path check_path(const std::string& name)
 
 Initializer Lib::dummy_;
 
+static void dummy_bfd_error_handler(const char*, [[maybe_unused]] va_list argp)
+{
+    return;
+}
+
 Lib::Lib(const std::string& name)
 : name_(name), handle_(bfd_openr(check_path(name).c_str(), nullptr))
 {
@@ -64,6 +71,14 @@ Lib::Lib(const std::string& name)
     {
         throw InitError("failed to open BFD handle", name);
     }
+
+    nitro::log::severity_level sl = lo2s::logging::get_min_severity_level();
+
+    if (sl > nitro::log::severity_level::debug)
+    {
+        bfd_set_error_handler(&dummy_bfd_error_handler);
+    }
+
     // init stuff
     //  Not sure if those are needed for side-effects
     bfd_get_arch_size(handle_.get());
