@@ -78,6 +78,7 @@ private:
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
 
+    void leave_current_thread(Thread thread, otf2::chrono::time_point tp);
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     ExecutionScope scope_;

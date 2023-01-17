@@ -48,7 +48,8 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(Cpu cpu, trace::Trace& trace)
 try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.switch_writer(cpu.as_scope())),
-    time_converter_(time::Converter::instance()), cctx_manager_(trace, otf2_writer_),
+    time_converter_(time::Converter::instance()), cctx_manager_(trace),
+    prev_pid_field_(get_sched_switch_event().field("prev_pid")),
     next_pid_field_(get_sched_switch_event().field("next_pid")),
     prev_state_field_(get_sched_switch_event().field("prev_state"))
 {
@@ -64,15 +65,35 @@ catch (const EventFormat::ParseError& e)
 
 SwitchWriter::~SwitchWriter()
 {
-    cctx_manager_.finalize(std::max(last_time_point_, lo2s::time::now()));
+    if (!cctx_manager_.current().is_undefined())
+    {
+        otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
+                                                 cctx_manager_.current());
+    }
+
+    cctx_manager_.finalize(&otf2_writer_);
 }
 
 bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
+    Process prev_process = Process(sample->raw_data.get(prev_pid_field_));
     Process next_process = Process(sample->raw_data.get(next_pid_field_));
 
-    cctx_manager_.update(tp, Process::invalid(), next_process.as_thread());
+    if (!cctx_manager_.thread_changed(next_process.as_thread()))
+    {
+        return false;
+    }
+    if (!cctx_manager_.current().is_undefined())
+    {
+        otf2_writer_.write_calling_context_leave(tp, cctx_manager_.current());
+        cctx_manager_.thread_leave(prev_process.as_thread());
+    }
+
+    cctx_manager_.thread_enter(Process::invalid(), next_process.as_thread());
+
+    otf2_writer_.write_calling_context_enter(tp, cctx_manager_.current(), 2);
+
     last_time_point_ = tp;
 
     if (next_process != Process::idle())

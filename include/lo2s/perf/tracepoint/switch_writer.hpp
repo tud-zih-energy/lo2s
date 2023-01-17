@@ -62,6 +62,7 @@ private:
 
     CallingContextManager cctx_manager_;
 
+    EventField prev_pid_field_;
     EventField next_pid_field_;
     EventField prev_state_field_;
 

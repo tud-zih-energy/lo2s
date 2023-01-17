@@ -58,15 +58,21 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
   otf2_writer_(trace.sample_writer(scope)),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer_.location(),
                                                otf2_writer_.location())),
-  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  cctx_manager_(trace, otf2_writer_), time_converter_(perf::time::Converter::instance()),
-  first_time_point_(lo2s::time::now()), last_time_point_(first_time_point_)
+  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_), cctx_manager_(trace),
+  time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
+  last_time_point_(first_time_point_)
 {
 }
 
 Writer::~Writer()
 {
-    cctx_manager_.finalize(adjust_timepoints(lo2s::time::now()));
+    if (!cctx_manager_.current().is_undefined())
+    {
+        otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
+                                                 cctx_manager_.current());
+    }
+
+    cctx_manager_.finalize(&otf2_writer_);
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
@@ -82,11 +88,14 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
     if (!has_cct_)
     {
-        cctx_manager_.write_sample(tp, sample->ip);
+        otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(sample->ip), 2,
+                                                  trace_.interrupt_generator().ref());
     }
     else
     {
-        cctx_manager_.write_sample(tp, sample->nr, sample->ips);
+        otf2_writer_.write_calling_context_sample(tp,
+                                                  cctx_manager_.sample_ref(sample->nr, sample->ips),
+                                                  sample->nr, trace_.interrupt_generator().ref());
     }
     return false;
 }
@@ -114,7 +123,22 @@ void Writer::update_current_thread(Process process, Thread thread, otf2::chrono:
         otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(scope_.as_thread()), -1);
         first_event_ = false;
     }
-    cctx_manager_.update(tp, process, thread);
+    if (!cctx_manager_.thread_changed(thread))
+    {
+        return;
+    }
+    else if (!cctx_manager_.current().is_undefined())
+    {
+        leave_current_thread(thread, tp);
+    }
+
+    cctx_manager_.thread_enter(process, thread);
+    otf2_writer_.write_calling_context_enter(tp, cctx_manager_.current(), 2);
+}
+void Writer::leave_current_thread(Thread thread, otf2::chrono::time_point tp)
+{
+    otf2_writer_.write_calling_context_leave(tp, cctx_manager_.current());
+    cctx_manager_.thread_leave(thread);
 }
 
 otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
@@ -173,13 +197,19 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 {
     if (switch_out)
     {
-        cctx_manager_.leave(tp, thread);
+        if (cctx_manager_.current().is_undefined())
+        {
+            Log::debug() << "Leave event but not in a thread!";
+            return;
+        }
+        leave_current_thread(thread, tp);
     }
     else
     {
         update_current_thread(process, thread, tp);
     }
 }
+
 #endif
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
