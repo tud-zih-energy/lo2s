@@ -26,6 +26,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/summary.hpp>
@@ -34,15 +35,15 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
+
 #include <nitro/env/get.hpp>
 #include <nitro/env/hostname.hpp>
 #include <nitro/lang/string.hpp>
 
-#include <filesystem>
-
 #include <fmt/chrono.h>
 #include <fmt/core.h>
 
+#include <filesystem>
 #include <map>
 #include <mutex>
 #include <regex>
@@ -221,6 +222,11 @@ otf2::chrono::time_point Trace::record_to() const
 
 Trace::~Trace()
 {
+    if (!cctx_refs_finalized_)
+    {
+        Log::error()
+            << "cctx refs have not been finalized, please report this bug to the developers";
+    }
     for (auto& thread : thread_names_)
     {
         auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread.first));
@@ -563,12 +569,12 @@ otf2::definition::metric_class& Trace::metric_class()
                                                             otf2::common::recorder_kind::abstract);
 }
 
-void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
+void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
                       std::vector<uint32_t>& mapping_table,
                       otf2::definition::calling_context& parent,
-                      std::map<Process, ProcessInfo>& infos, Process process)
+                      const std::map<Process, ProcessInfo>& infos, Process process)
 {
-    for (auto& elem : new_children)
+    for (const auto& elem : new_children)
     {
         auto& ip = elem.first;
         auto& local_ref = elem.second.ref;
@@ -615,9 +621,9 @@ void Trace::merge_ips(IpRefMap& new_children, IpCctxMap& children,
     }
 }
 
-otf2::definition::mapping_table Trace::merge_calling_contexts(ThreadCctxRefMap& new_ips,
-                                                              size_t num_ip_refs,
-                                                              std::map<Process, ProcessInfo>& infos)
+otf2::definition::mapping_table
+Trace::merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, size_t num_ip_refs,
+                              const std::map<Process, ProcessInfo>& infos)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 #ifndef NDEBUG
@@ -821,6 +827,35 @@ const otf2::definition::string& Trace::intern(const std::string& name)
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     return registry_.emplace<otf2::definition::string>(ByString(name), name);
+}
+
+ThreadCctxRefMap& Trace::create_cctx_refs()
+{
+    std::lock_guard<std::mutex> guard(cctx_refs_mutex_);
+
+    assert(!cctx_refs_finalized_);
+
+    return cctx_refs_.emplace_back();
+}
+
+void Trace::merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos)
+{
+    for (auto& cctx : cctx_refs_)
+    {
+        assert(cctx.writer != nullptr);
+        if (cctx.ref_count > 0)
+        {
+            const auto& mapping = merge_calling_contexts(cctx.map, cctx.ref_count, process_infos);
+            (*cctx.writer) << mapping;
+        }
+    }
+    cctx_refs_.clear();
+    auto finalized_twice = cctx_refs_finalized_.exchange(true);
+    if (finalized_twice)
+    {
+        Log::error() << "Trace::merge_calling_contexts was called twice."
+                        "This is a bug, please report it to the developers.";
+    }
 }
 } // namespace trace
 } // namespace lo2s

@@ -48,7 +48,7 @@ static const EventFormat& get_sched_switch_event()
 
 SwitchWriter::SwitchWriter(Cpu cpu, trace::Trace& trace)
 try : Reader(cpu, get_sched_switch_event().id()), otf2_writer_(trace.switch_writer(cpu.as_scope())),
-    trace_(trace), time_converter_(time::Converter::instance()),
+    time_converter_(time::Converter::instance()), cctx_manager_(trace),
     prev_pid_field_(get_sched_switch_event().field("prev_pid")),
     next_pid_field_(get_sched_switch_event().field("next_pid")),
     prev_state_field_(get_sched_switch_event().field("prev_state"))
@@ -65,21 +65,13 @@ catch (const EventFormat::ParseError& e)
 
 SwitchWriter::~SwitchWriter()
 {
-    // Always close the last event
-    if (!current_calling_context_.is_undefined())
+    if (!cctx_manager_.current().is_undefined())
     {
-        // time::now() can apparently lie in the past sometimes
         otf2_writer_.write_calling_context_leave(std::max(last_time_point_, lo2s::time::now()),
-                                                 current_calling_context_);
+                                                 cctx_manager_.current());
     }
 
-    if (!thread_calling_context_refs_.empty())
-    {
-        std::map<Process, ProcessInfo> m;
-        const auto& mapping = trace_.merge_calling_contexts(thread_calling_context_refs_,
-                                                            thread_calling_context_refs_.size(), m);
-        otf2_writer_ << mapping;
-    }
+    cctx_manager_.finalize(&otf2_writer_);
 }
 
 bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
@@ -87,20 +79,20 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     Process prev_process = Process(sample->raw_data.get(prev_pid_field_));
     Process next_process = Process(sample->raw_data.get(next_pid_field_));
-    if (!current_calling_context_.is_undefined())
-    {
-        if (prev_process != current_process_)
-        {
-            Log::warn() << "Conflicting processes: previous: " << prev_process
-                        << " != current: " << current_process_
-                        << " current_region: " << current_calling_context_;
-        }
-        otf2_writer_.write_calling_context_leave(tp, current_calling_context_);
-    }
-    current_process_ = next_process;
 
-    current_calling_context_ = thread_calling_context_ref(current_process_.as_thread());
-    otf2_writer_.write_calling_context_enter(tp, current_calling_context_, 2);
+    if (!cctx_manager_.thread_changed(next_process.as_thread()))
+    {
+        return false;
+    }
+    if (!cctx_manager_.current().is_undefined())
+    {
+        otf2_writer_.write_calling_context_leave(tp, cctx_manager_.current());
+        cctx_manager_.thread_leave(prev_process.as_thread());
+    }
+
+    cctx_manager_.thread_enter(Process::invalid(), next_process.as_thread());
+
+    otf2_writer_.write_calling_context_enter(tp, cctx_manager_.current(), 2);
 
     last_time_point_ = tp;
 
@@ -111,14 +103,6 @@ bool SwitchWriter::handle(const Reader::RecordSampleType* sample)
     return false;
 }
 
-otf2::definition::calling_context::reference_type
-SwitchWriter::thread_calling_context_ref(Thread thread)
-{
-    auto ret = thread_calling_context_refs_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(thread),
-        std::forward_as_tuple(Process::invalid(), thread_calling_context_refs_.size()));
-    return ret.first->second.entry.ref;
-}
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s

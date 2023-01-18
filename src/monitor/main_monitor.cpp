@@ -193,6 +193,8 @@ MainMonitor::~MainMonitor()
     trace_.end_record();
 
     metrics_.stop();
+
+    trace_.merge_calling_contexts(get_process_infos());
 }
 } // namespace monitor
 } // namespace lo2s

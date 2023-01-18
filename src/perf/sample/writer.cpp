@@ -58,7 +58,7 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
   otf2_writer_(trace.sample_writer(scope)),
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer_.location(),
                                                otf2_writer_.location())),
-  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_), cctx_manager_(trace),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -66,58 +66,13 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
 
 Writer::~Writer()
 {
-    if (current_thread_cctx_refs_)
+    if (!cctx_manager_.current().is_undefined())
     {
         otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
-                                                 current_thread_cctx_refs_->second.entry.ref);
+                                                 cctx_manager_.current());
     }
-    if (next_cctx_ref_ > 0)
-    {
-        const auto& mapping = trace_.merge_calling_contexts(local_cctx_refs_, next_cctx_ref_,
-                                                            monitor_.get_process_infos());
-        otf2_writer_ << mapping;
-    }
-}
 
-trace::IpRefMap::iterator Writer::find_ip_child(Address addr, trace::IpRefMap& children)
-{
-    // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
-    if (addr == -1)
-    {
-        Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
-        addr = -2;
-    }
-    auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                                std::forward_as_tuple(next_cctx_ref_));
-    if (ret.second)
-    {
-        next_cctx_ref_++;
-    }
-    return ret.first;
-}
-otf2::definition::calling_context::reference_type
-Writer::cctx_ref(const Reader::RecordSampleType* sample)
-{
-    if (!has_cct_)
-    {
-        auto it = find_ip_child(sample->ip, current_thread_cctx_refs_->second.entry.children);
-        return it->second.ref;
-    }
-    else
-    {
-        auto children = &current_thread_cctx_refs_->second.entry.children;
-        for (uint64_t i = sample->nr - 1;; i--)
-        {
-            auto it = find_ip_child(sample->ips[i], *children);
-            // We intentionally discard the last sample as it is somewhere in the kernel
-            if (i == 1)
-            {
-                return it->second.ref;
-            }
-
-            children = &it->second.children;
-        }
-    }
+    cctx_manager_.finalize(&otf2_writer_);
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
@@ -131,28 +86,17 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
-    // For unwind distance definiton, see:
-    // http://scorepci.pages.jsc.fz-juelich.de/otf2-pipelines/docs/otf2-2.2/html/group__records__definition.html#CallingContext
-
-    // We always have a fake CallingContext for the process, which is scheduled.
-    // So if we don't record the calling context tree, all nodes in the calling context tree are:
-    // The fake node for the process and a second node for the current context of the sample.
-    // Therefore, we always have an unwind distance of 2. (Technically, it could also be 1, but we
-    // lack the information to distinguish those cases. Hence, we stick with 2.)
-    //
-    // However, in the case that we actually record the complete call stack, we get the number of
-    // nodes in the calling context tree from the number of elements in the call stack recorded from
-    // perf. Tough, we still have the fake calling context for the process, which adds 1 to that
-    // number. But we also remove the lowest entry from the call stack, because that is ALWAYS in
-    // the kernel, which can't be resolved and thus doesn't provide any useful information.
-    //
-    // Having these things in mind, look at this line and tell me, why it is still wrong:
-    auto unwind_distance = has_cct_ ? sample->nr /* + 1 - 1 */ : 2;
-
-    // we write the ugly raw ref-only events here due to performance reasons
-    otf2_writer_.write_calling_context_sample(tp, cctx_ref(sample), unwind_distance,
-                                              trace_.interrupt_generator().ref());
-
+    if (!has_cct_)
+    {
+        otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(sample->ip), 2,
+                                                  trace_.interrupt_generator().ref());
+    }
+    else
+    {
+        otf2_writer_.write_calling_context_sample(tp,
+                                                  cctx_manager_.sample_ref(sample->nr, sample->ips),
+                                                  sample->nr, trace_.interrupt_generator().ref());
+    }
     return false;
 }
 
@@ -179,43 +123,22 @@ void Writer::update_current_thread(Process process, Thread thread, otf2::chrono:
         otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(scope_.as_thread()), -1);
         first_event_ = false;
     }
-
-    if (current_thread_cctx_refs_ && current_thread_cctx_refs_->first == thread)
+    if (!cctx_manager_.thread_changed(thread))
     {
-        // current thread is unchanged
         return;
     }
-    else if (current_thread_cctx_refs_)
+    else if (!cctx_manager_.current().is_undefined())
     {
+        leave_current_thread(thread, tp);
+    }
 
-        // need to leave
-        otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
-    }
-    // thread has changed
-    auto ret = local_cctx_refs_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                        std::forward_as_tuple(process, next_cctx_ref_));
-    if (ret.second)
-    {
-        next_cctx_ref_++;
-    }
-    otf2_writer_.write_calling_context_enter(tp, ret.first->second.entry.ref, 2);
-    current_thread_cctx_refs_ = &(*ret.first);
+    cctx_manager_.thread_enter(process, thread);
+    otf2_writer_.write_calling_context_enter(tp, cctx_manager_.current(), 2);
 }
-
 void Writer::leave_current_thread(Thread thread, otf2::chrono::time_point tp)
 {
-    if (current_thread_cctx_refs_ == nullptr)
-    {
-        // Already not in a thread
-        return;
-    }
-
-    if (current_thread_cctx_refs_->first != thread)
-    {
-        Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or later
-    }
-    otf2_writer_.write_calling_context_leave(tp, current_thread_cctx_refs_->second.entry.ref);
-    current_thread_cctx_refs_ = nullptr;
+    otf2_writer_.write_calling_context_leave(tp, cctx_manager_.current());
+    cctx_manager_.thread_leave(thread);
 }
 
 otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
@@ -274,6 +197,11 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 {
     if (switch_out)
     {
+        if (cctx_manager_.current().is_undefined())
+        {
+            Log::debug() << "Leave event but not in a thread!";
+            return;
+        }
         leave_current_thread(thread, tp);
     }
     else
@@ -281,6 +209,7 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
         update_current_thread(process, thread, tp);
     }
 }
+
 #endif
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
