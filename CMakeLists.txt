@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 
-project(lo2s VERSION 1.6.0)
-set(LO2S_COPYRIGHT_YEAR "2022")
+project(lo2s VERSION 1.7.0)
+set(LO2S_COPYRIGHT_YEAR "2023")
 
 
 include(CMakeDependentOption)
