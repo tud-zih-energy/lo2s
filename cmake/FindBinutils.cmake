@@ -64,7 +64,7 @@ find_library(Libiberty_LIBRARIES NAMES libiberty.a
         HINTS ENV LIBRARY_PATH)
 
 include (FindPackageHandleStandardArgs)
-if(${Sframe_LIBRARIES})
+if(Sframe_LIBRARIES)
         FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
                 Bfd_LIBRARIES
                 Sframe_LIBRARIES
@@ -87,8 +87,11 @@ list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 # BFD requires libz...
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Libiberty_LIBRARIES})
-list(APPEND Binutils_LIBRARIES ${Sframe_LIBRARIES})
-list(APPEND Binutils_LIBRARIES ${Zstd_LIBRARIES})
+
+if(Sframe_LIBRARIES)
+        list(APPEND Binutils_LIBRARIES ${Sframe_LIBRARIES})
+        list(APPEND Binutils_LIBRARIES ${Zstd_LIBRARIES})
+endif()
 
 add_library(binutils INTERFACE)
 target_link_libraries(binutils INTERFACE ${Binutils_LIBRARIES})
