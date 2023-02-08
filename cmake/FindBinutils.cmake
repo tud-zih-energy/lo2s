@@ -64,7 +64,7 @@ find_library(Libiberty_LIBRARIES NAMES libiberty.a
         HINTS ENV LIBRARY_PATH)
 
 include (FindPackageHandleStandardArgs)
-if(Sframe_LIBRARIES)
+if(${Sframe_LIBRARIES})
         FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
                 Bfd_LIBRARIES
                 Sframe_LIBRARIES
