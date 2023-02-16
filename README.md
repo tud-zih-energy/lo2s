@@ -4,6 +4,8 @@
 
 # `lo2s` - Lightweight Node-Level Performance Monitoring
 
+<img src="share/logo/full.png" alt="lo2s logo" width="300"/>
+
 `lo2s` creates parallel OTF2 traces with a focus on both application and system view.
 The traces can contain any of the following information:
 
