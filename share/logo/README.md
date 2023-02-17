@@ -4,15 +4,15 @@ This directory contains all data associated to the `lo2s` logo.
 ## Logo Variants
 - `circle`, only circle, transparent background
 
-  ![lo2s logo circle](./circle.png)
+  ![lo2s logo circle](./rendered/circle.png)
 
 - `circle_fill`, only circle, white background inside circle (outside transparent)
 
-  ![lo2s logo circle fill](./circle_fill.png)
+  ![lo2s logo circle fill](./rendered/circle_fill.png)
 
 - `full`, lo2s name, uses circle logo as o
 
-  ![lo2s logo full](./full.png)
+  ![lo2s logo full](./rendered/full.png)
   
 ## Notes on Design
 - font
