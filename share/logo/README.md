@@ -24,20 +24,17 @@ This directory contains all data associated to the `lo2s` logo.
     This effect should only become clearly visible in huge resolutions, and if required you can adjust the sizes.
 
 ## Building the Logos from Source
-Use inkscape to render the `.svg` files.
+Use inkscape to render the `.svg` files in `src/`.
 You can invoke that by calling `make`.
 
-Always **commit the built `.png`s**.
+This renders `.pdf`, `.png`, and plain (non-inkscape) `.svg` files to `rendered/`.
+Always **commit the built files**.
 
-To adjust the height call `make HEIGHT=1024` with your desired height in pixel,
+To adjust the height of the `.png` files call `make HEIGHT=1024` with your desired height in pixel,
 the width is automatically selected to respect aspect ratio.
 Default height is 512 px.
 
-The files are linked, only `circle.svg` contains the circle logo.
-All other files only refer to it.
-This link requires setting the DPI for the embedded file, currently this value is 8192.
-When printing to a high resolution (poster etc.) you might have to modify this DPI value.
-(No data is lost in this process, this is purely an inkscape rendering issue.)
+The logo is copied to all files, i.e. when adjusting the circle logo make sure to update the other files as well.
 
 The text is embedded as paths,
 but the original text object still exists in the files (but is set to invisble.)
