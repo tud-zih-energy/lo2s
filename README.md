@@ -2,9 +2,11 @@
 [![Current Release](https://img.shields.io/github/v/release/tud-zih-energy/lo2s?color=violet&label=Current%20release&sort=semver)](https://github.com/tud-zih-energy/lo2s/releases/latest)
 [![manpage](https://img.shields.io/badge/manpage-master-blue)](https://github.com/tud-zih-energy/lo2s/blob/master/man/lo2s.1.pod)
 
-# `lo2s` - Lightweight Node-Level Performance Monitoring
+<p align="center">
+    <img src="share/logo/rendered/full.svg" alt="lo2s logo" width="300"/>
+</p>
 
-<img src="share/logo/full.png" alt="lo2s logo" width="300"/>
+# `lo2s` - Lightweight Node-Level Performance Monitoring
 
 `lo2s` creates parallel OTF2 traces with a focus on both application and system view.
 The traces can contain any of the following information:
