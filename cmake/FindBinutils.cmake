@@ -31,6 +31,8 @@ IfUpdatedUnsetAll(Binutils_USE_STATIC_LIBS
     Z_LIBRARIES
     Libiberty_LIBRARIES
     Bfd_LIBRARIES
+    Sframe_LIBRARIES
+    Zstd_LIBRARIES
 )
 
 find_path(Binutils_INCLUDE_DIRS bfd.h
@@ -42,10 +44,18 @@ if(Binutils_USE_STATIC_LIBS)
             HINTS ENV LIBRARY_PATH)
     find_library(Z_LIBRARIES NAMES libz.a
             HINTS ENV LIBRARY_PATH)
+    find_library(Sframe_LIBRARIES NAMES libsframe.a
+            HINTS ENV LIBRARY_PATH)
+    find_library(Zstd_LIBRARIES NAMES libzstd.a
+            HINTS ENV LIBRARY_PATH)
 else()
     find_library(Bfd_LIBRARIES NAMES libbfd.so
             HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
     find_library(Z_LIBRARIES NAMES libz.so
+            HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+    find_library(Sframe_LIBRARIES NAMES libsframe.so
+            HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+    find_library(Zstd_LIBRARIES NAMES libzstd.so
             HINTS ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
 endif()
 
@@ -54,17 +64,34 @@ find_library(Libiberty_LIBRARIES NAMES libiberty.a
         HINTS ENV LIBRARY_PATH)
 
 include (FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
-        Bfd_LIBRARIES
-        Z_LIBRARIES
-        Libiberty_LIBRARIES
-        Binutils_INCLUDE_DIRS)
+if(Sframe_LIBRARIES)
+        FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
+                Bfd_LIBRARIES
+                Sframe_LIBRARIES
+                Zstd_LIBRARIES
+                Z_LIBRARIES
+                Libiberty_LIBRARIES
+                Binutils_INCLUDE_DIRS)
+else()
+        FIND_PACKAGE_HANDLE_STANDARD_ARGS(Binutils DEFAULT_MSG
+                Bfd_LIBRARIES
+                Z_LIBRARIES
+                Libiberty_LIBRARIES
+                Binutils_INCLUDE_DIRS)
+endif()
+
+
 
 set(Binutils_LIBRARIES "")
 list(APPEND Binutils_LIBRARIES ${Bfd_LIBRARIES})
 # BFD requires libz...
 list(APPEND Binutils_LIBRARIES ${Z_LIBRARIES})
 list(APPEND Binutils_LIBRARIES ${Libiberty_LIBRARIES})
+
+if(Sframe_LIBRARIES)
+        list(APPEND Binutils_LIBRARIES ${Sframe_LIBRARIES})
+        list(APPEND Binutils_LIBRARIES ${Zstd_LIBRARIES})
+endif()
 
 add_library(binutils INTERFACE)
 target_link_libraries(binutils INTERFACE ${Binutils_LIBRARIES})
