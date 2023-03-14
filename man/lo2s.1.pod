@@ -439,10 +439,21 @@ B<lo2s>:
 
 =over 6
 
-=item B<NOTE:>
+=item B<PERMISSIONS:>
+
 
 Recording tracepoint events usually requires both read and execute permissions
 on F</sys/kernel/debug>.
+
+To mount the debugfs execute:
+
+    # mount -t debugfs none /sys/kernel/debug
+
+Non-root access requires you to change the ownership of the debugfs and execute with kernel.perf_event_paranoid set to -1:
+
+    # chown -R myusername /sys/kernel/debug
+    # sysctl kernel.perf_event_paranoid=-1
+
 
 =back
 

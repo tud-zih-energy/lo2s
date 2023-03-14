@@ -437,9 +437,22 @@ void parse_program_options(int argc, const char** argv)
 
         if (arguments.given("list-tracepoints"))
         {
-            list_arguments_sorted(std::cout, "Kernel tracepoint events",
-                                  perf::tracepoint::EventFormat::get_tracepoint_event_names());
-            std::exit(EXIT_SUCCESS);
+            auto tracepoints = perf::tracepoint::EventFormat::get_tracepoint_event_names();
+
+            if (tracepoints.empty())
+            {
+                std::cout << "No tracepoints found!\n";
+                std::cout << "Make sure that the debugfs is mounted and that you have read-execute "
+                             "access to it.\n";
+                std::cout << "\n";
+                std::cout << "For more information, see the section TRACEPOINT in the man-page\n";
+                std::exit(EXIT_FAILURE);
+            }
+            else
+            {
+                list_arguments_sorted(std::cout, "Kernel tracepoint events", tracepoints);
+                std::exit(EXIT_SUCCESS);
+            }
         }
 
         if (arguments.given("list-knobs"))
