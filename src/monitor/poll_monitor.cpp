@@ -92,6 +92,11 @@ void PollMonitor::stop()
 
     stop_pipe_.write();
     thread_.join();
+
+    if (timer_pfd().fd != -1)
+    {
+        close(timer_pfd().fd);
+    }
 }
 
 void PollMonitor::monitor()
