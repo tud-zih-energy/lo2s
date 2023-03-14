@@ -92,11 +92,6 @@ void PollMonitor::stop()
 
     stop_pipe_.write();
     thread_.join();
-
-    if (timer_pfd().fd != -1)
-    {
-        close(timer_pfd().fd);
-    }
 }
 
 void PollMonitor::monitor()
@@ -163,5 +158,14 @@ void PollMonitor::run()
         }
     } while (!stop_requested);
 }
+
+PollMonitor::~PollMonitor()
+{
+    if (timer_pfd().fd != -1)
+    {
+        close(timer_pfd().fd);
+    }
+}
+
 } // namespace monitor
 } // namespace lo2s

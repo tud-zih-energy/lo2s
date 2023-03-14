@@ -47,6 +47,8 @@ public:
 
     void stop() override;
 
+    ~PollMonitor();
+
 protected:
     void run() override;
     void monitor() override;
