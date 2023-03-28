@@ -413,7 +413,30 @@ static void event_description_update(EventDescription& event, std::uint64_t valu
 const EventDescription raw_read_event(const std::string& ev_desc)
 {
     uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
-    const EventDescription event(ev_desc, PERF_TYPE_RAW, code, 0);
+
+    struct perf_event_attr perf_attr;
+    memset(&perf_attr, 0, sizeof(perf_attr));
+    perf_attr.size = sizeof(perf_attr);
+    perf_attr.sample_period = 0;
+    perf_attr.type = PERF_TYPE_RAW;
+    perf_attr.config = code;
+    perf_attr.config1 = 0;
+    perf_attr.exclude_kernel = 1;
+    // Needed when scaling multiplexed events, and recognize activation phases
+    perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+
+    std::set<Cpu> cpus;
+    for (const auto& cpu : Topology::instance().cpus())
+    {
+        int fd = perf_try_event_open(&perf_attr, cpu.as_scope(), -1, 0, -1);
+        if (fd != -1)
+        {
+            cpus.emplace(cpu);
+            close(fd);
+        }
+    }
+
+    const EventDescription event(ev_desc, PERF_TYPE_RAW, code, 0, cpus);
     // Do not check whether the event_is_openable because we don't know whether we are in
     // system or process mode
     return event;
