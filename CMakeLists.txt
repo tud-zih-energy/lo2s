@@ -22,7 +22,7 @@ include(cmake/GitSubmoduleUpdate.cmake)
 git_submodule_update()
 
 # Set of variables to enforce static or dynamic linking
-set(lo2s_USE_STATIC_LIBS "MOSTLY" CACHE STRING "Link lo2s statically.")
+set(lo2s_USE_STATIC_LIBS "OFF" CACHE STRING "Link lo2s statically.")
 set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
