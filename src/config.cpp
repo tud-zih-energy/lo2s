@@ -160,7 +160,7 @@ void parse_program_options(int argc, const char** argv)
     auto& x86_energy_options = parser.group("x86_energy options");
     auto& sensors_options = parser.group("sensors options");
     auto& io_options = parser.group("I/O recording options");
-
+    auto& nec_options = parser.group("NEC Aurora Tsubasa options");
     lo2s::Config config;
 
     general_options.toggle("help", "Show this help message.").short_name("h");
@@ -335,6 +335,12 @@ void parse_program_options(int argc, const char** argv)
     io_options.option("block-io-cache-size", "Size (in events) of the block I/O event cache")
         .optional()
         .metavar("NUM")
+        .default_value("1000");
+    
+    nec_options.toggle("use-nec-sensors", "Enable recording of NEC vector engine sensor information (e.g temperature, power usage etc.)");
+    nec_options.option("nec-readout-interval", "Time between NEC sensor readouts in milliseconds")
+        .optional()
+        .metavar("MSEC")
         .default_value("1000");
     nitro::options::arguments arguments;
     try
@@ -711,6 +717,19 @@ void parse_program_options(int argc, const char** argv)
     }
 #endif
 
+    if (arguments.given("use-nec-sensors"))
+    {
+        if(std::filesystem::exists("/sys/class/ve"))
+        {
+            lo2s::Log::fatal() << "System contains no NEC Aurora Cards or kernel module not loaded!";
+            std::exit(EXIT_FAILURE);
+        }
+        
+        config.nec_read_interval =
+            std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
+
+        
+    }
     config.command_line =
         nitro::lang::join(arguments.positionals().begin(), arguments.positionals().end());
 

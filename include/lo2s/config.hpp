@@ -93,6 +93,9 @@ struct Config
     // syscalls
     bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;
+    //NEC Aurora Tsubasa
+    bool use_nec_sensors;
+    std::chrono::nanoseconds nec_read_interval;
 };
 
 const Config& config();
