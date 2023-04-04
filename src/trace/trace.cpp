@@ -193,6 +193,21 @@ Trace::Trace()
             }
         }
     }
+
+    if (config().use_nec_sensors)
+    {
+        auto& devices = get_nec_devices();
+
+        auto& nec_system_tree_node_ = registry_.create<aotf2::definition::system_tree_node>(
+            intern("NEC accelerators"), intern("hardware"), system_tree_root_node_);
+
+        for (auto& device : devices)
+        {
+            registry_.emplace<otf2::definition::system_tree_node>(
+                ByNecDevice(device), intern(fmt::format("NEC accelerator {}", device.id())),
+                intern("hardware"), nec_system_tree_node_);
+        }
+    }
 }
 
 void Trace::begin_record()
@@ -460,7 +475,8 @@ otf2::writer::local& Trace::switch_writer(const ExecutionScope& writer_scope)
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::create_metric_writer(const std::string& name)
+otf2::writer::local& Trace::nec_sensor_writer otf2::writer::local&
+Trace::create_metric_writer(const std::string& name)
 {
     const auto& location = registry_.create<otf2::definition::location>(
         intern(name),

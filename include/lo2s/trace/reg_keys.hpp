@@ -25,6 +25,7 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/nec/util.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/util.hpp>
@@ -123,6 +124,12 @@ struct ByCounterCollectionTag
 
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
+struct ByNecSensorTag
+{
+};
+
+using ByNecSensor = SimpleKeyType<nec::Sensor, ByNecSensorTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -151,7 +158,7 @@ template <>
 struct Holder<otf2::definition::metric_member>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_member, ByString,
-                                                ByEventDescription>;
+                                                ByEventDescription, ByNecSensor>;
 };
 template <>
 struct Holder<otf2::definition::io_handle>

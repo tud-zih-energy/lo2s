@@ -336,8 +336,9 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("NUM")
         .default_value("1000");
-    
-    nec_options.toggle("use-nec-sensors", "Enable recording of NEC vector engine sensor information (e.g temperature, power usage etc.)");
+
+    nec_options.toggle("use-nec-sensors", "Enable recording of NEC vector engine sensor "
+                                          "information (e.g temperature, power usage etc.)");
     nec_options.option("nec-readout-interval", "Time between NEC sensor readouts in milliseconds")
         .optional()
         .metavar("MSEC")
@@ -719,16 +720,15 @@ void parse_program_options(int argc, const char** argv)
 
     if (arguments.given("use-nec-sensors"))
     {
-        if(std::filesystem::exists("/sys/class/ve"))
+        if (std::filesystem::exists("/sys/class/ve"))
         {
-            lo2s::Log::fatal() << "System contains no NEC Aurora Cards or kernel module not loaded!";
+            lo2s::Log::fatal()
+                << "System contains no NEC Aurora Cards or kernel module not loaded!";
             std::exit(EXIT_FAILURE);
         }
-        
+
         config.nec_read_interval =
             std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
-
-        
     }
     config.command_line =
         nitro::lang::join(arguments.positionals().begin(), arguments.positionals().end());

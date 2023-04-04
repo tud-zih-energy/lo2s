@@ -19,26 +19,28 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor/nec_sensor_monitor.hpp>
+#include <lo2s/nec/sensor_writer.cpp>
 
-#include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/util.hpp>
+#include <filesystem>
+#include <regex>
 
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
 
-NecSensorMonitor::NecSensorMonitor(trace::Trace& trace, Cpu cpu,
-                                   std::map<dev_t, std::unique_ptr<perf::bio::Writer>>&)
-: monitor::PollMonitor(trace, "", config().nec_read_interval), writer_(trace)
+SensorWriter::SensorWriter(trace::Trace& trace)
 {
-}
-void BioMonitor::monitor(int fd)
-{
-    writer_.write();
-}
+    const std::regex device_regex(".*ve(\\d+)");
+    std::smatch device_match;
 
-} // namespace monitor
+    for (const auto& file : std::filesystem::directory_iterator("/sys/class/ve"))
+    {
+        if (std::regex_match(file.path(), device_match, device_regex))
+        {
+            devices_.emplace_back(Device(stoi(device_match[1].str())));
+        }
+    }
+}
+} // namespace nec
 } // namespace lo2s

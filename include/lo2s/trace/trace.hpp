@@ -25,6 +25,7 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
+#include <lo2s/nec/util.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
@@ -174,6 +175,23 @@ public:
             ByEventDescription(event), intern(event.name), intern(event.name),
             otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
             otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit));
+    }
+
+    otf2::definition::metric_class& nec_metric_class(std::vector<nec::Sensor>& sensors)
+    {
+        auto& metric_class = registry_.create<otf2::definition::metric_class>(
+            otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
+
+        for (const auto& sensor : sensors)
+        {
+            auto member = registry_.emplace<otf2::definition::metric_member>(
+                ByNecSensor(sensor), intern(sensor.name()), intern(sensor.name()),
+                otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
+                otf2::common::type::Double, otf2::common::base_type::decimal, 0,
+                intern(sensor.unit()));
+            metric_class.add_member(member);
+        }
+        return metric_class;
     }
     otf2::definition::metric_class& perf_metric_class(MeasurementScope scope)
     {
@@ -343,6 +361,8 @@ private:
     otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> bio_system_tree_node_;
     otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> bio_paradigm_;
     otf2::definition::detail::weak_ref<otf2::definition::comm_group> bio_comm_group_;
+
+    otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> nec_system_tree_node_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 
