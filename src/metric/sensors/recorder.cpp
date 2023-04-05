@@ -87,7 +87,7 @@ Recorder::Recorder(trace::Trace& trace)
 
         std::string chip_name;
         chip_name.resize(chip_name_size);
-        int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size(), chip);
+        int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size() + 1, chip);
 
         if (res < 0)
         {
