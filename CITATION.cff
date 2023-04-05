@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "Please cite this paper if you use lo2s for scientific work"
+authors:
+- family-names: "Bielert"
+  given-names: "Mario"
+- family-names: "von Elm"
+  given-names: "Christian"
+- family-names: "Ilsche"
+  given-names: "Thomas"
+- family-names: "Schöne"
+  given-names: "Robert"
+title: "lo2s - Lightweight Node-Level Performance Monitoring"
+version: 1.7.0
+date-released: 2023-01-18
+url: "https://github.com/tud-zih-energy/lo2s"
+preferred-citation:
+  type: article
+  title: "lo2s — Multi-core System and Application Performance Analysis for Linux"
+  authors:
+  - family-names: "Ilsche"
+    given-names: "Thomas"
+  - family-names: "Schöne"
+    given-names: "Robert"
+  - family-names: "Bielert"
+    given-names: "Mario"
+  - family-names: "Gocht"
+    given-names: "Andreas"
+  - family-names: "Hackenberg"
+    given-names: "Daniel"
+  doi: "10.1109/CLUSTER.2017.116"
+  journal: "Workshop on Monitoring and Analysis for High Performance Computing Systems Plus Applications (HPCMASPA). 2017"
+  month: 9
+  year: 2017
