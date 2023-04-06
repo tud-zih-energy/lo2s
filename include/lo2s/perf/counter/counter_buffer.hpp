@@ -65,24 +65,44 @@ protected:
 
         for (std::size_t i = 0; i < accumulated_.size(); ++i)
         {
+            // Only a limited amount of hardware counters can be recorded per-CPU.
+            // If a user opens more counters than the processor can handle, perf multiplexes the
+            // hardware counters by running each of them  for just a part of the overall
+            // runtime. For users of perf to be able to account for this multiplexing, perf keeps
+            // track of two statistics per counter:
+            //
+            // diff_enabled - time the counter was enabled and _could_ have run
+            // diff_running - time the counter _actually_ ran
+            //
+            // Using diff_enabled / diff_running as a scaling factor, one can estimate the value for
+            // the counter if it ran for the whole diff_enabled duration.
+            //
+            // So for example, if the counter was only active for half of the time, a scaling factor
+            // of 2 would be applied.
+            //
+            // Due to floating point edge cases, several combinations of diff_enabled, diff_running
+            // and diff_value where some of those are 0 can result in NaNs, which due to the
+            // accumulated nature of counters will break them.
+            //
+            // A counter reading of 0 is assumed in all of these cases, as diff_enabled or
+            // diff_running being 0 indicates that the counter did not run during the last sampling
+            // interval
+
             auto diff_enabled = crtp_this->diff_enabled(i);
             auto diff_running = crtp_this->diff_running(i);
             auto diff_value = crtp_this->diff_value(i);
 
-            if (diff_enabled == 0 || diff_running == diff_enabled)
+            if (diff_enabled == 0 || diff_running == 0 || diff_value == 0)
+            {
+                continue;
+            }
+            else if (diff_enabled == diff_running)
             {
                 accumulated_[i] += diff_value;
             }
-            // Due to a perf bug diff_enabled and diff_running may be swapped
-            // diff_enabled is always smaller than diff_running so swap them if diff_enabled >
-            // diff_running
-            else if (diff_enabled > diff_running)
-            {
-                accumulated_[i] += (static_cast<double>(diff_enabled) / diff_running) * diff_value;
-            }
             else
             {
-                accumulated_[i] += (static_cast<double>(diff_running) / diff_enabled) * diff_value;
+                accumulated_[i] += (static_cast<double>(diff_enabled) / diff_running) * diff_value;
             }
         }
     }
