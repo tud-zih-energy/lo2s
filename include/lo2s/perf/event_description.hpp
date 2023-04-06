@@ -115,6 +115,10 @@ struct EventDescription
     {
         // per-process should always work. the counter will just not count if the process is
         // scheduled on a core that is not supprted by that counter
+        if (is_uncore)
+        {
+            return scope.is_cpu() && cpumask.count(scope.as_cpu());
+        }
         return scope.is_thread() || cpus_.empty() || cpus_.count(scope.as_cpu());
     }
 
