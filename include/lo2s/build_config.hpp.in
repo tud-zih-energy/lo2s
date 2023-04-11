@@ -32,6 +32,5 @@
 
 #cmakedefine USE_HW_BREAKPOINT_COMPAT
 
-#cmakedefine USE_PERF_CLOCKID
 
 #cmakedefine LO2S_COPYRIGHT_YEAR "@LO2S_COPYRIGHT_YEAR@"

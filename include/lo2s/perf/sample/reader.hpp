@@ -85,12 +85,11 @@ protected:
                      << ", enable_on_exec: " << enable_on_exec;
 
         struct perf_event_attr perf_attr = common_perf_event_attrs();
-#ifdef USE_PERF_CLOCKID
+
         if (config().use_pebs)
         {
             perf_attr.use_clockid = 0;
         }
-#endif
 
         perf_attr.exclude_kernel = config().exclude_kernel;
         perf_attr.sample_period = config().sampling_period;
@@ -165,12 +164,10 @@ protected:
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for sampling failed";
-#ifdef USE_PERF_CLOCKID
             if (perf_attr.use_clockid)
             {
                 Log::error() << "maybe the specified clock is unavailable?";
             }
-#endif
             throw_errno();
         }
         Log::debug() << "Using precise_ip level: " << perf_attr.precise_ip;
