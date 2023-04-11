@@ -154,7 +154,6 @@ otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
     return tp;
 }
 
-#ifdef USE_PERF_RECORD_SWITCH
 bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
     assert(scope_.is_cpu());
@@ -210,7 +209,6 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
     }
 }
 
-#endif
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
     if (!scope_.is_cpu())

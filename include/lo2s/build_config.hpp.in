@@ -34,6 +34,4 @@
 
 #cmakedefine USE_PERF_CLOCKID
 
-#cmakedefine USE_PERF_RECORD_SWITCH
-
 #cmakedefine LO2S_COPYRIGHT_YEAR "@LO2S_COPYRIGHT_YEAR@"

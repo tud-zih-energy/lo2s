@@ -111,16 +111,12 @@ if(PkgConfig_FOUND)
 endif()
 
 
-CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
-
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
 option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
 add_feature_info("USE_PERF_CLOCKID" USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events")
-CMAKE_DEPENDENT_OPTION(USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution" ON HAVE_PERF_RECORD_SWITCH OFF)
-add_feature_info("USE_PERF_RECORD_SWITCH" USE_PERF_RECORD_SWITCH "Uses PERF_RECORD_SWITCH for CPU Context Switches instead of the older tracepoint based solution")
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
@@ -137,6 +133,12 @@ if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
     check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
     unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
+CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
+
+if(NOT HAVE_PERF_RECORD_SWITCH)
+    message(FATAL_ERROR "lo2s requires support for perf context switch recording. Make sure that you are running on a kernel that support context_switch with perf_event_open")
 endif()
 
 # detect version of running kernel
@@ -335,10 +337,6 @@ else()
     if (HAVE_PERF_EVENT_ATTR_CLOCKID)
         message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
     endif()
-endif()
-
-if(NOT USE_PERF_RECORD_SWITCH)
-    target_sources(lo2s PRIVATE src/perf/tracepoint/switch_writer.cpp)
 endif()
 
 configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)

@@ -66,10 +66,8 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
     bool handle(const Reader::RecordMmapType* mmap_event);
     bool handle(const Reader::RecordCommType* comm);
-#ifdef USE_PERF_RECORD_SWITCH
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
     bool handle(const Reader::RecordSwitchType* context_switch);
-#endif
 
     void end();
 
