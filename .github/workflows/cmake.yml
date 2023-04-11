@@ -14,7 +14,6 @@ jobs:
         compiler: [g++-9, g++-10, clang++-10, clang++-11, clang++-12]
         build-type: [Debug, RelWithDebInfo]
         hw_breakpoint: [ON, OFF]
-        perf_clockid: [ON, OFF]
 
     runs-on: ${{ matrix.os }}
 
@@ -42,7 +41,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DUSE_PERF_CLOCKID=${{ matrix.perf_clockid }}
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}}
       - name: Build
         run: make -j 2
       - name: Create source tarball

@@ -115,8 +115,6 @@ endif()
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
 option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
-option(USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events" ON)
-add_feature_info("USE_PERF_CLOCKID" USE_PERF_CLOCKID "Enables specifying a custom reference clock for recorded events")
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
@@ -128,6 +126,11 @@ add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name reso
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
+
+if(NOT HAVE_PERF_EVENT_ATTR_CLOCKID)
+    message(FATAL_ERROR "The system is not able to use custom reference clocks for perf events. Make sure that you are running on system that supports use_clockid with perf")
+endif()
+
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
@@ -328,16 +331,6 @@ else()
     endif()
 endif()
 
-# extra feature for newer kernel version
-if (USE_PERF_CLOCKID)
-    if(NOT HAVE_PERF_EVENT_ATTR_CLOCKID)
-        message(SEND_ERROR "The system is not able to use custom reference clocks for perf events. Consider deactivating USE_PERF_CLOCKID.")
-    endif()
-else()
-    if (HAVE_PERF_EVENT_ATTR_CLOCKID)
-        message(WARNING "The system claims to support custom reference clocks for perf events. Consider activating USE_PERF_CLOCKID to enable the options -k,--clockid.")
-    endif()
-endif()
 
 configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
 

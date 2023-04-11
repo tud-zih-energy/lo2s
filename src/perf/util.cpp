@@ -58,7 +58,7 @@ struct perf_event_attr common_perf_event_attrs()
     attr.size = sizeof(struct perf_event_attr);
     attr.disabled = 1;
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#ifndef USE_HW_BREAKPOINT_COMPAT
     attr.use_clockid = config().use_clockid;
     attr.clockid = config().clockid;
 #endif
@@ -125,7 +125,7 @@ int perf_event_description_open(ExecutionScope scope, const EventDescription& de
     // Needed when scaling multiplexed events, and recognize activation phases
     perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#ifndef USE_HW_BREAKPOINT_COMPAT
     perf_attr.use_clockid = config().use_clockid;
     perf_attr.clockid = config().clockid;
 #endif
