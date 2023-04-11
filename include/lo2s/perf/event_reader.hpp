@@ -194,14 +194,12 @@ public:
             case PERF_RECORD_MMAP2:
                 stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                 break;
-#ifdef USE_PERF_RECORD_SWITCH
             case PERF_RECORD_SWITCH:
                 stop = crtp_this->handle((const RecordSwitchType*)event_header_p);
                 break;
             case PERF_RECORD_SWITCH_CPU_WIDE:
                 stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
                 break;
-#endif
             case PERF_RECORD_THROTTLE: /* fall-through */
             case PERF_RECORD_UNTHROTTLE:
                 throttle_samples++;

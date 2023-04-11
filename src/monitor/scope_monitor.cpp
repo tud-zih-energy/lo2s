@@ -45,11 +45,7 @@ namespace monitor
 ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec)
 : PollMonitor(parent.trace(), scope.name(), config().perf_read_interval), scope_(scope)
 {
-#ifndef USE_PERF_RECORD_SWITCH
-    if (config().sampling)
-#else
     if (config().sampling || scope.is_cpu())
-#endif
     {
         sample_writer_ =
             std::make_unique<perf::sample::Writer>(scope, parent, parent.trace(), enable_on_exec);
@@ -75,14 +71,6 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
             std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
         add_fd(userspace_counter_writer_->fd());
     }
-
-#ifndef USE_PERF_RECORD_SWITCH
-    if (scope.is_cpu())
-    {
-        switch_writer_ =
-            std::make_unique<perf::tracepoint::SwitchWriter>(scope.as_cpu(), parent.trace());
-    }
-#endif
 
     // note: start() can now be called
 }
@@ -128,12 +116,6 @@ void ScopeMonitor::monitor(int fd)
     {
         userspace_counter_writer_->read();
     }
-#ifndef USE_PERF_RECORD_SWITCH
-    if (switch_writer_ && (fd == timer_pfd().fd || fd == stop_pfd().fd))
-    {
-        switch_writer_->read();
-    }
-#endif
 }
 } // namespace monitor
 } // namespace lo2s

@@ -30,10 +30,6 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/perf/syscall/writer.hpp>
 
-#ifndef USE_PERF_RECORD_SWITCH
-#include <lo2s/perf/tracepoint/switch_writer.hpp>
-#endif
-
 #include <array>
 #include <chrono>
 #include <thread>
@@ -78,9 +74,6 @@ private:
     std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
-#ifndef USE_PERF_RECORD_SWITCH
-    std::unique_ptr<perf::tracepoint::SwitchWriter> switch_writer_;
-#endif
 };
 } // namespace monitor
 } // namespace lo2s
