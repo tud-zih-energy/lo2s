@@ -71,9 +71,19 @@ public:
         uint32_t pid, tid;
         uint64_t time;
         uint32_t cpu, res;
-        /* only relevant for has_cct_ / PERF_SAMPLE_CALLCHAIN */
+        void *callstack;
+    };
+
+    struct FramePointer
+    {
         uint64_t nr;
-        uint64_t ips[1]; // ISO C++ forbits zero-size array
+        uint64_t ips[1]; // ISO C++ forbits zero-size arrays
+    };
+
+    struct LastBranchRecord
+    {
+        uint64_t bnr;
+        struct perf_branch_entry lbr[1];
     };
 
 protected:

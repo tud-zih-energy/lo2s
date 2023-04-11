@@ -44,6 +44,13 @@ enum class MonitorType
     CPU_SET
 };
 
+enum class SamplingType
+{
+    INST_POINTER,
+    FRAME_POINTER,
+    LAST_BRANCH_RECORD
+};
+
 struct Config
 {
     // General
@@ -68,7 +75,7 @@ struct Config
     bool sampling;
     std::uint64_t sampling_period;
     std::string sampling_event;
-    bool enable_cct;
+    SamplingType sampling_type = SamplingType::INST_POINTER;
     bool suppress_ip;
     bool disassemble;
     // Interval monitors
