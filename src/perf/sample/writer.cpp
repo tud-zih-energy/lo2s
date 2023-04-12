@@ -86,16 +86,17 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     cpuid_metric_event_.raw_values()[0] = sample->cpu;
     otf2_writer_ << cpuid_metric_event_;
 
-    if (!has_cct_)
+    if (sampling_type_ == SamplingType::INST_POINTER)
     {
         otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(sample->ip), 2,
                                                   trace_.interrupt_generator().ref());
     }
-    else
+    else if (sampling_type_ == SamplingType::FRAME_POINTER)
     {
+        LastBranchRecord *lbr = (LastBranchRecord*)&sample->callstack;
         otf2_writer_.write_calling_context_sample(tp,
-                                                  cctx_manager_.sample_ref(sample->nr, sample->ips),
-                                                  sample->nr, trace_.interrupt_generator().ref());
+                                                  cctx_manager_.sample_ref(lbr->bnr, lbr->lbr),
+                                                  lbr->bnr, trace_.interrupt_generator().ref());
     }
     return false;
 }

@@ -249,8 +249,10 @@ void parse_program_options(int argc, const char** argv)
         .default_value("11010113")
         .metavar("N");
 
-    sampling_options.toggle("call-graph", "Record call stack of instruction samples.")
-        .short_name("g");
+    sampling_options.option("call-graph", "Record call stack of instruction samples.")
+        .short_name("g")
+        .default_value("fp")
+        .optional();
 
     sampling_options.toggle("no-ip",
                             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]");
@@ -355,7 +357,6 @@ void parse_program_options(int argc, const char** argv)
         arguments.provided("pid") ? Process(arguments.as<pid_t>("pid")) : Process::invalid();
     config.sampling_event = arguments.get("event");
     config.sampling_period = arguments.as<std::uint64_t>("count");
-    config.enable_cct = arguments.given("call-graph");
     config.suppress_ip = arguments.given("no-ip");
     config.tracepoint_events = arguments.get_all("tracepoint");
     config.use_x86_energy = arguments.given("x86-energy");
@@ -412,6 +413,20 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+        if (arguments.get("call-graph") == "fp")
+        {
+            Log::error() << "Frame Pointer!";
+            config.sampling_type = SamplingType::FRAME_POINTER;
+        }
+        if (arguments.get("call-graph") == "lbr")
+        {
+            Log::error() << "LBR!";
+            config.sampling_type = SamplingType::LAST_BRANCH_RECORD;
+        }
+        else
+        {
+            Log::error() << "Unrecognized callgraph option " << arguments.get("call-graph");
+        }
     // list arguments to arguments and exit
     {
         if (arguments.given("list-clockids"))

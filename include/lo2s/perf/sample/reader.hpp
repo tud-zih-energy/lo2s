@@ -89,7 +89,7 @@ public:
 protected:
     using EventReader<T>::init_mmap;
 
-    Reader(ExecutionScope scope, bool enable_on_exec) : has_cct_(config().enable_cct)
+    Reader(ExecutionScope scope, bool enable_on_exec) : sampling_type_(config().sampling_type)
     {
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
@@ -146,9 +146,14 @@ protected:
         // TODO see if we can remove remove tid
         perf_attr.sample_type =
             PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_CPU;
-        if (has_cct_)
+        if (sampling_type_ == SamplingType::FRAME_POINTER)
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
+        }
+        else if(sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
+        {
+            perf_attr.sample_type |= PERF_SAMPLE_BRANCH_STACK;
+            perf_attr.branch_sample_type |= PERF_SAMPLE_BRANCH_PLM_ALL | PERF_SAMPLE_BRANCH_ANY_CALL;
         }
 
         perf_attr.precise_ip = 3;
@@ -249,7 +254,7 @@ public:
     }
 
 protected:
-    bool has_cct_;
+    SamplingType sampling_type_;
 
 private:
     int fd_ = -1;
