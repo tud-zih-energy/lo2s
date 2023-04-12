@@ -53,17 +53,14 @@ int main(int argc, const char** argv)
             lo2s::Log::fatal() << "Aborting: " << e.what();
             return e.code().value();
         }
-        else
-        {
-            lo2s::summary().show();
-            return EXIT_SUCCESS;
-        }
     }
     catch (const std::exception& e)
     {
         lo2s::Log::fatal() << "Aborting: " << e.what();
         return EXIT_FAILURE;
     }
+
+    lo2s::summary().show();
 
     return 0;
 }
