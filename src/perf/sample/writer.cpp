@@ -93,6 +93,13 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     }
     else if (sampling_type_ == SamplingType::FRAME_POINTER)
     {
+        FramePointer *fp = (FramePointer*)&sample->callstack;
+        otf2_writer_.write_calling_context_sample(tp,
+                                                  cctx_manager_.sample_ref(fp->nr, fp->ips),
+                                                  fp->nr, trace_.interrupt_generator().ref());
+    }
+    else if (sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
+    {
         LastBranchRecord *lbr = (LastBranchRecord*)&sample->callstack;
         otf2_writer_.write_calling_context_sample(tp,
                                                   cctx_manager_.sample_ref(lbr->bnr, lbr->lbr),
