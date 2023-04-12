@@ -78,7 +78,7 @@ public:
     otf2::definition::calling_context::reference_type sample_ref(uint64_t num_ips, const perf_branch_entry entries[])
     {
         auto children = &current_thread_cctx_refs_->second.entry.children;
-        for (uint64_t i = num_ips - 1;; i--)
+        for (uint64_t i = num_ips - 1;num_ips > 1; i--)
         {
             auto it = find_ip_child(entries[i].to, *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
@@ -89,6 +89,8 @@ public:
 
             children = &it->second.children;
         }
+
+        return otf2::definition::calling_context::reference_type::undefined();
     }
 
     otf2::definition::calling_context::reference_type sample_ref(uint64_t num_ips,
