@@ -101,6 +101,9 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     else if (sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
     {
         LastBranchRecord *lbr = (LastBranchRecord*)&sample->callstack;
+        otf2_writer_.write_calling_context_sample(tp,
+                                                  cctx_manager_.sample_ref(lbr->nr, lbr->ips),
+                                                  lbr->nr, trace_.interrupt_generator().ref());
         auto ref_type = cctx_manager_.sample_ref(lbr->bnr, lbr->lbr);
         if (ref_type != otf2::definition::calling_context::reference_type::undefined())
         {

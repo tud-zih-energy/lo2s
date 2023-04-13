@@ -80,6 +80,7 @@ public:
         auto children = &current_thread_cctx_refs_->second.entry.children;
         for (uint64_t i = num_ips - 1;num_ips > 1; i--)
         {
+            Log::error() << "LBR: " << entries[i].to;
             auto it = find_ip_child(entries[i].to, *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)
@@ -117,6 +118,7 @@ public:
         auto children = &current_thread_cctx_refs_->second.entry.children;
         for (uint64_t i = num_ips - 1;; i--)
         {
+            Log::error() << "FP: " << ips[i];
             auto it = find_ip_child(ips[i], *children);
             // We intentionally discard the last sample as it is somewhere in the kernel
             if (i == 1)

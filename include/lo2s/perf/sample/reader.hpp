@@ -82,6 +82,8 @@ public:
 
     struct LastBranchRecord
     {
+        uint64_t nr;
+        uint64_t ips[1];
         uint64_t bnr;
         struct perf_branch_entry lbr[1];
     };
@@ -152,7 +154,7 @@ protected:
         }
         else if(sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
         {
-            perf_attr.sample_type |= PERF_SAMPLE_BRANCH_STACK;
+            perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN |  PERF_SAMPLE_BRANCH_STACK;
             perf_attr.branch_sample_type |= PERF_SAMPLE_BRANCH_PLM_ALL | PERF_SAMPLE_BRANCH_ANY_CALL;
         }
 
