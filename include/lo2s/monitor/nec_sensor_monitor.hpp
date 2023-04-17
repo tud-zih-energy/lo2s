@@ -44,9 +44,8 @@ private:
     }
 
 private:
-    nec::SensorWriter writer_;
+    std::vector<nec::SensorWriter> writers_;
 };
 
-}
 } // namespace monitor
 } // namespace lo2s

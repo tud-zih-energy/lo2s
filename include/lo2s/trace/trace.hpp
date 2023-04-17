@@ -134,6 +134,7 @@ public:
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const Cpu& cpu);
     otf2::writer::local& bio_writer(BlockDevice& device);
+    otf2::writer::local& nec_sensor_writer(const nec::Device& device);
     otf2::writer::local& create_metric_writer(const std::string& name);
 
     otf2::definition::io_handle& block_io_handle(BlockDevice& device);
@@ -177,12 +178,18 @@ public:
             otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit));
     }
 
-    otf2::definition::metric_class& nec_metric_class(std::vector<nec::Sensor>& sensors)
+    otf2::definition::metric_class& nec_metric_class(const nec::Device& device)
     {
-        auto& metric_class = registry_.create<otf2::definition::metric_class>(
-            otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
+        if (registry_.has<otf2::definition::metric_class>(ByNecDevice(device)))
+        {
+            return registry_.get<otf2::definition::metric_class>(ByNecDevice(device));
+        }
 
-        for (const auto& sensor : sensors)
+        auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
+            ByNecDevice(device), otf2::common::metric_occurence::async,
+            otf2::common::recorder_kind::abstract);
+
+        for (const auto& sensor : device.sensors())
         {
             auto member = registry_.emplace<otf2::definition::metric_member>(
                 ByNecSensor(sensor), intern(sensor.name()), intern(sensor.name()),
@@ -361,8 +368,6 @@ private:
     otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> bio_system_tree_node_;
     otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> bio_paradigm_;
     otf2::definition::detail::weak_ref<otf2::definition::comm_group> bio_comm_group_;
-
-    otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> nec_system_tree_node_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 

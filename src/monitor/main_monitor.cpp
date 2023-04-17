@@ -125,6 +125,11 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         }
     }
 #endif
+
+    if (config().use_nec_sensors)
+    {
+        nec_sensor_monitor_ = std::make_unique<NecSensorMonitor>(trace_);
+    }
 }
 
 void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)

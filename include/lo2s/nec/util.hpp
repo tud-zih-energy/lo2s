@@ -33,51 +33,35 @@ namespace lo2s
 namespace nec
 {
 
-uint64_t readSensor(int device_id, std::string sensor_name, bool is_hex = false)
-{
-    std::fstream sensor_file(fmt::format("/sys/class/ve{}/{}", device_id, sensor_name));
-    uint64_t res;
-    if (is_hex)
-    {
-        sensor_file >> std::hex >> res;
-    }
-    else
-    {
-        sensor_file >> res;
-    }
+uint64_t readSensor(int device_id, std::string sensor_name, bool is_hex = false);
 
-    return res;
-}
+int numaCount(int device_id);
 
-int numaCount(int device_id)
-{
-    if (!readSensor(device_id, "partitioning_mode"))
-    {
-        return 1;
-    }
-    const std::regex numa_regex("numa\\d+_cores");
-    int count;
-    for (const auto& file :
-         std::filesystem::directory_iterator(fmt::format("/sys/class/ve/ve{}", device_id)))
-    {
-        if (std::regex_match(file.path().numa_regex))
-        {
-            count++;
-        }
-    }
-    return count;
-}
 class Sensor
 {
 public:
     Sensor(int device_id, std::string name) : device_id_(device_id), name_(name)
     {
     }
-    virtual double read() = 0;
 
-    const std::string name()
+    virtual double read() const
+    {
+        return 0;
+    }
+
+    const std::string name() const
     {
         return fmt::format("{} ({})", name_, device_id_);
+    }
+
+    const std::string unit() const
+    {
+        return "#";
+    }
+
+    friend bool operator<(const Sensor& lhs, const Sensor& rhs)
+    {
+        return lhs.name_ < rhs.name_;
     }
 
 protected:
@@ -92,7 +76,7 @@ public:
     {
     }
 
-    double read() override
+    double read() const override
     {
         return readSensor(device_id_, file_) / scaling_;
     }
@@ -109,7 +93,7 @@ public:
     : Sensor(device_id, fmt::format("core {} temperature", core_id)), core_id_(core_id)
     {
     }
-    double read() override
+    double read() const override
     {
         return readSensor(device_id_, fmt::format("sensor_{}", core_id_ + 14)) / 1000000.0f;
     }
@@ -120,14 +104,14 @@ private:
 class Device
 {
 public:
-    Device(int device_id)
+    Device(int device_id) : device_id_(device_id)
     {
         // TODO: You can read numaX_cores to get which NUMA area a core belongs to, is that useful
         // here?
         int enabled_cores = readSensor(device_id, "cores_enable", true);
         int bit = 1;
 
-        for (int core_id = 0; core_id < sizeof(int) * 8; core_id++, bit <<= 1)
+        for (unsigned int core_id = 0; core_id < sizeof(int) * 8; core_id++, bit <<= 1)
         {
             if (bit & enabled_cores)
             {
@@ -137,13 +121,31 @@ public:
         sensors_.emplace_back(SimpleSensor(device_id, "voltage", "sensor_8", 1000000.0f));
     }
 
-    const std::vector<Sensor> sensors()
+    const std::vector<Sensor> sensors() const
     {
         return sensors_;
     }
 
+    const std::string name() const
+    {
+        return fmt::format("NEC Accelerator {}", device_id_);
+    }
+
+    int id() const
+    {
+        return device_id_;
+    }
+
+    friend bool operator<(const Device& lhs, const Device& rhs)
+    {
+        return lhs.device_id_ < rhs.device_id_;
+    }
+
 private:
+    int device_id_;
     std::vector<Sensor> sensors_;
 };
+
+std::vector<Device> get_nec_devices();
 } // namespace nec
 } // namespace lo2s

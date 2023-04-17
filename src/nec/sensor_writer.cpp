@@ -19,7 +19,8 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/nec/sensor_writer.cpp>
+#include <lo2s/nec/sensor_writer.hpp>
+#include <lo2s/trace/trace.hpp>
 
 #include <filesystem>
 #include <regex>
@@ -29,18 +30,27 @@ namespace lo2s
 namespace nec
 {
 
-SensorWriter::SensorWriter(trace::Trace& trace)
+SensorWriter::SensorWriter(trace::Trace& trace, const Device& device)
+: writer_(trace.nec_sensor_writer(device)),
+  metric_instance_(trace.metric_instance(trace.nec_metric_class(device), writer_.location(),
+                                         writer_.location())),
+  metric_event_(otf2::chrono::genesis(), metric_instance_), device_(device)
 {
-    const std::regex device_regex(".*ve(\\d+)");
-    std::smatch device_match;
+}
 
-    for (const auto& file : std::filesystem::directory_iterator("/sys/class/ve"))
+void SensorWriter::write()
+{
+    metric_event_.timestamp(lo2s::time::now());
+
+    otf2::event::metric::values& values = metric_event_.raw_values();
+
+    int i = 0;
+    for (const auto& sensor : device_.sensors())
     {
-        if (std::regex_match(file.path(), device_match, device_regex))
-        {
-            devices_.emplace_back(Device(stoi(device_match[1].str())));
-        }
+        values[i] = sensor.read();
     }
+
+    writer_.write(metric_event_);
 }
 } // namespace nec
 } // namespace lo2s

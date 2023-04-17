@@ -130,6 +130,12 @@ struct ByNecSensorTag
 
 using ByNecSensor = SimpleKeyType<nec::Sensor, ByNecSensorTag>;
 
+struct ByNecDeviceTag
+{
+};
+
+using ByNecDevice = SimpleKeyType<nec::Device, ByNecDeviceTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -139,7 +145,7 @@ template <>
 struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
-                                                ByProcess, ByDev, ByCpu, ByPackage>;
+                                                ByProcess, ByDev, ByCpu, ByPackage, ByNecDevice>;
 };
 template <>
 struct Holder<otf2::definition::regions_group>
@@ -151,7 +157,7 @@ template <>
 struct Holder<otf2::definition::metric_class>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString,
-                                                ByCounterCollection>;
+                                                ByNecDevice, ByCounterCollection>;
 };
 
 template <>
@@ -178,14 +184,14 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location_group,
+    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByNecDevice,
                                                 ByMeasurementScope, ByExecutionScope, ByDev>;
 };
 template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope, ByDev>;
+                                                ByMeasurementScope, ByNecDevice, ByDev>;
 };
 template <>
 struct Holder<otf2::definition::region>

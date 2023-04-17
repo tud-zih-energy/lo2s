@@ -720,7 +720,7 @@ void parse_program_options(int argc, const char** argv)
 
     if (arguments.given("use-nec-sensors"))
     {
-        if (std::filesystem::exists("/sys/class/ve"))
+        if (!std::filesystem::exists("/sys/class/ve"))
         {
             lo2s::Log::fatal()
                 << "System contains no NEC Aurora Cards or kernel module not loaded!";

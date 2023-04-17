@@ -30,14 +30,21 @@ namespace lo2s
 namespace monitor
 {
 
-NecSensorMonitor::NecSensorMonitor(trace::Trace& trace, Cpu cpu,
-                                   std::map<dev_t, std::unique_ptr<perf::bio::Writer>>&)
-: monitor::PollMonitor(trace, "", config().nec_read_interval), writer_(trace)
+NecSensorMonitor::NecSensorMonitor(trace::Trace& trace)
+: monitor::PollMonitor(trace, "", config().nec_read_interval)
 {
+    for (const auto& device : nec::get_nec_devices())
+    {
+        writers_.emplace_back(nec::SensorWriter(trace, device));
+    }
 }
-void BioMonitor::monitor(int fd)
+
+void NecSensorMonitor::monitor([[maybe_unused]] int fd)
 {
-    writer_.write();
+    for (auto& writer : writers_)
+    {
+        writer.write();
+    }
 }
 
 } // namespace monitor

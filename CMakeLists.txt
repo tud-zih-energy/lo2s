@@ -157,8 +157,11 @@ set(SOURCE_FILES
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
+    src/monitor/nec_sensor_monitor.cpp
     src/monitor/bio_monitor.cpp
     src/process_controller.cpp
+
+    src/nec/sensor_writer.cpp
 
     src/perf/event_provider.cpp
 
@@ -187,6 +190,7 @@ set(SOURCE_FILES
     src/util.cpp
     src/perf/util.cpp
     src/syscalls.cpp
+    src/nec/util.cpp
     src/summary.cpp
 )
 

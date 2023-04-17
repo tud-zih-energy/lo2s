@@ -22,6 +22,7 @@
 #pragma once
 #include <lo2s/nec/util.hpp>
 
+#include <lo2s/trace/trace.hpp>
 #include <otf2xx/otf2.hpp>
 
 namespace lo2s
@@ -32,7 +33,7 @@ namespace nec
 class SensorWriter
 {
 public:
-    SensorWriter(trace::Trace& trace);
+    SensorWriter(trace::Trace& trace, const Device& device);
 
     void write();
 
@@ -40,7 +41,7 @@ private:
     otf2::writer::local& writer_;
     otf2::definition::metric_instance metric_instance_;
     otf2::event::metric metric_event_;
-    std::vector<Device> devices_;
+    const Device& device_;
 };
 } // namespace nec
 } // namespace lo2s

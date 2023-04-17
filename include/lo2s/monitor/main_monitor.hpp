@@ -33,6 +33,7 @@
 #endif
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/bio_monitor.hpp>
+#include <lo2s/monitor/nec_sensor_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -82,6 +83,7 @@ protected:
 #ifdef HAVE_SENSORS
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
 #endif
+    std::unique_ptr<NecSensorMonitor> nec_sensor_monitor_;
 };
 } // namespace monitor
 } // namespace lo2s
