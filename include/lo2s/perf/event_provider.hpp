@@ -36,42 +36,7 @@ namespace perf
 class EventProvider
 {
 public:
-    struct DescriptionCache
-    {
-    private:
-        DescriptionCache()
-        : description(std::string(), static_cast<perf_type_id>(-1), 0, 0), valid_(false)
-        {
-        }
-
-    public:
-        DescriptionCache(const EventDescription& description)
-        : description(description), valid_(true)
-        {
-        }
-
-        DescriptionCache(EventDescription&& description)
-        : description(std::move(description)), valid_(true)
-        {
-        }
-
-        static DescriptionCache make_invalid()
-        {
-            return DescriptionCache();
-        }
-
-        bool is_valid() const
-        {
-            return valid_;
-        }
-
-        EventDescription description;
-
-    private:
-        bool valid_;
-    };
-
-    using EventMap = std::unordered_map<std::string, DescriptionCache>;
+    using EventMap = std::unordered_map<std::string, EventDescription>;
 
     EventProvider();
     EventProvider(const EventProvider&) = delete;

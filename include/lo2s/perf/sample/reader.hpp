@@ -84,16 +84,7 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        struct perf_event_attr perf_attr = common_perf_event_attrs();
-#ifdef USE_PERF_CLOCKID
-        if (config().use_pebs)
-        {
-            perf_attr.use_clockid = 0;
-        }
-#endif
-
-        perf_attr.exclude_kernel = config().exclude_kernel;
-        perf_attr.sample_period = config().sampling_period;
+        struct perf_event_attr perf_attr;
 
         if (config().sampling)
         {
@@ -104,19 +95,38 @@ protected:
 
             Log::debug() << "using sampling event \'" << config().sampling_event
                          << "\', period: " << config().sampling_period;
-
-            perf_attr.type = sampling_event.type;
-            perf_attr.config = sampling_event.config;
-            perf_attr.config1 = sampling_event.config1;
+            perf_attr = sampling_event.perf_event_attr();
 
             perf_attr.mmap = 1;
+            perf_attr.disabled = 1;
+
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+            perf_attr.use_clockid = config().use_clockid;
+            perf_attr.clockid = config().clockid;
+#endif
+            // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
+            // Default behaviour is to wakeup on every event, which is horrible performance wise
+            perf_attr.watermark = 1;
+            perf_attr.wakeup_watermark =
+                static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
         }
         else
         {
+            perf_attr = common_perf_event_attrs();
+
             // Set up a dummy event for recording calling context enter/leaves only
             perf_attr.type = PERF_TYPE_SOFTWARE;
             perf_attr.config = PERF_COUNT_SW_DUMMY;
         }
+#ifdef USE_PERF_CLOCKID
+        if (config().use_pebs)
+        {
+            perf_attr.use_clockid = 0;
+        }
+#endif
+
+        perf_attr.exclude_kernel = config().exclude_kernel;
+        perf_attr.sample_period = config().sampling_period;
 
         perf_attr.sample_id_all = 1;
         // Generate PERF_RECORD_COMM events to trace changes to the command

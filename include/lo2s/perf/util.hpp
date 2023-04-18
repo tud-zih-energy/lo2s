@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lo2s/perf/event_description.hpp>
+#include <lo2s/execution_scope.hpp>
 
 extern "C"
 {
@@ -19,7 +19,6 @@ struct perf_event_attr common_perf_event_attrs();
 void perf_warn_paranoid();
 void perf_check_disabled();
 
-int perf_event_description_open(ExecutionScope scope, const EventDescription& desc, int group_fd);
 int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                         unsigned long flags, int cgroup_fd = -1);
 

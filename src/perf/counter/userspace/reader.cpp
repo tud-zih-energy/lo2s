@@ -64,7 +64,7 @@ Reader<T>::Reader(ExecutionScope scope)
 
     for (auto& event : counter_collection_.counters)
     {
-        counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
+        counter_fds_.emplace_back(event.open_counter(scope, -1));
     }
 }
 

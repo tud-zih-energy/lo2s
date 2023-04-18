@@ -49,14 +49,21 @@ extern "C"
 
 namespace
 {
-#define PERF_EVENT(name, type, id)                                                                 \
+#define PERF_EVENT(name, id)                                                                       \
     {                                                                                              \
-        (name), (type), (id)                                                                       \
+        (name), (id)                                                                               \
     }
-#define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
-#define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
+#define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_COUNT_HW_##id)
+#define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_COUNT_SW_##id)
 
-static lo2s::perf::EventDescription HW_EVENT_TABLE[] = {
+template <typename T>
+struct string_to_id
+{
+    std::string name;
+    T id;
+};
+
+static string_to_id<perf_hw_id> HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
     PERF_EVENT_HW("instructions", INSTRUCTIONS),
     PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
@@ -75,7 +82,7 @@ static lo2s::perf::EventDescription HW_EVENT_TABLE[] = {
 #endif
 };
 
-static lo2s::perf::EventDescription SW_EVENT_TABLE[] = {
+static string_to_id<perf_sw_ids> SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
     PERF_EVENT_SW("task-clock", TASK_CLOCK),
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
@@ -89,17 +96,6 @@ static lo2s::perf::EventDescription SW_EVENT_TABLE[] = {
 #ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
-};
-
-#define PERF_MAKE_CACHE_ID(id) (id)
-#define PERF_MAKE_CACHE_OP_ID(id) ((id) << 8)
-#define PERF_MAKE_CACHE_OP_RES_ID(id) ((id) << 16)
-
-template <typename T>
-struct string_to_id
-{
-    const char* name;
-    T id;
 };
 
 static string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
@@ -132,20 +128,9 @@ inline constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw
     return cache | (op << 8) | (op_result << 16);
 }
 
-template <std::size_t N, typename T>
-inline constexpr std::size_t array_size(T (&)[N])
-{
-    return N;
-}
-
-constexpr std::uint64_t operator"" _u64(unsigned long long int lit)
-{
-    return static_cast<std::uint64_t>(lit);
-}
-
 constexpr std::uint64_t bit(int bitnumber)
 {
-    return static_cast<std::uint64_t>(1_u64 << bitnumber);
+    return static_cast<std::uint64_t>(1ULL << bitnumber);
 }
 } // namespace
 
@@ -156,92 +141,31 @@ namespace perf
 
 const EventDescription sysfs_read_event(const std::string& ev_desc);
 
-static bool event_is_openable(EventDescription& ev)
-{
-    struct perf_event_attr attr;
-    memset(&attr, 0, sizeof(attr));
-    attr.size = sizeof(attr);
-    attr.type = ev.type;
-    attr.config = ev.config;
-    attr.config1 = ev.config1;
-
-    int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-    int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
-    if (sys_fd == -1 && proc_fd == -1)
-    {
-        Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
-
-        attr.exclude_kernel = 1;
-        int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-        int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
-
-        if (sys_fd == -1 && proc_fd == -1)
-        {
-            switch (errno)
-            {
-            case ENOTSUP:
-                Log::debug() << "perf event not supported by the running kernel: " << ev.name;
-                break;
-            default:
-                Log::debug() << "perf event " << ev.name
-                             << " not available: " << std::string(std::strerror(errno));
-                break;
-            }
-            return false;
-        }
-    }
-    else if (sys_fd == -1)
-    {
-        close(proc_fd);
-        ev.availability = Availability::PROCESS_MODE;
-    }
-    else if (proc_fd == -1)
-    {
-        close(sys_fd);
-        ev.availability = Availability::SYSTEM_MODE;
-    }
-    else
-    {
-        ev.availability = Availability::UNIVERSAL;
-        close(sys_fd);
-        close(proc_fd);
-    }
-
-    return true;
-}
-
 static void populate_event_map(EventProvider::EventMap& map)
 {
     Log::info() << "checking available events...";
-    map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
-                array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
+
     for (auto& ev : HW_EVENT_TABLE)
     {
-        map.emplace(ev.name,
-                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
+        map.emplace(ev.name, EventDescription(ev.name, PERF_TYPE_HARDWARE, ev.id));
     }
 
     for (auto& ev : SW_EVENT_TABLE)
     {
-        map.emplace(ev.name,
-                    event_is_openable(ev) ? ev : EventProvider::DescriptionCache::make_invalid());
+        map.emplace(ev.name, EventDescription(ev.name, PERF_TYPE_SOFTWARE, ev.id));
     }
 
-    std::stringstream name_fmt;
     for (auto& cache : CACHE_NAME_TABLE)
     {
         for (auto& operation : CACHE_OPERATION_TABLE)
         {
-            name_fmt.str(std::string());
-            name_fmt << cache.name << '-' << operation.name;
+            std::string cache_str = fmt::format("{}-{}", cache.name, operation.name);
 
             EventDescription ev(
-                name_fmt.str(), PERF_TYPE_HW_CACHE,
+                cache_str, PERF_TYPE_HW_CACHE,
                 make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
 
-            map.emplace(ev.name, event_is_openable(ev) ?
-                                     ev :
-                                     EventProvider::DescriptionCache::make_invalid());
+            map.emplace(ev.name(), ev);
         }
     }
 }
@@ -378,38 +302,6 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-static void event_description_update(EventDescription& event, std::uint64_t value,
-                                     const std::string& format)
-{
-    // Parse config terms //
-
-    /* Format:  <term>:<bitmask>
-     *
-     * We only assign the terms 'config' and 'config1'.
-     *
-     * */
-
-    static constexpr auto npos = std::string::npos;
-    const auto colon = format.find_first_of(':');
-    if (colon == npos)
-    {
-        throw EventProvider::InvalidEvent("invalid format description: missing colon");
-    }
-
-    const auto target_config = format.substr(0, colon);
-    const auto mask = parse_bitmask(format.substr(colon + 1));
-
-    if (target_config == "config")
-    {
-        event.config |= apply_mask(value, mask);
-    }
-
-    if (target_config == "config1")
-    {
-        event.config1 |= apply_mask(value, mask);
-    }
-}
-
 const EventDescription raw_read_event(const std::string& ev_desc)
 {
     uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
@@ -462,6 +354,13 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
      *
      * */
 
+    std::underlying_type<perf_type_id>::type type;
+    uint64_t config = 0;
+    uint64_t config1 = 0;
+    std::set<Cpu> cpus;
+    double scale;
+    std::string unit;
+
     enum EVENT_DESCRIPTION_REGEX_GROUPS
     {
         ED_WHOLE_MATCH,
@@ -486,7 +385,6 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         std::filesystem::path("/sys/bus/event_source/devices") / pmu_name;
 
     // read PMU type id
-    std::underlying_type<perf_type_id>::type type;
     std::ifstream type_stream(pmu_path / "type");
     type_stream >> type;
     if (!type_stream)
@@ -495,11 +393,9 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
     }
 
-    std::set<Cpu> cpus;
     auto cpuids = parse_list_from_file(pmu_path / "cpus");
     std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
-    EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus);
 
     // Parse event configuration from sysfs //
 
@@ -560,30 +456,51 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         std::uint64_t val = std::stol(value, nullptr, 0);
         Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
                      << val << std::dec << std::noshowbase;
-        event_description_update(event, val, format);
+
+        static constexpr auto npos = std::string::npos;
+        const auto colon = format.find_first_of(':');
+        if (colon == npos)
+        {
+            throw EventProvider::InvalidEvent("invalid format description: missing colon");
+        }
+
+        const auto target_config = format.substr(0, colon);
+        const auto mask = parse_bitmask(format.substr(colon + 1));
+
+        if (target_config == "config")
+        {
+            config |= apply_mask(val, mask);
+        }
+
+        if (target_config == "config1")
+        {
+            config1 |= apply_mask(val, mask);
+        }
 
         ev_cfg = kv_match.suffix();
     }
 
     Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
-                 << event_name << "/type=" << event.type << ",config=" << event.config
-                 << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
+                 << event_name << "/type=" << type << ",config=" << config << ",config1=" << config1
+                 << std::dec << std::noshowbase << "/";
 
     std::ifstream scale_stream(event_path.string() + ".scale");
-    scale_stream >> event.scale;
+    scale_stream >> scale;
     if (scale_stream.fail())
     {
-        event.scale = 1;
+        scale = 1;
     }
 
     std::ifstream unit_stream(event_path.string() + ".unit");
-    unit_stream >> event.unit;
+    unit_stream >> unit;
     if (scale_stream.fail())
     {
-        event.unit = "#";
+        unit = "#";
     }
 
-    if (!event_is_openable(event))
+    EventDescription event(ev_desc, static_cast<perf_type_id>(type), config, config1, cpus, scale,
+                           unit);
+    if (!event.is_valid())
     {
         throw EventProvider::InvalidEvent(
             "Event can not be opened in process- or system-monitoring-mode");
@@ -607,18 +524,16 @@ const EventDescription& EventProvider::cache_event(const std::string& name)
     {
         if (regex_match(name, raw_regex))
         {
-            return event_map_.emplace(name, DescriptionCache(raw_read_event(name)))
-                .first->second.description;
+            return event_map_.emplace(name, raw_read_event(name)).first->second;
         }
         else
         {
-            return event_map_.emplace(name, DescriptionCache(sysfs_read_event(name)))
-                .first->second.description;
+            return event_map_.emplace(name, sysfs_read_event(name)).first->second;
         }
     }
     catch (const InvalidEvent& e)
     {
-        event_map_.emplace(name, DescriptionCache::make_invalid());
+        event_map_.emplace(name, EventDescription());
         throw e;
     }
 }
@@ -631,7 +546,7 @@ const EventDescription& EventProvider::get_event_by_name(const std::string& name
     {
         if (event_it->second.is_valid())
         {
-            return event_it->second.description;
+            return event_it->second;
         }
         else
         {
@@ -678,7 +593,7 @@ std::vector<EventDescription> EventProvider::get_predefined_events()
     {
         if (event.second.is_valid())
         {
-            events.push_back(event.second.description);
+            events.push_back(event.second);
         }
     }
 

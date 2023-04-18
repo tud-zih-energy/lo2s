@@ -74,30 +74,10 @@ static inline void print_availability(std::ostream& os, const std::string& descr
     std::vector<std::string> event_names;
     for (const auto& ev : events)
     {
-        if (ev.availability == perf::Availability::UNAVAILABLE)
+        if (ev.is_valid())
         {
-            continue;
+            event_names.push_back(ev.description());
         }
-
-        std::string availability = "";
-        std::string cpu = "";
-        if (ev.availability == perf::Availability::PROCESS_MODE)
-        {
-            availability = " *";
-        }
-        else if (ev.availability == perf::Availability::SYSTEM_MODE)
-        {
-            availability = " #";
-        }
-        if (ev.supported_cpus() != Topology::instance().cpus())
-        {
-            const auto& cpus = ev.supported_cpus();
-            cpu =
-                fmt::format(" [ CPUs {}-{} ]", std::min_element(cpus.begin(), cpus.end())->as_int(),
-                            std::max_element(cpus.begin(), cpus.end())->as_int());
-        }
-
-        event_names.push_back(ev.name + availability + cpu);
     }
     list_arguments_sorted(os, description, event_names);
 }
@@ -670,7 +650,7 @@ void parse_program_options(int argc, const char** argv)
     {
         for (const auto& mem_event : platform::get_mem_events())
         {
-            perf_group_events.emplace_back(mem_event.name);
+            perf_group_events.emplace_back(mem_event.name());
         }
         perf_group_events.emplace_back("instructions");
         perf_group_events.emplace_back("cpu-cycles");
