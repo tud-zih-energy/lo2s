@@ -53,11 +53,19 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
       CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    perf_event_attr leader_attr = common_perf_event_attrs();
+    perf_event_attr leader_attr = counter_collection_.leader.perf_event_attr();
 
-    leader_attr.type = counter_collection_.leader.type;
-    leader_attr.config = counter_collection_.leader.config;
-    leader_attr.config1 = counter_collection_.leader.config1;
+    leader_attr.disabled = 1;
+
+#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+    leader_attr.use_clockid = config().use_clockid;
+    leader_attr.clockid = config().clockid;
+#endif
+    // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
+    // Default behaviour is to wakeup on every event, which is horrible performance wise
+    leader_attr.watermark = 1;
+    leader_attr.wakeup_watermark =
+        static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
 
     leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
     leader_attr.freq = config().metric_use_frequency;
@@ -86,7 +94,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         throw_errno();
     }
 
-    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name << "'";
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name() << "'";
 
     counter_fds_.reserve(counter_collection_.counters.size());
     for (auto& description : counter_collection_.counters)
@@ -95,12 +103,11 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         {
             try
             {
-                counter_fds_.emplace_back(
-                    perf_event_description_open(scope, description, group_leader_fd_));
+                counter_fds_.emplace_back(description.open_counter(scope, group_leader_fd_));
             }
             catch (const std::system_error& e)
             {
-                Log::error() << "failed to add counter '" << description.name
+                Log::error() << "failed to add counter '" << description.name()
                              << "': " << e.code().message();
 
                 if (e.code().value() == EINVAL)
