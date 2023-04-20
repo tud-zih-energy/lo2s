@@ -51,9 +51,10 @@ struct EventDescription
 {
     EventDescription(const std::string& name, perf_type_id type, std::uint64_t config,
                      std::uint64_t config1 = 0, std::set<Cpu> cpus = std::set<Cpu>(),
+                     bool is_uncore = false, std::set<Cpu> cpumask = std::set<Cpu>(),
                      double scale = 1, std::string unit = "#")
-    : name_(name), type_(type), config_(config), config1_(config1), scale_(scale), unit_(unit),
-      cpus_(cpus)
+    : name_(name), type_(type), config_(config), config1_(config1), cpus_(cpus),
+      is_uncore_(is_uncore), cpumask_(cpumask), scale_(scale), unit_(unit)
     {
         struct perf_event_attr attr = perf_event_attr();
 
@@ -115,9 +116,9 @@ struct EventDescription
     {
         // per-process should always work. the counter will just not count if the process is
         // scheduled on a core that is not supprted by that counter
-        if (is_uncore)
+        if (is_uncore_)
         {
-            return scope.is_cpu() && cpumask.count(scope.as_cpu());
+            return scope.is_cpu() && cpumask_.count(scope.as_cpu());
         }
         return scope.is_thread() || cpus_.empty() || cpus_.count(scope.as_cpu());
     }
@@ -162,6 +163,11 @@ struct EventDescription
 
     std::string description() const
     {
+        if (is_uncore_)
+        {
+            return fmt::format("{} [UNC]", name_);
+        }
+
         if (availability_ == Availability::UNIVERSAL)
         {
             return name_;
@@ -220,11 +226,12 @@ private:
     perf_type_id type_;
     std::uint64_t config_;
     std::uint64_t config1_;
+    std::set<Cpu> cpus_;
+    bool is_uncore_;
+    std::set<Cpu> cpumask_;
     double scale_;
     std::string unit_;
     Availability availability_;
-
-    std::set<Cpu> cpus_;
 };
 } // namespace perf
 } // namespace lo2s

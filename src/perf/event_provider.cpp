@@ -360,6 +360,8 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
     std::set<Cpu> cpus;
     double scale;
     std::string unit;
+    std::set<Cpu> cpumask;
+    bool is_uncore = false;
 
     enum EVENT_DESCRIPTION_REGEX_GROUPS
     {
@@ -397,8 +399,6 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
     std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
 
-    std::set<Cpu> cpumask;
-    bool is_uncore = false;
     auto cpumaskids = parse_list_from_file(pmu_path / "cpumask");
     std::transform(cpumaskids.begin(), cpumaskids.end(), std::inserter(cpumask, cpumask.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
@@ -407,8 +407,6 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         is_uncore = true;
     }
 
-    EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus, is_uncore,
-                           cpumask);
     // Parse event configuration from sysfs //
 
     // read event configuration
@@ -510,8 +508,8 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         unit = "#";
     }
 
-    EventDescription event(ev_desc, static_cast<perf_type_id>(type), config, config1, cpus, scale,
-                           unit);
+    EventDescription event(ev_desc, static_cast<perf_type_id>(type), config, config1, cpus,
+                           is_uncore, cpumask, scale, unit);
     if (!event.is_valid())
     {
         throw EventProvider::InvalidEvent(
