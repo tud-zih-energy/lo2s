@@ -72,7 +72,7 @@ Use L<systctl(8)> to change the level if needed:
 
     # sysctl kernel.perf_event_paranoid=<level>
 
-See L<perf_event_open(2)> for a more detailed description.
+See L<perf_event_open(2)> and L<https://docs.kernel.org/admin-guide/perf-security.html> for a more detailed description.
 Options in B<OPTIONS> are annotated with the I<paranoid level> they require.
 
 =head1 OPTIONS
