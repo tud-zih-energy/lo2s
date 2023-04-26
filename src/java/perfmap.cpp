@@ -148,7 +148,7 @@ static void JNICALL cbClassPrepare(jvmtiEnv* jvmti, JNIEnv*, jthread, jclass cls
         jvmti->Deallocate((unsigned char*)class_signature_ptr);
     }
 
-    Log::info() << "class loaded: " << class_str;
+    Log::debug() << "class loaded: " << class_str;
 
     jint method_count;
     jmethodID* methods_ptr;
@@ -172,7 +172,6 @@ static void JNICALL cbClassPrepare(jvmtiEnv* jvmti, JNIEnv*, jthread, jclass cls
 
         jvmti->GetMethodLocation(methods_ptr[i], &begin, &end);
         int len = end - begin;
-        ;
 
         if (begin == 0)
         {
@@ -209,7 +208,7 @@ static void JNICALL cbClassPrepare(jvmtiEnv* jvmti, JNIEnv*, jthread, jclass cls
         }
     }
 
-    Log::info() << "class load finished: " << class_str;
+    Log::trace() << "class load finished: " << class_str;
 }
 
 jvmtiError enable_capabilities(jvmtiEnv* jvmti)
@@ -237,7 +236,10 @@ jvmtiError set_callbacks(jvmtiEnv* jvmti)
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.CompiledMethodLoad = &cbCompiledMethodLoad;
     callbacks.DynamicCodeGenerated = &cbDynamicCodeGenerated;
-    callbacks.ClassPrepare = &cbClassPrepare;
+    // perfj doesn't use this either
+    // so it's fine I guess
+    // callbacks.ClassPrepare = &cbClassPrepare;
+    (void)&cbClassPrepare;
     return jvmti->SetEventCallbacks(&callbacks, (jint)sizeof(callbacks));
 }
 

@@ -71,7 +71,7 @@ void JVMSymbols::attach()
 
 void JVMSymbols::read_symbols()
 {
-    Log::warn() << "read symbols called";
+    Log::trace() << "read symbols called";
 
     try
     {
@@ -99,20 +99,32 @@ void JVMSymbols::read_symbols()
             {
                 std::lock_guard<std::mutex> lock(mutex_);
 
+                // TODO this is very slow, because the exception path is rather common
+                // JVM seems to reuse the memory of former symbols A LOT
                 auto res = symbols_.emplace(std::piecewise_construct,
                                             std::make_tuple(address, address + len),
                                             std::make_tuple(symbol));
 
                 if (!res.second)
                 {
-                    Log::warn() << "Didn't inserted 0x" << std::hex << address << "-0x"
-                                << address + len << ": " << symbol;
+                    Log::trace() << "Didn't inserted 0x" << std::hex << address << "-0x"
+                                 << address + len << ": " << symbol;
+
+                    if (auto it = symbols_.find(Address{ address }); it != symbols_.end())
+                    {
+                        Log::trace() << "Found " << it->second << " at the start";
+                    }
+
+                    if (auto it = symbols_.find(Address{ address + len }); it != symbols_.end())
+                    {
+                        Log::trace() << "Found " << it->second << " at the start";
+                    }
                 }
             }
             catch (std::exception& e)
             {
                 // eof in the fifo will throw, so this is fine... sorta
-                Log::error() << "Inserting symbol failed: " << e.what();
+                Log::debug() << "Inserting symbol failed: " << e.what();
             }
         }
     }
@@ -122,7 +134,7 @@ void JVMSymbols::read_symbols()
         Log::error() << "Fifo read failed: " << e.what();
     }
 
-    Log::warn() << "read symbols ended";
+    Log::trace() << "read symbols ended";
 }
 } // namespace java
 } // namespace lo2s

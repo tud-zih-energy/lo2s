@@ -41,15 +41,16 @@ std::vector<std::string> parse_type_list(const std::string& input)
     static std::regex class_type("L([^;]+);");
 
     auto it = input.begin();
-    bool is_array = false;
+    auto is_array = 0;
 
     std::vector<std::string> result;
 
-    auto check_array = [&result, &is_array]() {
+    auto check_array = [&result, &is_array]()
+    {
         if (is_array)
         {
             assert(!result.empty());
-            is_array = false;
+            is_array--;
             result.back() += "[]";
         }
     };
@@ -100,12 +101,10 @@ std::vector<std::string> parse_type_list(const std::string& input)
             continue;
         case 'V':
             result.push_back("void");
-            check_array();
             ++it;
             continue;
         case '[':
-            assert(!is_array);
-            is_array = true;
+            is_array++;
             ++it;
             continue;
         default:
@@ -160,6 +159,12 @@ std::string parse_signature(const std::string& input)
     if (std::regex_match(input.begin(), input.end(), m, signature))
     {
         auto arguments = parse_type_list(m[1]);
+
+        if (arguments.size() == 1 && arguments[0] == m[1])
+        {
+            return "(??\?)";
+        }
+
         auto return_type = parse_type(m[2]);
 
         std::stringstream str;
@@ -178,9 +183,9 @@ std::string parse_signature(const std::string& input)
         return str.str();
     }
 
-    Log::debug() << "Cannot parse the JNI signature: " << input;
+    Log::info() << "Cannot parse the JNI signature: " << input;
 
-    return input;
+    return "(??\?)";
 }
 
 std::string parse_type(const std::string& input)
