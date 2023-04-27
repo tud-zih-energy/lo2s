@@ -37,14 +37,14 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
 # Build Requirements
 
- * Linux<sup>1</sup>
+ * Linux (>= 4.3)<sup>1</sup>
  * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 3.0)
  * libbfd
  * libiberty
  * CMake (>= 3.11)
  * A C++ Compiler with C++17 support and the std::filesystem library (GCC > 7, Clang > 5)
 
-<sup>1</sup>: Use Linux >= 4.1 for best results. Older versions, even the ancient 2.6.32, will work, but with degraded time synchronization.
+<sup>1</sup>: Older kernels can work as the required features are oftentimes backported. Otherwise [lo2s 1.7.0](https://github.com/tud-zih-energy/lo2s/releases/tag/v1.7.0) can be used, which is the newest lo2s version with support for kernels as old as even 2.6.32.
 
 # Optional Build Dependencies
 
@@ -62,7 +62,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
    `sudo sysctl kernel.perf_event_paranoid=1`
 
- * Tracepoints, block I/O, syscalls and system-wide monitoring on kernels older than 4.3 requires access to debugfs.
+ * Tracepoints, block I/O and syscalls require access to debugfs.
  Grant permissions at your own discretion.
 
    `sudo mount -t debugfs none /sys/kernel/debug`
@@ -104,9 +104,9 @@ The `perf_event_open` kernel infrastructure changed significantly over time.
 Therefore, it is already hard to just keep track which kernel version introduced which new feature.
 Combine that with the abundance of backports of particular features by different distributors, and you end with a mess of options.
 
-In the effort to keep compatible with older kernels, several quirks have been added to `lo2s`:
+In the effort to keep compatible with older kernels and some architectures that lack hardware breakpoint support, several quirks have been added to `lo2s`:
 
-1. The initial time synchronization between lo2s and the kernel-space perf is done with a hardware breakpoint. If your kernel doesn't support that, you can disable it using the CMake option `USE_HW_BREAKPOINT_COMPAT`.
+1. The initial time synchronization between lo2s and the kernel-space perf is done with a hardware breakpoint. If your kernel or processor architecture doesn't support that, you can disable it using the CMake option `USE_HW_BREAKPOINT_COMPAT`.
 2. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
 
 # Working with traces
