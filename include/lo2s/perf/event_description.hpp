@@ -197,7 +197,7 @@ struct EventDescription
         // Needed when scaling multiplexed events, and recognize activation phases
         perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#ifndef USE_HW_BREAKPOINT_COMPAT
         perf_attr.use_clockid = config().use_clockid;
         perf_attr.clockid = config().clockid;
 #endif

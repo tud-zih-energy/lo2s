@@ -100,7 +100,7 @@ protected:
             perf_attr.mmap = 1;
             perf_attr.disabled = 1;
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#ifndef USE_HW_BREAKPOINT_COMPAT
             perf_attr.use_clockid = config().use_clockid;
             perf_attr.clockid = config().clockid;
 #endif

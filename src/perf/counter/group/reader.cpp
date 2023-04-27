@@ -57,7 +57,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 
     leader_attr.disabled = 1;
 
-#if !defined(USE_HW_BREAKPOINT_COMPAT) && defined(USE_PERF_CLOCKID)
+#ifndef USE_HW_BREAKPOINT_COMPAT
     leader_attr.use_clockid = config().use_clockid;
     leader_attr.clockid = config().clockid;
 #endif
