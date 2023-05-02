@@ -188,8 +188,8 @@ private:
 };
 
 template <typename T>
-const std::filesystem::path
-    Reader<T>::base_path = std::filesystem::path("/sys/kernel/debug/tracing/events");
+const std::filesystem::path Reader<T>::base_path =
+    std::filesystem::path("/sys/kernel/debug/tracing/events");
 } // namespace syscall
 } // namespace perf
 } // namespace lo2s
