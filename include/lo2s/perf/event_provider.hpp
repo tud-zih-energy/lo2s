@@ -82,14 +82,14 @@ public:
         return instance_mutable();
     }
 
-    static const EventDescription& get_event_by_name(const std::string& name);
+    static EventDescription get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name);
 
     static std::vector<EventDescription> get_predefined_events();
     static std::vector<EventDescription> get_pmu_events();
 
-    static const EventDescription& fallback_metric_leader_event();
+    static EventDescription fallback_metric_leader_event();
 
     class InvalidEvent : public std::runtime_error
     {
@@ -107,7 +107,7 @@ private:
         return e;
     }
 
-    const EventDescription& cache_event(const std::string& name);
+    EventDescription cache_event(const std::string& name);
 
     EventMap event_map_;
 };
