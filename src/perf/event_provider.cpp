@@ -294,7 +294,7 @@ std::vector<EventDescription> EventProvider::get_pmu_events()
     return events;
 }
 
-const EventDescription& EventProvider::fallback_metric_leader_event()
+EventDescription EventProvider::fallback_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
@@ -305,7 +305,7 @@ const EventDescription& EventProvider::fallback_metric_leader_event()
     {
         try
         {
-            const EventDescription& ev = get_event_by_name(candidate);
+            const EventDescription ev = get_event_by_name(candidate);
             Log::debug() << "found suitable metric leader event: " << candidate;
             return ev;
         }
@@ -596,7 +596,7 @@ EventProvider::EventProvider()
     populate_event_map(event_map_);
 }
 
-const EventDescription& EventProvider::cache_event(const std::string& name)
+EventDescription EventProvider::cache_event(const std::string& name)
 {
     // Format for raw events is r followed by a hexadecimal number
     static const std::regex raw_regex("r[[:xdigit:]]{1,8}");
@@ -623,10 +623,10 @@ const EventDescription& EventProvider::cache_event(const std::string& name)
     }
 }
 
-const EventDescription& EventProvider::get_event_by_name(const std::string& name)
+EventDescription EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
-    const auto event_it = ev_map.find(name);
+    auto event_it = ev_map.find(name);
     if (event_it != ev_map.end())
     {
         if (event_it->second.is_valid())
