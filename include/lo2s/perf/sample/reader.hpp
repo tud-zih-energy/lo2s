@@ -71,7 +71,7 @@ public:
         uint32_t pid, tid;
         uint64_t time;
         uint32_t cpu, res;
-        void *callstack;
+        void* callstack;
     };
 
     struct FramePointer
@@ -82,9 +82,8 @@ public:
 
     struct LastBranchRecord
     {
-        uint64_t nr;
-        uint64_t ips[1];
         uint64_t bnr;
+        uint64_t hw_idx;
         struct perf_branch_entry lbr[1];
     };
 
@@ -152,10 +151,13 @@ protected:
         {
             perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN;
         }
-        else if(sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
+        else if (sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
         {
-            perf_attr.sample_type |= PERF_SAMPLE_CALLCHAIN |  PERF_SAMPLE_BRANCH_STACK;
-            perf_attr.branch_sample_type |= PERF_SAMPLE_BRANCH_PLM_ALL | PERF_SAMPLE_BRANCH_ANY_CALL;
+            perf_attr.sample_type |= PERF_SAMPLE_BRANCH_STACK;
+            perf_attr.branch_sample_type |=
+                PERF_SAMPLE_BRANCH_USER | PERF_SAMPLE_BRANCH_CALL_STACK |
+                PERF_SAMPLE_BRANCH_NO_CYCLES | PERF_SAMPLE_BRANCH_NO_FLAGS |
+                PERF_SAMPLE_BRANCH_HW_INDEX;
         }
 
         perf_attr.precise_ip = 3;

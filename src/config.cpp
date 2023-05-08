@@ -413,20 +413,20 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-        if (arguments.get("call-graph") == "fp")
-        {
-            Log::error() << "Frame Pointer!";
-            config.sampling_type = SamplingType::FRAME_POINTER;
-        }
-        if (arguments.get("call-graph") == "lbr")
-        {
-            Log::error() << "LBR!";
-            config.sampling_type = SamplingType::LAST_BRANCH_RECORD;
-        }
-        else
-        {
-            Log::error() << "Unrecognized callgraph option " << arguments.get("call-graph");
-        }
+    if (arguments.get("call-graph") == "fp")
+    {
+        Log::error() << "Frame Pointer!";
+        config.sampling_type = SamplingType::FRAME_POINTER;
+    }
+    if (arguments.get("call-graph") == "lbr")
+    {
+        Log::error() << "LBR!";
+        config.sampling_type = SamplingType::LAST_BRANCH_RECORD;
+    }
+    else
+    {
+        Log::error() << "Unrecognized callgraph option " << arguments.get("call-graph");
+    }
     // list arguments to arguments and exit
     {
         if (arguments.given("list-clockids"))

@@ -93,24 +93,19 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     }
     else if (sampling_type_ == SamplingType::FRAME_POINTER)
     {
-        FramePointer *fp = (FramePointer*)&sample->callstack;
-        otf2_writer_.write_calling_context_sample(tp,
-                                                  cctx_manager_.sample_ref(fp->nr, fp->ips),
+        FramePointer* fp = (FramePointer*)&sample->callstack;
+        otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(fp->nr, fp->ips),
                                                   fp->nr, trace_.interrupt_generator().ref());
     }
     else if (sampling_type_ == SamplingType::LAST_BRANCH_RECORD)
     {
-        LastBranchRecord *lbr = (LastBranchRecord*)&sample->callstack;
-        otf2_writer_.write_calling_context_sample(tp,
-                                                  cctx_manager_.sample_ref(lbr->nr, lbr->ips),
-                                                  lbr->nr, trace_.interrupt_generator().ref());
+        LastBranchRecord* lbr = (LastBranchRecord*)&sample->callstack;
+
         auto ref_type = cctx_manager_.sample_ref(lbr->bnr, lbr->lbr);
         if (ref_type != otf2::definition::calling_context::reference_type::undefined())
         {
-            otf2_writer_.write_calling_context_sample(tp,
-                                                  ref_type,
-                                                  lbr->bnr, trace_.interrupt_generator().ref());
-    
+            otf2_writer_.write_calling_context_sample(tp, ref_type, lbr->bnr,
+                                                      trace_.interrupt_generator().ref());
         }
     }
     return false;
