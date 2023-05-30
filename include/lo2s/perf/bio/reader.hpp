@@ -60,19 +60,20 @@ enum class BioEventType
 
 struct __attribute((__packed__)) RecordBlock
 {
-    uint16_t common_type;         // 2
-    uint8_t common_flag;          // 3
-    uint8_t common_preempt_count; // 4
-    int32_t common_pid;           // 8
+    uint16_t common_type; // common fields included in all tracepoints, ignored here
+    uint8_t common_flag;
+    uint8_t common_preempt_count;
+    int32_t common_pid;
 
-    uint32_t dev;    // 12
-    char padding[4]; // 16
-    uint64_t sector; // 24
+    uint32_t dev;    // the accessed device (as dev_t)
+    char padding[4]; // padding because of struct alignment
+    uint64_t sector; // the accessed sector on the device
 
-    uint32_t nr_sector;     // 28
-    int32_t error_or_bytes; // 32
+    uint32_t nr_sector;     // the number of sectors written
+    int32_t error_or_bytes; // for insert/issue: number of bytes written (nr_sector * 512)
+                            // for complete: the error code of the operation
 
-    char rwbs[8]; // 40
+    char rwbs[8]; // the type of the operation. "R" for read, "W" for write, etc.
 };
 
 struct RecordBlockSampleType

@@ -72,22 +72,23 @@ public:
         otf2::writer::local& writer = trace_.bio_writer(dev);
         otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
 
-        auto size = record->sector * SECTOR_SIZE;
+        auto size = record->nr_sector * SECTOR_SIZE;
 
         if (identity.type == BioEventType::INSERT)
         {
             writer << otf2::event::io_operation_begin(
                 time_converter_(event->time), handle, mode,
-                otf2::common::io_operation_flag_type::non_blocking, record->nr_sector, size);
+                otf2::common::io_operation_flag_type::non_blocking, size, record->sector);
         }
         else if (identity.type == BioEventType::ISSUE)
         {
-            writer << otf2::event::io_operation_issued(time_converter_(event->time), handle, size);
+            writer << otf2::event::io_operation_issued(time_converter_(event->time), handle,
+                                                       record->sector);
         }
         else
         {
-            writer << otf2::event::io_operation_complete(time_converter_(event->time), handle,
-                                                         record->nr_sector, size);
+            writer << otf2::event::io_operation_complete(time_converter_(event->time), handle, size,
+                                                         record->sector);
         }
     }
 
