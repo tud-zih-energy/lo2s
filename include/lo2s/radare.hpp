@@ -30,7 +30,8 @@
 
 extern "C"
 {
-#include <r_asm.h>
+#include <libr/r_asm.h>
+#include <libr/r_lib.h>
 
 #include <unistd.h>
 }
@@ -51,7 +52,7 @@ public:
 
     Radare();
 
-    static std::string single_instruction(std::byte* buf);
+    static std::string single_instruction(char* buf);
 
     std::string operator()(Address ip, std::istream& obj);
 
@@ -62,6 +63,8 @@ public:
     }
 
 private:
+    RLib* r_lib_;
+    RAnal* r_anal_;
     RAsm* r_asm_;
 };
 
