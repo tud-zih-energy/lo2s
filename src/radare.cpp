@@ -23,30 +23,42 @@
 
 namespace lo2s
 {
-Radare::Radare() : r_asm_(r_asm_new())
+Radare::Radare() : r_lib_(r_lib_new(nullptr, nullptr)), r_anal_(r_anal_new()), r_asm_(r_asm_new())
 {
-    r_asm_use(r_asm_, "x86");
-    r_asm_set_bits(r_asm_, 64);
-    r_asm_set_syntax(r_asm_, R_ASM_SYNTAX_ATT);
-    r_asm_set_pc(r_asm_, 0x0);
+    r_unref(r_anal_->config);
+
+    r_asm_->num = r_num_new(nullptr, nullptr, nullptr);
+    r_anal_->config = r_ref_ptr(r_asm_->config);
+    r_anal_bind(r_anal_, &r_asm_->analb);
+
+    r_asm_use(r_asm_, R_SYS_ARCH);
+    r_anal_use(r_anal_, R_SYS_ARCH);
+
+    int sysbits = (R_SYS_BITS & R_SYS_BITS_64) ? 64 : 32;
+    r_asm_set_bits(r_asm_, sysbits);
+    r_anal_set_bits(r_anal_, sysbits);
 }
 
 std::string Radare::single_instruction(char* buf)
 {
-    auto len = strlen(buf);
-    if (len == 0)
+    if (buf == nullptr)
+    {
+        throw Error("code->assembly is NULL");
+    }
+
+    auto it = buf;
+
+    while (*it != '\0' && *it != '\n')
+    {
+        it++;
+    }
+
+    if (it == buf)
     {
         throw Error("empty instruction");
     }
-    for (size_t i = 0; i < len; i++)
-    {
-        if (buf[i] == '\n')
-        {
-            buf[i] = '\0';
-            break;
-        }
-    }
-    return std::string(buf);
+
+    return std::string(buf, it - 1);
 }
 
 std::string Radare::operator()(Address ip, std::istream& obj)
@@ -66,9 +78,19 @@ std::string Radare::operator()(Address ip, std::istream& obj)
     {
         throw Error("instruction pointer at end of file");
     }
+
+    r_asm_set_pc(r_asm_, offset);
     auto code = r_asm_mdisassemble(r_asm_, (unsigned char*)buffer, read_bytes);
-    auto ret = single_instruction(code->buf_asm);
+
+    if (code == nullptr)
+    {
+        throw Error("could not disassemble instruction");
+    }
+
+    auto ret = single_instruction(code->assembly);
+
     r_asm_code_free(code);
+
     return ret;
 }
 

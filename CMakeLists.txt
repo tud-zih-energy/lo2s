@@ -30,7 +30,6 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Binutils_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
-    Radare_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
 )
@@ -40,7 +39,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
-    set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
@@ -51,7 +49,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
-    set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
@@ -63,7 +60,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
-    set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
@@ -97,7 +93,6 @@ include(lib/x86_adapt/x86_adapt.cmake)
 # find external dependencies
 find_package(Git)
 find_package(Binutils REQUIRED)
-find_package(Radare)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
@@ -108,11 +103,12 @@ find_package(PkgConfig)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
+    pkg_check_modules(Radare IMPORTED_TARGET r_main>=5.8.0)
 endif()
 
 
 # configurable options
-CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON "Radare_FOUND" OFF)
+CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON Radare_FOUND OFF)
 option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
 option(IWYU "Developer option for include what you use." OFF)
@@ -250,12 +246,12 @@ add_feature_info("x86_energy" x86_energy_FOUND "Provide additional power measure
 if (USE_RADARE)
     if (Radare_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
-        target_link_libraries(lo2s PRIVATE Radare::Radare)
+        target_link_libraries(lo2s PRIVATE PkgConfig::Radare)
         target_sources(lo2s PRIVATE
             src/radare.cpp
         )
     else()
-        message(SEND_ERROR "Radare not found but requested.")
+        message(SEND_ERROR "Radare2 not found but requested.")
     endif()
 endif()
 
@@ -279,6 +275,7 @@ if (USE_LIBAUDIT)
         message(SEND_ERROR "Libaudit not found but requested.")
     endif()
 endif()
+
 
 # generate version string used in lo2s
 if(Git_FOUND)

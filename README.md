@@ -50,7 +50,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
- * libradare for disassembled instruction strings
+ * libradare (>= 5.8.0) for disassembled instruction strings
  * libsensors for sensor readings
  * libaudit to resolve syscall names, otherwise only syscall nrs can be used in syscall tracing
  * [pod2man](https://www.eyrie.org/~eagle/software/podlators/) to generate the man pages (typically distributed as part of `perl`)
