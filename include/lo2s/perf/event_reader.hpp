@@ -310,26 +310,29 @@ private:
         return (struct perf_event_mmap_page*)base;
     }
 
-    // Regarding the issue of memory barriers:
-    // we simply use the same barriers as perf (see linux/tools/include/linux/ring_buffer.h)
+    // memory_order_acquire comes before loads
+    // memory_order_release comes after stores
+    // see documentation for atomic_thread_fence for more information
+    //
+    // use atomic_ref here when we upgrade to C++20
     uint64_t data_head() const
     {
+        std::atomic_thread_fence(std::memory_order_acquire);
         auto head = header()->data_head;
-        std::atomic_thread_fence(std::memory_order_acq_rel);
         return head;
     }
 
     void data_tail(uint64_t tail)
     {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
         header()->data_tail = tail;
+        std::atomic_thread_fence(std::memory_order_release);
     }
 
+    // data_tail is only read in the kernel, so reads to data_tail in userspace do not have to be
+    // protected.
     uint64_t data_tail() const
     {
-        auto tail = header()->data_tail;
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        return tail;
+        return header()->data_tail;
     }
 
     uint64_t data_size() const
