@@ -310,26 +310,21 @@ private:
         return (struct perf_event_mmap_page*)base;
     }
 
-    // Regarding the issue of memory barriers:
-    // we simply use the same barriers as perf (see linux/tools/include/linux/ring_buffer.h)
     uint64_t data_head() const
     {
-        auto head = header()->data_head;
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        return head;
+        return __atomic_load_n(&(header()->data_head), __ATOMIC_ACQUIRE);
     }
 
     void data_tail(uint64_t tail)
     {
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        header()->data_tail = tail;
+        __atomic_store_n(&(header()->data_tail), tail, __ATOMIC_RELEASE);
     }
 
+    // data_tail is only read in the kernel, so reads to data_tail in userspace do not have to be
+    // protected.
     uint64_t data_tail() const
     {
-        auto tail = header()->data_tail;
-        std::atomic_thread_fence(std::memory_order_acq_rel);
-        return tail;
+        return header()->data_tail;
     }
 
     uint64_t data_size() const
