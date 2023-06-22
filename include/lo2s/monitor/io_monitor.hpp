@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/bio/reader.hpp>
 #include <lo2s/perf/bio/writer.hpp>
+#include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
 
 #include <lo2s/monitor/poll_monitor.hpp>
@@ -36,10 +36,11 @@ namespace lo2s
 namespace monitor
 {
 
-class BioMonitor : public PollMonitor
+template <class Writer>
+class IoMonitor : public PollMonitor
 {
 public:
-    BioMonitor(trace::Trace& trace);
+    IoMonitor(trace::Trace& trace);
 
 private:
     void monitor(int fd) override;
@@ -47,11 +48,11 @@ private:
 
     std::string group() const override
     {
-        return "lo2s::BioMonitor";
+        return "lo2s::IoMonitor";
     }
 
 private:
-    perf::MultiReader<perf::bio::Reader, perf::bio::Writer> multi_reader_;
+    perf::MultiReader<Writer> multi_reader_;
 };
 
 } // namespace monitor

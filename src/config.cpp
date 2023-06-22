@@ -332,10 +332,7 @@ void parse_program_options(int argc, const char** argv)
 
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
-    io_options.option("block-io-cache-size", "Size (in events) of the block I/O event cache")
-        .optional()
-        .metavar("NUM")
-        .default_value("1000");
+
     nitro::options::arguments arguments;
     try
     {
@@ -361,7 +358,6 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
-    config.block_io_cache_size = arguments.as<std::size_t>("block-io-cache-size");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))

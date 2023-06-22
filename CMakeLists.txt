@@ -162,7 +162,7 @@ set(SOURCE_FILES
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
-    src/monitor/bio_monitor.cpp
+    src/monitor/io_monitor.cpp
     src/process_controller.cpp
 
     src/perf/event_provider.cpp

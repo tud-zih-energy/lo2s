@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/monitor/bio_monitor.hpp>
+#include <lo2s/monitor/io_monitor.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
@@ -30,27 +30,25 @@ namespace lo2s
 namespace monitor
 {
 
-BioMonitor::BioMonitor(trace::Trace& trace)
+template <class Writer>
+IoMonitor<Writer>::IoMonitor(trace::Trace& trace)
 : monitor::PollMonitor(trace, "", config().perf_read_interval), multi_reader_(trace)
 
 {
-    for (const auto& cpu : Topology::instance().cpus())
+    for (auto fd : multi_reader_.get_fds())
     {
-        add_fd(multi_reader_.addReader(
-            perf::bio::Reader::IdentityType(perf::bio::BioEventType::INSERT, cpu)));
-        add_fd(multi_reader_.addReader(
-            perf::bio::Reader::IdentityType(perf::bio::BioEventType::ISSUE, cpu)));
-        add_fd(multi_reader_.addReader(
-            perf::bio::Reader::IdentityType(perf::bio::BioEventType::COMPLETE, cpu)));
+        add_fd(fd);
     }
 }
 
-void BioMonitor::finalize_thread()
+template <class Writer>
+void IoMonitor<Writer>::finalize_thread()
 {
     multi_reader_.finalize();
 }
 
-void BioMonitor::monitor(int fd)
+template <class Writer>
+void IoMonitor<Writer>::monitor(int fd)
 {
     if (fd == timer_pfd().fd)
     {
@@ -61,5 +59,7 @@ void BioMonitor::monitor(int fd)
         multi_reader_.read();
     }
 }
+
+template class IoMonitor<perf::bio::Writer>;
 } // namespace monitor
 } // namespace lo2s

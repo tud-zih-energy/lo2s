@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/bio/reader.hpp>
 #include <lo2s/perf/bio/writer.hpp>
+#include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/trace/trace.hpp>
@@ -40,7 +40,7 @@ namespace lo2s
 namespace perf
 {
 
-template <class Reader, class Writer>
+template <class Writer>
 class MultiReader
 {
 public:
@@ -65,30 +65,36 @@ public:
         // Flush the event buffer one last time
         read();
     }
-    using ReaderIdentity = typename Reader::IdentityType;
-    int addReader(ReaderIdentity identity);
+
+    std::vector<int> get_fds();
 
 private:
     struct ReaderState
     {
-        ReaderState(uint64_t time, ReaderIdentity identity) : time(time), identity(identity)
+        ReaderState(uint64_t time, IoReaderIdentity identity) : time(time), identity(identity)
         {
         }
 
         uint64_t time;
-        ReaderIdentity identity;
+        IoReaderIdentity identity;
 
         friend bool operator>(const ReaderState& lhs, const ReaderState& rhs)
         {
+            if (lhs.time == rhs.time)
+            {
+                return lhs.identity > rhs.identity;
+            }
             return lhs.time > rhs.time;
         }
     };
 
     Writer writer_;
-    std::map<ReaderIdentity, Reader> readers_;
+    std::map<IoReaderIdentity, IoReader> readers_;
     uint64_t highest_written_ = 0;
     std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
         earliest_available_;
+
+    std::vector<int> fds_;
 };
 
 } // namespace perf

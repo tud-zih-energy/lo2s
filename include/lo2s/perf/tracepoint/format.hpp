@@ -130,6 +130,11 @@ public:
         throw std::out_of_range("field not found");
     }
 
+    friend bool operator==(const EventFormat& lhs, const EventFormat& rhs)
+    {
+        return lhs.id_ == rhs.id_;
+    }
+
     static std::vector<std::string> get_tracepoint_event_names();
 
 private:

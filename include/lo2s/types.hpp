@@ -172,6 +172,11 @@ public:
         return lhs.cpu_ < rhs.cpu_;
     }
 
+    friend bool operator>(const Cpu& lhs, const Cpu& rhs)
+    {
+        return lhs.cpu_ > rhs.cpu_;
+    }
+
     friend std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)
     {
         return stream << fmt::format("{}", cpu);
