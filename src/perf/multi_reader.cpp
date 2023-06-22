@@ -19,29 +19,37 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/bio/reader.hpp>
 #include <lo2s/perf/bio/writer.hpp>
+#include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-template <class Reader, class Writer>
-MultiReader<Reader, Writer>::MultiReader(trace::Trace& trace) : writer_(trace)
+template <class Writer>
+MultiReader<Writer>::MultiReader(trace::Trace& trace) : writer_(trace)
 {
+    for (const auto& cpu : Topology::instance().cpus())
+    {
+        for (auto tp : writer_.get_tracepoints())
+        {
+            IoReaderIdentity id(tp, cpu);
+            auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                                           std::forward_as_tuple(id));
+            fds_.emplace_back(reader.first->second.fd());
+        }
+    }
 }
 
-template <class Reader, class Writer>
-int MultiReader<Reader, Writer>::addReader(ReaderIdentity identity)
+template <class Writer>
+std::vector<int> MultiReader<Writer>::get_fds()
 {
-    auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(identity),
-                                   std::forward_as_tuple(Reader(identity)));
-    return reader.first->second.fd();
+    return fds_;
 }
 
-template <class Reader, class Writer>
-void MultiReader<Reader, Writer>::read()
+template <class Writer>
+void MultiReader<Writer>::read()
 {
     std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
         earliest_available;
@@ -88,7 +96,7 @@ void MultiReader<Reader, Writer>::read()
     }
 }
 
-template class MultiReader<bio::Reader, bio::Writer>;
+template class MultiReader<bio::Writer>;
 
 } // namespace perf
 } // namespace lo2s

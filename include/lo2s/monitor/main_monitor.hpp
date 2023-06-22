@@ -32,8 +32,9 @@
 #include <lo2s/metric/sensors/recorder.hpp>
 #endif
 #include <lo2s/mmap.hpp>
-#include <lo2s/monitor/bio_monitor.hpp>
+#include <lo2s/monitor/io_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
+#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
@@ -71,7 +72,7 @@ protected:
     metric::plugin::Metrics metrics_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 
-    std::unique_ptr<BioMonitor> bio_monitor_;
+    std::unique_ptr<IoMonitor<perf::bio::Writer>> bio_monitor_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;
 #endif

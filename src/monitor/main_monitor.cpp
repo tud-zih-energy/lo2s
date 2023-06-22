@@ -67,7 +67,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 
     if (config().use_block_io)
     {
-        bio_monitor_ = std::make_unique<BioMonitor>(trace_);
+        bio_monitor_ = std::make_unique<IoMonitor<perf::bio::Writer>>(trace_);
         bio_monitor_->start();
     }
 

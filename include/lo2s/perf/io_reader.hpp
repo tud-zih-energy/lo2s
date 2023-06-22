@@ -49,84 +49,57 @@ namespace lo2s
 {
 namespace perf
 {
-namespace bio
-{
-enum class BioEventType
-{
-    INSERT,
-    ISSUE,
-    COMPLETE
-};
 
-struct __attribute((__packed__)) RecordBlock
-{
-    uint16_t common_type; // common fields included in all tracepoints, ignored here
-    uint8_t common_flag;
-    uint8_t common_preempt_count;
-    int32_t common_pid;
-
-    uint32_t dev;    // the accessed device (as dev_t)
-    char padding[4]; // padding because of struct alignment
-    uint64_t sector; // the accessed sector on the device
-
-    uint32_t nr_sector;     // the number of sectors written
-    int32_t error_or_bytes; // for insert/issue: number of bytes written (nr_sector * 512)
-                            // for complete: the error code of the operation
-
-    char rwbs[8]; // the type of the operation. "R" for read, "W" for write, etc.
-};
-
-struct RecordBlockSampleType
+struct __attribute((__packed__)) TracepointSampleType
 {
     struct perf_event_header header;
     uint64_t time;
     uint32_t tp_data_size;
-    RecordBlock blk;
 };
 
-class Reader : public PullReader
+struct IoReaderIdentity
+{
+    IoReaderIdentity(int tracepoint, Cpu cpu) : tp(tracepoint), cpu(cpu)
+    {
+    }
+
+    int tp;
+    Cpu cpu;
+
+    friend bool operator>(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
+    {
+        if (lhs.cpu == rhs.cpu)
+        {
+            return lhs.tp > rhs.tp;
+        }
+
+        return lhs.cpu > rhs.cpu;
+    }
+    friend bool operator<(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
+    {
+        if (lhs.cpu == rhs.cpu)
+        {
+            return lhs.tp < rhs.tp;
+        }
+
+        return lhs.cpu < rhs.cpu;
+    }
+};
+
+class IoReader : public PullReader
 {
 public:
-    struct IdentityType
-    {
-        IdentityType(BioEventType type, Cpu cpu) : type(type), cpu(cpu)
-        {
-        }
-
-        BioEventType type;
-        Cpu cpu;
-
-        friend bool operator<(const IdentityType& lhs, const IdentityType& rhs)
-        {
-            if (lhs.cpu == rhs.cpu)
-            {
-                return lhs.type < rhs.type;
-            }
-
-            return lhs.cpu < rhs.cpu;
-        }
-    };
-
-    Reader(IdentityType identity) : type_(identity.type), cpu_(identity.cpu)
+    IoReader(IoReaderIdentity identity) : identity_(identity)
     {
         struct perf_event_attr attr = common_perf_event_attrs();
         attr.type = PERF_TYPE_TRACEPOINT;
-        if (type_ == BioEventType::INSERT)
-        {
-            attr.config = tracepoint::EventFormat("block:block_rq_insert").id();
-        }
-        else if (type_ == BioEventType::ISSUE)
-        {
-            attr.config = tracepoint::EventFormat("block:block_rq_issue").id();
-        }
-        else
-        {
-            attr.config = tracepoint::EventFormat("block:block_rq_complete").id();
-        }
+
+        attr.config = identity.tp;
+        ;
 
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
-        fd_ = perf_event_open(&attr, cpu_.as_scope(), -1, 0);
+        fd_ = perf_event_open(&attr, identity.cpu.as_scope(), -1, 0);
         if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
@@ -160,7 +133,7 @@ public:
         }
     }
 
-    ~Reader()
+    ~IoReader()
     {
         if (fd_ != -1)
         {
@@ -178,9 +151,9 @@ public:
         }
     }
 
-    RecordBlockSampleType* top()
+    TracepointSampleType* top()
     {
-        return reinterpret_cast<RecordBlockSampleType*>(get());
+        return reinterpret_cast<TracepointSampleType*>(get());
     }
 
     int fd() const
@@ -188,31 +161,26 @@ public:
         return fd_;
     }
 
-    Reader& operator=(const Reader&) = delete;
-    Reader(const Reader& other) = delete;
+    IoReader& operator=(const IoReader&) = delete;
+    IoReader(const IoReader& other) = delete;
 
-    Reader& operator=(Reader&& other)
+    IoReader& operator=(IoReader&& other)
     {
         PullReader::operator=(std::move(other));
-        std::swap(cpu_, other.cpu_);
+        std::swap(identity_, other.identity_);
         std::swap(fd_, other.fd_);
-        std::swap(type_, other.type_);
 
         return *this;
     }
 
-    Reader(Reader&& other) : PullReader(std::move(other)), type_(other.type_), cpu_(other.cpu_)
+    IoReader(IoReader&& other) : PullReader(std::move(other)), identity_(other.identity_)
     {
         std::swap(fd_, other.fd_);
     }
 
-protected:
-    BioEventType type_;
-
 private:
-    Cpu cpu_;
+    IoReaderIdentity identity_;
     int fd_ = -1;
 };
-} // namespace bio
 } // namespace perf
 } // namespace lo2s

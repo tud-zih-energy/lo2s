@@ -89,7 +89,6 @@ struct Config
     bool use_x86_energy;
     // block I/O
     bool use_block_io;
-    size_t block_io_cache_size;
     // syscalls
     bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;
