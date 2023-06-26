@@ -23,6 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/nvme/writer.hpp>
 #include <lo2s/util.hpp>
 
 namespace lo2s
@@ -61,5 +62,6 @@ void IoMonitor<Writer>::monitor(int fd)
 }
 
 template class IoMonitor<perf::bio::Writer>;
+template class IoMonitor<perf::nvme::Writer>;
 } // namespace monitor
 } // namespace lo2s

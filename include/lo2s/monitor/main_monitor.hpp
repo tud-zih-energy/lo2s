@@ -35,6 +35,7 @@
 #include <lo2s/monitor/io_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/perf/bio/writer.hpp>
+#include <lo2s/perf/nvme/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
@@ -82,6 +83,7 @@ protected:
 #ifdef HAVE_SENSORS
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
 #endif
+    std::unique_ptr<IoMonitor<perf::nvme::Writer>> nvme_monitor_;
 };
 } // namespace monitor
 } // namespace lo2s

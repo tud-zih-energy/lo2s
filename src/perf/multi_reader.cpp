@@ -22,6 +22,7 @@
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
+#include <lo2s/perf/nvme/writer.hpp>
 
 namespace lo2s
 {
@@ -97,6 +98,7 @@ void MultiReader<Writer>::read()
 }
 
 template class MultiReader<bio::Writer>;
+template class MultiReader<nvme::Writer>;
 
 } // namespace perf
 } // namespace lo2s

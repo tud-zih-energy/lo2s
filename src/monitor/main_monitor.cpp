@@ -71,6 +71,9 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         bio_monitor_->start();
     }
 
+    nvme_monitor_ = std::make_unique<IoMonitor<perf::nvme::Writer>>(trace_);
+    nvme_monitor_->start();
+
 #ifdef HAVE_X86_ADAPT
     if (!config().x86_adapt_knobs.empty())
     {
@@ -158,6 +161,8 @@ MainMonitor::~MainMonitor()
     {
         bio_monitor_->stop();
     }
+
+    nvme_monitor_->stop();
 
     if (!tracepoint_monitors_.empty())
     {

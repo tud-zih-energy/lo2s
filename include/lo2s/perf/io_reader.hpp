@@ -50,7 +50,7 @@ namespace lo2s
 namespace perf
 {
 
-struct __attribute((__packed__)) TracepointSampleType
+struct __attribute((packed)) TracepointSampleType
 {
     struct perf_event_header header;
     uint64_t time;
