@@ -97,13 +97,27 @@ static void JNICALL cbCompiledMethodLoad(jvmtiEnv* jvmti, jmethodID method, jint
                  << reinterpret_cast<std::uint64_t>(address) << " " << std::dec << code_size << ": "
                  << symbol_name;
 
-    if (!symbol_name.empty())
+    {
+        auto lg = Log::debug() << "cbCompiledMethodLoad map of size " << map_length << ":\n";
+
+        for (int i = 0; i < map_length - 1; i++)
+        {
+            lg << "0x" << std::hex << reinterpret_cast<std::uint64_t>(map[i].start_address)
+               << " - 0x" << reinterpret_cast<std::uint64_t>(map[i + 1].start_address) - 1
+               << " ====> location " << std::dec << map[i].location << "\n";
+        }
+    }
+
+    if (!symbol_name.empty() && map_length >= 2)
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        int len = code_size;
+        // TODO Assumption: the method is contiguous in memory.
 
-        fifo->write(reinterpret_cast<std::uint64_t>(address));
+        int len = reinterpret_cast<std::uint64_t>(map[map_length - 1].start_address) - 1 -
+                  reinterpret_cast<std::uint64_t>(map[0].start_address);
+
+        fifo->write(reinterpret_cast<std::uint64_t>(map[0].start_address));
         fifo->write(len);
         fifo->write(symbol_name);
     }
@@ -262,12 +276,24 @@ extern "C"
         }
         catch (...)
         {
+            Log::fatal() << "Failed to open IPC pipe to lo2s in the JNI plugin. Won't be able to "
+                            "resolve JVM methods.";
+
             return 0;
         }
 
         jvmtiEnv* jvmti;
         vm->GetEnv((void**)&jvmti, JVMTI_VERSION_1);
         enable_capabilities(jvmti);
+
+        // check jLocation format
+        jvmtiJlocationFormat format;
+        jvmti->GetJLocationFormat(&format);
+        if (format != 1)
+        {
+            Log::warn() << "Unsupported jLocation Format: " << format;
+        }
+
         set_callbacks(jvmti);
         set_notification_mode(jvmti, JVMTI_ENABLE);
         jvmti->GenerateEvents(JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
@@ -287,12 +313,24 @@ extern "C"
         }
         catch (...)
         {
+            Log::fatal() << "Failed to open IPC pipe to lo2s in the JNI plugin. Won't be able to "
+                            "resolve JVM methods.";
+
             return 0;
         }
 
         jvmtiEnv* jvmti;
         vm->GetEnv((void**)&jvmti, JVMTI_VERSION_1);
         enable_capabilities(jvmti);
+
+        // check jLocation format
+        jvmtiJlocationFormat format;
+        jvmti->GetJLocationFormat(&format);
+        if (format != 1)
+        {
+            Log::warn() << "Unsupported jLocation Format: " << format;
+        }
+
         set_callbacks(jvmti);
         set_notification_mode(jvmti, JVMTI_ENABLE);
         jvmti->GenerateEvents(JVMTI_EVENT_DYNAMIC_CODE_GENERATED);
