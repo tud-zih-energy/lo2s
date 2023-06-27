@@ -64,6 +64,7 @@ public:
         }
         // Flush the event buffer one last time
         read();
+        writer_.finalize();
     }
 
     std::vector<int> get_fds();

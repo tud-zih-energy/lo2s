@@ -126,6 +126,10 @@ public:
         return { bio_insert_, bio_issue_, bio_complete_ };
     }
 
+    void finalize()
+    {
+    }
+
 private:
     trace::Trace& trace_;
     time::Converter& time_converter_;

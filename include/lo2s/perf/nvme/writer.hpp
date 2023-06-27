@@ -46,6 +46,23 @@ enum class NVMeOp
     WRITE = 2
 };
 
+enum class OpType
+{
+    BEGIN,
+    COMPLETE
+};
+
+struct CachedEvent
+{
+    std::string name;
+    OpType type;
+    uint64_t time;
+    uint64_t start;
+    uint64_t size;
+    otf2::common::io_operation_mode_type mode;
+    uint16_t matching_id;
+};
+
 struct __attribute__((packed)) RecordNVMeSetupCmd
 {
     TracepointSampleType header;
@@ -94,6 +111,15 @@ struct __attribute__((packed)) RecordNVMeCompleteRq
     uint16_t status;
 };
 
+class CachedCompare
+{
+public:
+    bool operator()(CachedEvent& lhs, CachedEvent& rhs)
+    {
+        return lhs.time > rhs.time;
+    }
+};
+
 class Writer
 {
 public:
@@ -103,12 +129,7 @@ public:
 
     void write(IoReaderIdentity identity, TracepointSampleType* header)
     {
-
-        uint64_t matching_id;
-        uint16_t num_blocks = 0;
-        std::string name;
-        otf2::common::io_operation_mode_type mode = otf2::common::io_operation_mode_type::flush;
-
+        CachedEvent cache_event;
         if (identity.tp == nvme_setup_cmd_)
         {
 
@@ -119,24 +140,25 @@ public:
             {
                 if (event->opcode == static_cast<uint8_t>(NVMeOp::READ))
                 {
-                    mode = otf2::common::io_operation_mode_type::read;
+                    cache_event.mode = otf2::common::io_operation_mode_type::read;
                 }
                 else if (event->opcode == static_cast<uint8_t>(NVMeOp::WRITE))
                 {
-                    mode = otf2::common::io_operation_mode_type::write;
+                    cache_event.mode = otf2::common::io_operation_mode_type::write;
                 }
                 else
                 {
+                    Log::error() << "Opcode: " << event->opcode;
                     // TODO: Handle commands other than READ/Write, especially "write zeroes"
                     return;
                 }
 
+                cache_event.type = OpType::BEGIN;
                 struct nvme_rw* rw_command = (struct nvme_rw*)event->cdw10;
-                matching_id = event->cid;
-                name = event->disk;
-                num_blocks = rw_command->length;
-
-                size_cache.insert_or_assign(matching_id, num_blocks);
+                cache_event.matching_id = event->cid;
+                cache_event.name = event->disk;
+                cache_event.size = rw_command->length;
+                cache_event.time = event->header.time;
             }
             else
             {
@@ -146,13 +168,17 @@ public:
         else if (identity.tp == nvme_complete_rq_)
         {
             struct RecordNVMeCompleteRq* event = (RecordNVMeCompleteRq*)header;
-            name = event->disk;
-            matching_id = event->cid;
 
-            if (size_cache.count(matching_id) != 0)
+            if (event->qid != 0)
             {
-                num_blocks = size_cache.at(matching_id);
-                size_cache.erase(matching_id);
+                cache_event.type = OpType::COMPLETE;
+                cache_event.time = event->header.time;
+                cache_event.name = event->disk;
+                cache_event.matching_id = event->cid;
+            }
+            else
+            {
+                return;
             }
         }
         else
@@ -161,26 +187,57 @@ public:
                                      "not valid for NVMe tracing!");
         }
 
-        BlockDevice dev = BlockDevice::block_device_for(dev_for_nvme(name));
+        reorder_buffer_.push(cache_event);
 
-        otf2::writer::local& writer = trace_.bio_writer(dev);
-        otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+        if (reorder_buffer_.size() > 10000)
+        {
+            flush();
+        }
+    }
 
-        if (identity.tp == nvme_setup_cmd_)
+    void flush(bool last = false)
+    {
+        std::size_t threshhold = 8000;
+        if (last)
         {
-            writer << otf2::event::io_operation_begin(
-                time_converter_(header->time), handle, mode,
-                otf2::common::io_operation_flag_type::non_blocking, num_blocks, matching_id);
+            threshhold = 0;
         }
-        else if (identity.tp == nvme_complete_rq_)
+        while (reorder_buffer_.size() > threshhold)
         {
-            writer << otf2::event::io_operation_complete(time_converter_(header->time), handle,
-                                                         num_blocks, matching_id);
-        }
-        else
-        {
-            throw std::runtime_error("tracepoint " + std::to_string(identity.tp) +
-                                     "not valid for NVMe tracing!");
+            CachedEvent event = reorder_buffer_.top();
+            reorder_buffer_.pop();
+
+            if (event.time < highest_written_)
+            {
+                Log::error() << "Event arriving late!";
+                continue;
+            }
+
+            std::size_t size = event.size * logical_block_size(event.name);
+
+            BlockDevice dev = BlockDevice::block_device_for(dev_for_nvme(event.name));
+
+            otf2::writer::local& writer = trace_.bio_writer(dev);
+            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+
+            if (event.type == OpType::BEGIN)
+            {
+                size_cache.insert_or_assign(event.matching_id, size);
+                writer << otf2::event::io_operation_begin(
+                    time_converter_(event.time), handle, event.mode,
+                    otf2::common::io_operation_flag_type::non_blocking, size, event.matching_id);
+            }
+            else if (event.type == OpType::COMPLETE)
+            {
+                if (size_cache.count(event.matching_id) != 0)
+                {
+                    size = size_cache.at(event.matching_id);
+                    size_cache.erase(event.matching_id);
+                }
+                writer << otf2::event::io_operation_complete(time_converter_(event.time), handle,
+                                                             size, event.matching_id);
+            }
+            highest_written_ = event.time;
         }
     }
 
@@ -190,6 +247,11 @@ public:
         nvme_setup_cmd_ = tracepoint::EventFormat("nvme:nvme_setup_cmd").id();
         nvme_complete_rq_ = tracepoint::EventFormat("nvme:nvme_complete_rq").id();
         return { nvme_setup_cmd_, nvme_complete_rq_ };
+    }
+
+    void finalize()
+    {
+        flush(true);
     }
 
 private:
@@ -245,6 +307,9 @@ private:
     int nvme_setup_cmd_;
     int nvme_complete_rq_;
     std::map<uint64_t, uint64_t> size_cache;
+
+    std::priority_queue<CachedEvent, std::vector<CachedEvent>, CachedCompare> reorder_buffer_;
+    uint64_t highest_written_;
 };
 } // namespace nvme
 } // namespace perf

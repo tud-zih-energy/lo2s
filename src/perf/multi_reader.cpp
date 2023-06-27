@@ -79,19 +79,7 @@ void MultiReader<Writer>::read()
                 break;
             }
 
-            if (event->time < highest_written_)
-            {
-                // OTF2 requires strict temporal event ordering. Because we combine multiple
-                // indepedent perf buffers, we can not guarantee that we will see the events for a
-                // block device in strict temporal order. In the rare case that we get an event with
-                // a smaller timestamp than an already written event, we have to just drop it.
-                readers_.at(state.identity).pop();
-                Log::warn() << "Event loss due to event arriving late!";
-                continue;
-            }
-
             writer_.write(state.identity, event);
-            highest_written_ = event->time;
             readers_.at(state.identity).pop();
         }
     }

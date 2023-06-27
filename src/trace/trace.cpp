@@ -167,22 +167,22 @@ Trace::Trace()
     }
 
     groups_.add_process(NO_PARENT_PROCESS);
+    bio_comm_group_ = registry_.create<otf2::definition::comm_group>(
+        intern("block devices"), otf2::common::paradigm_type::hardware,
+        otf2::common::group_flag_type::none);
 
+    bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
+        intern("block devices"), intern("hardware"), system_tree_root_node_);
+
+    const std::vector<otf2::common::io_paradigm_property_type> properties;
+    const std::vector<otf2::attribute_value> values;
+
+    bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
+        intern("block_io"), intern("block layer I/O"),
+        otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
+        properties, values);
     if (config().use_block_io)
     {
-        bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
-            intern("block devices"), intern("hardware"), system_tree_root_node_);
-
-        const std::vector<otf2::common::io_paradigm_property_type> properties;
-        const std::vector<otf2::attribute_value> values;
-        bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
-            intern("block_io"), intern("block layer I/O"),
-            otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
-            properties, values);
-
-        bio_comm_group_ = registry_.create<otf2::definition::comm_group>(
-            intern("block devices"), otf2::common::paradigm_type::hardware,
-            otf2::common::group_flag_type::none);
 
         for (auto& device : get_block_devices())
         {
