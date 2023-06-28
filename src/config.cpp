@@ -159,6 +159,7 @@ void parse_program_options(int argc, const char** argv)
     auto& x86_adapt_options = parser.group("x86_adapt options");
     auto& x86_energy_options = parser.group("x86_energy options");
     auto& sensors_options = parser.group("sensors options");
+    auto& nvml_options = parser.group("nvml options");
     auto& io_options = parser.group("I/O recording options");
 
     lo2s::Config config;
@@ -330,6 +331,8 @@ void parse_program_options(int argc, const char** argv)
 
     sensors_options.toggle("sensors", "Record sensors using libsensors.").short_name("S");
 
+    nvml_options.toggle("nvml", "Monitor GPU using the NVIDIA Management Library.").short_name("N");
+
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
     io_options.option("block-io-cache-size", "Size (in events) of the block I/O event cache")
@@ -360,6 +363,7 @@ void parse_program_options(int argc, const char** argv)
     config.tracepoint_events = arguments.get_all("tracepoint");
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
+    config.use_nvml = arguments.given("nvml");
     config.use_block_io = arguments.given("block-io");
     config.block_io_cache_size = arguments.as<std::size_t>("block-io-cache-size");
     config.command = arguments.positionals();
@@ -720,6 +724,15 @@ void parse_program_options(int argc, const char** argv)
     {
         lo2s::Log::fatal() << "lo2s was built without support for libsensors; "
                               "cannot request sensor recording.\n";
+        std::exit(EXIT_FAILURE);
+    }
+#endif
+
+#ifndef HAVE_NVML
+    if (config.use_nvml)
+    {
+        lo2s::Log::fatal() << "lo2s was built without support for NVIDIA Management Library; "
+                              "cannot request nvml recording.\n";
         std::exit(EXIT_FAILURE);
     }
 #endif

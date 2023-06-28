@@ -31,6 +31,9 @@
 #ifdef HAVE_SENSORS
 #include <lo2s/metric/sensors/recorder.hpp>
 #endif
+#ifdef HAVE_NVML
+#include <lo2s/metric/nvml/nvml_recorder.hpp>
+#endif
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/bio_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
@@ -80,6 +83,9 @@ protected:
 #endif
 #ifdef HAVE_SENSORS
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
+#endif
+#ifdef HAVE_NVML
+    std::unique_ptr<metric::nvml::Recorder> nvml_recorder_;
 #endif
 };
 } // namespace monitor

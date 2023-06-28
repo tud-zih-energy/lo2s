@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.17)
 
 project(lo2s VERSION 1.7.0)
 set(LO2S_COPYRIGHT_YEAR "2023")
@@ -44,6 +44,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
+    set(NVML_USE_STATIC_LIBS     OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -55,6 +56,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(NVML_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -67,6 +69,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(NVML_USE_STATIC_LIBS     ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -104,6 +107,7 @@ find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
+find_package(CUDAToolkit)
 find_package(PkgConfig)
 
 if(PkgConfig_FOUND)
@@ -120,6 +124,8 @@ option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
 CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
 add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
+CMAKE_DEPENDENT_OPTION(USE_NVML "Use the NVIDIA Management Library for GPU sampling and metrics." ON "CUDAToolkit_FOUND" OFF)
+add_feature_info("USE_NVML" USE_NVML "Use the NVIDIA Management Library for GPU sampling and metrics.")
 CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" ON Audit_FOUND OFF)
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 
@@ -270,6 +276,18 @@ if (USE_SENSORS)
         )
     else()
         message(SEND_ERROR "Sensors not found but requested.")
+    endif()
+endif()
+
+if (USE_NVML)
+    if (CUDAToolkit_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_NVML)
+        target_link_libraries(lo2s PRIVATE CUDA::nvml)
+        target_sources(lo2s PRIVATE
+            src/metric/nvml/nvml_recorder.cpp
+        )
+    else()
+        message(SEND_ERROR "NVML not found but requested.")
     endif()
 endif()
 

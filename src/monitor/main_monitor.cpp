@@ -116,6 +116,21 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         }
     }
 #endif
+
+#ifdef HAVE_NVML
+    if (config().use_nvml)
+    {
+        try
+        {
+            nvml_recorder_ = std::make_unique<metric::nvml::Recorder>(trace_);
+            nvml_recorder_->start();
+        }
+        catch (std::exception& e)
+        {
+            Log::warn() << "Failed to initialize nvml metrics: " << e.what();
+        }
+    }
+#endif
 }
 
 void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
@@ -137,6 +152,13 @@ MainMonitor::~MainMonitor()
     if (config().use_sensors)
     {
         sensors_recorder_->stop();
+    }
+#endif
+
+#ifdef HAVE_NVML
+    if (config().use_nvml)
+    {
+        nvml_recorder_->stop();
     }
 #endif
 
