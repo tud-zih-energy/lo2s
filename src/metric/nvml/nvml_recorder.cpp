@@ -65,7 +65,7 @@ Recorder::Recorder(trace::Trace& trace)
         throw_errno();
     }
 
-    Log::debug() << "Found " << device_count << " GPU(s)";
+    Log::debug() << "Found " << device_count << " GPU" << (device_count != 1 ? "s" : "");
 
     // Get GPU handle and name
     
@@ -89,9 +89,39 @@ Recorder::Recorder(trace::Trace& trace)
 
     auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 
-    mc->add_member(trace.metric_member(std::string(name), "Power Usage",
+    mc->add_member(trace.metric_member("GPU Power Usage", "Total power consumption of this GPU",
                                         otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "mW"));
+                                        otf2::common::type::Double, "W"));
+    mc->add_member(trace.metric_member("GPU Temperature", "Temperature of the GPU die",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "°C"));
+    mc->add_member(trace.metric_member("GPU Fan Speed", "Percentage of maximum Fan Speed",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member("GPU Graphics Clock", "Speed of Graphics Clock Domain",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "MHz"));
+    mc->add_member(trace.metric_member("GPU SM Clock", "Speed of Streaming Multiprocessor Clock Domain",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "MHz"));
+    mc->add_member(trace.metric_member("GPU Memory Clock", "Speed of Memory Clock Domain",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "MHz"));
+    mc->add_member(trace.metric_member("GPU Video Clock", "Speed of Video Encoder/Decoder Clock Domain",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "MHz"));
+    mc->add_member(trace.metric_member("GPU Utilization Rate", "Percentage of last sample period where kernels were executing",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member("GPU Memory Utilization Rate", "Percentage of last sample period where memory was read/written",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member("GPU PState", "Performance State of the GPU",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, ""));
+    mc->add_member(trace.metric_member("NVML monitoring time", "time taken to get GPU metrics via nvml",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "ms"));
 
     event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
 }
@@ -101,10 +131,38 @@ void Recorder::monitor([[maybe_unused]] int fd)
     // update timestamp
     event_->timestamp(time::now());
 
+    otf2::chrono::time_point start = time::now();
+
     // update event values with nvml data
     unsigned int power;
+    unsigned int temp;
+    unsigned int fan_speed;
+    unsigned int g_clock;
+    unsigned int sm_clock;
+    unsigned int mem_clock;
+    unsigned int vid_clock;
+    nvmlUtilization_t utilization;
+    nvmlPstates_t p_state;
+
         
 	result = nvmlDeviceGetPowerUsage(device, &power);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetTemperature(device, NVML_TEMPERATURE_GPU, &temp) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetFanSpeed(device, &fan_speed) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetClockInfo(device, NVML_CLOCK_GRAPHICS, &g_clock) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetClockInfo(device, NVML_CLOCK_SM, &sm_clock) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetClockInfo(device, NVML_CLOCK_MEM, &mem_clock) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetClockInfo(device, NVML_CLOCK_VIDEO, &vid_clock) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetUtilizationRates(device, &utilization) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetPerformanceState(device, &p_state) : result);
+
 
     if (NVML_SUCCESS != result){ 
         
@@ -112,7 +170,20 @@ void Recorder::monitor([[maybe_unused]] int fd)
 
     }
 
-    event_->raw_values()[0] = double(power);
+    auto time_taken = time::now() - start;
+    
+
+    event_->raw_values()[0] = double(power/1000);
+    event_->raw_values()[1] = double(temp);
+    event_->raw_values()[2] = double(fan_speed);
+    event_->raw_values()[3] = double(g_clock);
+    event_->raw_values()[4] = double(sm_clock);
+    event_->raw_values()[5] = double(mem_clock);
+    event_->raw_values()[6] = double(vid_clock);
+    event_->raw_values()[7] = double(utilization.gpu);
+    event_->raw_values()[8] = double(utilization.memory);
+    event_->raw_values()[9] = double(p_state);
+    event_->raw_values()[10] = double(std::chrono::duration_cast<std::chrono::milliseconds>(time_taken).count());
 
     // write event to archive
     otf2_writer_.write(*event_);
@@ -124,7 +195,7 @@ Recorder::~Recorder()
 
     if (NVML_SUCCESS != result){
 
-        Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
+        Log::error() << "Failed to shutdown NVML: " << nvmlErrorString(result);
         throw_errno();
     }
 }
