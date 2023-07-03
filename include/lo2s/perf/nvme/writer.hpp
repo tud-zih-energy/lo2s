@@ -217,7 +217,7 @@ public:
 
             BlockDevice dev = BlockDevice::block_device_for(dev_for_nvme(event.name));
 
-            otf2::writer::local& writer = trace_.bio_writer(dev);
+            otf2::writer::local& writer = trace_.nvme_writer(dev);
             otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
 
             if (event.type == OpType::BEGIN)

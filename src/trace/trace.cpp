@@ -171,16 +171,18 @@ Trace::Trace()
         intern("block devices"), otf2::common::paradigm_type::hardware,
         otf2::common::group_flag_type::none);
 
-    bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
-        intern("block devices"), intern("hardware"), system_tree_root_node_);
-
     const std::vector<otf2::common::io_paradigm_property_type> properties;
     const std::vector<otf2::attribute_value> values;
 
-    bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
-        intern("block_io"), intern("block layer I/O"),
-        otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
-        properties, values);
+    if (config().use_block_io || config().use_nvme)
+    {
+        bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
+            intern("block devices"), intern("hardware"), system_tree_root_node_);
+        bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
+            intern("block_io"), intern("block layer I/O"),
+            otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
+            properties, values);
+    }
     if (config().use_block_io)
     {
 
@@ -190,6 +192,18 @@ Trace::Trace()
             {
                 block_io_handle(device.second);
                 bio_writer(device.second);
+            }
+        }
+    }
+
+    if (config().use_nvme)
+    {
+        for (auto& device : get_block_devices())
+        {
+            if (device.second.name.find("/dev/nvme") != std::string::npos)
+            {
+                block_io_handle(device.second);
+                nvme_writer(device.second);
             }
         }
     }
@@ -444,6 +458,31 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
 
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
         ByBlockDevice(dev), name, bio_location_group,
+        otf2::definition::location::location_type::cpu_thread);
+
+    hardware_comm_locations_group_.add_member(intern_location);
+    return archive_(intern_location);
+}
+
+otf2::writer::local& Trace::nvme_writer(BlockDevice dev)
+{
+    std::lock_guard<std::recursive_mutex> guard(mutex_);
+
+    if (registry_.has<otf2::definition::location>(ByNVMeDevice(dev)))
+    {
+        return archive_(registry_.get<otf2::definition::location>(ByNVMeDevice(dev)));
+    }
+
+    const auto& name = intern(fmt::format("NVMe events for {}", dev.name));
+
+    const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
+        ByBlockDevice(dev), intern(dev.name), intern("nvme dev"), bio_system_tree_node_);
+
+    const auto& bio_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByBlockDevice(dev), name, otf2::common::location_group_type::process, node);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByNVMeDevice(dev), name, bio_location_group,
         otf2::definition::location::location_type::cpu_thread);
 
     hardware_comm_locations_group_.add_member(intern_location);

@@ -84,6 +84,11 @@ struct ByBlockDeviceTag
 };
 using ByBlockDevice = SimpleKeyType<BlockDevice, ByBlockDeviceTag>;
 
+struct ByNVMeDeviceTag
+{
+};
+using ByNVMeDevice = SimpleKeyType<BlockDevice, ByNVMeDeviceTag>;
+
 struct ByStringTag
 {
 };
@@ -180,7 +185,7 @@ template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope, ByBlockDevice>;
+                                                ByNVMeDevice, ByMeasurementScope, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::region>
