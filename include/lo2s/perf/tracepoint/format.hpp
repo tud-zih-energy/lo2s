@@ -101,6 +101,10 @@ public:
     };
 
 public:
+    EventFormat() : id_(-1)
+    {
+    }
+
     EventFormat(const std::string& name);
 
     int id() const
@@ -118,6 +122,11 @@ public:
         return fields_;
     }
 
+    std::string name() const
+    {
+        return name_;
+    }
+
     const auto& field(const std::string& name) const
     {
         for (const auto& field : fields())
@@ -133,6 +142,16 @@ public:
     friend bool operator==(const EventFormat& lhs, const EventFormat& rhs)
     {
         return lhs.id_ == rhs.id_;
+    }
+
+    friend bool operator<(const EventFormat& lhs, const EventFormat& rhs)
+    {
+        return lhs.id_ < rhs.id_;
+    }
+
+    friend bool operator>(const EventFormat& lhs, const EventFormat& rhs)
+    {
+        return lhs.id_ > rhs.id_;
     }
 
     static std::vector<std::string> get_tracepoint_event_names();
