@@ -23,6 +23,7 @@
 
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/trace/trace.hpp>
 
 extern "C"
@@ -61,10 +62,9 @@ public:
     {
     }
 
-    void write(IoReaderIdentity identity, TracepointSampleType* header)
+    void write(IoReaderIdentity& identity, TracepointSampleType* header)
     {
         struct RecordBlock* event = (RecordBlock*)header;
-        Log::warn() << "BLA" << event->rwbs;
 
         otf2::common::io_operation_mode_type mode = otf2::common::io_operation_mode_type::flush;
         // TODO: Handle the few io operations that arent either reads or write
@@ -93,35 +93,35 @@ public:
 
         auto size = event->nr_sector * SECTOR_SIZE;
 
-        if (identity.tp == bio_insert_)
+        if (identity.tracepoint == bio_insert_)
         {
             writer << otf2::event::io_operation_begin(
                 time_converter_(event->header.time), handle, mode,
                 otf2::common::io_operation_flag_type::non_blocking, size, event->sector);
         }
-        else if (identity.tp == bio_issue_)
+        else if (identity.tracepoint == bio_issue_)
         {
             writer << otf2::event::io_operation_issued(time_converter_(event->header.time), handle,
                                                        event->sector);
         }
-        else if (identity.tp == bio_complete_)
+        else if (identity.tracepoint == bio_complete_)
         {
             writer << otf2::event::io_operation_complete(time_converter_(event->header.time),
                                                          handle, size, event->sector);
         }
         else
         {
-            throw std::runtime_error("tracepoint " + std::to_string(identity.tp) +
-                                     "not valid for block I/O");
+            throw std::runtime_error("tracepoint " + identity.tracepoint.name() +
+                                     " not valid for block I/O");
         }
     }
 
-    std::vector<int> get_tracepoints()
+    std::vector<tracepoint::EventFormat> get_tracepoints()
     {
 
-        bio_insert_ = tracepoint::EventFormat("block:block_rq_insert").id();
-        bio_issue_ = tracepoint::EventFormat("block:block_rq_issue").id();
-        bio_complete_ = tracepoint::EventFormat("block:block_rq_complete").id();
+        bio_insert_ = tracepoint::EventFormat("block:block_rq_insert");
+        bio_issue_ = tracepoint::EventFormat("block:block_rq_issue");
+        bio_complete_ = tracepoint::EventFormat("block:block_rq_complete");
 
         return { bio_insert_, bio_issue_, bio_complete_ };
     }
@@ -130,9 +130,9 @@ private:
     trace::Trace& trace_;
     time::Converter& time_converter_;
 
-    int bio_insert_;
-    int bio_issue_;
-    int bio_complete_;
+    tracepoint::EventFormat bio_insert_;
+    tracepoint::EventFormat bio_issue_;
+    tracepoint::EventFormat bio_complete_;
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
     static constexpr int SECTOR_SIZE = 512;
 };

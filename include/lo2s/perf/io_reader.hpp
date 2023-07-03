@@ -59,27 +59,28 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(int tracepoint, Cpu cpu) : tp(tracepoint), cpu(cpu)
+    IoReaderIdentity(tracepoint::EventFormat tracepoint, Cpu cpu) : tracepoint(tracepoint), cpu(cpu)
     {
     }
 
-    int tp;
+    tracepoint::EventFormat tracepoint;
     Cpu cpu;
 
     friend bool operator>(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tp > rhs.tp;
+            return lhs.tracepoint > rhs.tracepoint;
         }
 
         return lhs.cpu > rhs.cpu;
     }
+
     friend bool operator<(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tp < rhs.tp;
+            return lhs.tracepoint < rhs.tracepoint;
         }
 
         return lhs.cpu < rhs.cpu;
@@ -94,8 +95,7 @@ public:
         struct perf_event_attr attr = common_perf_event_attrs();
         attr.type = PERF_TYPE_TRACEPOINT;
 
-        attr.config = identity.tp;
-        ;
+        attr.config = identity.tracepoint.id();
 
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
