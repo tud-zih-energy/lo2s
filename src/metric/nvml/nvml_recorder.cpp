@@ -183,7 +183,7 @@ void Recorder::monitor([[maybe_unused]] int fd)
     event_->raw_values()[7] = double(utilization.gpu);
     event_->raw_values()[8] = double(utilization.memory);
     event_->raw_values()[9] = double(p_state);
-    event_->raw_values()[10] = double(std::chrono::duration_cast<std::chrono::milliseconds>(time_taken).count());
+    event_->raw_values()[10] = double(std::chrono::duration_cast<std::chrono::microseconds>(time_taken).count());
 
     // write event to archive
     otf2_writer_.write(*event_);

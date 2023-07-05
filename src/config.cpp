@@ -193,7 +193,7 @@ void parse_program_options(int argc, const char** argv)
         .option("readout-interval", "Time in milliseconds between readouts of interval based "
                                     "monitors, i.e. x86_adapt, x86_energy.")
         .short_name("i")
-        .default_value("1")
+        .default_value("50")
         .metavar("MSEC");
 
     general_options
