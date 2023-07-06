@@ -404,6 +404,50 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
+otf2::writer::local& Trace::nec_writer(int device, const Thread& nec_thread)
+{
+    std::ifstream cmdline(fmt::format("/proc/{}/cmdline", nec_thread.as_pid_t()));
+    std::string cmdline_str;
+    cmdline >> cmdline_str;
+    ;
+
+    const char* cmdline_c_str = cmdline_str.c_str();
+    std::vector<std::string> args;
+    while (cmdline_c_str < cmdline_str.c_str() + cmdline_str.length())
+    {
+        args.emplace_back(std::string(cmdline_c_str));
+        cmdline_c_str += args.back().length() + 1;
+    }
+
+    std::string thread_name = fmt::format("{}", nec_thread);
+
+    for (std::size_t i = 0; i < args.size(); i++)
+    {
+        if (args[i] == "--")
+        {
+            if (i + 1 < args.size())
+            {
+                thread_name = fmt::format("{} ({})", args[i + 1], nec_thread.as_pid_t());
+            }
+        }
+    }
+
+    auto& intern_name = intern(fmt::format("VE{} {}", device, thread_name));
+
+    const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
+        ByNecDevice(device), intern(fmt::format("VE{}", device)), intern("NEC vector accelerator"),
+        system_tree_root_node_);
+
+    const auto& nec_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByNecThread(nec_thread), intern_name, otf2::common::location_group_type::process, node);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByNecThread(nec_thread), intern_name, nec_location_group,
+        otf2::definition::location::location_type::cpu_thread);
+
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::syscall_writer(const Cpu& cpu)
 {
     MeasurementScope scope = MeasurementScope::syscall(cpu.as_scope());

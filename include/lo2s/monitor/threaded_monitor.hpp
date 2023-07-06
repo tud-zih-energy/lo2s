@@ -57,7 +57,6 @@ protected:
     virtual void run() = 0;
 
     void thread_main();
-    virtual void monitor() = 0;
 
     void register_thread();
 
