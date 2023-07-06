@@ -116,6 +116,23 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         }
     }
 #endif
+
+#ifdef HAVE_VEOSINFO
+    const std::regex nec_regex("/sys/class/ve/ve(\\d)");
+
+    for (auto& dir_entry : std::filesystem::directory_iterator("/sys/class/ve"))
+    {
+        std::smatch nec_match;
+
+        auto path = dir_entry.path().string();
+        if (std::regex_match(path, nec_match, nec_regex))
+        {
+            nec_monitors_.emplace_back(
+                std::make_unique<NecMonitorMain>(trace_, std::stoi(nec_match[1])));
+            nec_monitors_.back()->start();
+        }
+    }
+#endif
 }
 
 void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
@@ -166,6 +183,16 @@ MainMonitor::~MainMonitor()
             tracepoint_monitor->stop();
         }
     }
+
+#ifdef HAVE_VEOSINFO
+    if (!nec_monitors_.empty())
+    {
+        for (auto& nec_monitor : nec_monitors_)
+        {
+            nec_monitor->stop();
+        }
+    }
+#endif
 
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace

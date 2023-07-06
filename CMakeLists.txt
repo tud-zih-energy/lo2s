@@ -104,6 +104,7 @@ find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
+find_package(Veosinfo)
 find_package(PkgConfig)
 
 if(PkgConfig_FOUND)
@@ -122,7 +123,8 @@ CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." 
 add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
 CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" ON Audit_FOUND OFF)
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
-
+CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use veosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
+add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use veosinfo to sample NEC SX-Aurora  Tsubasa cards.")
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -270,6 +272,17 @@ if (USE_SENSORS)
         )
     else()
         message(SEND_ERROR "Sensors not found but requested.")
+    endif()
+endif()
+
+if (USE_VEOSINFO)
+    if(Veosinfo_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_VEOSINFO)
+        target_link_libraries(lo2s PRIVATE Veosinfo::veosinfo)
+        target_sources(lo2s PRIVATE src/monitor/nec_thread_monitor.cpp
+                                    src/monitor/nec_monitor_main.cpp)
+    else()
+        message(SEND_ERROR "Veosinfo not found but requested.")
     endif()
 endif()
 

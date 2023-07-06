@@ -74,6 +74,11 @@ struct ByThreadTag
 };
 using ByThread = SimpleKeyType<Thread, ByThreadTag>;
 
+struct ByNecThreadTag
+{
+};
+using ByNecThread = SimpleKeyType<Thread, ByNecThreadTag>;
+
 struct ByProcessTag
 {
 };
@@ -124,6 +129,12 @@ struct ByCounterCollectionTag
 
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
+struct ByNecDeviceTag
+{
+};
+
+using ByNecDevice = SimpleKeyType<int, ByNecDeviceTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -132,8 +143,8 @@ struct Holder
 template <>
 struct Holder<otf2::definition::system_tree_node>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
-                                                ByProcess, ByBlockDevice, ByCpu, ByPackage>;
+    using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByNecDevice,
+                                                ByCore, ByProcess, ByBlockDevice, ByCpu, ByPackage>;
 };
 template <>
 struct Holder<otf2::definition::regions_group>
@@ -174,13 +185,13 @@ struct Holder<otf2::definition::location_group>
 {
     using type =
         otf2::lookup_definition_holder<otf2::definition::location_group, ByMeasurementScope,
-                                       ByExecutionScope, ByBlockDevice>;
+                                       ByExecutionScope, ByNecThread, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope, ByBlockDevice>;
+                                                ByMeasurementScope, ByNecThread, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::region>
