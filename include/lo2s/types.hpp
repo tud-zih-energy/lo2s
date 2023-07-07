@@ -280,6 +280,11 @@ public:
         return stream << fmt::format("{}", gpu);
     }
 
+    const std::string name()
+    {
+        return name_;
+    }
+
 private:
     int gpu_;
     std::string name_;

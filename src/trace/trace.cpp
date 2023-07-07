@@ -166,6 +166,27 @@ Trace::Trace()
         groups_.add_cpu(cpu);
     }
 
+    #ifdef HAVE_NVML
+    for (auto gpu : sys.gpus())
+    {
+        Log::debug() << "Registering GPU " << gpu.as_int() << ": " << gpu.name();
+
+        const auto& name = intern(gpu.name());
+
+        const auto& gpu_node = registry_.create<otf2::definition::system_tree_node>(
+            ByGpu(gpu), name, intern("gpu"), system_tree_root_node_);
+
+        // TODO otf2 has OTF2_SYSTEM_TREE_DOMAIN_ACCELERATOR_DEVICE, otf2xx doesn't
+        registry_.create<otf2::definition::system_tree_node_domain>(
+            gpu_node, otf2::common::system_tree_node_domain::numa);
+
+        
+        registry_.create<otf2::definition::location_group>(
+            ByExecutionScope(gpu.as_scope()), name,
+            otf2::definition::location_group::location_group_type::process, gpu_node);
+    }
+    #endif
+
     groups_.add_process(NO_PARENT_PROCESS);
 
     if (config().use_block_io)

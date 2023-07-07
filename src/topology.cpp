@@ -1,10 +1,12 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
+#ifdef HAVE_NVML
 extern "C"
 {
 #include <nvml.h>
 }
+#endif
 
 namespace lo2s
 {
@@ -48,7 +50,7 @@ void Topology::read_proc()
         }
     }
 
-    
+    #ifdef HAVE_NVML
     // get GPUs from nvml
     nvmlReturn_t result;
     unsigned int device_count;
@@ -56,7 +58,8 @@ void Topology::read_proc()
     // First initialize NVML library
     result = nvmlInit();
 
-    if (NVML_SUCCESS != result){ 
+    if (NVML_SUCCESS != result)
+    { 
 
         Log::error() << "Failed to initialize NVML: " << nvmlErrorString(result);
     }
@@ -64,29 +67,30 @@ void Topology::read_proc()
     // Get number of GPUs
     result = nvmlDeviceGetCount(&device_count);
 
-    if (NVML_SUCCESS != result){ 
+    if (NVML_SUCCESS != result)
+    { 
 
         Log::error() << "Failed to query device count: " << nvmlErrorString(result);
     }
 
-    Log::debug() << "Found " << device_count << " GPU" << (device_count != 1 ? "s" : "");
-
-
-    for(int i = 0; i < device_count; i++){
+    for(unsigned int i = 0; i < device_count; i++)
+    {
         // Get GPU handle and name
         nvmlDevice_t device;
-        char name[64];
+        char name[96];
 
         result = nvmlDeviceGetHandleByIndex(i, &device);
 
-        if (NVML_SUCCESS != result){ 
+        if (NVML_SUCCESS != result)
+        { 
 
             Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
         }
 
-        result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
+        result = nvmlDeviceGetName(device, name, sizeof(name) / sizeof(name[0]));
 
-        if (NVML_SUCCESS != result){ 
+        if (NVML_SUCCESS != result)
+        { 
 
             Log::error() << "Failed to get name for device: " << nvmlErrorString(result);
         }
@@ -96,10 +100,13 @@ void Topology::read_proc()
 
     result = nvmlShutdown();
 
-    if (NVML_SUCCESS != result){
+    if (NVML_SUCCESS != result)
+    {
 
         Log::error() << "Failed to shutdown NVML: " << nvmlErrorString(result);
     }
+    
+    #endif
  
 }
 
