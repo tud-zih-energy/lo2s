@@ -24,6 +24,7 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/types.hpp>
 
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/writer/local.hpp>
@@ -42,7 +43,7 @@ namespace nvml
 class Recorder : public monitor::PollMonitor
 {
 public:
-    Recorder(trace::Trace& trace);
+    Recorder(trace::Trace& trace, Gpu gpu);
     ~Recorder();
 
 protected:

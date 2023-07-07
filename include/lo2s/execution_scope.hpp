@@ -35,6 +35,7 @@ enum class ExecutionScopeType
     THREAD,
     PROCESS,
     CPU,
+    GPU,
     UNKNOWN
 };
 
@@ -60,6 +61,10 @@ public:
     }
 
     explicit ExecutionScope(Cpu cpu) : type(ExecutionScopeType::CPU), id(cpu.as_int())
+    {
+    }
+    
+    explicit ExecutionScope(Gpu gpu) : type(ExecutionScopeType::GPU), id(gpu.as_int())
     {
     }
 

@@ -47,7 +47,17 @@ int Cpu::as_int() const
     return cpu_;
 }
 
+int Gpu::as_int() const
+{
+    return gpu_;
+}
+
 ExecutionScope Cpu::as_scope() const
+{
+    return ExecutionScope(*this);
+}
+
+ExecutionScope Gpu::as_scope() const
 {
     return ExecutionScope(*this);
 }

@@ -69,6 +69,11 @@ struct ByCpuTag
 };
 using ByCpu = SimpleKeyType<Cpu, ByCpuTag>;
 
+struct ByGpuTag
+{
+};
+using ByGpu = SimpleKeyType<Gpu, ByGpuTag>;
+
 struct ByThreadTag
 {
 };
@@ -133,7 +138,7 @@ template <>
 struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByCore,
-                                                ByProcess, ByBlockDevice, ByCpu, ByPackage>;
+                                                ByProcess, ByBlockDevice, ByCpu, ByGpu, ByPackage>;
 };
 template <>
 struct Holder<otf2::definition::regions_group>

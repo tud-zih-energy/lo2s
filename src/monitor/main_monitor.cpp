@@ -122,8 +122,10 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     {
         try
         {
-            nvml_recorder_ = std::make_unique<metric::nvml::Recorder>(trace_);
-            nvml_recorder_->start();
+            for(const auto& gpu : Topology::instance().gpus()){
+                nvml_recorder_ = std::make_unique<metric::nvml::Recorder>(trace_, gpu);
+                nvml_recorder_->start();
+            }
         }
         catch (std::exception& e)
         {

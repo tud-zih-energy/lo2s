@@ -251,6 +251,39 @@ public:
 private:
     int id_;
 };
+
+class Gpu
+{
+public:
+    explicit Gpu(int gpuid, std::string gpuname) : gpu_(gpuid), name_(gpuname)
+    {
+    }
+    int as_int() const;
+    ExecutionScope as_scope() const;
+
+    static Gpu invalid()
+    {
+        return Gpu(-1, "");
+    }
+    friend bool operator==(const Gpu& lhs, const Gpu& rhs)
+    {
+        return lhs.gpu_ == rhs.gpu_;
+    }
+
+    friend bool operator<(const Gpu& lhs, const Gpu& rhs)
+    {
+        return lhs.gpu_ < rhs.gpu_;
+    }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Gpu& gpu)
+    {
+        return stream << fmt::format("{}", gpu);
+    }
+
+private:
+    int gpu_;
+    std::string name_;
+};
 } // namespace lo2s
 
 namespace fmt
@@ -315,6 +348,27 @@ struct formatter<lo2s::Cpu>
     auto format(const lo2s::Cpu& cpu, FormatContext& ctx) const
     {
         return fmt::format_to(ctx.out(), "cpu {}", cpu.as_int());
+    }
+};
+
+template <>
+struct formatter<lo2s::Gpu>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
+        {
+            throw format_error("invalid format");
+        }
+
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::Gpu& gpu, FormatContext& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "gpu {}", gpu.as_int());
     }
 };
 } // namespace fmt

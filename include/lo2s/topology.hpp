@@ -97,11 +97,17 @@ public:
         return Cpu::invalid();
     }
 
+    const std::set<Gpu>& gpus() const
+    {
+        return gpus_;
+    }
+
 private:
     std::set<Cpu> cpus_;
     std::set<Package> packages_;
     std::map<Cpu, Core> cpu_to_core_;
     std::map<Cpu, Package> cpu_to_package_;
+    std::set<Gpu> gpus_;
 
     bool hypervised_ = false;
 

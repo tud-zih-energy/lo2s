@@ -230,6 +230,11 @@ public:
         return registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu));
     }
 
+    const otf2::definition::system_tree_node& system_tree_gpu_node(Gpu gpu) const
+    {
+        return registry_.emplace<otf2::definition::system_tree_node>(ByGpu(gpu));
+    }
+
     const otf2::definition::system_tree_node& system_tree_core_node(Core core) const
     {
         return registry_.get<otf2::definition::system_tree_node>(ByCore(core));

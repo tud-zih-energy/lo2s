@@ -38,16 +38,13 @@ namespace nvml
 {
 
 
-Recorder::Recorder(trace::Trace& trace)
+Recorder::Recorder(trace::Trace& trace, Gpu gpu)
 : PollMonitor(trace, "NVML recorder", config().read_interval),
   otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(trace.metric_class(), otf2_writer_.location(),
-                                         trace.system_tree_root_node()))
+                                         trace.system_tree_gpu_node(gpu)))
 {
 
-    unsigned int device_count;
-
-    // First initialize NVML library
     result = nvmlInit();
 
     if (NVML_SUCCESS != result){ 
@@ -56,36 +53,13 @@ Recorder::Recorder(trace::Trace& trace)
         throw_errno();
     }
 
-    // Get number of GPUs
-    result = nvmlDeviceGetCount(&device_count);
+    result = nvmlDeviceGetHandleByIndex(gpu.as_int(), &device);
 
     if (NVML_SUCCESS != result){ 
 
-        Log::error() << "Failed to query device count: " << nvmlErrorString(result);
+        Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
         throw_errno();
     }
-
-    Log::debug() << "Found " << device_count << " GPU" << (device_count != 1 ? "s" : "");
-
-    // Get GPU handle and name
-    
-    char name[64];
-
-    result = nvmlDeviceGetHandleByIndex(0, &device);
-
-        if (NVML_SUCCESS != result){ 
-
-            Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
-            throw_errno();
-        }
-
-    result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
-
-        if (NVML_SUCCESS != result){ 
-
-            Log::error() << "Failed to get name for device: " << nvmlErrorString(result);
-            throw_errno();
-        }
 
     auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 

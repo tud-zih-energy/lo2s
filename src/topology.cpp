@@ -1,6 +1,11 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
+extern "C"
+{
+#include <nvml.h>
+}
+
 namespace lo2s
 {
 const std::filesystem::path Topology::base_path = "/sys/devices/system/cpu";
@@ -42,6 +47,60 @@ void Topology::read_proc()
             }
         }
     }
+
+    
+    // get GPUs from nvml
+    nvmlReturn_t result;
+    unsigned int device_count;
+
+    // First initialize NVML library
+    result = nvmlInit();
+
+    if (NVML_SUCCESS != result){ 
+
+        Log::error() << "Failed to initialize NVML: " << nvmlErrorString(result);
+    }
+
+    // Get number of GPUs
+    result = nvmlDeviceGetCount(&device_count);
+
+    if (NVML_SUCCESS != result){ 
+
+        Log::error() << "Failed to query device count: " << nvmlErrorString(result);
+    }
+
+    Log::debug() << "Found " << device_count << " GPU" << (device_count != 1 ? "s" : "");
+
+
+    for(int i = 0; i < device_count; i++){
+        // Get GPU handle and name
+        nvmlDevice_t device;
+        char name[64];
+
+        result = nvmlDeviceGetHandleByIndex(i, &device);
+
+        if (NVML_SUCCESS != result){ 
+
+            Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
+        }
+
+        result = nvmlDeviceGetName(device, name, sizeof(name)/sizeof(name[0]));
+
+        if (NVML_SUCCESS != result){ 
+
+            Log::error() << "Failed to get name for device: " << nvmlErrorString(result);
+        }
+
+        gpus_.emplace(i, name);
+    }
+
+    result = nvmlShutdown();
+
+    if (NVML_SUCCESS != result){
+
+        Log::error() << "Failed to shutdown NVML: " << nvmlErrorString(result);
+    }
+ 
 }
 
 } // namespace lo2s
