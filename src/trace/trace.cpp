@@ -125,8 +125,10 @@ Trace::Trace()
         Core core = sys.core_of(cpu);
         Package package = sys.package_of(cpu);
 
-        auto package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
+        Log::debug() << "Registering cpu " << cpu.as_int() << "@" << package.as_int() << ":"
+                     << core.core_as_int();
 
+        auto package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
         if (!package_node)
         {
             package_node = registry_.emplace<otf2::definition::system_tree_node>(
@@ -137,30 +139,28 @@ Trace::Trace()
                 package_node, otf2::common::system_tree_node_domain::socket);
         }
 
-        const auto& core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
-
+        auto core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
         if (!core_node)
         {
-            registry_.emplace<otf2::definition::system_tree_node>(
+            core_node = registry_.emplace<otf2::definition::system_tree_node>(
                 ByCore(core), intern(fmt::format("{}:{}", package.as_int(), core.core_as_int())),
                 intern("core"), package_node);
 
             registry_.create<otf2::definition::system_tree_node_domain>(
                 core_node, otf2::common::system_tree_node_domain::core);
         }
-        const auto& name = intern(fmt::format("{}", cpu));
 
-        Log::debug() << "Registering cpu " << cpu.as_int() << "@" << core.core_as_int() << ":"
-                     << package.as_int();
-
+        const auto& name = intern(fmt::format("{}", cpu.as_int()));
         const auto& cpu_node = registry_.create<otf2::definition::system_tree_node>(
             ByCpu(cpu), name, intern("cpu"), core_node);
-
         registry_.create<otf2::definition::system_tree_node_domain>(
             cpu_node, otf2::common::system_tree_node_domain::pu);
 
+        // We need to a different name for the location_group than the system tree node,
+        // because a system_tree_node gets attached its class_name in Vampir.
+        const auto& lg_name = intern(fmt::format("{}", cpu));
         registry_.create<otf2::definition::location_group>(
-            ByExecutionScope(cpu.as_scope()), name,
+            ByExecutionScope(cpu.as_scope()), lg_name,
             otf2::definition::location_group::location_group_type::process, cpu_node);
 
         groups_.add_cpu(cpu);
