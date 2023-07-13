@@ -39,7 +39,7 @@ namespace nvml
 
 
 Recorder::Recorder(trace::Trace& trace, Gpu gpu)
-: PollMonitor(trace, "NVML recorder", config().read_interval),
+: PollMonitor(trace, "gpu " + std::to_string(gpu.as_int()) + " (" + gpu.name() + ")", config().read_interval),
   otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(trace.metric_class(), otf2_writer_.location(),
                                          trace.system_tree_gpu_node(gpu)))
@@ -93,9 +93,12 @@ Recorder::Recorder(trace::Trace& trace, Gpu gpu)
     mc->add_member(trace.metric_member("GPU PState", "Performance State of the GPU",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, ""));
+    mc->add_member(trace.metric_member("PID", "PID of a currently running process",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, ""));
     mc->add_member(trace.metric_member("NVML monitoring time", "time taken to get GPU metrics via nvml",
                                         otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "ms"));
+                                        otf2::common::type::Double, "µs"));
 
     event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
 }
@@ -117,6 +120,9 @@ void Recorder::monitor([[maybe_unused]] int fd)
     unsigned int vid_clock;
     nvmlUtilization_t utilization;
     nvmlPstates_t p_state;
+    unsigned int infoCount;
+    char proc_name[64];
+	unsigned int max_length = 64;
 
         
 	result = nvmlDeviceGetPowerUsage(device, &power);
@@ -137,6 +143,13 @@ void Recorder::monitor([[maybe_unused]] int fd)
 
     result = (NVML_SUCCESS == result ? nvmlDeviceGetPerformanceState(device, &p_state) : result);
 
+    nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, NULL);
+        
+    nvmlProcessInfo_t *infos = new nvmlProcessInfo_t[infoCount];
+        
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, infos) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlSystemGetProcessName(infos[0].pid, proc_name, max_length) : result);
 
     if (NVML_SUCCESS != result){ 
         
@@ -157,7 +170,8 @@ void Recorder::monitor([[maybe_unused]] int fd)
     event_->raw_values()[7] = double(utilization.gpu);
     event_->raw_values()[8] = double(utilization.memory);
     event_->raw_values()[9] = double(p_state);
-    event_->raw_values()[10] = double(std::chrono::duration_cast<std::chrono::microseconds>(time_taken).count());
+    event_->raw_values()[10] = double(infos[0].pid);
+    event_->raw_values()[11] = double(std::chrono::duration_cast<std::chrono::microseconds>(time_taken).count());
 
     // write event to archive
     otf2_writer_.write(*event_);

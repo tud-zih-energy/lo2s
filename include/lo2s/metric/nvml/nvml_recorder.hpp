@@ -62,7 +62,7 @@ private:
 
     nvmlReturn_t result;
     nvmlDevice_t device;
-
+    
 };
 } // namespace nvml
 } // namespace metric
