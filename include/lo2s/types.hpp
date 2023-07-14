@@ -258,6 +258,9 @@ public:
     explicit Gpu(int gpuid, std::string gpuname) : gpu_(gpuid), name_(gpuname)
     {
     }
+    explicit Gpu() : gpu_(-1), name_("")
+    {
+    }
     int as_int() const;
     ExecutionScope as_scope() const;
 

@@ -285,6 +285,7 @@ if (USE_NVML)
         target_link_libraries(lo2s PRIVATE CUDA::nvml)
         target_sources(lo2s PRIVATE
             src/metric/nvml/nvml_recorder.cpp
+            src/metric/nvml/process_recorder.cpp
         )
     else()
         message(SEND_ERROR "NVML not found but requested.")

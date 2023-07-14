@@ -22,15 +22,12 @@
 #pragma once
 
 #include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/metric/nvml/process_recorder.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/types.hpp>
 
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/writer/local.hpp>
-
-#include <set>
 
 extern "C"
 {
@@ -43,11 +40,11 @@ namespace metric
 {
 namespace nvml
 {
-class Recorder : public monitor::PollMonitor
+class ProcessRecorder : public monitor::PollMonitor
 {
 public:
-    Recorder(trace::Trace& trace, Gpu gpu);
-    ~Recorder();
+    ProcessRecorder(trace::Trace& trace, Gpu gpu, unsigned int pid, char proc_name[]);
+    ~ProcessRecorder();
 
 protected:
     void monitor(int fd) override;
@@ -63,12 +60,10 @@ private:
     otf2::definition::metric_instance metric_instance_;
     std::unique_ptr<otf2::event::metric> event_;
 
-    Gpu gpu_;
-    std::set<unsigned int> processes_;
-    std::unique_ptr<ProcessRecorder> proc_recorder_;
-
     nvmlReturn_t result;
     nvmlDevice_t device;
+    unsigned int pid_;
+    unsigned long long lastSeenTimeStamp = 0;
     
 };
 } // namespace nvml

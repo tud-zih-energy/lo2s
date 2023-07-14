@@ -45,6 +45,8 @@ Recorder::Recorder(trace::Trace& trace, Gpu gpu)
                                          trace.system_tree_gpu_node(gpu)))
 {
 
+    gpu_ = gpu;
+
     result = nvmlInit();
 
     if (NVML_SUCCESS != result){ 
@@ -63,42 +65,51 @@ Recorder::Recorder(trace::Trace& trace, Gpu gpu)
 
     auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 
-    mc->add_member(trace.metric_member("GPU Power Usage", "Total power consumption of this GPU",
+    mc->add_member(trace.metric_member("Power Usage", "Total power consumption of this GPU",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "W"));
-    mc->add_member(trace.metric_member("GPU Temperature", "Temperature of the GPU die",
+    mc->add_member(trace.metric_member("Temperature", "Temperature of the GPU die",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "°C"));
-    mc->add_member(trace.metric_member("GPU Fan Speed", "Percentage of maximum Fan Speed",
+    mc->add_member(trace.metric_member("Fan Speed", "Percentage of maximum Fan Speed",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("GPU Graphics Clock", "Speed of Graphics Clock Domain",
+    mc->add_member(trace.metric_member("Graphics Clock", "Speed of Graphics Clock Domain",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "MHz"));
-    mc->add_member(trace.metric_member("GPU SM Clock", "Speed of Streaming Multiprocessor Clock Domain",
+    mc->add_member(trace.metric_member("SM Clock", "Speed of Streaming Multiprocessor Clock Domain",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "MHz"));
-    mc->add_member(trace.metric_member("GPU Memory Clock", "Speed of Memory Clock Domain",
+    mc->add_member(trace.metric_member("Memory Clock", "Speed of Memory Clock Domain",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "MHz"));
-    mc->add_member(trace.metric_member("GPU Video Clock", "Speed of Video Encoder/Decoder Clock Domain",
+    mc->add_member(trace.metric_member("Video Clock", "Speed of Video Encoder/Decoder Clock Domain",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "MHz"));
-    mc->add_member(trace.metric_member("GPU Utilization Rate", "Percentage of last sample period where kernels were executing",
+    mc->add_member(trace.metric_member("Utilization Rate", "Percentage of last sample period where kernels were executing",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("GPU Memory Utilization Rate", "Percentage of last sample period where memory was read/written",
+    mc->add_member(trace.metric_member("Memory Utilization Rate", "Percentage of last sample period where memory was read/written",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("GPU PState", "Performance State of the GPU",
+    mc->add_member(trace.metric_member("PState", "Performance State of the GPU",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, ""));
-    mc->add_member(trace.metric_member("PID", "PID of a currently running process",
+    mc->add_member(trace.metric_member("PCIe TX Throughput", "PCIe Transmit throughput of the GPU",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "KB/s"));
+    mc->add_member(trace.metric_member("PCIe RX Throughput", "PCIe Receive throughput of the GPU",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "KB/s"));
+    mc->add_member(trace.metric_member("Total Energy Consumption", "Energy Consumption of the GPU since last driver reload",
+                                        otf2::common::metric_mode::absolute_point,
+                                        otf2::common::type::Double, "J"));
+    mc->add_member(trace.metric_member("Clocks Throttle Reasons", "Throttling reasons of clocks specified in bit mask",
                                         otf2::common::metric_mode::absolute_point,
                                         otf2::common::type::Double, ""));
     mc->add_member(trace.metric_member("NVML monitoring time", "time taken to get GPU metrics via nvml",
                                         otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "µs"));
+                                        otf2::common::type::Double, "ms"));
 
     event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
 }
@@ -120,9 +131,14 @@ void Recorder::monitor([[maybe_unused]] int fd)
     unsigned int vid_clock;
     nvmlUtilization_t utilization;
     nvmlPstates_t p_state;
-    unsigned int infoCount;
+    unsigned int tx;
+    unsigned int rx;
+    unsigned long long energy;
+    unsigned long long clocksThrottleReasons;
+
+    unsigned int samples_count;
     char proc_name[64];
-	unsigned int max_length = 64;
+    int max_length = 64;
 
         
 	result = nvmlDeviceGetPowerUsage(device, &power);
@@ -143,13 +159,35 @@ void Recorder::monitor([[maybe_unused]] int fd)
 
     result = (NVML_SUCCESS == result ? nvmlDeviceGetPerformanceState(device, &p_state) : result);
 
-    nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, NULL);
-        
-    nvmlProcessInfo_t *infos = new nvmlProcessInfo_t[infoCount];
-        
-    result = (NVML_SUCCESS == result ? nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, infos) : result);
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetPcieThroughput(device, NVML_PCIE_UTIL_TX_BYTES, &tx) : result);
 
-    result = (NVML_SUCCESS == result ? nvmlSystemGetProcessName(infos[0].pid, proc_name, max_length) : result);
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetPcieThroughput(device, NVML_PCIE_UTIL_RX_BYTES, &rx) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetTotalEnergyConsumption(device, &energy) : result);
+
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetCurrentClocksThrottleReasons(device, &clocksThrottleReasons) : result);
+
+
+    nvmlDeviceGetProcessUtilization(device, NULL, &samples_count, 0);
+        
+    nvmlProcessUtilizationSample_t *samples = new nvmlProcessUtilizationSample_t[samples_count];
+        
+    result = (NVML_SUCCESS == result ? nvmlDeviceGetProcessUtilization(device, samples, &samples_count, 0) : result);
+
+    for(unsigned int i = 0; i < samples_count; i++)
+    {
+        if(processes_.find(samples[i].pid) != processes_.end())
+        {
+            result = (NVML_SUCCESS == result ? nvmlSystemGetProcessName(samples[i].pid, proc_name, max_length) : result);
+
+            proc_recorder_ = std::make_unique<ProcessRecorder>(trace_, gpu_, samples[i].pid, proc_name);
+            proc_recorder_->start();
+
+            processes_.emplace(samples[i].pid);
+
+        }
+
+    }
 
     if (NVML_SUCCESS != result){ 
         
@@ -170,11 +208,16 @@ void Recorder::monitor([[maybe_unused]] int fd)
     event_->raw_values()[7] = double(utilization.gpu);
     event_->raw_values()[8] = double(utilization.memory);
     event_->raw_values()[9] = double(p_state);
-    event_->raw_values()[10] = double(infos[0].pid);
-    event_->raw_values()[11] = double(std::chrono::duration_cast<std::chrono::microseconds>(time_taken).count());
+    event_->raw_values()[10] = double(tx);
+    event_->raw_values()[11] = double(rx);
+    event_->raw_values()[12] = double(energy/1000);
+    event_->raw_values()[13] = double(clocksThrottleReasons);
+    event_->raw_values()[14] = double(std::chrono::duration_cast<std::chrono::microseconds>(time_taken).count())/1000;
 
     // write event to archive
     otf2_writer_.write(*event_);
+
+    delete samples;
 }
 
 Recorder::~Recorder()
