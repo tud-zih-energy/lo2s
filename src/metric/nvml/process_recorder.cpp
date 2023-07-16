@@ -37,26 +37,17 @@ namespace metric
 namespace nvml
 {
 
-
-ProcessRecorder::ProcessRecorder(trace::Trace& trace, Gpu gpu, unsigned int pid, char proc_name[])
-: PollMonitor(trace, std::string(proc_name) + " (" + std::to_string(pid) + ")", config().read_interval),
-  otf2_writer_(trace.create_metric_writer(name())),
-  metric_instance_(trace.metric_instance(trace.metric_class(), otf2_writer_.location(),
-                                         trace.system_tree_gpu_node(gpu)))
+ProcessRecorder::ProcessRecorder(trace::Trace& trace, Gpu gpu)
+: PollMonitor(trace, "gpu " + std::to_string(gpu.as_int()) + " (" + gpu.name() + ")",
+              config().read_interval),
+  metric_instance_(trace.metric_instance(trace.metric_class(), otf2::definition::location(),
+                                         trace.system_tree_gpu_node(gpu))),
+  gpu_(gpu)
 {
-    pid_ = pid;
+    auto result = nvmlDeviceGetHandleByIndex(gpu.as_int(), &device_);
 
-    result = nvmlInit();
-
-    if (NVML_SUCCESS != result){ 
-
-        Log::error() << "Failed to initialize NVML: " << nvmlErrorString(result);
-        throw_errno();
-    }
-
-    result = nvmlDeviceGetHandleByIndex(gpu.as_int(), &device);
-
-    if (NVML_SUCCESS != result){ 
+    if (NVML_SUCCESS != result)
+    {
 
         Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
         throw_errno();
@@ -64,18 +55,18 @@ ProcessRecorder::ProcessRecorder(trace::Trace& trace, Gpu gpu, unsigned int pid,
 
     auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 
-    mc->add_member(trace.metric_member("Decoder Utilization", "GPU Decoder Utilization by this Process",
-                                        otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("Encoder Utilization", "GPU Encoder Utilization by this Process",
-                                        otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("Memory Utilization", "GPU Memory Utilization by this Process",
-                                        otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member(
+        "Decoder Utilization", "GPU Decoder Utilization by this Process",
+        otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member(
+        "Encoder Utilization", "GPU Encoder Utilization by this Process",
+        otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
+    mc->add_member(trace.metric_member(
+        "Memory Utilization", "GPU Memory Utilization by this Process",
+        otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
     mc->add_member(trace.metric_member("SM Utilization", "GPU SM Utilization by this Process",
-                                        otf2::common::metric_mode::absolute_point,
-                                        otf2::common::type::Double, "%"));
+                                       otf2::common::metric_mode::absolute_point,
+                                       otf2::common::type::Double, "%"));
 
     event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
 }
@@ -87,50 +78,42 @@ void ProcessRecorder::monitor([[maybe_unused]] int fd)
 
     unsigned int samples_count;
 
+    nvmlDeviceGetProcessUtilization(device_, NULL, &samples_count, lastSeenTimeStamp);
 
-    nvmlDeviceGetProcessUtilization(device, NULL, &samples_count, lastSeenTimeStamp);
-        
-    nvmlProcessUtilizationSample_t *samples = new nvmlProcessUtilizationSample_t[samples_count];
-        
-    result = nvmlDeviceGetProcessUtilization(device, samples, &samples_count, lastSeenTimeStamp);
+    auto samples = std::make_unique<nvmlProcessUtilizationSample_t[]>(samples_count);
 
-    if (NVML_SUCCESS != result){ 
-        
+    auto result =
+        nvmlDeviceGetProcessUtilization(device_, samples.get(), &samples_count, lastSeenTimeStamp);
+
+    // NVML_ERROR_NOT_FOUND means, there are no samples since last query
+    if (NVML_SUCCESS != result && result != NVML_ERROR_NOT_FOUND)
+    {
+        Log::error() << "Failed to get utilization for device: " << nvmlErrorString(result);
         throw_errno();
-
     }
 
-    for(unsigned int i = 0; i < samples_count; i++)
+    for (unsigned int i = 0; i < samples_count; i++)
     {
-        if(samples[i].pid == pid_)
+        const auto& sample = samples[i];
+
+        event_->raw_values()[0] = double(sample.decUtil);
+        event_->raw_values()[1] = double(sample.encUtil);
+        event_->raw_values()[2] = double(sample.memUtil);
+        event_->raw_values()[3] = double(sample.smUtil);
+
+        lastSeenTimeStamp = sample.timeStamp;
+
+        if (process_writers_.count(sample.pid) == 0)
         {
-            event_->raw_values()[0] = double(samples[i].decUtil);
-            event_->raw_values()[1] = double(samples[i].encUtil);
-            event_->raw_values()[2] = double(samples[i].memUtil);
-            event_->raw_values()[3] = double(samples[i].smUtil);
-
-            lastSeenTimeStamp = samples[i].timeStamp;
-
-            // write event to archive
-            otf2_writer_.write(*event_);
+            process_writers_.try_emplace(sample.pid,
+                                         &trace_.metric_writer(gpu_, Process(sample.pid)));
         }
 
-    }
-
-    delete samples;
-
-}
-
-ProcessRecorder::~ProcessRecorder()
-{
-    result = nvmlShutdown();
-
-    if (NVML_SUCCESS != result){
-
-        Log::error() << "Failed to shutdown NVML: " << nvmlErrorString(result);
-        throw_errno();
+        // write event to archive
+        process_writers_.at(sample.pid)->write(*event_);
     }
 }
+
 } // namespace nvml
 } // namespace metric
 } // namespace lo2s

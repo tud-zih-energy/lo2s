@@ -63,7 +63,7 @@ public:
     explicit ExecutionScope(Cpu cpu) : type(ExecutionScopeType::CPU), id(cpu.as_int())
     {
     }
-    
+
     explicit ExecutionScope(Gpu gpu) : type(ExecutionScopeType::GPU), id(gpu.as_int())
     {
     }
@@ -78,6 +78,8 @@ public:
             return fmt::format("process {}");
         case ExecutionScopeType::CPU:
             return fmt::format("cpu {}", id);
+        case ExecutionScopeType::GPU:
+            return fmt::format("gpu {}", id);
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }
@@ -113,6 +115,12 @@ public:
     {
         return type == ExecutionScopeType::CPU;
     }
+
+    bool is_gpu() const
+    {
+        return type == ExecutionScopeType::GPU;
+    }
+
     // Needed because this is used as a Key in some Structures.
     // Simply order (arbitrarly) by type first, then by scope
     friend bool operator<(const ExecutionScope& lhs, const ExecutionScope& rhs)
@@ -216,6 +224,11 @@ public:
     void add_cpu(Cpu cpu)
     {
         groups_.emplace(cpu.as_scope(), cpu.as_scope());
+    }
+
+    void add_gpu(Gpu gpu)
+    {
+        groups_.emplace(gpu.as_scope(), gpu.as_scope());
     }
 
 private:

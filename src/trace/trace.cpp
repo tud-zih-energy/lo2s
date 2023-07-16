@@ -166,7 +166,7 @@ Trace::Trace()
         groups_.add_cpu(cpu);
     }
 
-    #ifdef HAVE_NVML
+#ifdef HAVE_NVML
     for (auto gpu : sys.gpus())
     {
         Log::debug() << "Registering GPU " << gpu.as_int() << ": " << gpu.name();
@@ -180,12 +180,13 @@ Trace::Trace()
         registry_.create<otf2::definition::system_tree_node_domain>(
             gpu_node, otf2::common::system_tree_node_domain::numa);
 
-        
         registry_.create<otf2::definition::location_group>(
             ByExecutionScope(gpu.as_scope()), name,
             otf2::definition::location_group::location_group_type::process, gpu_node);
+
+        groups_.add_gpu(gpu);
     }
-    #endif
+#endif
 
     groups_.add_process(NO_PARENT_PROCESS);
 
@@ -442,6 +443,15 @@ otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
         ByMeasurementScope(writer_scope), intern(writer_scope.name()),
         registry_.get<otf2::definition::location_group>(
             ByExecutionScope(groups_.get_parent(writer_scope.scope))),
+        otf2::definition::location::location_type::metric);
+    return archive_(intern_location);
+}
+
+otf2::writer::local& Trace::metric_writer(const Gpu& where, const Process& what)
+{
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(MeasurementScope::gpu(what.as_scope())), intern(fmt::format("{}", what)),
+        registry_.get<otf2::definition::location_group>(ByExecutionScope(where.as_scope())),
         otf2::definition::location::location_type::metric);
     return archive_(intern_location);
 }

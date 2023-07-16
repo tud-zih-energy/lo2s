@@ -50,7 +50,7 @@ void Topology::read_proc()
         }
     }
 
-    #ifdef HAVE_NVML
+#ifdef HAVE_NVML
     // get GPUs from nvml
     nvmlReturn_t result;
     unsigned int device_count;
@@ -59,7 +59,7 @@ void Topology::read_proc()
     result = nvmlInit();
 
     if (NVML_SUCCESS != result)
-    { 
+    {
 
         Log::error() << "Failed to initialize NVML: " << nvmlErrorString(result);
     }
@@ -68,12 +68,12 @@ void Topology::read_proc()
     result = nvmlDeviceGetCount(&device_count);
 
     if (NVML_SUCCESS != result)
-    { 
+    {
 
         Log::error() << "Failed to query device count: " << nvmlErrorString(result);
     }
 
-    for(unsigned int i = 0; i < device_count; i++)
+    for (unsigned int i = 0; i < device_count; i++)
     {
         // Get GPU handle and name
         nvmlDevice_t device;
@@ -82,7 +82,7 @@ void Topology::read_proc()
         result = nvmlDeviceGetHandleByIndex(i, &device);
 
         if (NVML_SUCCESS != result)
-        { 
+        {
 
             Log::error() << "Failed to get handle for device: " << nvmlErrorString(result);
         }
@@ -90,12 +90,12 @@ void Topology::read_proc()
         result = nvmlDeviceGetName(device, name, sizeof(name) / sizeof(name[0]));
 
         if (NVML_SUCCESS != result)
-        { 
+        {
 
             Log::error() << "Failed to get name for device: " << nvmlErrorString(result);
         }
 
-        gpus_.emplace(i, name);
+        gpus_.emplace_back(i, name);
     }
 
     result = nvmlShutdown();
@@ -105,9 +105,8 @@ void Topology::read_proc()
 
         Log::error() << "Failed to shutdown NVML: " << nvmlErrorString(result);
     }
-    
-    #endif
- 
+
+#endif
 }
 
 } // namespace lo2s

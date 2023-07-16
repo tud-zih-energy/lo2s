@@ -29,6 +29,12 @@
 
 #include <thread>
 
+#ifdef HAVE_NVML
+extern "C"
+{
+#include <nvml.h>
+}
+#endif
 namespace lo2s
 {
 namespace monitor
@@ -120,11 +126,23 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #ifdef HAVE_NVML
     if (config().use_nvml)
     {
+        if (auto result = nvmlInit(); NVML_SUCCESS != result)
+        {
+            Log::error() << "Failed to initialize NVML: " << nvmlErrorString(result);
+            throw_errno();
+        }
+
         try
         {
-            for(const auto& gpu : Topology::instance().gpus()){
-                nvml_recorder_ = std::make_unique<metric::nvml::Recorder>(trace_, gpu);
-                nvml_recorder_->start();
+            for (const auto& gpu : Topology::instance().gpus())
+            {
+                {
+                    auto [it, inserted] = nvml_recorders_.try_emplace(gpu, trace_, gpu);
+                    it->second.start();
+                }
+
+                auto [it, inserted] = nvml_process_recorders_.try_emplace(gpu, trace_, gpu);
+                it->second.start();
             }
         }
         catch (std::exception& e)
@@ -160,7 +178,13 @@ MainMonitor::~MainMonitor()
 #ifdef HAVE_NVML
     if (config().use_nvml)
     {
-        nvml_recorder_->stop();
+        for (const auto& gpu : Topology::instance().gpus())
+        {
+            nvml_recorders_.at(gpu).stop();
+            nvml_process_recorders_.at(gpu).stop();
+        }
+
+        nvmlShutdown();
     }
 #endif
 

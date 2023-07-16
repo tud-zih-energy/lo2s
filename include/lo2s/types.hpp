@@ -255,12 +255,14 @@ private:
 class Gpu
 {
 public:
-    explicit Gpu(int gpuid, std::string gpuname) : gpu_(gpuid), name_(gpuname)
+    explicit Gpu(int gpuid, const std::string& gpuname) : gpu_(gpuid), name_(gpuname)
     {
     }
+
     explicit Gpu() : gpu_(-1), name_("")
     {
     }
+
     int as_int() const;
     ExecutionScope as_scope() const;
 
@@ -268,6 +270,7 @@ public:
     {
         return Gpu(-1, "");
     }
+
     friend bool operator==(const Gpu& lhs, const Gpu& rhs)
     {
         return lhs.gpu_ == rhs.gpu_;

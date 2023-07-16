@@ -32,6 +32,7 @@ enum class MeasurementScopeType
     SWITCH,
     BIO,
     SYSCALL,
+    GPU,
     UNKNOWN
 };
 
@@ -72,9 +73,15 @@ struct MeasurementScope
     {
         return { MeasurementScopeType::BIO, s };
     }
+
     static MeasurementScope syscall(ExecutionScope s)
     {
         return { MeasurementScopeType::SYSCALL, s };
+    }
+
+    static MeasurementScope gpu(ExecutionScope s)
+    {
+        return { MeasurementScopeType::GPU, s };
     }
 
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
@@ -109,6 +116,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
+        case MeasurementScopeType::GPU:
+            return fmt::format("process utilization for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

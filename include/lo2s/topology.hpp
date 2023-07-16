@@ -97,7 +97,12 @@ public:
         return Cpu::invalid();
     }
 
-    const std::set<Gpu>& gpus() const
+    Gpu gpu(int gpu) const
+    {
+        return gpus_[gpu];
+    }
+
+    const std::vector<Gpu>& gpus() const
     {
         return gpus_;
     }
@@ -107,7 +112,7 @@ private:
     std::set<Package> packages_;
     std::map<Cpu, Core> cpu_to_core_;
     std::map<Cpu, Package> cpu_to_package_;
-    std::set<Gpu> gpus_;
+    std::vector<Gpu> gpus_;
 
     bool hypervised_ = false;
 

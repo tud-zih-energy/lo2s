@@ -85,7 +85,8 @@ protected:
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
 #endif
 #ifdef HAVE_NVML
-    std::unique_ptr<metric::nvml::Recorder> nvml_recorder_;
+    std::map<Gpu, metric::nvml::Recorder> nvml_recorders_;
+    std::map<Gpu, metric::nvml::ProcessRecorder> nvml_process_recorders_;
 #endif
 };
 } // namespace monitor
