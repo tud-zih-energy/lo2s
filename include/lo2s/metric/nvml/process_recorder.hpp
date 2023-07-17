@@ -54,8 +54,7 @@ protected:
     }
 
 private:
-    otf2::definition::metric_instance metric_instance_;
-    std::unique_ptr<otf2::event::metric> event_;
+    otf2::definition::metric_class metric_class_;
 
     std::map<int, otf2::writer::local*> process_writers_;
 

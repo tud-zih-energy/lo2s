@@ -40,9 +40,7 @@ namespace nvml
 ProcessRecorder::ProcessRecorder(trace::Trace& trace, Gpu gpu)
 : PollMonitor(trace, "gpu " + std::to_string(gpu.as_int()) + " (" + gpu.name() + ")",
               config().read_interval),
-  metric_instance_(trace.metric_instance(trace.metric_class(), otf2::definition::location(),
-                                         trace.system_tree_gpu_node(gpu))),
-  gpu_(gpu)
+  metric_class_(trace.metric_class()), gpu_(gpu)
 {
     auto result = nvmlDeviceGetHandleByIndex(gpu.as_int(), &device_);
 
@@ -53,28 +51,23 @@ ProcessRecorder::ProcessRecorder(trace::Trace& trace, Gpu gpu)
         throw_errno();
     }
 
-    auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
-
-    mc->add_member(trace.metric_member(
+    metric_class_.add_member(trace.metric_member(
         "Decoder Utilization", "GPU Decoder Utilization by this Process",
         otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member(
+    metric_class_.add_member(trace.metric_member(
         "Encoder Utilization", "GPU Encoder Utilization by this Process",
         otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member(
+    metric_class_.add_member(trace.metric_member(
         "Memory Utilization", "GPU Memory Utilization by this Process",
         otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
-    mc->add_member(trace.metric_member("SM Utilization", "GPU SM Utilization by this Process",
-                                       otf2::common::metric_mode::absolute_point,
-                                       otf2::common::type::Double, "%"));
-
-    event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
+    metric_class_.add_member(trace.metric_member(
+        "SM Utilization", "GPU SM Utilization by this Process",
+        otf2::common::metric_mode::absolute_point, otf2::common::type::Double, "%"));
 }
 
 void ProcessRecorder::monitor([[maybe_unused]] int fd)
 {
-    // update timestamp
-    event_->timestamp(time::now());
+    auto now = time::now();
 
     unsigned int samples_count;
 
@@ -96,21 +89,31 @@ void ProcessRecorder::monitor([[maybe_unused]] int fd)
     {
         const auto& sample = samples[i];
 
-        event_->raw_values()[0] = double(sample.decUtil);
-        event_->raw_values()[1] = double(sample.encUtil);
-        event_->raw_values()[2] = double(sample.memUtil);
-        event_->raw_values()[3] = double(sample.smUtil);
-
-        lastSeenTimeStamp = sample.timeStamp;
+        auto process = Process(sample.pid);
 
         if (process_writers_.count(sample.pid) == 0)
         {
-            process_writers_.try_emplace(sample.pid,
-                                         &trace_.metric_writer(gpu_, Process(sample.pid)));
+            process_writers_.try_emplace(sample.pid, &trace_.metric_writer(gpu_, process));
         }
 
+        const auto& scope = trace_.registry().get<otf2::definition::location_group>(
+            trace::ByGpuProcess(gpu_, process));
+
+        const auto& instance = trace_.registry().emplace<otf2::definition::metric_instance>(
+            trace::ByGpuProcess(gpu_, process), metric_class_,
+            process_writers_.at(sample.pid)->location(), scope);
+
+        otf2::event::metric event(now, instance);
+
+        event.raw_values()[0] = double(sample.decUtil);
+        event.raw_values()[1] = double(sample.encUtil);
+        event.raw_values()[2] = double(sample.memUtil);
+        event.raw_values()[3] = double(sample.smUtil);
+
+        lastSeenTimeStamp = sample.timeStamp;
+
         // write event to archive
-        process_writers_.at(sample.pid)->write(*event_);
+        process_writers_.at(sample.pid)->write(event);
     }
 }
 

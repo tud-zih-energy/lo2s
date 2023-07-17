@@ -176,13 +176,12 @@ Trace::Trace()
         const auto& gpu_node = registry_.create<otf2::definition::system_tree_node>(
             ByGpu(gpu), name, intern("gpu"), system_tree_root_node_);
 
-        // TODO otf2 has OTF2_SYSTEM_TREE_DOMAIN_ACCELERATOR_DEVICE, otf2xx doesn't
         registry_.create<otf2::definition::system_tree_node_domain>(
-            gpu_node, otf2::common::system_tree_node_domain::numa);
+            gpu_node, otf2::common::system_tree_node_domain::accelerator_device);
 
         registry_.create<otf2::definition::location_group>(
-            ByExecutionScope(gpu.as_scope()), name,
-            otf2::definition::location_group::location_group_type::process, gpu_node);
+            ByGpu(gpu), name, otf2::definition::location_group::location_group_type::accelerator,
+            gpu_node);
 
         groups_.add_gpu(gpu);
     }
@@ -340,6 +339,10 @@ void Trace::add_process(Process parent, Process process, const std::string& name
             ByExecutionScope(ExecutionScope(Process(process))), iname,
             otf2::definition::location_group::location_group_type::process, ret);
 
+        registry_.emplace<otf2::definition::location_group>(
+            ByProcess(Process(process)), iname,
+            otf2::definition::location_group::location_group_type::process, ret);
+
         const auto& comm_group = registry_.emplace<otf2::definition::comm_group>(
             ByProcess(process), iname, otf2::common::paradigm_type::pthread,
             otf2::common::group_flag_type::none);
@@ -358,6 +361,7 @@ void Trace::update_process_name(Process process, const std::string& name)
         registry_.get<otf2::definition::system_tree_node>(ByProcess(process)).name(iname);
         registry_.get<otf2::definition::location_group>(ByExecutionScope(process.as_scope()))
             .name(iname);
+        registry_.get<otf2::definition::location_group>(ByProcess(process)).name(iname);
         registry_.get<otf2::definition::comm_group>(ByProcess(process)).name(iname);
         registry_.get<otf2::definition::comm>(ByProcess(process)).name(iname);
 
@@ -449,9 +453,21 @@ otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
 
 otf2::writer::local& Trace::metric_writer(const Gpu& where, const Process& what)
 {
+    const auto& name = intern(fmt::format("{}", what));
+    const auto& gpu_name = intern(fmt::format("{}", where));
+
+    const auto& gpu_node = registry_.get<otf2::definition::system_tree_node>(ByGpu(where));
+
+    const auto& creator = registry_.emplace<otf2::definition::location_group>(
+        ByProcess(what), name, otf2::definition::location_group::location_group_type::process,
+        system_tree_root_node_);
+
+    const auto& lg = registry_.emplace<otf2::definition::location_group>(
+        ByGpuProcess(where, what), gpu_name,
+        otf2::definition::location_group::location_group_type::accelerator, gpu_node, creator);
+
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(MeasurementScope::gpu(what.as_scope())), intern(fmt::format("{}", what)),
-        registry_.get<otf2::definition::location_group>(ByExecutionScope(where.as_scope())),
+        ByMeasurementScope(MeasurementScope::gpu(what.as_scope())), name, lg,
         otf2::definition::location::location_type::metric);
     return archive_(intern_location);
 }

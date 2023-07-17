@@ -53,6 +53,21 @@ struct SimpleKeyType
     }
 };
 
+template <typename KeyTypeA, typename KeyTypeB, typename tag>
+struct DualKeyType
+{
+    using key_type = std::pair<KeyTypeA, KeyTypeB>;
+    key_type key;
+
+    explicit DualKeyType(KeyTypeA keyA, KeyTypeB keyB) : key({ keyA, keyB })
+    {
+    }
+
+    explicit DualKeyType(key_type key) : key(key)
+    {
+    }
+};
+
 // Can i haz strong typedef
 struct ByCoreTag
 {
@@ -73,6 +88,11 @@ struct ByGpuTag
 {
 };
 using ByGpu = SimpleKeyType<Gpu, ByGpuTag>;
+
+struct ByGpuProcessTag
+{
+};
+using ByGpuProcess = DualKeyType<Gpu, Process, ByGpuProcessTag>;
 
 struct ByThreadTag
 {
@@ -154,6 +174,12 @@ struct Holder<otf2::definition::metric_class>
 };
 
 template <>
+struct Holder<otf2::definition::metric_instance>
+{
+    using type = otf2::lookup_definition_holder<otf2::definition::metric_instance, ByGpuProcess>;
+};
+
+template <>
 struct Holder<otf2::definition::metric_member>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_member, ByString,
@@ -177,9 +203,9 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type =
-        otf2::lookup_definition_holder<otf2::definition::location_group, ByMeasurementScope,
-                                       ByExecutionScope, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::location_group,
+                                                ByMeasurementScope, ByExecutionScope, ByBlockDevice,
+                                                ByGpu, ByGpuProcess, ByProcess>;
 };
 template <>
 struct Holder<otf2::definition::location>
