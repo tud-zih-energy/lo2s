@@ -44,7 +44,19 @@ template <class Writer>
 class MultiReader
 {
 public:
-    MultiReader(trace::Trace& trace);
+    MultiReader(trace::Trace& trace) : writer_(trace)
+    {
+        for (const auto& cpu : Topology::instance().cpus())
+        {
+            for (auto tp : writer_.get_tracepoints())
+            {
+                IoReaderIdentity id(tp, cpu);
+                auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
+                                               std::forward_as_tuple(id));
+                fds_.emplace_back(reader.first->second.fd());
+            }
+        }
+    }
 
     MultiReader(const MultiReader& other) = delete;
     MultiReader& operator=(const MultiReader&) = delete;
@@ -54,7 +66,53 @@ public:
     ~MultiReader() = default;
 
 public:
-    void read();
+    void read()
+    {
+        std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
+            earliest_available;
+
+        for (auto& reader : readers_)
+        {
+            if (!reader.second.empty())
+            {
+                earliest_available.push(ReaderState(reader.second.top()->time, reader.first));
+            }
+        }
+
+        while (!earliest_available.empty())
+        {
+            auto state = earliest_available.top();
+            earliest_available.pop();
+
+            while (!readers_.at(state.identity).empty())
+            {
+                auto event = readers_.at(state.identity).top();
+                if (event->time > earliest_available.top().time)
+                {
+                    state.time = event->time;
+                    earliest_available.push(state);
+                    readers_.at(state.identity).pop();
+                    break;
+                }
+
+                if (event->time < highest_written_)
+                {
+                    // OTF2 requires strict temporal event ordering. Because we combine multiple
+                    // indepedent perf buffers, we can not guarantee that we will see the events for
+                    // a block device in strict temporal order. In the rare case that we get an
+                    // event with a smaller timestamp than an already written event, we have to just
+                    // drop it.
+                    readers_.at(state.identity).pop();
+                    Log::warn() << "Event loss due to event arriving late!";
+                    continue;
+                }
+
+                writer_.write(state.identity, event);
+                highest_written_ = event->time;
+                readers_.at(state.identity).pop();
+            }
+        }
+    }
 
     void finalize()
     {
@@ -66,7 +124,10 @@ public:
         read();
     }
 
-    std::vector<int> get_fds();
+    std::vector<int> get_fds()
+    {
+        return fds_;
+    }
 
 private:
     struct ReaderState
