@@ -40,11 +40,33 @@ template <class Writer>
 class IoMonitor : public PollMonitor
 {
 public:
-    IoMonitor(trace::Trace& trace);
+    IoMonitor(trace::Trace& trace)
+    : monitor::PollMonitor(trace, "", config().perf_read_interval), multi_reader_(trace)
+
+    {
+        for (auto fd : multi_reader_.get_fds())
+        {
+            add_fd(fd);
+        }
+    }
 
 private:
-    void monitor(int fd) override;
-    void finalize_thread() override;
+    void monitor(int fd) override
+    {
+        if (fd == timer_pfd().fd)
+        {
+            return;
+        }
+        else
+        {
+            multi_reader_.read();
+        }
+    }
+
+    void finalize_thread() override
+    {
+        multi_reader_.finalize();
+    }
 
     std::string group() const override
     {
