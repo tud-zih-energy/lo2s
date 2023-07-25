@@ -124,7 +124,7 @@ public:
         read();
     }
 
-    std::vector<int> get_fds()
+    const std::vector<int>& get_fds() const
     {
         return fds_;
     }

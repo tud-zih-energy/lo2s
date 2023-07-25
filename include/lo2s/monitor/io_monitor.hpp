@@ -53,11 +53,7 @@ public:
 private:
     void monitor(int fd) override
     {
-        if (fd == timer_pfd().fd)
-        {
-            return;
-        }
-        else
+        if (fd != timer_pfd().fd)
         {
             multi_reader_.read();
         }
