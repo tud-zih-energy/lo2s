@@ -162,13 +162,11 @@ set(SOURCE_FILES
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
-    src/monitor/io_monitor.cpp
     src/process_controller.cpp
 
     src/perf/event_provider.cpp
 
     src/perf/bio/block_device.cpp
-    src/perf/multi_reader.cpp
     src/perf/counter/counter_provider.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
