@@ -381,6 +381,8 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("BYTE")
         .default_value("65536");
+    io_options.toggle("posix-io",
+                      "Enable recording of POSIX I/o events (requires access to debugfs)");
 
     nitro::options::arguments arguments;
     try
@@ -412,6 +414,7 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_CUDA
     config.cuda_injectionlib_path = arguments.get("nvidia-injection-path");
 #endif
+    config.use_posix_io = arguments.given("posix-io");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
