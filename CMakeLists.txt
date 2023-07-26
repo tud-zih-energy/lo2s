@@ -107,6 +107,7 @@ find_package(Sensors)
 find_package(Veosinfo)
 find_package(Libpfm)
 find_package(PkgConfig)
+find_package(BpfObject)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
@@ -129,6 +130,9 @@ CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" O
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
+CMAKE_DEPENDENT_OPTION(USE_BPF "Use BPF for filename lookup" ON BpfObject_FOUND OFF)
+add_feature_info("USE_BPF" USE_BPF "Use BPF for filename lookup")
+
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -367,6 +371,18 @@ target_include_directories(lo2s PRIVATE
     include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
+
+
+if (USE_BPF)
+    if (BpfObject_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_BPF)
+        bpf_object(open src/perf/posix_io/open.bpf.c)
+        add_dependencies(lo2s open_skel)
+        target_link_libraries(lo2s PRIVATE open_skel)
+    else()
+        message(SEND_ERROR "BPF not found but requested.")
+    endif()
+endif()
 
 add_subdirectory(man)
 
