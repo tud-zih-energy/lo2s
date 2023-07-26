@@ -397,6 +397,8 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("BYTE")
         .default_value("65536");
+    io_options.toggle("posix-io",
+                      "Enable recording of POSIX I/o events (requires access to debugfs)");
 
     nitro::options::arguments arguments;
     try
@@ -695,6 +697,14 @@ void parse_program_options(int argc, const char** argv)
         lo2s::Log::fatal() << "No process to monitor provided. "
                               "You need to pass either a COMMAND or a PID.";
         parser.usage(std::cerr);
+        std::exit(EXIT_FAILURE);
+    }
+
+    config.use_posix_io = arguments.given("posix-io");
+
+    if (config.monitor_type == lo2s::MonitorType::CPU_SET && config.use_posix_io)
+    {
+        Log::fatal() << "POSIX I/O recording can only be enabled in process monitoring mode.";
         std::exit(EXIT_FAILURE);
     }
 

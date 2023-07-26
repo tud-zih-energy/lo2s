@@ -200,6 +200,20 @@ Trace::Trace()
             intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
             otf2::common::base_type::decimal, 0, config().sampling_period);
     }
+
+    if (config().use_posix_io)
+    {
+
+        const std::vector<otf2::common::io_paradigm_property_type> properties;
+        const std::vector<otf2::attribute_value> values;
+        posix_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
+            intern("POSIX"), intern("POSIX I/O"), otf2::common::io_paradigm_class_type::parallel,
+            otf2::common::io_paradigm_flag_type::os, properties, values);
+
+        posix_comm_group_ = registry_.create<otf2::definition::comm_group>(
+            intern("POSIX I/O files"), otf2::common::paradigm_type::hardware,
+            otf2::common::group_flag_type::none);
+    }
 }
 
 void Trace::begin_record()
@@ -493,6 +507,19 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
     return archive_(intern_location);
 }
 
+otf2::writer::local& Trace::posix_io_writer(Thread thread)
+{
+    MeasurementScope scope = MeasurementScope::posix_io(thread.as_scope());
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(scope), intern(scope.name()),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_parent(thread.as_scope()))),
+        otf2::definition::location::location_type::cpu_thread);
+
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::create_metric_writer(const std::string& name)
 {
     const auto& location = registry_.create<otf2::definition::location>(
@@ -550,6 +577,46 @@ otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)
     registry_.create<otf2::definition::io_pre_created_handle_state>(
         handle, otf2::common::io_access_mode_type::read_write,
         otf2::common::io_status_flag_type::none);
+    return handle;
+}
+
+otf2::definition::io_handle& Trace::posix_io_handle(Thread thread, int fd, int instance,
+                                                    std::string& name)
+{
+    ThreadFdInstance id(thread, fd, instance);
+
+    if (registry_.has<otf2::definition::io_handle>(ByThreadFdInstance(id)))
+    {
+        return registry_.get<otf2::definition::io_handle>(ByThreadFdInstance(id));
+    }
+
+    const auto& filename = intern(name);
+
+    const auto& file = registry_.emplace<otf2::definition::io_regular_file>(
+        ByString(name), filename, system_tree_root_node_);
+
+    auto& handle = registry_.emplace<otf2::definition::io_handle>(
+        ByThreadFdInstance(id), filename, file, posix_paradigm_,
+        otf2::common::io_handle_flag_type::none,
+        registry_.get<otf2::definition::comm>(ByProcess(groups_.get_process(thread))));
+
+    // Mark stdin, stdout and stderr as pre-created, because they are
+    if (fd < 3)
+    {
+        otf2::common::io_access_mode_type mode;
+
+        if (fd == 0)
+        {
+            mode = otf2::common::io_access_mode_type::read_only;
+        }
+        else
+        {
+            mode = otf2::common::io_access_mode_type::write_only;
+        }
+
+        registry_.create<otf2::definition::io_pre_created_handle_state>(
+            handle, mode, otf2::common::io_status_flag_type::none);
+    }
     return handle;
 }
 

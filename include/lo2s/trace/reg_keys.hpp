@@ -28,6 +28,7 @@
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
+#include <lo2s/thread_fd_instance.hpp>
 #include <lo2s/util.hpp>
 #include <otf2xx/otf2.hpp>
 
@@ -157,6 +158,12 @@ struct ByMeasurementScopeTypeTag
 
 using ByMeasurementScopeType = SimpleKeyType<MeasurementScopeType, ByMeasurementScopeTypeTag>;
 
+struct ByThreadFdInstanceTag
+{
+};
+
+using ByThreadFdInstance = SimpleKeyType<ThreadFdInstance, ByThreadFdInstanceTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -194,13 +201,15 @@ struct Holder<otf2::definition::metric_member>
 template <>
 struct Holder<otf2::definition::io_handle>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByThreadFdInstance,
+                                                ByBlockDevice>;
 };
 
 template <>
 struct Holder<otf2::definition::io_regular_file>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByBlockDevice>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByString, ByBlockDevice>;
 };
 
 template <>
@@ -248,7 +257,8 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess,
+                                                ByThreadFdInstance, ByBlockDevice>;
 };
 
 template <>

@@ -35,6 +35,7 @@ enum class MeasurementScopeType
     SYSCALL,
     CUDA,
     TRACEPOINT,
+    POSIX_IO,
     UNKNOWN
 };
 
@@ -91,6 +92,11 @@ struct MeasurementScope
         return { MeasurementScopeType::TRACEPOINT, s };
     }
 
+    static MeasurementScope posix_io(ExecutionScope s)
+    {
+        return { MeasurementScopeType::POSIX_IO, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -127,6 +133,8 @@ struct MeasurementScope
             return fmt::format("cuda kernel events for {}", scope.name());
         case MeasurementScopeType::TRACEPOINT:
             return fmt::format("tracepoint events for {}", scope.name());
+        case MeasurementScopeType::POSIX_IO:
+            return fmt::format("POSIX I/O events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

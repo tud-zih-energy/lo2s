@@ -38,7 +38,8 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Radare_USE_STATIC_LIBS
     Sensors_USE_STATIC_LIBS
     Veosinfo_USE_STATIC_LIBS
-    Audit_USE_STATIC_LIBS)
+    Audit_USE_STATIC_LIBS
+    LibBpf_USE_STATIC_LIBS)
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
@@ -53,6 +54,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Veosinfo_USE_STATIC_LIBS OFF CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    OFF CACHE BOOL "")
+    set(LibBpf_USE_STATIC_LIBS   OFF CACHE BOOL "")
 else()
     if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
         set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
@@ -78,6 +80,7 @@ else()
     set(Veosinfo_USE_STATIC_LIBS ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
+    set(LibBpf_USE_STATIC_LIBS   ON CACHE BOOL "")
 endif()
 
 # Check if we are running Linux
@@ -113,6 +116,7 @@ find_package(Libpfm)
 find_package(CUDAToolkit)
 find_package(Radare)
 find_package(Audit)
+find_package(BpfObject)
 
 
 # configurable options
@@ -132,6 +136,9 @@ CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsu
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
 CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
 add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
+CMAKE_DEPENDENT_OPTION(USE_BPF "Use BPF to record POSIX I/O activity" ON BpfObject_FOUND OFF)
+add_feature_info("USE_BPF" USE_BPF "Use BPF to record POSIX I/O activity")
+
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -418,6 +425,18 @@ target_include_directories(lo2s PRIVATE
     include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
+
+
+if (USE_BPF)
+    if (BpfObject_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_BPF)
+        bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
+        add_dependencies(lo2s posix_io_skel)
+        target_link_libraries(lo2s PRIVATE posix_io_skel)
+    else()
+        message(SEND_ERROR "BPF not found but requested.")
+    endif()
+endif()
 
 add_subdirectory(man)
 
