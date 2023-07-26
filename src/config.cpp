@@ -333,6 +333,9 @@ void parse_program_options(int argc, const char** argv)
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
 
+    io_options.toggle("posix-io",
+                      "Enable recording of POSIX I/o events (requires access to debugfs)");
+
     nitro::options::arguments arguments;
     try
     {
@@ -358,6 +361,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
+    config.use_posix_io = arguments.given("posix-io");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))

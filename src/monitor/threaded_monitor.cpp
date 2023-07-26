@@ -39,7 +39,6 @@ ThreadedMonitor::ThreadedMonitor(trace::Trace& trace, const std::string& name)
 ThreadedMonitor::~ThreadedMonitor()
 {
     summary().record_perf_wakeups(num_wakeups_);
-    assert(!thread_.joinable());
 }
 
 void ThreadedMonitor::start()

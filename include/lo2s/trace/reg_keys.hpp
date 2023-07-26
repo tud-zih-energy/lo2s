@@ -124,6 +124,45 @@ struct ByCounterCollectionTag
 
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
+struct ThreadFdInstance
+{
+public:
+    ThreadFdInstance() : thread(Thread::invalid()), fd(-1), instance(0)
+    {
+    }
+    ThreadFdInstance(Thread thread, int fd, int instance)
+    : thread(thread), fd(fd), instance(instance)
+    {
+    }
+    friend bool operator==(const ThreadFdInstance& lhs, const ThreadFdInstance& rhs)
+    {
+        return lhs.thread == rhs.thread && lhs.fd == rhs.fd && lhs.instance == rhs.instance;
+    }
+    friend bool operator<(const ThreadFdInstance& lhs, const ThreadFdInstance& rhs)
+    {
+        if (lhs.thread == rhs.thread)
+        {
+            if (lhs.fd == rhs.fd)
+            {
+                return lhs.instance < rhs.instance;
+            }
+            return lhs.fd < rhs.fd;
+        }
+        return lhs.thread < rhs.thread;
+    }
+
+private:
+    Thread thread;
+    int fd;
+    int instance;
+};
+
+struct ByThreadFdInstanceTag
+{
+};
+
+using ByThreadFdInstance = SimpleKeyType<ThreadFdInstance, ByThreadFdInstanceTag>;
+
 template <typename Definition>
 struct Holder
 {
@@ -157,12 +196,14 @@ struct Holder<otf2::definition::metric_member>
 template <>
 struct Holder<otf2::definition::io_handle>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByThreadFdInstance,
+                                                ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::io_regular_file>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByBlockDevice>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByString, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::string>
@@ -203,7 +244,8 @@ struct Holder<otf2::definition::source_code_location>
 template <>
 struct Holder<otf2::definition::comm>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess,
+                                                ByThreadFdInstance, ByBlockDevice>;
 };
 template <>
 struct Holder<otf2::definition::comm_group>

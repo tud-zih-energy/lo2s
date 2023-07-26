@@ -31,6 +31,11 @@ namespace monitor
 
 ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
+    if (config().use_posix_io)
+    {
+        posix_monitor_ = std::make_unique<PosixMonitor>(trace_);
+        posix_monitor_->start();
+    }
     trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
@@ -43,6 +48,10 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
 
 void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn)
 {
+    if (posix_monitor_)
+    {
+        posix_monitor_->insert_thread(thread);
+    }
     trace_.add_thread(thread, name);
 
     if (config().sampling)
@@ -72,6 +81,10 @@ void ProcessMonitor::update_process_name(Process process, const std::string& nam
 
 void ProcessMonitor::exit_thread(Thread thread)
 {
+    if (posix_monitor_)
+    {
+        posix_monitor_->exit_thread(thread);
+    }
     if (threads_.count(thread) != 0)
     {
         threads_.at(thread).stop();
@@ -84,6 +97,11 @@ ProcessMonitor::~ProcessMonitor()
     for (auto& thread : threads_)
     {
         thread.second.stop();
+    }
+
+    if (posix_monitor_)
+    {
+        posix_monitor_->stop();
     }
 }
 } // namespace monitor

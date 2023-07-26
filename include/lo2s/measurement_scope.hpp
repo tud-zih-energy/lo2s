@@ -32,6 +32,7 @@ enum class MeasurementScopeType
     SWITCH,
     BIO,
     SYSCALL,
+    POSIX_IO,
     UNKNOWN
 };
 
@@ -77,6 +78,11 @@ struct MeasurementScope
         return { MeasurementScopeType::SYSCALL, s };
     }
 
+    static MeasurementScope posix_io(ExecutionScope s)
+    {
+        return { MeasurementScopeType::POSIX_IO, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -109,6 +115,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
+        case MeasurementScopeType::POSIX_IO:
+            return fmt::format("POSIX I/O events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }
