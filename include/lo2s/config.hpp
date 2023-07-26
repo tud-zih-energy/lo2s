@@ -94,6 +94,8 @@ struct Config
     bool use_x86_energy = false;
     // block I/O
     bool use_block_io = false;
+    // posix I/O
+    bool use_posix_io = false;
     // syscalls
     bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;

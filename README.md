@@ -59,6 +59,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
  * libaudit to resolve syscall names, otherwise only syscall nrs can be used in syscall tracing
  * [pod2man](https://www.eyrie.org/~eagle/software/podlators/) to generate the man pages (typically distributed as part of `perl`)
  * `gzip` to compress the man pages
+ * libbpf and bpftool to enable POSIX I/O recording
 
 # Runtime Requirements
 

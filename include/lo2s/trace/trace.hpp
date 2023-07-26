@@ -138,11 +138,14 @@ public:
     otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
     otf2::writer::local& nec_writer(NecDevice device, const Thread& nec_thread);
+    otf2::writer::local& posix_io_writer(Thread thread);
 
     otf2::definition::calling_context& cuda_calling_context(std::string& exe,
                                                             std::string& function);
 
     otf2::definition::io_handle& block_io_handle(BlockDevice dev);
+    otf2::definition::io_handle& posix_io_handle(Thread thread, int fd, int instance,
+                                                 std::string& name);
 
     otf2::definition::metric_member
     metric_member(const std::string& name, const std::string& description,
@@ -409,6 +412,9 @@ private:
     otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> bio_system_tree_node_;
     otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> bio_paradigm_;
     otf2::definition::detail::weak_ref<otf2::definition::comm_group> bio_comm_group_;
+
+    otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> posix_paradigm_;
+    otf2::definition::detail::weak_ref<otf2::definition::comm_group> posix_comm_group_;
 
     const otf2::definition::system_tree_node& system_tree_root_node_;
 
