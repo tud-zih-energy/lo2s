@@ -44,10 +44,10 @@ class Reader : public EventReader<Reader>
 {
 public:
     Reader();
-    ~Reader();
 
 public:
     using EventReader<Reader>::handle;
+    using EventReader<Reader>::fd_;
 #ifndef USE_HW_BREAKPOINT_COMPAT
     struct RecordSampleType
     {
@@ -65,9 +65,6 @@ public:
 public:
     otf2::chrono::time_point local_time = otf2::chrono::genesis();
     perf::Clock::time_point perf_time;
-
-private:
-    int fd_;
 };
 } // namespace time
 } // namespace perf

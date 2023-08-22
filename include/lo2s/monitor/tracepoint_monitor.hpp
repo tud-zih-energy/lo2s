@@ -25,6 +25,7 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types.hpp>
 
 #include <map>
 #include <memory>
@@ -40,7 +41,7 @@ public:
     TracepointMonitor(trace::Trace& trace, Cpu cpu);
 
 private:
-    void monitor(int fd) override;
+    void monitor(WeakFd fd) override;
     void initialize_thread() override;
     void finalize_thread() override;
 
@@ -51,7 +52,7 @@ private:
 
 private:
     Cpu cpu_;
-    std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
+    std::map<WeakFd, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -249,7 +249,7 @@ Thread gettid()
     return Thread(syscall(SYS_gettid));
 }
 
-int get_cgroup_mountpoint_fd(std::string cgroup)
+Fd get_cgroup_mountpoint_fd(std::string cgroup)
 {
     std::ifstream mtab("/proc/mounts");
 
@@ -272,16 +272,16 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
             {
                 std::filesystem::path cgroup_path =
                     std::filesystem::path(cgroup_match[2].str()) / cgroup;
-                int fd = open(cgroup_path.c_str(), O_RDONLY);
+                Fd fd = Fd(open(cgroup_path.c_str(), O_RDONLY));
 
-                if (fd != -1)
+                if (fd.is_valid())
                 {
                     return fd;
                 }
             }
         }
     }
-    return -1;
+    return Fd::invalid();
 }
 
 std::set<std::uint32_t> parse_list(std::string list)

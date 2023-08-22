@@ -48,16 +48,16 @@ public:
 
     void read();
 
-    int fd()
+    WeakFd fd()
     {
         return timer_fd_;
     }
 
 protected:
-    std::vector<int> counter_fds_;
+    std::vector<Fd> counter_fds_;
     CounterCollection counter_collection_;
     UserspaceCounterBuffer counter_buffer_;
-    int timer_fd_;
+    Fd timer_fd_ = Fd::invalid();
 
     std::vector<UserspaceReadFormat> data_;
 };

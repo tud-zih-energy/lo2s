@@ -39,7 +39,9 @@
 
 extern "C"
 {
+#include <fcntl.h>
 #include <linux/perf_event.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -146,6 +148,23 @@ public:
         // struct sample_id sample_id;
     };
 
+    EventReader()
+    {
+    }
+    EventReader& operator=(EventReader&& other)
+    {
+        fd_ = std::move(other.fd_);
+        return *this;
+    }
+
+    EventReader(EventReader&) = delete;
+    EventReader operator=(EventReader&) = delete;
+
+    EventReader(EventReader<T>&& other)
+    {
+        fd_ = std::move(other.fd_);
+    }
+
     ~EventReader()
     {
         if (lost_samples > 0)
@@ -156,14 +175,20 @@ public:
     }
 
 protected:
-    void init_mmap(int fd)
+    void init_mmap(bool enable = false)
     {
-        fd_ = fd;
+
+        // asynchronous delivery
+        // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
+        if (fcntl(fd_.as_int(), F_SETFL, O_NONBLOCK))
+        {
+            throw_errno();
+        }
 
         mmap_pages_ = config().mmap_pages;
 
         base = mmap(NULL, (mmap_pages_ + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                    fd, 0);
+                    fd_.as_int(), 0);
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
@@ -172,6 +197,16 @@ protected:
                             "the amount of mappable memory by increasing /proc/sys/kernel/"
                             "perf_event_mlock_kb";
             throw_errno();
+        }
+
+        if (!enable)
+        {
+            auto ret = ioctl(fd_.as_int(), PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
         }
     }
 
@@ -342,9 +377,9 @@ private:
     }
 
 public:
-    int fd()
+    WeakFd fd()
     {
-        return fd_;
+        return WeakFd(fd_.as_int());
     }
 
     bool handle(const RecordForkType*)
@@ -367,9 +402,9 @@ protected:
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;
     size_t mmap_pages_ = 0;
+    Fd fd_ = Fd::invalid();
 
 private:
-    int fd_;
     void* base;
     std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };

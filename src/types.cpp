@@ -52,4 +52,19 @@ ExecutionScope Cpu::as_scope() const
     return ExecutionScope(*this);
 }
 
+bool operator==(const WeakFd& lhs, const Fd& rhs)
+{
+    return lhs.fd_ == rhs.fd_;
+}
+
+bool operator==(const Fd& lhs, const WeakFd& rhs)
+{
+    return lhs.fd_ == rhs.fd_;
+}
+
+Fd::operator WeakFd() const
+{
+    return WeakFd(fd_);
+}
+
 } // namespace lo2s

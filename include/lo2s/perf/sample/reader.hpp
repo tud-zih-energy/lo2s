@@ -37,13 +37,9 @@
 
 extern "C"
 {
-#include <fcntl.h>
 #include <unistd.h>
 
 #include <linux/perf_event.h>
-
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 }
 
 namespace lo2s
@@ -78,7 +74,7 @@ public:
 
 protected:
     using EventReader<T>::init_mmap;
-
+    using EventReader<T>::fd_;
     Reader(ExecutionScope scope, bool enable_on_exec) : has_cct_(config().enable_cct)
     {
         Log::debug() << "initializing event_reader for:" << scope.name()
@@ -143,7 +139,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = perf_event_open(&perf_attr, scope, -1, 0, config().cgroup_fd);
+            fd_ = perf_event_open(&perf_attr, scope, Fd::invalid(), 0, config().cgroup_fd);
 
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {
@@ -159,9 +155,9 @@ protected:
                 break;
             else
                 perf_attr.precise_ip--;
-        } while (fd_ <= 0);
+        } while (!fd_.is_valid());
 
-        if (fd_ < 0)
+        if (!fd_.is_valid())
         {
             Log::error() << "perf_event_open for sampling failed";
             if (perf_attr.use_clockid)
@@ -172,34 +168,8 @@ protected:
         }
         Log::debug() << "Using precise_ip level: " << perf_attr.precise_ip;
 
-        // Exception safe, so much wow!
-        try
-        {
-            // asynchronous delivery
-            // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
-            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
-            {
-                throw_errno();
-            }
-
-            init_mmap(fd_);
-            Log::debug() << "mmap initialized";
-
-            if (!enable_on_exec)
-            {
-                auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-                Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
-                if (ret == -1)
-                {
-                    throw_errno();
-                }
-            }
-        }
-        catch (...)
-        {
-            close();
-            throw;
-        }
+        init_mmap(enable_on_exec);
+        Log::debug() << "mmap initialized";
     }
 
     Reader(const Reader&) = delete;
@@ -220,24 +190,10 @@ protected:
                            "extend to prevent the kernel from doing that"
                            " or you can increase your sampling period.";
         }
-        close();
-    }
-
-public:
-    void close()
-    {
-        if (fd_ != -1)
-        {
-            ::close(fd_);
-            fd_ = -1;
-        }
     }
 
 protected:
     bool has_cct_;
-
-private:
-    int fd_ = -1;
 };
 } // namespace sample
 } // namespace perf

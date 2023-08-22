@@ -8,6 +8,7 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/types.hpp>
 
 #include <x86_adapt_cxx/x86_adapt.hpp>
 
@@ -39,7 +40,7 @@ public:
             trace::Trace& trace, const otf2::definition::metric_class& metric_class);
 
 protected:
-    void monitor(int fd) override;
+    void monitor(WeakFd fd) override;
     void initialize_thread() override;
 
     std::string group() const override

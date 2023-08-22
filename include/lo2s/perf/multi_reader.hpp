@@ -126,7 +126,7 @@ public:
         read();
     }
 
-    const std::vector<int>& get_fds() const
+    const std::vector<WeakFd> get_fds() const
     {
         return fds_;
     }
@@ -157,7 +157,7 @@ private:
     std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
         earliest_available_;
 
-    std::vector<int> fds_;
+    std::vector<WeakFd> fds_;
 };
 
 } // namespace perf
