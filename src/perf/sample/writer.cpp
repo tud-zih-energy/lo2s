@@ -172,21 +172,13 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
+    bool is_switch_out = context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT;
     update_calling_context(Process(context_switch->pid), Thread(context_switch->tid), tp,
-                           context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT);
+                           is_switch_out);
 
-    if (context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT)
-    {
-        cpuid_metric_event_.timestamp(tp);
-        cpuid_metric_event_.raw_values()[0] = -1;
-        otf2_writer_ << cpuid_metric_event_;
-    }
-    else
-    {
-        cpuid_metric_event_.timestamp(tp);
-        cpuid_metric_event_.raw_values()[0] = context_switch->cpu;
-        otf2_writer_ << cpuid_metric_event_;
-    }
+    cpuid_metric_event_.timestamp(tp);
+    cpuid_metric_event_.raw_values()[0] = is_switch_out ? -1 : context_switch->cpu;
+    otf2_writer_ << cpuid_metric_event_;
 
     return false;
 }

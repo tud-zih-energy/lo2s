@@ -41,7 +41,7 @@ class IoMonitor : public PollMonitor
 {
 public:
     IoMonitor(trace::Trace& trace)
-    : monitor::PollMonitor(trace, "", config().perf_read_interval), multi_reader_(trace)
+    : monitor::PollMonitor(trace, "IoMonitor", config().perf_read_interval), multi_reader_(trace)
 
     {
         for (auto fd : multi_reader_.get_fds())
