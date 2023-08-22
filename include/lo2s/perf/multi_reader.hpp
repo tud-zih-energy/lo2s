@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/log.hpp>
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -31,6 +32,7 @@
 #include <otf2xx/event/metric.hpp>
 #include <otf2xx/writer/local.hpp>
 
+#include <functional>
 #include <queue>
 #include <unordered_map>
 #include <vector>
