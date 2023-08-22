@@ -186,7 +186,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
+    src/topology.cpp src/bfd_resolve.cpp
     src/mmap.cpp
     src/util.cpp
     src/perf/util.cpp

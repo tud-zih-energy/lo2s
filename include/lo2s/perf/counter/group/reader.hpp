@@ -49,6 +49,7 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
+    using EventReader<T>::fd_;
     Reader(ExecutionScope scope, bool enable_on_exec);
 
     struct RecordSampleType
@@ -58,21 +59,8 @@ public:
         struct GroupReadFormat v;
     };
 
-    ~Reader()
-    {
-        for (int fd : counter_fds_)
-        {
-            if (fd != -1)
-            {
-                ::close(fd);
-            }
-        }
-        ::close(group_leader_fd_);
-    }
-
 protected:
-    int group_leader_fd_;
-    std::vector<int> counter_fds_;
+    std::vector<Fd> counter_fds_;
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };

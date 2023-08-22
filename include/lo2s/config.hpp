@@ -58,7 +58,7 @@ struct Config
     std::vector<std::string> x86_adapt_knobs;
 #endif
     bool use_sensors;
-    int cgroup_fd = -1;
+    Fd cgroup_fd = Fd::invalid();
     // OTF2
     std::string trace_path;
     // perf

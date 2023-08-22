@@ -508,7 +508,7 @@ void parse_program_options(int argc, const char** argv)
         {
             config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
 
-            if (config.cgroup_fd == -1)
+            if (!config.cgroup_fd.is_valid())
             {
                 Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
                 std::exit(EXIT_FAILURE);

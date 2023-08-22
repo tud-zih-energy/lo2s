@@ -31,7 +31,7 @@ void Monitor::initialize_thread()
     try_pin_to_scope(ExecutionScope(Cpu(device_.id())));
 }
 
-void Monitor::monitor([[maybe_unused]] int fd)
+void Monitor::monitor([[maybe_unused]] WeakFd fd)
 {
     // update timestamp
     event_.timestamp(time::now());

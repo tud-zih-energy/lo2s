@@ -24,6 +24,7 @@
 extern "C"
 {
 #include <sys/types.h>
+#include <unistd.h>
 }
 
 #include <fmt/format.h>
@@ -256,6 +257,96 @@ public:
 private:
     int id_;
 };
+
+class WeakFd;
+class Fd
+{
+public:
+    explicit Fd(int fd) : fd_(fd)
+    {
+    }
+
+    friend WeakFd;
+
+    Fd(const Fd&) = delete;
+    Fd& operator=(const Fd&) = delete;
+
+    Fd(Fd&& other)
+    {
+        fd_ = other.fd_;
+        other.fd_ = -1;
+    }
+
+    Fd& operator=(Fd&& other)
+    {
+        fd_ = other.fd_;
+        other.fd_ = -1;
+        return *this;
+    }
+
+    int as_int() const
+    {
+        return fd_;
+    }
+
+    static Fd invalid()
+    {
+        return Fd(-1);
+    }
+
+    bool is_valid() const
+    {
+        return fd_ != -1;
+    }
+
+    ~Fd()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
+    }
+    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
+    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
+
+    operator WeakFd() const;
+
+private:
+    int fd_;
+};
+
+class WeakFd
+{
+public:
+    explicit WeakFd(int fd) : fd_(fd)
+    {
+    }
+    friend bool operator==(const WeakFd& lhs, const WeakFd& rhs)
+    {
+        return lhs.fd_ == rhs.fd_;
+    }
+
+    friend bool operator!=(const WeakFd& lhs, const WeakFd& rhs)
+    {
+        return lhs.fd_ != rhs.fd_;
+    }
+
+    friend bool operator<(const WeakFd& lhs, const WeakFd& rhs)
+    {
+        return lhs.fd_ < rhs.fd_;
+    }
+    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
+    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
+
+    int as_int() const
+    {
+        return fd_;
+    }
+
+private:
+    int fd_;
+};
+
 } // namespace lo2s
 
 namespace fmt

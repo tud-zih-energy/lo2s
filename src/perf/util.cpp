@@ -28,16 +28,16 @@ int perf_event_paranoid()
     }
 }
 
-int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                    unsigned long flags, int cgroup_fd)
+Fd perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, const Fd& group_fd,
+                   unsigned long flags, const Fd& cgroup_fd)
 {
     int cpuid = -1;
     pid_t pid = -1;
     if (scope.is_cpu())
     {
-        if (cgroup_fd != -1)
+        if (cgroup_fd.is_valid())
         {
-            pid = cgroup_fd;
+            pid = cgroup_fd.as_int();
             flags |= PERF_FLAG_PID_CGROUP;
         }
         cpuid = scope.as_cpu().as_int();
@@ -46,7 +46,7 @@ int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int
     {
         pid = scope.as_thread().as_pid_t();
     }
-    return syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags);
+    return Fd(syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd.as_int(), flags));
 }
 
 // Default options we use in every perf_event_open call
@@ -99,11 +99,11 @@ void perf_check_disabled()
         throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
     }
 }
-int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                        unsigned long flags, int cgroup_fd)
+Fd perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, const Fd& group_fd,
+                       unsigned long flags, const Fd& cgroup_fd)
 {
-    int fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
-    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
+    Fd fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
+    if (fd.is_valid() && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
     {
         perf_attr->exclude_kernel = 1;
         perf_warn_paranoid();
@@ -112,7 +112,8 @@ int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope,
     return fd;
 }
 
-int perf_event_description_open(ExecutionScope scope, const EventDescription& desc, int group_fd)
+Fd perf_event_description_open(ExecutionScope scope, const EventDescription& desc,
+                               const Fd& group_fd)
 {
     struct perf_event_attr perf_attr;
     memset(&perf_attr, 0, sizeof(perf_attr));
@@ -130,8 +131,8 @@ int perf_event_description_open(ExecutionScope scope, const EventDescription& de
     perf_attr.clockid = config().clockid;
 #endif
 
-    int fd = perf_try_event_open(&perf_attr, scope, group_fd, 0, config().cgroup_fd);
-    if (fd < 0)
+    Fd fd = perf_try_event_open(&perf_attr, scope, group_fd, 0, config().cgroup_fd);
+    if (!fd.is_valid())
     {
         Log::error() << "perf_event_open for counter failed";
         throw_errno();

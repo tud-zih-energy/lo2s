@@ -58,13 +58,13 @@ Reader<T>::Reader(ExecutionScope scope)
 
     tspec.it_interval.tv_nsec =
         (config().userspace_read_interval % std::chrono::seconds(1)).count();
-    timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    timer_fd_ = Fd(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK));
 
-    timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);
+    timerfd_settime(timer_fd_.as_int(), TFD_TIMER_ABSTIME, &tspec, NULL);
 
     for (auto& event : counter_collection_.counters)
     {
-        counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
+        counter_fds_.emplace_back(perf_event_description_open(scope, event));
     }
 }
 
@@ -74,7 +74,7 @@ void Reader<T>::read()
     for (std::size_t i = 0; i < counter_fds_.size(); i++)
     {
         [[maybe_unused]] auto bytes_read =
-            ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
+            ::read(counter_fds_[i].as_int(), &(data_[i]), sizeof(UserspaceReadFormat));
 
         assert(bytes_read == sizeof(UserspaceReadFormat));
     }
@@ -82,7 +82,7 @@ void Reader<T>::read()
     static_cast<T*>(this)->handle(data_);
 
     [[maybe_unused]] uint64_t expirations;
-    if (::read(timer_fd_, &expirations, sizeof(expirations)) == -1 && errno != EAGAIN)
+    if (::read(timer_fd_.as_int(), &expirations, sizeof(expirations)) == -1 && errno != EAGAIN)
     {
         Log::error() << "Flushing timer fd failed";
         throw_errno();

@@ -52,13 +52,13 @@ void TracepointMonitor::initialize_thread()
 {
     try_pin_to_scope(cpu_.as_scope());
 }
-void TracepointMonitor::monitor(int fd)
+void TracepointMonitor::monitor(WeakFd fd)
 {
-    if (fd == timer_pfd().fd)
+    if (fd == timer_fd())
     {
         return;
     }
-    else if (fd == stop_pfd().fd)
+    else if (fd == stop_fd())
     {
         for (auto& perf_writer : perf_writers_)
         {

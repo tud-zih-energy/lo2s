@@ -109,7 +109,7 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 
 void try_pin_to_scope(ExecutionScope scope);
 
-int get_cgroup_mountpoint_fd(std::string cgroup);
+Fd get_cgroup_mountpoint_fd(std::string cgroup);
 
 Thread gettid();
 

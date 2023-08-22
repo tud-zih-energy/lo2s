@@ -88,31 +88,29 @@ void ScopeMonitor::finalize_thread()
     }
 }
 
-void ScopeMonitor::monitor(int fd)
+void ScopeMonitor::monitor(WeakFd fd)
 {
     if (!scope_.is_cpu())
     {
         try_pin_to_scope(scope_);
     }
 
-    if (syscall_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || syscall_writer_->fd() == fd))
+    if (syscall_writer_ && (fd == timer_fd() || fd == stop_fd() || syscall_writer_->fd() == fd))
     {
         syscall_writer_->read();
     }
-    if (sample_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
+    if (sample_writer_ && (fd == timer_fd() || fd == stop_fd() || sample_writer_->fd() == fd))
     {
         sample_writer_->read();
     }
 
     if (group_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || group_counter_writer_->fd() == fd))
+        (fd == timer_fd() || fd == stop_fd() || group_counter_writer_->fd() == fd))
     {
         group_counter_writer_->read();
     }
     if (userspace_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
+        (fd == timer_fd() || fd == stop_fd() || userspace_counter_writer_->fd() == fd))
     {
         userspace_counter_writer_->read();
     }

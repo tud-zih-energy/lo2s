@@ -26,7 +26,9 @@
 #include <cmath>
 extern "C"
 {
+#include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <unistd.h>
 }
 
 namespace lo2s
@@ -37,10 +39,24 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
                          std::chrono::nanoseconds read_interval)
 : ThreadedMonitor(trace, name)
 {
-    pfds_.resize(2);
-    stop_pfd().fd = stop_pipe_.read_fd();
-    stop_pfd().events = POLLIN;
-    stop_pfd().revents = 0;
+    int fds[2];
+    int ret = pipe(fds);
+
+    if (ret == -1)
+    {
+        throw_errno();
+    }
+
+    read_fd_ = Fd(fds[0]);
+    write_fd_ = Fd(fds[1]);
+
+    epoll_fd_ = Fd(epoll_create1(0));
+
+    if (!epoll_fd_.is_valid())
+    {
+        throw_errno();
+    }
+    add_fd(read_fd_);
 
     // Create and initialize timer_fd
     struct itimerspec tspec;
@@ -58,28 +74,26 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
 
         tspec.it_interval.tv_nsec = (read_interval % std::chrono::seconds(1)).count();
 
-        timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-        timer_pfd().events = POLLIN;
-        timer_pfd().revents = 0;
-
-        timerfd_settime(timer_pfd().fd, TFD_TIMER_ABSTIME, &tspec, NULL);
-    }
-    else
-    {
-        // fd = -1 is just going to be ignored
-        timer_pfd().fd = -1;
-        timer_pfd().events = 0;
-        timer_pfd().revents = 0;
+        timer_fd_ = Fd(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK));
+        add_fd(timer_fd_);
+        timerfd_settime(timer_fd_.as_int(), TFD_TIMER_ABSTIME, &tspec, NULL);
     }
 }
 
-void PollMonitor::add_fd(int fd)
+void PollMonitor::add_fd(WeakFd fd)
 {
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-    pfd.revents = 0;
-    pfds_.push_back(pfd);
+    struct epoll_event ev;
+    memset(&ev, 0, sizeof(epoll_event));
+
+    ev.events = EPOLLIN;
+    ev.data.fd = fd.as_int();
+
+    if (epoll_ctl(epoll_fd_.as_int(), EPOLL_CTL_ADD, fd.as_int(), &ev) == -1)
+    {
+        throw_errno();
+    }
+
+    num_fds_++;
 }
 
 void PollMonitor::stop()
@@ -90,81 +104,68 @@ void PollMonitor::stop()
         return;
     }
 
-    stop_pipe_.write();
+    auto buf = std::byte(0);
+    ::write(write_fd_.as_int(), &buf, 1);
     thread_.join();
-}
-
-void PollMonitor::monitor()
-{
-    for (const auto& pfd : pfds_)
-    {
-        if (pfd.revents & POLLIN)
-        {
-            monitor(pfd.fd);
-        }
-    }
 }
 
 void PollMonitor::run()
 {
+    std::vector<struct epoll_event> events(num_fds_);
     bool stop_requested = false;
     do
     {
-        auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
+        auto nfds = epoll_wait(epoll_fd_.as_int(), events.data(), num_fds_, -1);
         num_wakeups_++;
 
-        if (ret == 0)
+        if (nfds == 0)
         {
             throw std::runtime_error("Received poll timeout despite requesting no timeout.");
         }
-        else if (ret < 0)
+        else if (nfds < 0)
         {
+            // Received Ctrl-C during epoll, ignore as it is harmless
+            if (errno == EINTR)
+            {
+                continue;
+            }
             Log::error() << "poll failed";
             throw_errno();
         }
-        Log::trace() << "PollMonitor poll returned " << ret;
+        Log::trace() << "PollMonitor poll returned " << nfds;
 
         bool panic = false;
-        for (const auto& pfd : pfds_)
+        for (int i = 0; i < nfds; i++)
         {
-            if (pfd.revents != 0 && pfd.revents != POLLIN)
+            if (events[i].events != 0 && events[i].events != POLLIN)
             {
-                Log::warn() << "Poll on raw event fds got unexpected event flags: " << pfd.revents
-                            << ". Stopping raw event polling.";
+                Log::warn() << "Poll on raw event fds got unexpected event flags: "
+                            << events[i].events << ". Stopping raw event polling.";
                 panic = true;
             }
+
+            // Flush timer
+            if (timer_fd_.is_valid() && events[i].data.fd == timer_fd_.as_int())
+            {
+                [[maybe_unused]] uint64_t expirations;
+                if (read(timer_fd_.as_int(), &expirations, sizeof(expirations)) == -1)
+                {
+                    Log::error() << "Flushing timer fd failed";
+                    throw_errno();
+                }
+            }
+            if (events[i].data.fd == read_fd_.as_int())
+            {
+                stop_requested = true;
+            }
+            monitor(WeakFd(events[i].data.fd));
         }
         if (panic)
         {
             break;
         }
 
-        monitor();
-
-        // Flush timer
-        if (timer_pfd().revents & POLLIN)
-        {
-            [[maybe_unused]] uint64_t expirations;
-            if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
-            {
-                Log::error() << "Flushing timer fd failed";
-                throw_errno();
-            }
-        }
-        if (stop_pfd().revents & POLLIN)
-        {
-            Log::debug() << "Requested stop of PollMonitor";
-            stop_requested = true;
-        }
     } while (!stop_requested);
-}
-
-PollMonitor::~PollMonitor()
-{
-    if (timer_pfd().fd != -1)
-    {
-        close(timer_pfd().fd);
-    }
 }
 
 } // namespace monitor

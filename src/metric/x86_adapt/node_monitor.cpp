@@ -33,7 +33,7 @@ void NodeMonitor::initialize_thread()
         ExecutionScope(Topology::instance().measuring_cpu_for_package(Package(device_.id()))));
 }
 
-void NodeMonitor::monitor([[maybe_unused]] int fd)
+void NodeMonitor::monitor([[maybe_unused]] WeakFd fd)
 {
     event_.timestamp(time::now());
     for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))

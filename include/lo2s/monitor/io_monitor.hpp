@@ -51,9 +51,9 @@ public:
     }
 
 private:
-    void monitor(int fd) override
+    void monitor(WeakFd fd) override
     {
-        if (fd != timer_pfd().fd)
+        if (fd != timer_fd())
         {
             multi_reader_.read();
         }

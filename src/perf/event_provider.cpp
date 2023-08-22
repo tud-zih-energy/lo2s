@@ -165,17 +165,17 @@ static bool event_is_openable(EventDescription& ev)
     attr.config = ev.config;
     attr.config1 = ev.config1;
 
-    int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-    int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
-    if (sys_fd == -1 && proc_fd == -1)
+    Fd proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)));
+    Fd sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()));
+    if (!sys_fd.is_valid() && !proc_fd.is_valid())
     {
         Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
 
         attr.exclude_kernel = 1;
-        int proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-        int sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()), -1, 0);
+        proc_fd = perf_event_open(&attr, ExecutionScope(Thread(0)));
+        sys_fd = perf_event_open(&attr, ExecutionScope(*ev.supported_cpus().begin()));
 
-        if (sys_fd == -1 && proc_fd == -1)
+        if (!sys_fd.is_valid() && !proc_fd.is_valid())
         {
             switch (errno)
             {
@@ -190,21 +190,17 @@ static bool event_is_openable(EventDescription& ev)
             return false;
         }
     }
-    else if (sys_fd == -1)
+    else if (!sys_fd.is_valid())
     {
-        close(proc_fd);
         ev.availability = Availability::PROCESS_MODE;
     }
-    else if (proc_fd == -1)
+    else if (!proc_fd.is_valid())
     {
-        close(sys_fd);
         ev.availability = Availability::SYSTEM_MODE;
     }
     else
     {
         ev.availability = Availability::UNIVERSAL;
-        close(sys_fd);
-        close(proc_fd);
     }
 
     return true;
@@ -428,11 +424,10 @@ const EventDescription raw_read_event(const std::string& ev_desc)
     std::set<Cpu> cpus;
     for (const auto& cpu : Topology::instance().cpus())
     {
-        int fd = perf_try_event_open(&perf_attr, cpu.as_scope(), -1, 0, -1);
-        if (fd != -1)
+        Fd fd = perf_try_event_open(&perf_attr, cpu.as_scope());
+        if (!fd.is_valid())
         {
             cpus.emplace(cpu);
-            close(fd);
         }
     }
 
