@@ -83,7 +83,10 @@ private:
 std::size_t get_page_size();
 std::string get_process_exe(Process process);
 std::string get_process_comm(Process process);
+std::vector<std::string> get_thread_cmdline(Thread thread);
 std::string get_task_comm(Process process, Thread thread);
+
+std::string get_nec_thread_comm(Thread thread);
 
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();

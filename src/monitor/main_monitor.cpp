@@ -127,8 +127,10 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         auto path = dir_entry.path().string();
         if (std::regex_match(path, nec_match, nec_regex))
         {
-            nec_monitors_.emplace_back(
+            auto monitor = nec_monitors_.emplace_back(
                 std::make_unique<NecMonitorMain>(trace_, std::stoi(nec_match[1])));
+            std::asssert(monitor.first);
+
             nec_monitors_.back()->start();
         }
     }

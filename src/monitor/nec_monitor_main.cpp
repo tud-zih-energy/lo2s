@@ -26,6 +26,22 @@ namespace lo2s
 namespace monitor
 {
 
+  int NecMonitorMain::get_nec_device_id_for_thread(Thread thread)
+  {
+            // /sys/class/ve/ve0 is not device 0, because that would make too much sense
+            // So look the device id up here
+
+            int real_device_id = -1;
+            for (int i = 0; i < nodeinfo_.total_node_count; i++)
+            {
+                if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
+                {
+                    real_device_id = nodeinfo_.nodeid[i];
+                    break;
+                }
+            }
+            return real_device_id;
+  }
 NecMonitorMain::NecMonitorMain(trace::Trace& trace, int device)
 : ThreadedMonitor(trace, fmt::format("VE {}", device)), trace_(trace), device_(device),
   stopped_(false)
@@ -47,6 +63,8 @@ void NecMonitorMain::run()
             task_stream >> pid;
             threads.emplace_back(Thread(pid));
         }
+
+        //For some god-forsaken reason, the last read entry from task_id_all will always be invalid
 
         threads.pop_back();
 
@@ -70,18 +88,7 @@ void NecMonitorMain::run()
                 continue;
             }
 
-            // /sys/class/ve/ve0 is not device 0, because that would make too much sense
-            // So look the device id up here
-
-            int real_device_id = -1;
-            for (int i = 0; i < nodeinfo_.total_node_count; i++)
-            {
-                if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
-                {
-                    real_device_id = nodeinfo_.nodeid[i];
-                    break;
-                }
-            }
+            int real_device_id = get_nec_device_id_for_thread(thread);
 
             if (real_device_id == -1)
             {

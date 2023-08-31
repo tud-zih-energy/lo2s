@@ -52,6 +52,8 @@ protected:
     void finalize_thread() override;
 
 private:
+    int get_nec_device_id_for_thread(Thread thread);
+
     std::map<Thread, NecThreadMonitor> monitors_;
     trace::Trace& trace_;
     int device_;

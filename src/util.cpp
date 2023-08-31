@@ -327,4 +327,41 @@ std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
 
     return std::set<std::uint32_t>();
 }
+
+std::vector<std::string> get_thread_cmdline(Thread thread)
+{
+    std::ifstream cmdline(fmt::format("/proc/{}/cmdline", thread.as_pid_t()));
+    std::string cmdline_str;
+    cmdline >> cmdline_str;
+
+    const char* cmdline_c_str = cmdline_str.c_str();
+    std::vector<std::string> args;
+    while (cmdline_c_str < cmdline_str.c_str() + cmdline_str.length())
+    {
+        args.emplace_back(std::string(cmdline_c_str));
+        cmdline_c_str += args.back().length() + 1;
+    }
+    return args;
+}
+
+std::string get_nec_thread_comm(Thread thread)
+{
+  // For normal processes, /proc/{PID}/comm contains the name of the program running in that process
+  // For NEC processes, it instead contains the name of the program loader, ve_exec
+  // So instead, we have to extract the name of the actual NEC program we are executing from the commandline arguments to ve_exec
+    std::string thread_name = fmt::format("{}", thread);
+
+    auto args = get_thread_cmdline(thread);
+    for (std::size_t i = 0; i < args.size(); i++)
+    {
+        if (args[i] == "--")
+        {
+            if (i + 1 < args.size())
+            {
+                thread_name = fmt::format("{} ({})", args[i + 1], thread.as_pid_t());
+            }
+        }
+    }
+    return thread_name;
+}
 } // namespace lo2s
