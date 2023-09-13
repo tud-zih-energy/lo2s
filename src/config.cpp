@@ -535,7 +535,7 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
         }
 
-        if (arguments.provided("syscalls"))
+        if (arguments.provided("syscall"))
         {
             Log::fatal() << "Syscall recording is only available in system-wide monitoring mode";
             std::exit(EXIT_FAILURE);
