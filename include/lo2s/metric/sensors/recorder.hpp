@@ -41,7 +41,7 @@ public:
     ~Recorder();
 
 protected:
-    void monitor(int fd) override;
+    void monitor(WeakFd fd) override;
 
     std::string group() const override
     {
