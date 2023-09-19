@@ -58,8 +58,6 @@ namespace monitor
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
 
-    /* we need ptrace to get fork/clone/... */
-    ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
     std::vector<char*> tmp;
     std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
