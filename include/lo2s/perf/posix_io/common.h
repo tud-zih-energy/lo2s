@@ -61,9 +61,9 @@ struct syscalls_sys_enter_rw
 
 struct syscalls_sys_enter_close
 {
-  int32_t __syscall_nr;
+  long __syscall_nr;
   char padding0 [4];
-  uint64_t fd;
+  unsigned long long fd;
 };
 
 struct posix_event_header

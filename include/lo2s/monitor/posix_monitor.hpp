@@ -137,13 +137,17 @@ public:
         {
             struct open_event* e = (struct open_event*)data;
 
+            if (e->header.fd >= 3)
+            {
+                filename = std::string(e->filename);
+            }
             if (!instance_.count(thread_fd))
             {
                 instance_.emplace(thread_fd, 0);
             }
-            if (e->header.fd >= 3)
+            else
             {
-                filename = std::string(e->filename);
+                instance_[thread_fd] = instance_[thread_fd] + 1;
             }
             auto& handle = trace_.posix_io_handle(Thread(e->header.pid), e->header.fd,
                                                   instance_[thread_fd], filename);
@@ -158,10 +162,6 @@ public:
         {
             auto& handle =
                 trace_.posix_io_handle(Thread(e->pid), e->fd, instance_[thread_fd], filename);
-            if (instance_.count(thread_fd))
-            {
-                instance_[thread_fd] = instance_[thread_fd] + 1;
-            }
 
             otf2::writer::local& writer = trace_.posix_io_writer(thread);
 
@@ -261,6 +261,11 @@ private:
             }
 
             return lhs.fd < rhs.fd;
+        }
+
+        friend bool operator==(const ThreadFd& lhs, const ThreadFd& rhs)
+        {
+            return lhs.fd == rhs.fd && lhs.thread == rhs.thread;
         }
 
     private:

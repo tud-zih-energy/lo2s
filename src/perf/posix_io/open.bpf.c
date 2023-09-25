@@ -19,11 +19,15 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// The generated vmlinux.h headers has to go first
+// clang-format off
+#include <vmlinux.h>
+// clang-format on
+
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include <lo2s/perf/posix_io/common.h>
-#include <vmlinux.h>
 
 char LICENSE[] SEC("license") = "GPL";
 
@@ -59,7 +63,6 @@ int BPF_KPROBE(do_filp_open, int dfd, struct filename* fn, const struct open_fla
 
     char name[256];
     char* name_ptr = BPF_CORE_READ(fn, name);
-    bpf_printk("%s\n", name_ptr);
     bpf_probe_read_kernel_str(name, 256, name_ptr);
     bpf_map_update_elem(&open_cache, &pid, name, BPF_ANY);
     return 0;
