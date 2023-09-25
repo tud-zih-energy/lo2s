@@ -25,7 +25,8 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/fd.hpp>
 
 #include <map>
 #include <memory>

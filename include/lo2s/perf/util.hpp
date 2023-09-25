@@ -1,7 +1,7 @@
 #pragma once
 
 #include <lo2s/perf/event_description.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
 
 extern "C"
 {

@@ -25,7 +25,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
 
 #include <chrono>
 #include <vector>

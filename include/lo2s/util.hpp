@@ -22,7 +22,8 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <filesystem>
 

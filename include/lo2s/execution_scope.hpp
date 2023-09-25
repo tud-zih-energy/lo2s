@@ -26,7 +26,9 @@
 #include <fmt/core.h>
 
 #include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/process.hpp>
+
 namespace lo2s
 {
 

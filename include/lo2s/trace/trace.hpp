@@ -29,7 +29,8 @@
 #include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <otf2xx/otf2.hpp>
 

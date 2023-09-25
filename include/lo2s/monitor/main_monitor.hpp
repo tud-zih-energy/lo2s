@@ -37,7 +37,7 @@
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <memory>
 #include <vector>

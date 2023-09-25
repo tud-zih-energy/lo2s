@@ -21,17 +21,13 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
+#include <iostream>
 extern "C"
 {
 #include <sys/types.h>
-#include <unistd.h>
 }
-
-#include <fmt/format.h>
-
-#include <vector>
-
-#include <cstdint>
 
 namespace lo2s
 {
@@ -150,203 +146,6 @@ private:
     pid_t pid_;
 };
 
-class Cpu
-{
-public:
-    explicit Cpu(int cpuid) : cpu_(cpuid)
-    {
-    }
-    int as_int() const;
-    ExecutionScope as_scope() const;
-
-    static Cpu invalid()
-    {
-        return Cpu(-1);
-    }
-    friend bool operator==(const Cpu& lhs, const Cpu& rhs)
-    {
-        return lhs.cpu_ == rhs.cpu_;
-    }
-
-    friend bool operator<(const Cpu& lhs, const Cpu& rhs)
-    {
-        return lhs.cpu_ < rhs.cpu_;
-    }
-
-    friend bool operator>(const Cpu& lhs, const Cpu& rhs)
-    {
-        return lhs.cpu_ > rhs.cpu_;
-    }
-
-    friend std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)
-    {
-        return stream << fmt::format("{}", cpu);
-    }
-
-private:
-    int cpu_;
-};
-
-class Core
-{
-public:
-    Core(int core_id, int package_id) : core_id_(core_id), package_id_(package_id)
-    {
-    }
-
-    static Core invalid()
-    {
-        return Core(-1, -1);
-    }
-
-    friend bool operator==(const Core& lhs, const Core& rhs)
-    {
-        return (lhs.core_id_ == rhs.core_id_) && (lhs.package_id_ == rhs.package_id_);
-    }
-
-    friend bool operator<(const Core& lhs, const Core& rhs)
-    {
-        if (lhs.package_id_ == rhs.package_id_)
-        {
-            return lhs.core_id_ < rhs.core_id_;
-        }
-        return lhs.package_id_ < rhs.package_id_;
-    }
-
-    int core_as_int() const
-    {
-        return core_id_;
-    }
-
-    int package_as_int() const
-    {
-        return package_id_;
-    }
-
-private:
-    int core_id_;
-    int package_id_;
-};
-
-class Package
-{
-public:
-    explicit Package(int id) : id_(id)
-    {
-    }
-
-    static Package invalid()
-    {
-        return Package(-1);
-    }
-
-    friend bool operator==(const Package& lhs, const Package& rhs)
-    {
-        return lhs.id_ == rhs.id_;
-    }
-    friend bool operator<(const Package& lhs, const Package& rhs)
-    {
-        return lhs.id_ < rhs.id_;
-    }
-
-    int as_int() const
-    {
-        return id_;
-    }
-
-private:
-    int id_;
-};
-
-class WeakFd;
-class Fd
-{
-public:
-    explicit Fd(int fd) : fd_(fd)
-    {
-    }
-
-    friend WeakFd;
-
-    Fd(Fd&) = delete;
-    Fd& operator=(Fd&) = delete;
-
-    Fd(Fd&& other)
-    {
-        fd_ = other.fd_;
-        other.fd_ = -1;
-    }
-
-    Fd& operator=(Fd&& other)
-    {
-        fd_ = other.fd_;
-        other.fd_ = -1;
-        return *this;
-    }
-
-    int as_int() const
-    {
-        return fd_;
-    }
-
-    static Fd invalid()
-    {
-        return Fd(-1);
-    }
-
-    bool is_valid() const
-    {
-        return fd_ != -1;
-    }
-
-    ~Fd()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
-        }
-    }
-    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
-    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
-
-    operator WeakFd() const;
-
-private:
-    int fd_;
-};
-
-class WeakFd
-{
-public:
-    explicit WeakFd(int fd) : fd_(fd)
-    {
-    }
-    friend bool operator==(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ == rhs.fd_;
-    }
-
-    friend bool operator!=(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ != rhs.fd_;
-    }
-
-    friend bool operator<(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ < rhs.fd_;
-    }
-    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
-    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
-
-    int as_int() const
-    {
-        return fd_;
-    }
-
-private:
-    int fd_;
-};
-
 } // namespace lo2s
 
 namespace fmt
@@ -390,27 +189,6 @@ struct formatter<lo2s::Process>
     auto format(const lo2s::Process& process, FormatContext& ctx)
     {
         return fmt::format_to(ctx.out(), "process {}", process.as_pid_t());
-    }
-};
-
-template <>
-struct formatter<lo2s::Cpu>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}')
-        {
-            throw format_error("invalid format");
-        }
-
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const lo2s::Cpu& cpu, FormatContext& ctx) const
-    {
-        return fmt::format_to(ctx.out(), "cpu {}", cpu.as_int());
     }
 };
 } // namespace fmt

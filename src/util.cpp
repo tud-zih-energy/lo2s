@@ -1,6 +1,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>

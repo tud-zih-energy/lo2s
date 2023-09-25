@@ -27,7 +27,9 @@
 
 #include <cstdint>
 
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 
 extern "C"
 {

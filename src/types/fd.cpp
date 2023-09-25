@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,32 +19,23 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <lo2s/monitor/main_monitor.hpp>
-#include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/types/cpu.hpp>
-
-#include <vector>
+#include <lo2s/types/fd.hpp>
 
 namespace lo2s
 {
-namespace monitor
+bool operator==(const WeakFd& lhs, const Fd& rhs)
 {
+    return lhs.fd_ == rhs.fd_;
+}
 
-/**
- * Current implementation is just for all CPUs
- * TODO extend to list of CPUs
- */
-class CpuSetMonitor : public MainMonitor
+bool operator==(const Fd& lhs, const WeakFd& rhs)
 {
-public:
-    CpuSetMonitor();
+    return lhs.fd_ == rhs.fd_;
+}
 
-    void run();
+Fd::operator WeakFd() const
+{
+    return WeakFd(fd_);
+}
 
-private:
-    std::map<Cpu, ScopeMonitor> monitors_;
-};
-} // namespace monitor
 } // namespace lo2s
