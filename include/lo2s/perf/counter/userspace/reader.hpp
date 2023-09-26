@@ -28,9 +28,9 @@
 
 #include <cstdint>
 
-#include <vector>
-
 #include <cstdlib>
+#include <optional>
+#include <vector>
 namespace lo2s
 {
 namespace perf
@@ -48,16 +48,17 @@ public:
 
     void read();
 
-    WeakFd fd()
+    const Fd& fd()
     {
-        return timer_fd_;
+        assert(timer_fd_);
+        return timer_fd_.value();
     }
 
 protected:
     std::vector<Fd> counter_fds_;
     CounterCollection counter_collection_;
     UserspaceCounterBuffer counter_buffer_;
-    Fd timer_fd_ = Fd::invalid();
+    std::optional<Fd> timer_fd_;
 
     std::vector<UserspaceReadFormat> data_;
 };

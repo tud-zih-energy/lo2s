@@ -47,16 +47,16 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
         throw_errno();
     }
 
-    read_fd_ = Fd(fds[0]);
-    write_fd_ = Fd(fds[1]);
+    read_fd_ = std::make_optional<Fd>(fds[0]);
+    write_fd_ = std::make_optional<Fd>(fds[1]);
 
-    epoll_fd_ = Fd(epoll_create1(0));
+    epoll_fd_ = std::optional<Fd>(epoll_create1(0));
 
-    if (!epoll_fd_.is_valid())
+    if (!epoll_fd_)
     {
         throw_errno();
     }
-    add_fd(read_fd_);
+    add_fd(*read_fd_);
 
     // Create and initialize timer_fd
     struct itimerspec tspec;
@@ -74,13 +74,23 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
 
         tspec.it_interval.tv_nsec = (read_interval % std::chrono::seconds(1)).count();
 
-        timer_fd_ = Fd(timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK));
-        add_fd(timer_fd_);
-        timerfd_settime(timer_fd_.as_int(), TFD_TIMER_ABSTIME, &tspec, NULL);
+        int timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+        if (timer_fd == -1)
+        {
+            throw_errno();
+        }
+
+        timer_fd_ = std::make_optional<Fd>(timer_fd);
+        add_fd(*timer_fd_);
+
+        if (timerfd_settime(timer_fd_->as_int(), TFD_TIMER_ABSTIME, &tspec, NULL) == -1)
+        {
+            throw_errno();
+        }
     }
 }
 
-void PollMonitor::add_fd(WeakFd fd)
+void PollMonitor::add_fd(const Fd& fd)
 {
     struct epoll_event ev;
     memset(&ev, 0, sizeof(epoll_event));
@@ -88,7 +98,7 @@ void PollMonitor::add_fd(WeakFd fd)
     ev.events = EPOLLIN;
     ev.data.fd = fd.as_int();
 
-    if (epoll_ctl(epoll_fd_.as_int(), EPOLL_CTL_ADD, fd.as_int(), &ev) == -1)
+    if (epoll_ctl(epoll_fd_->as_int(), EPOLL_CTL_ADD, fd.as_int(), &ev) == -1)
     {
         throw_errno();
     }
@@ -105,7 +115,7 @@ void PollMonitor::stop()
     }
 
     auto buf = std::byte(0);
-    ::write(write_fd_.as_int(), &buf, 1);
+    ::write(write_fd_->as_int(), &buf, 1);
     thread_.join();
 }
 
@@ -115,7 +125,7 @@ void PollMonitor::run()
     bool stop_requested = false;
     do
     {
-        auto nfds = epoll_wait(epoll_fd_.as_int(), events.data(), num_fds_, -1);
+        auto nfds = epoll_wait(epoll_fd_->as_int(), events.data(), num_fds_, -1);
         num_wakeups_++;
 
         if (nfds == 0)
@@ -145,16 +155,16 @@ void PollMonitor::run()
             }
 
             // Flush timer
-            if (timer_fd_.is_valid() && events[i].data.fd == timer_fd_.as_int())
+            if (timer_fd_ && events[i].data.fd == timer_fd_->as_int())
             {
                 [[maybe_unused]] uint64_t expirations;
-                if (read(timer_fd_.as_int(), &expirations, sizeof(expirations)) == -1)
+                if (read(timer_fd_->as_int(), &expirations, sizeof(expirations)) == -1)
                 {
                     Log::error() << "Flushing timer fd failed";
                     throw_errno();
                 }
             }
-            if (events[i].data.fd == read_fd_.as_int())
+            if (events[i].data.fd == read_fd_->as_int())
             {
                 stop_requested = true;
             }

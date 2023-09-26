@@ -55,7 +55,7 @@ public:
                 IoReaderIdentity id(tp, cpu);
                 auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
                                                std::forward_as_tuple(id));
-                fds_.emplace_back(reader.first->second.fd());
+                fds_.emplace_back(std::cref(reader.first->second.fd()));
             }
         }
     }
@@ -126,7 +126,7 @@ public:
         read();
     }
 
-    const std::vector<WeakFd> get_fds() const
+    const std::vector<std::reference_wrapper<const Fd>> get_fds() const
     {
         return fds_;
     }
@@ -157,7 +157,7 @@ private:
     std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
         earliest_available_;
 
-    std::vector<WeakFd> fds_;
+    std::vector<std::reference_wrapper<const Fd>> fds_;
 };
 
 } // namespace perf

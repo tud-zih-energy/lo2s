@@ -44,7 +44,7 @@ public:
     : monitor::PollMonitor(trace, "IoMonitor", config().perf_read_interval), multi_reader_(trace)
 
     {
-        for (auto fd : multi_reader_.get_fds())
+        for (const auto& fd : multi_reader_.get_fds())
         {
             add_fd(fd);
         }

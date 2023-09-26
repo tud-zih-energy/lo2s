@@ -40,11 +40,6 @@ extern "C"
 }
 #endif
 
-extern "C"
-{
-#include <sys/ioctl.h>
-}
-
 namespace lo2s
 {
 namespace perf
@@ -77,7 +72,7 @@ Reader::Reader()
     try
     {
         fd_ = perf_event_open(&attr, ExecutionScope(Thread(0)));
-        if (!fd_.is_valid())
+        if (!fd_)
         {
             throw_errno();
         }

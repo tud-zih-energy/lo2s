@@ -28,6 +28,7 @@
 #include <lo2s/types/fd.hpp>
 
 #include <chrono>
+#include <optional>
 #include <vector>
 
 extern "C"
@@ -50,25 +51,26 @@ public:
 protected:
     void run() override;
 
-    void add_fd(WeakFd fd);
+    void add_fd(const Fd& fd);
 
     virtual void monitor([[maybe_unused]] WeakFd fd){};
 
-    WeakFd stop_fd()
+    const Fd& stop_fd()
     {
-        return WeakFd(write_fd_.as_int());
+        assert(write_fd_);
+        return write_fd_.value();
     }
 
-    WeakFd timer_fd()
+    const std::optional<Fd>& timer_fd()
     {
-        return WeakFd(timer_fd_.as_int());
+        return timer_fd_;
     }
 
 private:
-    Fd read_fd_ = Fd::invalid();
-    Fd write_fd_ = Fd::invalid();
-    Fd timer_fd_ = Fd::invalid();
-    Fd epoll_fd_ = Fd::invalid();
+    std::optional<Fd> read_fd_;
+    std::optional<Fd> write_fd_;
+    std::optional<Fd> timer_fd_;
+    std::optional<Fd> epoll_fd_;
     int num_fds_ = 0;
 };
 } // namespace monitor

@@ -31,16 +31,14 @@
 #include <lo2s/util.hpp>
 
 #include <filesystem>
-
 #include <ios>
+#include <optional>
 
 #include <cstddef>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -120,8 +118,8 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-        fd_ = perf_event_open(&attr, cpu.as_scope(), Fd::invalid(), 0, config().cgroup_fd);
-        if (fd_.is_valid())
+        fd_ = perf_event_open(&attr, cpu.as_scope(), std::optional<Fd>(), 0, config().cgroup_fd);
+        if (fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -141,7 +139,7 @@ public:
 
     void stop()
     {
-        auto ret = ioctl(fd_.as_int(), PERF_EVENT_IOC_DISABLE);
+        auto ret = fd_.ioctl(PERF_EVENT_IOC_DISABLE);
         Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {

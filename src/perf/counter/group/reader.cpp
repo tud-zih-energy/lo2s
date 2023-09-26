@@ -33,8 +33,6 @@
 
 extern "C"
 {
-#include <sys/ioctl.h>
-
 #include <linux/perf_event.h>
 }
 
@@ -79,8 +77,8 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
     leader_attr.enable_on_exec = enable_on_exec;
 
-    fd_ = perf_try_event_open(&leader_attr, scope, Fd::invalid(), 0, config().cgroup_fd);
-    if (!fd_.is_valid())
+    fd_ = perf_try_event_open(&leader_attr, scope, std::optional<Fd>(), 0, config().cgroup_fd);
+    if (!fd_)
     {
         Log::error() << "perf_event_open for counter group leader failed";
         throw_errno();
@@ -95,7 +93,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         {
             try
             {
-                counter_fds_.emplace_back(perf_event_description_open(scope, description, fd_));
+                counter_fds_.emplace_back(*perf_event_description_open(scope, description, fd_));
             }
             catch (const std::system_error& e)
             {

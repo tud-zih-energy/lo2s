@@ -38,9 +38,7 @@
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 }
@@ -101,7 +99,7 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
         fd_ = perf_event_open(&attr, identity.cpu.as_scope());
-        if (!fd_.is_valid())
+        if (!fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -123,7 +121,7 @@ public:
 
     void stop()
     {
-        auto ret = ioctl(fd_.as_int(), PERF_EVENT_IOC_DISABLE);
+        auto ret = fd_.value().ioctl(PERF_EVENT_IOC_DISABLE);
         Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
@@ -136,9 +134,10 @@ public:
         return reinterpret_cast<TracepointSampleType*>(get());
     }
 
-    WeakFd fd() const
+    const Fd& fd() const
     {
-        return fd_;
+        assert(fd_);
+        return fd_.value();
     }
 
     IoReader& operator=(const IoReader&) = delete;

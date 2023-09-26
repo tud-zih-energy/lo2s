@@ -20,16 +20,19 @@
  */
 
 #pragma once
+#include <optional>
+#include <utility>
 
 extern "C"
 {
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 }
 
 namespace lo2s
 {
 
-class WeakFd;
 class Fd
 {
 public:
@@ -37,10 +40,8 @@ public:
     {
     }
 
-    friend WeakFd;
-
-    Fd(Fd&) = delete;
-    Fd& operator=(Fd&) = delete;
+    Fd(const Fd&) = delete;
+    Fd& operator=(const Fd&) = delete;
 
     Fd(Fd&& other)
     {
@@ -60,61 +61,39 @@ public:
         return fd_;
     }
 
-    static Fd invalid()
+    template <typename... Args>
+    int ioctl(unsigned long request, Args&&... args)
     {
-        return Fd(-1);
+        return ::ioctl(fd_, request, std::forward<Args>(args)...);
     }
 
-    bool is_valid() const
+    template <typename... Args>
+    int fcntl(unsigned long cmd, Args&&... args)
     {
-        return fd_ != -1;
+        return ::fcntl(fd_, cmd, std::forward<Args>(args)...);
+    }
+
+    static std::optional<Fd> open(const char* pathname, int flags, mode_t mode = 0)
+    {
+        int fd = ::open(pathname, flags, mode);
+
+        if (fd == -1)
+        {
+            return std::optional<Fd>();
+        }
+        else
+        {
+            return std::make_optional<Fd>(fd);
+        }
     }
 
     ~Fd()
     {
-        if (fd_ != -1)
-        {
-            close(fd_);
-        }
-    }
-    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
-    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
-
-    operator WeakFd() const;
-
-private:
-    int fd_;
-};
-
-class WeakFd
-{
-public:
-    explicit WeakFd(int fd) : fd_(fd)
-    {
-    }
-    friend bool operator==(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ == rhs.fd_;
-    }
-
-    friend bool operator!=(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ != rhs.fd_;
-    }
-
-    friend bool operator<(const WeakFd& lhs, const WeakFd& rhs)
-    {
-        return lhs.fd_ < rhs.fd_;
-    }
-    friend bool operator==(const WeakFd& lhs, const Fd& rhs);
-    friend bool operator==(const Fd& lhs, const WeakFd& rhs);
-
-    int as_int() const
-    {
-        return fd_;
+        close(fd_);
     }
 
 private:
     int fd_;
 };
+
 } // namespace lo2s

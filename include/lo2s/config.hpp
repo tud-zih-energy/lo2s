@@ -22,10 +22,10 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
-
-#include <cstdint>
 
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/fd.hpp>
@@ -60,7 +60,7 @@ struct Config
     std::vector<std::string> x86_adapt_knobs;
 #endif
     bool use_sensors;
-    Fd cgroup_fd = Fd::invalid();
+    std::optional<Fd> cgroup_fd;
     // OTF2
     std::string trace_path;
     // perf

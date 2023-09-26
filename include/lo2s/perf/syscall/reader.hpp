@@ -36,9 +36,7 @@
 #include <fmt/format.h>
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -74,29 +72,30 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME | PERF_SAMPLE_IDENTIFIER;
 
-        fd_ = perf_event_open(&attr, cpu.as_scope(), Fd::invalid(), 0, config().cgroup_fd);
-        if (!fd_.is_valid())
+        fd_ = perf_event_open(&attr, cpu.as_scope(), std::optional<Fd>(), 0, config().cgroup_fd);
+        if (!fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
 
         attr.config = tracepoint::EventFormat("raw_syscalls:sys_exit").id();
-        other_fd_ = perf_event_open(&attr, cpu.as_scope(), Fd::invalid(), 0, config().cgroup_fd);
-        if (!other_fd_.is_valid())
+        other_fd_ =
+            perf_event_open(&attr, cpu.as_scope(), std::optional<Fd>(), 0, config().cgroup_fd);
+        if (!other_fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
 
-        ioctl(fd_.as_int(), PERF_EVENT_IOC_ID, &sys_enter_id);
-        ioctl(other_fd_.as_int(), PERF_EVENT_IOC_ID, &sys_exit_id);
+        fd_->ioctl(PERF_EVENT_IOC_ID, &sys_enter_id);
+        other_fd_->ioctl(PERF_EVENT_IOC_ID, &sys_exit_id);
 
         try
         {
             Log::debug() << "perf_tracepoint_reader mmap initialized";
             init_mmap(false);
-            if (ioctl(other_fd_.as_int(), PERF_EVENT_IOC_SET_OUTPUT, fd_.as_int()) == -1)
+            if (other_fd_->ioctl(PERF_EVENT_IOC_SET_OUTPUT, fd_->as_int()) == -1)
             {
                 throw_errno();
             }
@@ -108,23 +107,23 @@ public:
                                [](const auto& elem) { return fmt::format("id == {}", elem); });
                 std::string filter = fmt::format("{}", fmt::join(names, "||"));
 
-                if (ioctl(other_fd_.as_int(), PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
+                if (other_fd_->ioctl(PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
                 {
                     throw_errno();
                 }
-                if (ioctl(fd_.as_int(), PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
+                if (fd_->ioctl(PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
                 {
                     throw_errno();
                 }
             }
 
-            auto ret = ioctl(fd_.as_int(), PERF_EVENT_IOC_ENABLE);
+            auto ret = fd_->ioctl(PERF_EVENT_IOC_ENABLE);
             Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
             if (ret == -1)
             {
                 throw_errno();
             }
-            ret = ioctl(other_fd_.as_int(), PERF_EVENT_IOC_ENABLE);
+            ret = other_fd_->ioctl(PERF_EVENT_IOC_ENABLE);
             Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
             if (ret == -1)
             {
@@ -145,7 +144,7 @@ public:
 
     void stop()
     {
-        auto ret = ioctl(other_fd_.as_int(), PERF_EVENT_IOC_DISABLE);
+        auto ret = other_fd_->ioctl(PERF_EVENT_IOC_DISABLE);
         Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
@@ -161,7 +160,7 @@ protected:
     uint64_t sys_exit_id;
 
 private:
-    Fd other_fd_ = Fd::invalid();
+    std::optional<Fd> other_fd_;
     const static std::filesystem::path base_path;
 };
 

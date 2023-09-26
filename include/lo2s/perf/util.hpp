@@ -3,6 +3,8 @@
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/types/fd.hpp>
 
+#include <optional>
+
 extern "C"
 {
 #include <linux/perf_event.h>
@@ -15,18 +17,22 @@ namespace perf
 
 int perf_event_paranoid();
 
-Fd perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope,
-                   const Fd& group_fd = Fd::invalid(), unsigned long flags = 0,
-                   const Fd& cgroup_fd = Fd::invalid());
+std::optional<Fd> perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope,
+                                  const std::optional<Fd>& group_fd = std::optional<Fd>(),
+                                  unsigned long flags = 0,
+                                  const std::optional<Fd>& cgroup_fd = std::optional<Fd>());
 struct perf_event_attr common_perf_event_attrs();
 void perf_warn_paranoid();
 void perf_check_disabled();
 
-Fd perf_event_description_open(ExecutionScope scope, const EventDescription& desc,
-                               const Fd& group_fd = Fd::invalid());
-Fd perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope,
-                       const Fd& group_fd = Fd::invalid(), unsigned long flags = 0,
-                       const Fd& cgroup_fd = Fd::invalid());
+std::optional<Fd>
+perf_event_description_open(ExecutionScope scope, const EventDescription& desc,
+                            const std::optional<Fd>& group_fd = std::optional<Fd>());
+
+std::optional<Fd> perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope,
+                                      const std::optional<Fd>& group_fd = std::optional<Fd>(),
+                                      unsigned long flags = 0,
+                                      const std::optional<Fd>& cgroup_fd = std::optional<Fd>());
 
 } // namespace perf
 } // namespace lo2s

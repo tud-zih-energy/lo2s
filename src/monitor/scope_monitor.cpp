@@ -95,22 +95,31 @@ void ScopeMonitor::monitor(WeakFd fd)
         try_pin_to_scope(scope_);
     }
 
-    if (syscall_writer_ && (fd == timer_fd() || fd == stop_fd() || syscall_writer_->fd() == fd))
+    if ((timer_fd() && fd == *timer_fd()) || fd == stop_fd())
+    {
+        syscall_writer_->read();
+        sample_writer_->read();
+        group_counter_writer_->read();
+        group_counter_writer_->read();
+        return;
+    }
+
+    if (syscall_writer_ && syscall_writer_->fd() == fd)
     {
         syscall_writer_->read();
     }
-    if (sample_writer_ && (fd == timer_fd() || fd == stop_fd() || sample_writer_->fd() == fd))
+
+    if (sample_writer_ && sample_writer_->fd() == fd)
     {
         sample_writer_->read();
     }
 
-    if (group_counter_writer_ &&
-        (fd == timer_fd() || fd == stop_fd() || group_counter_writer_->fd() == fd))
+    if (group_counter_writer_ && group_counter_writer_->fd() == fd)
     {
         group_counter_writer_->read();
     }
-    if (userspace_counter_writer_ &&
-        (fd == timer_fd() || fd == stop_fd() || userspace_counter_writer_->fd() == fd))
+
+    if (userspace_counter_writer_ && userspace_counter_writer_->fd() == fd)
     {
         userspace_counter_writer_->read();
     }

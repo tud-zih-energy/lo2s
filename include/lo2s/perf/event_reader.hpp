@@ -39,9 +39,7 @@
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -180,7 +178,7 @@ protected:
 
         // asynchronous delivery
         // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
-        if (fcntl(fd_.as_int(), F_SETFL, O_NONBLOCK))
+        if (fd_->fcntl(F_SETFL, O_NONBLOCK))
         {
             throw_errno();
         }
@@ -188,7 +186,7 @@ protected:
         mmap_pages_ = config().mmap_pages;
 
         base = mmap(NULL, (mmap_pages_ + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                    fd_.as_int(), 0);
+                    fd_.value().as_int(), 0);
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
@@ -201,7 +199,7 @@ protected:
 
         if (!enable)
         {
-            auto ret = ioctl(fd_.as_int(), PERF_EVENT_IOC_ENABLE);
+            auto ret = fd_.value().ioctl(PERF_EVENT_IOC_ENABLE);
             Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
             if (ret == -1)
             {
@@ -377,9 +375,10 @@ private:
     }
 
 public:
-    WeakFd fd()
+    const Fd& fd()
     {
-        return WeakFd(fd_.as_int());
+        assert(fd_);
+        return fd_.value();
     }
 
     bool handle(const RecordForkType*)
@@ -402,7 +401,7 @@ protected:
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;
     size_t mmap_pages_ = 0;
-    Fd fd_ = Fd::invalid();
+    std::optional<Fd> fd_;
 
 private:
     void* base;

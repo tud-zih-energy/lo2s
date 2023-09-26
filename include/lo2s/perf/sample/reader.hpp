@@ -139,7 +139,7 @@ protected:
          * and the value of it is greater than the initial value */
         do
         {
-            fd_ = perf_event_open(&perf_attr, scope, Fd::invalid(), 0, config().cgroup_fd);
+            fd_ = perf_event_open(&perf_attr, scope, std::optional<Fd>(), 0, config().cgroup_fd);
 
             if (errno == EACCES && !perf_attr.exclude_kernel && perf_event_paranoid() > 1)
             {
@@ -155,9 +155,9 @@ protected:
                 break;
             else
                 perf_attr.precise_ip--;
-        } while (!fd_.is_valid());
+        } while (!fd_);
 
-        if (!fd_.is_valid())
+        if (!fd_)
         {
             Log::error() << "perf_event_open for sampling failed";
             if (perf_attr.use_clockid)
