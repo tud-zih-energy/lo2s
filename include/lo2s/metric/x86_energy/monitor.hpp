@@ -32,7 +32,7 @@ public:
             const otf2::definition::system_tree_node& stn);
 
 protected:
-    void monitor(WeakFd fd) override;
+    void monitor(int fd) override;
     void initialize_thread() override;
 
     std::string group() const override

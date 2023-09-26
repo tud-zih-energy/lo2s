@@ -40,7 +40,7 @@ public:
             trace::Trace& trace, const otf2::definition::metric_class& metric_class);
 
 protected:
-    void monitor(WeakFd fd) override;
+    void monitor(int fd) override;
     void initialize_thread() override;
 
     std::string group() const override

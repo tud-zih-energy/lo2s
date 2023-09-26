@@ -54,7 +54,7 @@ public:
 
     void initialize_thread() override;
     void finalize_thread() override;
-    void monitor(WeakFd fd) override;
+    void monitor(int fd) override;
 
     std::string group() const override
     {

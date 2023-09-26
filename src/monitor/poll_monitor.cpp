@@ -168,7 +168,7 @@ void PollMonitor::run()
             {
                 stop_requested = true;
             }
-            monitor(WeakFd(events[i].data.fd));
+            monitor(events[i].data.fd);
         }
         if (panic)
         {

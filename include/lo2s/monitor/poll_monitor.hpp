@@ -53,7 +53,7 @@ protected:
 
     void add_fd(const Fd& fd);
 
-    virtual void monitor([[maybe_unused]] WeakFd fd){};
+    virtual void monitor([[maybe_unused]] int fd){};
 
     const Fd& stop_fd()
     {

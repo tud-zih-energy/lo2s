@@ -32,7 +32,7 @@ void Monitor::initialize_thread()
     try_pin_to_scope(ExecutionScope(cpu_));
 }
 
-void Monitor::monitor([[maybe_unused]] WeakFd fd)
+void Monitor::monitor([[maybe_unused]] int fd)
 {
     metric_event_.timestamp(time::now());
     metric_event_.raw_values()[0] = counter_.read();

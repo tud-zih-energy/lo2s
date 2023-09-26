@@ -87,6 +87,23 @@ public:
         }
     }
 
+    friend bool operator==(const Fd& lhs, const int& rhs)
+    {
+        return lhs.fd_ == rhs;
+    }
+    friend bool operator==(const int& lhs, const Fd& rhs)
+    {
+        return lhs == rhs.fd_;
+    }
+    friend bool operator!=(const Fd& lhs, const int& rhs)
+    {
+        return lhs.fd_ != rhs;
+    }
+    friend bool operator!=(const int& lhs, const Fd& rhs)
+    {
+        return lhs != rhs.fd_;
+    }
+
     ~Fd()
     {
         close(fd_);

@@ -51,7 +51,7 @@ public:
     }
 
 private:
-    void monitor(WeakFd fd) override
+    void monitor(int fd) override
     {
         if (fd != timer_fd())
         {

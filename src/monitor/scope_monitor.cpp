@@ -88,7 +88,7 @@ void ScopeMonitor::finalize_thread()
     }
 }
 
-void ScopeMonitor::monitor(WeakFd fd)
+void ScopeMonitor::monitor(int fd)
 {
     if (!scope_.is_cpu())
     {
