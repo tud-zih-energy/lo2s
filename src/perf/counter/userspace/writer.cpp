@@ -52,7 +52,9 @@ bool Writer::handle(std::vector<UserspaceReadFormat>& data)
 
     for (std::size_t i = 0; i < counter_buffer_.size(); i++)
     {
-        values[i] = counter_buffer_[i] * counter_collection_.get_scale(i);
+        // In get_scale, index 0 is reserved for the metric leader, which we don't have in the
+        // userspace metric mode, so add 1 to the counter index
+        values[i] = counter_buffer_[i] * counter_collection_.get_scale(i + 1);
     }
 
     writer_.write(metric_event_);
