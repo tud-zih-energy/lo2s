@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
+#include <chrono>
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
@@ -322,6 +323,7 @@ private:
     std::recursive_mutex mutex_;
 
     otf2::chrono::time_point starting_time_;
+    std::chrono::system_clock::time_point starting_system_time_;
     otf2::chrono::time_point stopping_time_;
 
     otf2::definition::interrupt_generator& interrupt_generator_;

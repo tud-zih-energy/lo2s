@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "otf2xx/chrono/duration.hpp"
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/address.hpp>
@@ -199,8 +200,9 @@ void Trace::begin_record()
 {
     Log::info() << "Initialization done. Start recording...";
     starting_time_ = time::now();
+    starting_system_time_ = std::chrono::system_clock::now();
 
-    const std::time_t t_c = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    const std::time_t t_c = std::chrono::system_clock::to_time_t(starting_system_time_);
     add_lo2s_property("STARTING_TIME", fmt::format("{:%c}", fmt::localtime(t_c)));
 }
 
@@ -257,7 +259,8 @@ Trace::~Trace()
         stopping_time_ = starting_time_;
     }
 
-    archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_);
+    archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_,
+                                                   starting_system_time_);
 
     std::filesystem::path symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
 
