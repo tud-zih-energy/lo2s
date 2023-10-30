@@ -346,9 +346,10 @@ std::vector<std::string> get_thread_cmdline(Thread thread)
 
 std::string get_nec_thread_comm(Thread thread)
 {
-  // For normal processes, /proc/{PID}/comm contains the name of the program running in that process
-  // For NEC processes, it instead contains the name of the program loader, ve_exec
-  // So instead, we have to extract the name of the actual NEC program we are executing from the commandline arguments to ve_exec
+    // For normal processes, /proc/{PID}/comm contains the name of the program running in that
+    // process For NEC processes, it instead contains the name of the program loader, ve_exec So
+    // instead, we have to extract the name of the actual NEC program we are executing from the
+    // commandline arguments to ve_exec
     std::string thread_name = fmt::format("{}", thread);
 
     auto args = get_thread_cmdline(thread);

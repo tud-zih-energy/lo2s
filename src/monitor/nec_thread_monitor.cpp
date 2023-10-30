@@ -28,7 +28,6 @@ extern "C"
 
 #include <libved.h>
 
-
 namespace lo2s
 {
 namespace monitor
@@ -54,11 +53,11 @@ void NecThreadMonitor::monitor()
     static int reg[] = { IC };
     uint64_t val;
 
-        ve_get_regvals(device_, nec_thread_.as_pid_t(), 1, reg, &val);
-        otf2::chrono::time_point tp = lo2s::time::now();
-        otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(val), 2,
-                                                  trace_.interrupt_generator().ref());
-        std::this_thread::sleep_for(nec_readout_interval_);
+    ve_get_regvals(device_, nec_thread_.as_pid_t(), 1, reg, &val);
+    otf2::chrono::time_point tp = lo2s::time::now();
+    otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(val), 2,
+                                              trace_.interrupt_generator().ref());
+    std::this_thread::sleep_for(nec_readout_interval_);
 }
 
 void NecThreadMonitor::finalize_thread()
