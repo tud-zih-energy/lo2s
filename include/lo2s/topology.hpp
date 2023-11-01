@@ -35,7 +35,7 @@
 
 #include <filesystem>
 
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
 
 using namespace std::literals::string_literals;
 

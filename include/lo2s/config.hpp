@@ -22,12 +22,14 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
-#include <cstdint>
-
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 
 extern "C"
 {
@@ -58,7 +60,7 @@ struct Config
     std::vector<std::string> x86_adapt_knobs;
 #endif
     bool use_sensors;
-    int cgroup_fd = -1;
+    std::optional<Fd> cgroup_fd;
     // OTF2
     std::string trace_path;
     // perf

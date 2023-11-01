@@ -30,7 +30,7 @@ extern "C"
 #include <sys/types.h>
 }
 
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
 
 namespace lo2s
 {

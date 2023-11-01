@@ -24,10 +24,11 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/fd.hpp>
 
 #include <chrono>
+#include <optional>
 #include <vector>
 
 extern "C"
@@ -47,30 +48,30 @@ public:
 
     void stop() override;
 
-    ~PollMonitor();
-
 protected:
     void run() override;
-    void monitor() override;
 
-    void add_fd(int fd);
+    void add_fd(const Fd& fd);
 
     virtual void monitor([[maybe_unused]] int fd){};
 
-    struct pollfd& stop_pfd()
+    const Fd& stop_fd()
     {
-        return pfds_[0];
+        assert(write_fd_);
+        return write_fd_.value();
     }
 
-    struct pollfd& timer_pfd()
+    const std::optional<Fd>& timer_fd()
     {
-        return pfds_[1];
+        return timer_fd_;
     }
-
-    Pipe stop_pipe_;
 
 private:
-    std::vector<pollfd> pfds_;
+    std::optional<Fd> read_fd_;
+    std::optional<Fd> write_fd_;
+    std::optional<Fd> timer_fd_;
+    std::optional<Fd> epoll_fd_;
+    int num_fds_ = 0;
 };
 } // namespace monitor
 } // namespace lo2s

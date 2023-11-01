@@ -33,8 +33,6 @@
 
 extern "C"
 {
-#include <sys/ioctl.h>
-
 #include <linux/perf_event.h>
 }
 
@@ -79,8 +77,8 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
     leader_attr.enable_on_exec = enable_on_exec;
 
-    group_leader_fd_ = perf_try_event_open(&leader_attr, scope, -1, 0, config().cgroup_fd);
-    if (group_leader_fd_ < 0)
+    fd_ = perf_try_event_open(&leader_attr, scope, std::optional<Fd>(), 0, config().cgroup_fd);
+    if (!fd_)
     {
         Log::error() << "perf_event_open for counter group leader failed";
         throw_errno();
@@ -95,8 +93,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         {
             try
             {
-                counter_fds_.emplace_back(
-                    perf_event_description_open(scope, description, group_leader_fd_));
+                counter_fds_.emplace_back(*perf_event_description_open(scope, description, fd_));
             }
             catch (const std::system_error& e)
             {
@@ -115,17 +112,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         }
     }
 
-    if (!enable_on_exec)
-    {
-        auto ret = ::ioctl(group_leader_fd_, PERF_EVENT_IOC_ENABLE);
-        if (ret == -1)
-        {
-            Log::error() << "failed to enable perf counter group";
-            ::close(group_leader_fd_);
-            throw_errno();
-        }
-    }
-    EventReader<T>::init_mmap(group_leader_fd_);
+    EventReader<T>::init_mmap(enable_on_exec);
 }
 template class Reader<Writer>;
 } // namespace group

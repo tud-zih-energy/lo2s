@@ -31,16 +31,14 @@
 #include <lo2s/util.hpp>
 
 #include <filesystem>
-
 #include <ios>
+#include <optional>
 
 #include <cstddef>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -120,8 +118,8 @@ public:
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
 
-        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0, config().cgroup_fd);
-        if (fd_ < 0)
+        fd_ = perf_event_open(&attr, cpu.as_scope(), std::optional<Fd>(), 0, config().cgroup_fd);
+        if (fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -129,49 +127,19 @@ public:
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
                      << event_id;
 
-        try
-        {
-            // asynchronous delivery
-            // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
-            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
-            {
-                throw_errno();
-            }
-
-            init_mmap(fd_);
-            Log::debug() << "perf_tracepoint_reader mmap initialized";
-
-            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
-            if (ret == -1)
-            {
-                throw_errno();
-            }
-        }
-        catch (...)
-        {
-            close(fd_);
-            throw;
-        }
+        init_mmap();
+        Log::debug() << "perf_tracepoint_reader mmap initialized";
     }
 
     Reader(Reader&& other)
     : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
     {
-        std::swap(fd_, other.fd_);
-    }
-
-    ~Reader()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
-        }
+        fd_ = std::move(other.fd_);
     }
 
     void stop()
     {
-        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        auto ret = fd_.ioctl(PERF_EVENT_IOC_DISABLE);
         Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
@@ -182,10 +150,10 @@ public:
 
 protected:
     using EventReader<T>::init_mmap;
+    using EventReader<T>::fd_;
 
 private:
     Cpu cpu_;
-    int fd_ = -1;
     const static std::filesystem::path base_path;
 };
 

@@ -38,9 +38,7 @@
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 }
@@ -90,6 +88,7 @@ struct IoReaderIdentity
 class IoReader : public PullReader
 {
 public:
+    using PullReader::fd_;
     IoReader(IoReaderIdentity identity) : identity_(identity)
     {
         struct perf_event_attr attr = common_perf_event_attrs();
@@ -99,8 +98,8 @@ public:
 
         attr.sample_period = 1;
         attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
-        fd_ = perf_event_open(&attr, identity.cpu.as_scope(), -1, 0);
-        if (fd_ < 0)
+        fd_ = perf_event_open(&attr, identity.cpu.as_scope());
+        if (!fd_)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -110,40 +109,19 @@ public:
 
         try
         {
-            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
-            {
-                throw_errno();
-            }
-
-            init_mmap(fd_);
+            init_mmap();
             Log::debug() << "perf_tracepoint_reader mmap initialized";
-
-            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
-            if (ret == -1)
-            {
-                throw_errno();
-            }
         }
         catch (...)
         {
             Log::error() << "Couldn't initialize block:rq_insert reading";
-            close(fd_);
             throw;
-        }
-    }
-
-    ~IoReader()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
         }
     }
 
     void stop()
     {
-        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        auto ret = fd_.value().ioctl(PERF_EVENT_IOC_DISABLE);
         Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
         if (ret == -1)
         {
@@ -156,9 +134,10 @@ public:
         return reinterpret_cast<TracepointSampleType*>(get());
     }
 
-    int fd() const
+    const Fd& fd() const
     {
-        return fd_;
+        assert(fd_);
+        return fd_.value();
     }
 
     IoReader& operator=(const IoReader&) = delete;
@@ -180,7 +159,6 @@ public:
 
 private:
     IoReaderIdentity identity_;
-    int fd_ = -1;
 };
 } // namespace perf
 } // namespace lo2s

@@ -145,7 +145,7 @@ string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSI
 
 # prepare list of source files
 set(SOURCE_FILES
-    src/types.cpp
+    src/types/process.cpp
 
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
 
@@ -182,7 +182,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
+    src/topology.cpp src/bfd_resolve.cpp
     src/mmap.cpp
     src/util.cpp
     src/perf/util.cpp

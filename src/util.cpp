@@ -1,6 +1,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>
@@ -249,7 +250,7 @@ Thread gettid()
     return Thread(syscall(SYS_gettid));
 }
 
-int get_cgroup_mountpoint_fd(std::string cgroup)
+std::optional<Fd> get_cgroup_mountpoint_fd(std::string cgroup)
 {
     std::ifstream mtab("/proc/mounts");
 
@@ -272,16 +273,12 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
             {
                 std::filesystem::path cgroup_path =
                     std::filesystem::path(cgroup_match[2].str()) / cgroup;
-                int fd = open(cgroup_path.c_str(), O_RDONLY);
 
-                if (fd != -1)
-                {
-                    return fd;
-                }
+                return Fd::open(cgroup_path.c_str(), O_RDONLY);
             }
         }
     }
-    return -1;
+    return std::optional<Fd>();
 }
 
 std::set<std::uint32_t> parse_list(std::string list)

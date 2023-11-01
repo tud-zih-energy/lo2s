@@ -26,7 +26,7 @@
 #ifdef HAVE_RADARE
 #include <lo2s/radare.hpp>
 #endif
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
 #include <lo2s/util.hpp>
 
 #include <deque>

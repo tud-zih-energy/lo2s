@@ -40,11 +40,6 @@ extern "C"
 }
 #endif
 
-extern "C"
-{
-#include <sys/ioctl.h>
-}
-
 namespace lo2s
 {
 namespace perf
@@ -76,18 +71,13 @@ Reader::Reader()
 
     try
     {
-        fd_ = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
-        if (fd_ == -1)
+        fd_ = perf_event_open(&attr, ExecutionScope(Thread(0)));
+        if (!fd_)
         {
             throw_errno();
         }
 
-        init_mmap(fd_);
-
-        if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
-        {
-            throw_errno();
-        }
+        init_mmap();
     }
     catch (...)
     {
@@ -98,7 +88,6 @@ Reader::Reader()
         Log::error()
             << "opening the perf event for HW_BREAKPOINT_COMPAT time synchronization failed";
 #endif
-        close(fd_);
         throw;
     }
 
@@ -110,7 +99,6 @@ Reader::Reader()
     }
     else if (pid == -1)
     {
-        close(fd_);
         throw_errno();
     }
     waitpid(pid, NULL, 0);
@@ -124,11 +112,6 @@ bool Reader::handle(const RecordSyncType* sync_event)
     perf_time = convert_time_point(sync_event->time);
     return true;
 }
-Reader::~Reader()
-{
-    close(fd_);
-}
-
 } // namespace time
 } // namespace perf
 } // namespace lo2s

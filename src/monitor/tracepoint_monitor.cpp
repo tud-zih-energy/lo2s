@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -34,7 +35,7 @@ namespace monitor
 {
 
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
-: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
+: monitor::PollMonitor(trace, "", std::chrono::nanoseconds(0)), cpu_(cpu)
 {
     for (const auto& event_name : config().tracepoint_events)
     {
@@ -44,7 +45,8 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
             std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 
         add_fd(writer->fd());
-        perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),
+        perf_writers_.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(writer->fd().as_int()),
                               std::forward_as_tuple(std::move(writer)));
     }
 }
@@ -54,11 +56,7 @@ void TracepointMonitor::initialize_thread()
 }
 void TracepointMonitor::monitor(int fd)
 {
-    if (fd == timer_pfd().fd)
-    {
-        return;
-    }
-    else if (fd == stop_pfd().fd)
+    if (fd == stop_fd())
     {
         for (auto& perf_writer : perf_writers_)
         {

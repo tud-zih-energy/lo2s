@@ -20,7 +20,8 @@
  */
 
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
+
 namespace lo2s
 {
 
@@ -51,5 +52,4 @@ ExecutionScope Cpu::as_scope() const
 {
     return ExecutionScope(*this);
 }
-
 } // namespace lo2s

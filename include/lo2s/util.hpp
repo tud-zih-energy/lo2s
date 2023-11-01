@@ -22,7 +22,8 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/fd.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <filesystem>
 
@@ -109,7 +110,7 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 
 void try_pin_to_scope(ExecutionScope scope);
 
-int get_cgroup_mountpoint_fd(std::string cgroup);
+std::optional<Fd> get_cgroup_mountpoint_fd(std::string cgroup);
 
 Thread gettid();
 

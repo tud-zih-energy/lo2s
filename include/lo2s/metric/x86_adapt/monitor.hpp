@@ -8,6 +8,7 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/fd.hpp>
 
 #include <x86_adapt_cxx/x86_adapt.hpp>
 

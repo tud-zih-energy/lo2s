@@ -146,6 +146,23 @@ public:
         // struct sample_id sample_id;
     };
 
+    EventReader()
+    {
+    }
+    EventReader& operator=(EventReader&& other)
+    {
+        fd_ = std::move(other.fd_);
+        return *this;
+    }
+
+    EventReader(EventReader&) = delete;
+    EventReader operator=(EventReader&) = delete;
+
+    EventReader(EventReader<T>&& other)
+    {
+        fd_ = std::move(other.fd_);
+    }
+
     ~EventReader()
     {
         if (lost_samples > 0)
@@ -156,14 +173,20 @@ public:
     }
 
 protected:
-    void init_mmap(int fd)
+    void init_mmap(bool enable = false)
     {
-        fd_ = fd;
+
+        // asynchronous delivery
+        // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
+        if (fd_->fcntl(F_SETFL, O_NONBLOCK))
+        {
+            throw_errno();
+        }
 
         mmap_pages_ = config().mmap_pages;
 
         base = mmap(NULL, (mmap_pages_ + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                    fd, 0);
+                    fd_.value().as_int(), 0);
         // Should not be necessary to check for nullptr, but we've seen it!
         if (base == MAP_FAILED || base == nullptr)
         {
@@ -172,6 +195,16 @@ protected:
                             "the amount of mappable memory by increasing /proc/sys/kernel/"
                             "perf_event_mlock_kb";
             throw_errno();
+        }
+
+        if (!enable)
+        {
+            auto ret = fd_.value().ioctl(PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
         }
     }
 
@@ -342,9 +375,10 @@ private:
     }
 
 public:
-    int fd()
+    const Fd& fd()
     {
-        return fd_;
+        assert(fd_);
+        return fd_.value();
     }
 
     bool handle(const RecordForkType*)
@@ -367,9 +401,9 @@ protected:
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;
     size_t mmap_pages_ = 0;
+    std::optional<Fd> fd_;
 
 private:
-    int fd_;
     void* base;
     std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
