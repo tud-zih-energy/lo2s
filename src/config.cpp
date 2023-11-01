@@ -335,7 +335,7 @@ void parse_program_options(int argc, const char** argv)
                       "Enable recording of block I/O events (requires access to debugfs)");
 
     nec_options.toggle("nec", "Enable NEC SX-Aurora Tsubasa sampling");
-    nec_options.option("nec-readout-interval").optional().metavar("MSEC").default_value("1");
+    nec_options.option("nec-readout-interval", "NEC sampling interval in microseconds").optional().metavar("MSEC").default_value("1");
     nitro::options::arguments arguments;
     try
     {
@@ -617,8 +617,9 @@ void parse_program_options(int argc, const char** argv)
     config.userspace_read_interval =
         std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
 
-    config.nec_readout_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
+    config.nec_read_interval =
+
+        std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
 
     if (arguments.provided("perf-readout-interval"))
     {

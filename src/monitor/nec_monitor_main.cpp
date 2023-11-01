@@ -23,51 +23,62 @@
 
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
 
-int NecMonitorMain::get_nec_device_id_for_thread(Thread thread)
+  std::optional<int> NecMonitorMain::get_device_of(Thread thread)
 {
     // /sys/class/ve/ve0 is not device 0, because that would make too much sense
     // So look the device id up here
-
-    int real_device_id = -1;
+  
     for (int i = 0; i < nodeinfo_.total_node_count; i++)
     {
         if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
         {
-            real_device_id = nodeinfo_.nodeid[i];
-            break;
+            return nodeinfo_.nodeid[i];
         }
     }
-    return real_device_id;
-}
-NecMonitorMain::NecMonitorMain(trace::Trace& trace, int device)
-: ThreadedMonitor(trace, fmt::format("VE {}", device)), trace_(trace), device_(device),
-  stopped_(false)
-{
-    ve_node_info(&nodeinfo_);
+    return std::optional<int>();
 }
 
-void NecMonitorMain::run()
-{
+  std::vector<Thread> get_tasks_for(int device)
+  {
+    std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device_));
+
+    std::vector<Thread> threads;
+
+    while (task_stream)
+    {
+        pid_t pid;
+        task_stream >> pid;
+        threads.emplace_back(Thread(pid));
+        Log::error() << pid;
+    }
+
+    // For some god-forsaken reason, the last read entry from task_id_all will always be invalid
+
+    threads.pop_back();
+
+    return threads;
+  }
+
+  NecMonitorMain::NecMonitorMain(trace::Trace& trace, int device)
+  : ThreadedMonitor(trace, fmt::format("VE {}", device)), trace_(trace), device_(device),
+    stopped_(false)
+  {
+    auto ret = ve_node_info(&nodeinfo_);
+    if (ret == -1)
+    {
+        Log::error() << "Failed to get Vector Engine node information!";
+        throw_errno();
+    }
+  }
+
+  void NecMonitorMain::run()
+  {
     while (!stopped_)
     {
-        std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device_));
-
-        std::vector<Thread> threads;
-
-        while (task_stream.good())
-        {
-            pid_t pid;
-            task_stream >> pid;
-            threads.emplace_back(Thread(pid));
-        }
-
-        // For some god-forsaken reason, the last read entry from task_id_all will always be invalid
-
-        threads.pop_back();
-
+      auto threads = get_tasks_for(device_);
         for (auto monitor = monitors_.begin(); monitor != monitors_.end();)
         {
             if (std::find(threads.begin(), threads.end(), monitor->first) == threads.end())
@@ -88,9 +99,9 @@ void NecMonitorMain::run()
                 continue;
             }
 
-            int real_device_id = get_nec_device_id_for_thread(thread);
+            auto real_device_id = get_device_of(thread);
 
-            if (real_device_id == -1)
+            if (!real_device_id)
             {
                 Log::warn() << "Could not find real vector accelerator id for "
                             << thread.as_pid_t();
@@ -98,7 +109,7 @@ void NecMonitorMain::run()
             }
 
             auto ret = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                         std::forward_as_tuple(thread, trace_, real_device_id));
+                                         std::forward_as_tuple(thread, trace_, *real_device_id));
             if (ret.second)
             {
                 ret.first->second.start();
@@ -106,7 +117,7 @@ void NecMonitorMain::run()
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-}
+  }
 
 void NecMonitorMain::stop()
 {

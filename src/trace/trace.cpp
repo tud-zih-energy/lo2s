@@ -194,6 +194,13 @@ Trace::Trace()
             }
         }
     }
+
+    if(config().use_nec)
+      {
+        nec_interrupt_generator_ = registry_.create<otf2::definition::interrupt_generator>(
+            intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
+            otf2::common::base_type::decimal, 0, config().sampling_period);
+      }
 }
 
 void Trace::begin_record()

@@ -94,7 +94,7 @@ struct Config
     std::vector<int64_t> syscall_filter;
     // NEC SX-Aurora Tsubasa
     bool use_nec;
-    std::chrono::nanoseconds nec_readout_interval;
+    std::chrono::microseconds nec_read_interval;
 };
 
 const Config& config();

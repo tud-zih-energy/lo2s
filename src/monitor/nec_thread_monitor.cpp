@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <chrono>
 #include <lo2s/monitor/nec_thread_monitor.hpp>
 
 extern "C"
@@ -30,11 +31,11 @@ extern "C"
 
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
 NecThreadMonitor::NecThreadMonitor(Thread thread, trace::Trace& trace, int device)
-: ThreadedMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t())),
-  nec_readout_interval_(config().nec_readout_interval),
+  : PollMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t()), std::chrono::duration_cast<std::chrono::nanoseconds>(config().nec_read_interval)),
+  nec_read_interval_(config().nec_read_interval),
   otf2_writer_(trace.nec_writer(device, thread)), nec_thread_(thread), trace_(trace),
   device_(device), stopped_(false), cctx_manager_(trace)
 {
@@ -48,16 +49,22 @@ void NecThreadMonitor::stop()
     thread_.join();
 }
 
-void NecThreadMonitor::monitor()
+void NecThreadMonitor::monitor([[maybe_unused]] int fd)
 {
     static int reg[] = { IC };
     uint64_t val;
 
-    ve_get_regvals(device_, nec_thread_.as_pid_t(), 1, reg, &val);
+    auto ret = ve_get_regvals(device_, nec_thread_.as_pid_t(), 1, reg, &val);
+
+    if(ret == -1)
+      {
+        Log::error() << "Failed to the vector engine instruction counter value!";
+        throw_errno();
+      }
+
     otf2::chrono::time_point tp = lo2s::time::now();
     otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(val), 2,
-                                              trace_.interrupt_generator().ref());
-    std::this_thread::sleep_for(nec_readout_interval_);
+                                              trace_.nec_interrupt_generator().ref());
 }
 
 void NecThreadMonitor::finalize_thread()

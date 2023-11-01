@@ -21,12 +21,15 @@
 
 #pragma once
 
+#include <chrono>
+
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/calling_context_manager.hpp>
 #include <lo2s/trace/trace.hpp>
+
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
 class NecThreadMonitor : public PollMonitor
 {
@@ -41,9 +44,10 @@ protected:
 
     void finalize_thread() override;
 
-    void monitor([[maybe_unused]] int fd) override;
+    void monitor(int fd) override;
 
 private:
+  std::chrono::microseconds nec_read_interval_;
     otf2::writer::local& otf2_writer_;
     Thread nec_thread_;
     trace::Trace& trace_;

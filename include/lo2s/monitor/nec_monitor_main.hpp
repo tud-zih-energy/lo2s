@@ -26,14 +26,19 @@
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
 
-#include <veosinfo/veosinfo.h>
+#include <filesystem>
+#include <utility>
+
+extern "C"
+{
+#include<veosinfo / veosinfo.h>
 
 #include <libved.h>
+}
 
-#include <filesystem>
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
 class NecMonitorMain : public ThreadedMonitor
 {
@@ -52,13 +57,13 @@ protected:
     void finalize_thread() override;
 
 private:
-    int get_nec_device_id_for_thread(Thread thread);
+  std::optional<int> get_device_of(Thread thread);
 
     std::map<Thread, NecThreadMonitor> monitors_;
     trace::Trace& trace_;
     int device_;
-    bool stopped_;
-    struct ve_nodeinfo nodeinfo_;
+  std::atomic<bool> stopped_;
+    ve_nodeinfo nodeinfo_;
 };
 } // namespace monitor
 } // namespace lo2s

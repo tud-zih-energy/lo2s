@@ -129,7 +129,7 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         {
             auto monitor = nec_monitors_.emplace_back(
                 std::make_unique<NecMonitorMain>(trace_, std::stoi(nec_match[1])));
-            std::asssert(monitor.first);
+            std::assert(monitor.first);
 
             nec_monitors_.back()->start();
         }
@@ -187,13 +187,10 @@ MainMonitor::~MainMonitor()
     }
 
 #ifdef HAVE_VEOSINFO
-    if (!nec_monitors_.empty())
-    {
         for (auto& nec_monitor : nec_monitors_)
         {
             nec_monitor->stop();
         }
-    }
 #endif
 
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
