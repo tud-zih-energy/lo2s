@@ -26,7 +26,7 @@ namespace lo2s
 namespace nec
 {
 
-  std::optional<int> NecMonitorMain::get_device_of(Thread thread)
+  std::optional<NecDevice> NecMonitorMain::get_device_of(Thread thread)
 {
     // /sys/class/ve/ve0 is not device 0, because that would make too much sense
     // So look the device id up here
@@ -35,35 +35,34 @@ namespace nec
     {
         if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
         {
-            return nodeinfo_.nodeid[i];
+          return NecDevice(nodeinfo_.nodeid[i]);
         }
     }
-    return std::optional<int>();
+    return std::optional<NecDevice>();
 }
 
-  std::vector<Thread> get_tasks_for(int device)
-  {
-    std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device_));
+std::vector<Thread> NecMonitorMain::get_tasks_of(NecDevice device)
+{
+  std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device.as_int()));
 
     std::vector<Thread> threads;
 
-    while (task_stream)
+    while (true)
     {
         pid_t pid;
         task_stream >> pid;
+        if(!task_stream)
+          {
+            break;
+          }
         threads.emplace_back(Thread(pid));
-        Log::error() << pid;
     }
 
-    // For some god-forsaken reason, the last read entry from task_id_all will always be invalid
-
-    threads.pop_back();
-
     return threads;
-  }
+}
 
-  NecMonitorMain::NecMonitorMain(trace::Trace& trace, int device)
-  : ThreadedMonitor(trace, fmt::format("VE {}", device)), trace_(trace), device_(device),
+  NecMonitorMain::NecMonitorMain(trace::Trace& trace, NecDevice device)
+  : ThreadedMonitor(trace, fmt::format("{}", device)), trace_(trace), device_(device),
     stopped_(false)
   {
     auto ret = ve_node_info(&nodeinfo_);
@@ -78,7 +77,7 @@ namespace nec
   {
     while (!stopped_)
     {
-      auto threads = get_tasks_for(device_);
+      auto threads = get_tasks_of(device_);
         for (auto monitor = monitors_.begin(); monitor != monitors_.end();)
         {
             if (std::find(threads.begin(), threads.end(), monitor->first) == threads.end())

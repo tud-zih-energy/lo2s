@@ -33,28 +33,22 @@ namespace lo2s
 {
 namespace nec
 {
-NecThreadMonitor::NecThreadMonitor(Thread thread, trace::Trace& trace, int device)
+NecThreadMonitor::NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device)
   : PollMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t()), std::chrono::duration_cast<std::chrono::nanoseconds>(config().nec_read_interval)),
   nec_read_interval_(config().nec_read_interval),
   otf2_writer_(trace.nec_writer(device, thread)), nec_thread_(thread), trace_(trace),
-  device_(device), stopped_(false), cctx_manager_(trace)
+  device_(device), cctx_manager_(trace)
 {
     cctx_manager_.thread_enter(nec_thread_.as_process(), thread);
     otf2_writer_.write_calling_context_enter(lo2s::time::now(), cctx_manager_.current(), 2);
 }
 
-void NecThreadMonitor::stop()
-{
-    stopped_ = true;
-    thread_.join();
-}
-
 void NecThreadMonitor::monitor([[maybe_unused]] int fd)
 {
-    static int reg[] = { IC };
+    static int reg[] = { VE_USR_IC };
     uint64_t val;
 
-    auto ret = ve_get_regvals(device_, nec_thread_.as_pid_t(), 1, reg, &val);
+    auto ret = ve_get_regvals(device_.as_int(), nec_thread_.as_pid_t(), 1, reg, &val);
 
     if(ret == -1)
       {

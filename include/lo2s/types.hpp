@@ -256,6 +256,31 @@ public:
 private:
     int id_;
 };
+
+class NecDevice
+{
+public:
+    explicit NecDevice(int id) : id_(id)
+    {
+    }
+
+    int as_int() const
+    {
+        return id_;
+    }
+
+    friend bool operator==(const NecDevice& lhs, const NecDevice& rhs)
+    {
+        return lhs.id_ == rhs.id_;
+    }
+    friend bool operator<(const NecDevice& lhs, const NecDevice& rhs)
+    {
+        return lhs.id_ < rhs.id_;
+    }
+private:
+  int id_;
+};
+
 } // namespace lo2s
 
 namespace fmt
@@ -322,6 +347,27 @@ struct formatter<lo2s::Cpu>
         return fmt::format_to(ctx.out(), "cpu {}", cpu.as_int());
     }
 };
+
+  template <>
+  struct formatter<lo2s::NecDevice>
+  {
+    constexpr auto parse(format_parse_context& ctx)
+    {
+      auto it = ctx.begin(), end = ctx.end();
+      if(it != end && *it != '}')
+        {
+          throw format_error("invalid format");
+        }
+
+      return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::NecDevice& device, FormatContext& ctx) const
+    {
+      return fmt::format_to(ctx.out(), "VE {}", device.as_int());
+    }
+  };
 } // namespace fmt
 
 namespace std

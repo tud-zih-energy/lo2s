@@ -118,21 +118,12 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 
 #ifdef HAVE_VEOSINFO
-    const std::regex nec_regex("/sys/class/ve/ve(\\d)");
 
-    for (auto& dir_entry : std::filesystem::directory_iterator("/sys/class/ve"))
-    {
-        std::smatch nec_match;
-
-        auto path = dir_entry.path().string();
-        if (std::regex_match(path, nec_match, nec_regex))
-        {
-            auto monitor = nec_monitors_.emplace_back(
-                std::make_unique<NecMonitorMain>(trace_, std::stoi(nec_match[1])));
-            std::assert(monitor.first);
+    for(auto device : Topology::instance().nec_devices())
+      {
+        nec_monitors_.emplace_back(std::make_unique<nec::NecMonitorMain>(trace_, device ));
 
             nec_monitors_.back()->start();
-        }
     }
 #endif
 }

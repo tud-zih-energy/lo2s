@@ -411,13 +411,13 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
-otf2::writer::local& Trace::nec_writer(int device, const Thread& nec_thread)
+otf2::writer::local& Trace::nec_writer(NecDevice device, const Thread& nec_thread)
 {
 
-    auto& intern_name = intern(fmt::format("VE{} {}", device, get_nec_thread_comm(nec_thread)));
+    auto& intern_name = intern(fmt::format("{} {}", device, get_nec_thread_comm(nec_thread)));
 
     const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
-        ByNecDevice(device), intern(fmt::format("VE{}", device)), intern("NEC vector accelerator"),
+        ByNecDevice(device), intern(fmt::format("{}", device)), intern("NEC vector accelerator"),
         system_tree_root_node_);
 
     const auto& nec_location_group = registry_.emplace<otf2::definition::location_group>(

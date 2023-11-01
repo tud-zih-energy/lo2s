@@ -133,7 +133,7 @@ struct ByNecDeviceTag
 {
 };
 
-using ByNecDevice = SimpleKeyType<int, ByNecDeviceTag>;
+using ByNecDevice = SimpleKeyType<NecDevice, ByNecDeviceTag>;
 
 template <typename Definition>
 struct Holder

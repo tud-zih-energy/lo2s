@@ -31,10 +31,10 @@ namespace lo2s
 {
 namespace nec
 {
-class NecThreadMonitor : public PollMonitor
+  class NecThreadMonitor : public monitor::PollMonitor
 {
 public:
-    NecThreadMonitor(Thread thread, trace::Trace& trace, int device);
+    NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device);
 
 protected:
     std::string group() const override
@@ -51,7 +51,7 @@ private:
     otf2::writer::local& otf2_writer_;
     Thread nec_thread_;
     trace::Trace& trace_;
-    int device_;
+    NecDevice device_;
     perf::CallingContextManager cctx_manager_;
 };
 } // namespace monitor
