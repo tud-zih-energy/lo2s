@@ -277,8 +277,9 @@ public:
     {
         return lhs.id_ < rhs.id_;
     }
+
 private:
-  int id_;
+    int id_;
 };
 
 } // namespace lo2s
@@ -348,26 +349,26 @@ struct formatter<lo2s::Cpu>
     }
 };
 
-  template <>
-  struct formatter<lo2s::NecDevice>
-  {
+template <>
+struct formatter<lo2s::NecDevice>
+{
     constexpr auto parse(format_parse_context& ctx)
     {
-      auto it = ctx.begin(), end = ctx.end();
-      if(it != end && *it != '}')
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}')
         {
-          throw format_error("invalid format");
+            throw format_error("invalid format");
         }
 
-      return it;
+        return it;
     }
 
     template <typename FormatContext>
     auto format(const lo2s::NecDevice& device, FormatContext& ctx) const
     {
-      return fmt::format_to(ctx.out(), "VE {}", device.as_int());
+        return fmt::format_to(ctx.out(), "VE {}", device.as_int());
     }
-  };
+};
 } // namespace fmt
 
 namespace std

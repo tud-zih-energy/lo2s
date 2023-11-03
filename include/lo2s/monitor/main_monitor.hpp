@@ -85,7 +85,7 @@ protected:
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
 #endif
 #ifdef HAVE_VEOSINFO
-  std::vector<std::unique_ptr<nec::NecMonitorMain>> nec_monitors_;
+    std::vector<std::unique_ptr<nec::NecMonitorMain>> nec_monitors_;
 #endif
 };
 } // namespace monitor

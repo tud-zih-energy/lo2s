@@ -119,11 +119,11 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 
 #ifdef HAVE_VEOSINFO
 
-    for(auto device : Topology::instance().nec_devices())
-      {
-        nec_monitors_.emplace_back(std::make_unique<nec::NecMonitorMain>(trace_, device ));
+    for (auto device : Topology::instance().nec_devices())
+    {
+        nec_monitors_.emplace_back(std::make_unique<nec::NecMonitorMain>(trace_, device));
 
-            nec_monitors_.back()->start();
+        nec_monitors_.back()->start();
     }
 #endif
 }
@@ -178,10 +178,10 @@ MainMonitor::~MainMonitor()
     }
 
 #ifdef HAVE_VEOSINFO
-        for (auto& nec_monitor : nec_monitors_)
-        {
-            nec_monitor->stop();
-        }
+    for (auto& nec_monitor : nec_monitors_)
+    {
+        nec_monitor->stop();
+    }
 #endif
 
     // Notify trace, that we will end recording now. That means, get_time() of this call will be

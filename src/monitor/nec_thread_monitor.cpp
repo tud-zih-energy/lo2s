@@ -34,10 +34,10 @@ namespace lo2s
 namespace nec
 {
 NecThreadMonitor::NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device)
-  : PollMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t()), std::chrono::duration_cast<std::chrono::nanoseconds>(config().nec_read_interval)),
-  nec_read_interval_(config().nec_read_interval),
-  otf2_writer_(trace.nec_writer(device, thread)), nec_thread_(thread), trace_(trace),
-  device_(device), cctx_manager_(trace)
+: PollMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t()),
+              std::chrono::duration_cast<std::chrono::nanoseconds>(config().nec_read_interval)),
+  nec_read_interval_(config().nec_read_interval), otf2_writer_(trace.nec_writer(device, thread)),
+  nec_thread_(thread), trace_(trace), device_(device), cctx_manager_(trace)
 {
     cctx_manager_.thread_enter(nec_thread_.as_process(), thread);
     otf2_writer_.write_calling_context_enter(lo2s::time::now(), cctx_manager_.current(), 2);
@@ -50,11 +50,11 @@ void NecThreadMonitor::monitor([[maybe_unused]] int fd)
 
     auto ret = ve_get_regvals(device_.as_int(), nec_thread_.as_pid_t(), 1, reg, &val);
 
-    if(ret == -1)
-      {
+    if (ret == -1)
+    {
         Log::error() << "Failed to the vector engine instruction counter value!";
         throw_errno();
-      }
+    }
 
     otf2::chrono::time_point tp = lo2s::time::now();
     otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(val), 2,
@@ -70,5 +70,5 @@ void NecThreadMonitor::finalize_thread()
 
     cctx_manager_.finalize(&otf2_writer_);
 }
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s

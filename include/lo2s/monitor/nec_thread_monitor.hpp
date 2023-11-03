@@ -31,7 +31,7 @@ namespace lo2s
 {
 namespace nec
 {
-  class NecThreadMonitor : public monitor::PollMonitor
+class NecThreadMonitor : public monitor::PollMonitor
 {
 public:
     NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device);
@@ -47,12 +47,12 @@ protected:
     void monitor(int fd) override;
 
 private:
-  std::chrono::microseconds nec_read_interval_;
+    std::chrono::microseconds nec_read_interval_;
     otf2::writer::local& otf2_writer_;
     Thread nec_thread_;
     trace::Trace& trace_;
     NecDevice device_;
     perf::CallingContextManager cctx_manager_;
 };
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s

@@ -12,6 +12,7 @@
 #include <ios>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <regex>
 #include <set>
 
@@ -346,12 +347,10 @@ std::vector<std::string> get_thread_cmdline(Thread thread)
 
 std::string get_nec_thread_comm(Thread thread)
 {
-    // For normal processes, /proc/{PID}/comm contains the name of the program running in that
-    // process. For NEC processes, it instead contains the name of the program loader, ve_exec, So
-    // instead, we have to extract the name of the actual NEC program we are executing from the
-    // commandline arguments to ve_exec
-    std::string thread_name = fmt::format("{}", thread);
-
+    // We can't use /task/{pid}/comm to get the name of a NEC process because that will contain the
+    // name of the program offloader (ve_exec) instead of the program that is run. Instead, we have
+    // to parse the command line of the offloader. Thankfully, the kernel always puts '--' before
+    // the name of the program run.
     auto args = get_thread_cmdline(thread);
     for (std::size_t i = 0; i < args.size(); i++)
     {
@@ -359,10 +358,12 @@ std::string get_nec_thread_comm(Thread thread)
         {
             if (i + 1 < args.size())
             {
-                thread_name = fmt::format("{} ({})", args[i + 1], thread.as_pid_t());
+                return fmt::format("{} ({})", args[i + 1], thread.as_pid_t());
             }
         }
     }
-    return thread_name;
+
+    // If no '--' is found, fall back to the complete commandline as a name
+    return std::accumulate(args.begin(), args.end(), std::string(""));
 }
 } // namespace lo2s

@@ -71,25 +71,25 @@ public:
         return cpus_;
     }
 
-  const std::set<NecDevice> nec_devices() const
-  {
-    std::set<NecDevice> devices;
-
-    const std::regex nec_regex("/sys/class/ve/ve(\\d)");
-
-    for (auto& dir_entry : std::filesystem::directory_iterator("/sys/class/ve"))
+    const std::set<NecDevice> nec_devices() const
     {
-        std::smatch nec_match;
+        std::set<NecDevice> devices;
 
-        auto path = dir_entry.path().string();
-        if (std::regex_match(path, nec_match, nec_regex))
+        const std::regex nec_regex("/sys/class/ve/ve(\\d)");
+
+        for (auto& dir_entry : std::filesystem::directory_iterator("/sys/class/ve"))
         {
-          devices.emplace(NecDevice(std::stoi(nec_match[1])));
-        }
-    }
+            std::smatch nec_match;
 
-    return devices;
-  }
+            auto path = dir_entry.path().string();
+            if (std::regex_match(path, nec_match, nec_regex))
+            {
+                devices.emplace(NecDevice(std::stoi(nec_match[1])));
+            }
+        }
+
+        return devices;
+    }
 
     Core core_of(Cpu cpu) const
     {

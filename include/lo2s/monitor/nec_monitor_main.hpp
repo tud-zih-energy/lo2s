@@ -31,7 +31,7 @@
 
 extern "C"
 {
-#include  <veosinfo/veosinfo.h>
+#include <veosinfo/veosinfo.h>
 
 #include <libved.h>
 }
@@ -40,7 +40,7 @@ namespace lo2s
 {
 namespace nec
 {
-  class NecMonitorMain : public monitor::ThreadedMonitor
+class NecMonitorMain : public monitor::ThreadedMonitor
 {
 public:
     NecMonitorMain(trace::Trace& trace, NecDevice device);
@@ -57,13 +57,13 @@ protected:
     void finalize_thread() override;
 
 private:
-  std::optional<NecDevice> get_device_of(Thread thread);
-  std::vector<Thread> get_tasks_of(NecDevice device);
+    std::optional<NecDevice> get_device_of(Thread thread);
+    std::vector<Thread> get_tasks_of(NecDevice device);
     std::map<Thread, NecThreadMonitor> monitors_;
     trace::Trace& trace_;
     NecDevice device_;
-  std::atomic<bool> stopped_;
+    std::atomic<bool> stopped_;
     ve_nodeinfo nodeinfo_;
 };
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s

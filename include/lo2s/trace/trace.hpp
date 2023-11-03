@@ -228,10 +228,10 @@ public:
         return interrupt_generator_;
     }
 
-  const otf2::definition::interrupt_generator nec_interrupt_generator() const
-  {
-    return nec_interrupt_generator_;
-  }
+    const otf2::definition::interrupt_generator nec_interrupt_generator() const
+    {
+        return nec_interrupt_generator_;
+    }
 
     const otf2::definition::system_tree_node& system_tree_cpu_node(Cpu cpu) const
     {
@@ -260,7 +260,7 @@ public:
     }
 
     const otf2::definition::location& location(const ExecutionScope& scope)
-  {
+    {
         MeasurementScope sample_scope = MeasurementScope::sample(scope);
 
         const auto& intern_location = registry_.emplace<otf2::definition::location>(
@@ -335,7 +335,8 @@ private:
 
     otf2::definition::interrupt_generator& interrupt_generator_;
 
-  otf2::definition::detail::weak_ref<otf2::definition::interrupt_generator> nec_interrupt_generator_;
+    otf2::definition::detail::weak_ref<otf2::definition::interrupt_generator>
+        nec_interrupt_generator_;
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 
     std::map<Thread, std::string> thread_names_;

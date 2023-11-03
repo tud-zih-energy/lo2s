@@ -95,6 +95,7 @@ struct Config
     // NEC SX-Aurora Tsubasa
     bool use_nec;
     std::chrono::microseconds nec_read_interval;
+    std::chrono::milliseconds nec_check_interval;
 };
 
 const Config& config();

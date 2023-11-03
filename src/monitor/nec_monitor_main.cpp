@@ -26,16 +26,16 @@ namespace lo2s
 namespace nec
 {
 
-  std::optional<NecDevice> NecMonitorMain::get_device_of(Thread thread)
+std::optional<NecDevice> NecMonitorMain::get_device_of(Thread thread)
 {
     // /sys/class/ve/ve0 is not device 0, because that would make too much sense
     // So look the device id up here
-  
+
     for (int i = 0; i < nodeinfo_.total_node_count; i++)
     {
         if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
         {
-          return NecDevice(nodeinfo_.nodeid[i]);
+            return NecDevice(nodeinfo_.nodeid[i]);
         }
     }
     return std::optional<NecDevice>();
@@ -43,7 +43,7 @@ namespace nec
 
 std::vector<Thread> NecMonitorMain::get_tasks_of(NecDevice device)
 {
-  std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device.as_int()));
+    std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device.as_int()));
 
     std::vector<Thread> threads;
 
@@ -51,33 +51,32 @@ std::vector<Thread> NecMonitorMain::get_tasks_of(NecDevice device)
     {
         pid_t pid;
         task_stream >> pid;
-        if(!task_stream)
-          {
+        if (!task_stream)
+        {
             break;
-          }
+        }
         threads.emplace_back(Thread(pid));
     }
 
     return threads;
 }
 
-  NecMonitorMain::NecMonitorMain(trace::Trace& trace, NecDevice device)
-  : ThreadedMonitor(trace, fmt::format("{}", device)), trace_(trace), device_(device),
-    stopped_(false)
-  {
+NecMonitorMain::NecMonitorMain(trace::Trace& trace, NecDevice device)
+: ThreadedMonitor(trace, fmt::format("{}", device)), trace_(trace), device_(device), stopped_(false)
+{
     auto ret = ve_node_info(&nodeinfo_);
     if (ret == -1)
     {
         Log::error() << "Failed to get Vector Engine node information!";
         throw_errno();
     }
-  }
+}
 
-  void NecMonitorMain::run()
-  {
+void NecMonitorMain::run()
+{
     while (!stopped_)
     {
-      auto threads = get_tasks_of(device_);
+        auto threads = get_tasks_of(device_);
         for (auto monitor = monitors_.begin(); monitor != monitors_.end();)
         {
             if (std::find(threads.begin(), threads.end(), monitor->first) == threads.end())
@@ -114,9 +113,9 @@ std::vector<Thread> NecMonitorMain::get_tasks_of(NecDevice device)
                 ret.first->second.start();
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(config().nec_check_interval);
     }
-  }
+}
 
 void NecMonitorMain::stop()
 {
@@ -131,5 +130,5 @@ void NecMonitorMain::finalize_thread()
         monitor.second.stop();
     }
 }
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s
