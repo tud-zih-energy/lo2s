@@ -25,6 +25,9 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
+#ifdef HAVE_LIBPFM
+#include <lo2s/perf/pfm.hpp>
+#endif
 #include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
@@ -49,10 +52,7 @@ extern "C"
 
 namespace
 {
-#define PERF_EVENT(name, type, id)                                                                 \
-    {                                                                                              \
-        (name), (type), (id)                                                                       \
-    }
+#define PERF_EVENT(name, type, id) { (name), (type), (id) }
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
@@ -156,7 +156,7 @@ namespace perf
 
 const EventDescription sysfs_read_event(const std::string& ev_desc);
 
-static bool event_is_openable(EventDescription& ev)
+bool event_is_openable(EventDescription& ev)
 {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
@@ -628,8 +628,19 @@ EventDescription EventProvider::cache_event(const std::string& name)
     }
     catch (const InvalidEvent& e)
     {
+#ifdef HAVE_LIBPFM
+        auto ev = PFM4::instance().pfm4_read_event(name);
+        if (!ev)
+        {
+            event_map_.emplace(name, DescriptionCache::make_invalid());
+            throw e;
+        }
+
+        return *ev;
+#else
         event_map_.emplace(name, DescriptionCache::make_invalid());
         throw e;
+#endif
     }
 }
 

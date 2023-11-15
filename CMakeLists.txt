@@ -31,6 +31,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Binutils_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
+    Libpfm_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
 )
@@ -43,6 +44,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
+    set(Libpfm_USE_STATIC_LIBS  OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -53,6 +55,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -64,6 +67,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -101,6 +105,7 @@ find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 find_package(Veosinfo)
+find_package(Libpfm)
 find_package(PkgConfig)
 
 if(PkgConfig_FOUND)
@@ -118,6 +123,8 @@ option(UML_LOOK "Generate graphs with an UML look" OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
 CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
 add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
+CMAKE_DEPENDENT_OPTION(USE_LIBPFM "Use libpfm to retrieve metric information." ON "Libpfm_FOUND" OFF)
+add_feature_info("USE_LIBPFM" USE_LIBPFM "Use libpfm to retrieve metric information.")
 CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" ON Audit_FOUND OFF)
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
@@ -278,6 +285,15 @@ if (USE_VEOSINFO)
                                     src/monitor/nec_monitor_main.cpp)
     else()
         message(SEND_ERROR "Veosinfo not found but requested.")
+    endif()
+endif()
+
+if (USE_LIBPFM)
+    if (Libpfm_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_LIBPFM)
+        target_link_libraries(lo2s PRIVATE Libpfm::libpfm)
+    else()
+        message(SEND_ERROR "Libpfm not found but requested.")
     endif()
 endif()
 
