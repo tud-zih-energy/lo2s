@@ -55,6 +55,23 @@ struct __attribute((__packed__)) RecordBlock
     char rwbs[8]; // the type of the operation. "R" for read, "W" for write, etc.
 };
 
+struct __attribute((__packed__)) RecordBioQueue
+{
+    TracepointSampleType header;
+    uint16_t common_type; // common fields included in all tracepoints, ignored here
+    uint8_t common_flag;
+    uint8_t common_preempt_count;
+    int32_t common_pid;
+
+    uint32_t dev;    // the accessed device (as dev_t)
+    char padding[4]; // padding because of struct alignment
+    uint64_t sector; // the accessed sector on the device
+
+    uint32_t nr_sector; // the number of sector_cache_ written
+
+    char rwbs[8]; // the type of the operation. "R" for read, "W" for write, etc.
+};
+
 class Writer
 {
 public:
@@ -64,50 +81,71 @@ public:
 
     void write(IoReaderIdentity& identity, TracepointSampleType* header)
     {
-        struct RecordBlock* event = (RecordBlock*)header;
-
-        otf2::common::io_operation_mode_type mode = otf2::common::io_operation_mode_type::flush;
-        // TODO: Handle the few io operations that arent either reads or write
-        if (event->rwbs[0] == 'R')
+        if (identity.tracepoint == bio_queue_)
         {
-            mode = otf2::common::io_operation_mode_type::read;
-        }
-        else if (event->rwbs[0] == 'W')
-        {
-            mode = otf2::common::io_operation_mode_type::write;
-        }
-        else
-        {
-            return;
-        }
+            struct RecordBioQueue* event = (RecordBioQueue*)header;
 
-        // Something seems to be broken about the dev_t dev field returned from the block_rq_*
-        // tracepoints What works is extracting the major:minor numbers from the dev field with
-        // bitshifts as documented in block/block_rq_*/format So first convert the dev field into
-        // major:minor numbers and then use the makedev macro to get an unbroken dev_t.
-        BlockDevice dev =
-            BlockDevice::block_device_for(makedev(event->dev >> 20, event->dev & ((1U << 20) - 1)));
+            otf2::common::io_operation_mode_type mode = otf2::common::io_operation_mode_type::flush;
+            // TODO: Handle the few io operations that arent either reads or write
+            if (event->rwbs[0] == 'R')
+            {
+                mode = otf2::common::io_operation_mode_type::read;
+            }
+            else if (event->rwbs[0] == 'W')
+            {
+                mode = otf2::common::io_operation_mode_type::write;
+            }
+            else
+            {
+                return;
+            }
 
-        otf2::writer::local& writer = trace_.bio_writer(dev);
-        otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+            BlockDevice dev = block_device_for<RecordBioQueue>(event);
 
-        auto size = event->nr_sector * SECTOR_SIZE;
+            otf2::writer::local& writer = trace_.bio_writer(dev);
+            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+            auto size = event->nr_sector * SECTOR_SIZE;
 
-        if (identity.tracepoint == bio_insert_)
-        {
+            sector_cache_[dev][event->sector] += size;
             writer << otf2::event::io_operation_begin(
                 time_converter_(event->header.time), handle, mode,
                 otf2::common::io_operation_flag_type::non_blocking, size, event->sector);
         }
         else if (identity.tracepoint == bio_issue_)
         {
+            struct RecordBlock* event = (RecordBlock*)header;
+
+            BlockDevice dev = block_device_for<RecordBlock>(event);
+
+            if (sector_cache_.count(dev) == 0 || sector_cache_.at(dev).count(event->sector) == 0)
+            {
+                return;
+            }
+
+            otf2::writer::local& writer = trace_.bio_writer(dev);
+            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+
             writer << otf2::event::io_operation_issued(time_converter_(event->header.time), handle,
                                                        event->sector);
         }
         else if (identity.tracepoint == bio_complete_)
         {
+            struct RecordBlock* event = (RecordBlock*)header;
+
+            BlockDevice dev = block_device_for<RecordBlock>(event);
+
+            if (sector_cache_.count(dev) == 0 && sector_cache_[dev].count(event->sector) == 0)
+            {
+                return;
+            }
+
+            otf2::writer::local& writer = trace_.bio_writer(dev);
+            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
+
             writer << otf2::event::io_operation_complete(time_converter_(event->header.time),
-                                                         handle, size, event->sector);
+                                                         handle, sector_cache_[dev][event->sector],
+                                                         event->sector);
+            sector_cache_[dev][event->sector] = 0;
         }
         else
         {
@@ -119,18 +157,31 @@ public:
     std::vector<tracepoint::EventFormat> get_tracepoints()
     {
 
-        bio_insert_ = tracepoint::EventFormat("block:block_rq_insert");
+        bio_queue_ = tracepoint::EventFormat("block:block_bio_queue");
         bio_issue_ = tracepoint::EventFormat("block:block_rq_issue");
         bio_complete_ = tracepoint::EventFormat("block:block_rq_complete");
 
-        return { bio_insert_, bio_issue_, bio_complete_ };
+        return { bio_queue_, bio_issue_, bio_complete_ };
     }
 
 private:
+    template <class T>
+    BlockDevice block_device_for(T* event)
+    {
+        // Something seems to be broken about the dev_t dev field returned from the block_rq_*
+        // tracepoints What works is extracting the major:minor numbers from the dev field with
+        // bitshifts as documented in block/block_rq_*/format So first convert the dev field
+        // into major:minor numbers and then use the makedev macro to get an unbroken dev_t.
+        return BlockDevice::block_device_for(
+            makedev(event->dev >> 20, event->dev & ((1U << 20) - 1)));
+    }
+
+private:
+    std::map<BlockDevice, std::map<uint64_t, uint64_t>> sector_cache_;
     trace::Trace& trace_;
     time::Converter& time_converter_;
 
-    tracepoint::EventFormat bio_insert_;
+    tracepoint::EventFormat bio_queue_;
     tracepoint::EventFormat bio_issue_;
     tracepoint::EventFormat bio_complete_;
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
