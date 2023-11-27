@@ -190,12 +190,12 @@ static bool event_is_openable(EventDescription& ev)
             return false;
         }
     }
-    else if (sys_fd == -1)
+    if (sys_fd == -1 && proc_fd != -1)
     {
         close(proc_fd);
         ev.availability = Availability::PROCESS_MODE;
     }
-    else if (proc_fd == -1)
+    else if (proc_fd == -1 && sys_fd != -1)
     {
         close(sys_fd);
         ev.availability = Availability::SYSTEM_MODE;
