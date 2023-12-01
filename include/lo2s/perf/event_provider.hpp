@@ -21,12 +21,12 @@
 
 #pragma once
 
+#include <lo2s/perf/event_description.hpp>
+
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <lo2s/perf/event_description.hpp>
 
 namespace lo2s
 {
@@ -111,5 +111,7 @@ private:
 
     EventMap event_map_;
 };
+
+bool event_is_openable(EventDescription& ev);
 } // namespace perf
 } // namespace lo2s
