@@ -25,6 +25,7 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/perf/counter/group/writer.hpp>
+#include <lo2s/perf/counter/topdown/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 
 #include <lo2s/perf/sample/writer.hpp>
@@ -74,6 +75,8 @@ private:
     std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
+
+    std::unique_ptr<perf::counter::topdown::Writer> topdown_writer_;
 };
 } // namespace monitor
 } // namespace lo2s

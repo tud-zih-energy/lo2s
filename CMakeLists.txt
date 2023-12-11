@@ -170,6 +170,9 @@ set(SOURCE_FILES
     src/perf/counter/userspace/reader.cpp
 
     src/perf/counter/userspace/writer.cpp
+    src/perf/counter/topdown/reader.cpp
+
+    src/perf/counter/topdown/writer.cpp
     src/perf/counter/group/writer.cpp
 
     src/perf/sample/writer.cpp
