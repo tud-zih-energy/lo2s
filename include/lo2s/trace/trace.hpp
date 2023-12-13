@@ -130,7 +130,6 @@ public:
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
-    otf2::writer::local& switch_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const Cpu& cpu);
     otf2::writer::local& bio_writer(BlockDevice dev);

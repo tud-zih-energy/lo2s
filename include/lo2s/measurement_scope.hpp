@@ -29,7 +29,6 @@ enum class MeasurementScopeType
     SAMPLE,
     GROUP_METRIC,
     USERSPACE_METRIC,
-    SWITCH,
     BIO,
     SYSCALL,
     UNKNOWN
@@ -61,11 +60,6 @@ struct MeasurementScope
     static MeasurementScope userspace_metric(ExecutionScope s)
     {
         return { MeasurementScopeType::USERSPACE_METRIC, s };
-    }
-
-    static MeasurementScope context_switch(ExecutionScope s)
-    {
-        return { MeasurementScopeType::SWITCH, s };
     }
 
     static MeasurementScope bio(ExecutionScope s)
@@ -103,8 +97,6 @@ struct MeasurementScope
             return fmt::format("metrics for {}", scope.name());
         case MeasurementScopeType::SAMPLE:
             return fmt::format("samples for {}", scope.name());
-        case MeasurementScopeType::SWITCH:
-            return fmt::format("context switches for {}", scope.name());
         case MeasurementScopeType::BIO:
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:

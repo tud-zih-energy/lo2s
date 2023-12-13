@@ -453,21 +453,6 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::switch_writer(const ExecutionScope& writer_scope)
-{
-    MeasurementScope scope = MeasurementScope::context_switch(writer_scope);
-
-    const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(writer_scope))),
-        otf2::definition::location::location_type::cpu_thread);
-
-    comm_locations_group_.add_member(intern_location);
-
-    return archive_(intern_location);
-}
-
 otf2::writer::local& Trace::create_metric_writer(const std::string& name)
 {
     const auto& location = registry_.create<otf2::definition::location>(
