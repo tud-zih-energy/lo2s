@@ -366,4 +366,25 @@ std::string get_nec_thread_comm(Thread thread)
     // If no '--' is found, fall back to the complete commandline as a name
     return std::accumulate(args.begin(), args.end(), std::string(""));
 }
+
+struct rlimit initial_rlimit_fd()
+{
+    static struct rlimit current;
+
+    if (current.rlim_cur == 0)
+    {
+        getrlimit(RLIMIT_NOFILE, &current);
+    }
+
+    return current;
+}
+
+void bump_rlimit_fd()
+{
+    struct rlimit highest;
+    getrlimit(RLIMIT_NOFILE, &highest);
+
+    highest.rlim_cur = highest.rlim_max;
+    setrlimit(RLIMIT_NOFILE, &highest);
+}
 } // namespace lo2s
