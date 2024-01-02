@@ -55,6 +55,9 @@ namespace monitor
 
 [[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
+    struct rlimit initial_rlimit = initial_rlimit_fd();
+    setrlimit(RLIMIT_NOFILE, &initial_rlimit);
+
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
 
@@ -109,6 +112,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
             throw_errno();
         }
     }
+
     if (process == Process::invalid())
     {
         Log::error() << "Fork failed.";

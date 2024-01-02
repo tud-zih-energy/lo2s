@@ -24,11 +24,20 @@
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/summary.hpp>
+#include <lo2s/util.hpp>
 
 #include <system_error>
 
 int main(int argc, const char** argv)
 {
+    // The resource limit for file descriptors (which lo2s uses a lot of, especially in
+    // system-monitoring mode) is artifically low to cope with the ancient select() systemcall. We
+    // do not use select(), so we can safely bump the limit, but whatever command we are running
+    // under lo2s might (and resource limits are preserved accross fork()) so preserve it here so
+    // that we can restore it later
+    lo2s::initial_rlimit_fd();
+    lo2s::bump_rlimit_fd();
+
     try
     {
         lo2s::parse_program_options(argc, argv);

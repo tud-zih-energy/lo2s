@@ -40,6 +40,7 @@
 
 extern "C"
 {
+#include <sys/resource.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -113,6 +114,9 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads();
 void try_pin_to_scope(ExecutionScope scope);
 
 int get_cgroup_mountpoint_fd(std::string cgroup);
+
+void bump_rlimit_fd();
+struct rlimit initial_rlimit_fd();
 
 Thread gettid();
 
