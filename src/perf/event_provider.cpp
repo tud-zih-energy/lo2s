@@ -499,6 +499,14 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
     auto cpuids = parse_list_from_file(pmu_path / "cpus");
     std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
+
+    // Uncore events, like power consumption, are not part of a cpu, but for the purposes of being
+    // openable with perf, they are associated with one. Which one can be parsed from the cpumask
+    // file.
+    auto cpumask = parse_list_from_file(pmu_path / "cpumask");
+    std::transform(cpumask.begin(), cpumask.end(), std::inserter(cpus, cpus.end()),
+                   [](uint32_t cpumask) { return Cpu(cpumask); });
+
     EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus);
 
     // Parse event configuration from sysfs //
