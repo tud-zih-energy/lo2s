@@ -245,6 +245,12 @@ void parse_program_options(int argc, const char** argv)
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
     system_mode_options
+        .toggle("process-recording", "Record process activity. In system monitoring: "
+                                     "(default: enabled)")
+        .allow_reverse()
+        .default_value(true);
+
+    system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
                             "Monitor as long as COMMAND is running or until PID exits.")
         .short_name("a");
@@ -646,6 +652,7 @@ void parse_program_options(int argc, const char** argv)
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
         config.sampling = false;
+        config.process_recording = arguments.given("process-recording");
 
         // The check for instruction sampling is a bit more complicated, because the default value
         // is different depending on the monitoring mode. This check here is only relevant for
@@ -679,6 +686,7 @@ void parse_program_options(int argc, const char** argv)
 
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
+        config.process_recording = false;
 
         if (!arguments.given("instruction-sampling"))
         {

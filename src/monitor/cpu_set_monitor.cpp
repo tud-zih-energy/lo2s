@@ -63,7 +63,10 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
+    if (config().sampling || config().process_recording)
+    {
+        trace_.add_threads(get_comms_for_running_threads());
+    }
 
     try
     {
@@ -138,8 +141,10 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
-
+    if (config().sampling || config().process_recording)
+    {
+        trace_.add_threads(get_comms_for_running_threads());
+    }
     for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.stop();
