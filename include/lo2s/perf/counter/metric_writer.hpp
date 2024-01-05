@@ -38,7 +38,7 @@ public:
     MetricWriter(MeasurementScope scope, trace::Trace& trace)
     : time_converter_(time::Converter::instance()), writer_(trace.metric_writer(scope)),
       metric_instance_(trace.metric_instance(trace.perf_metric_class(scope), writer_.location(),
-                                             trace.location(scope.scope))),
+                                             trace.sample_writer(scope.scope).location())),
       metric_event_(otf2::chrono::genesis(), metric_instance_)
     {
     }

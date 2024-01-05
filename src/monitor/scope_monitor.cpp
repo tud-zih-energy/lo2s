@@ -43,7 +43,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
                            bool is_process)
 : PollMonitor(parent.trace(), scope.name(), config().perf_read_interval), scope_(scope)
 {
-    if (config().sampling || scope.is_cpu())
+    if (config().sampling || config().process_recording)
     {
         sample_writer_ =
             std::make_unique<perf::sample::Writer>(scope, parent, parent.trace(), enable_on_exec);

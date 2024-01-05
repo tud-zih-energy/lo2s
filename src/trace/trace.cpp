@@ -421,12 +421,29 @@ void Trace::add_lo2s_property(const std::string& name, const std::string& value)
         system_tree_root_node_, intern(property_name), otf2::attribute_value{ intern(value) });
 }
 
-otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
+otf2::writer::local& Trace::sample_writer(const ExecutionScope& scope)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
-    return archive_(location(writer_scope));
+    MeasurementScope sample_scope = MeasurementScope::sample(scope);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(sample_scope), intern(sample_scope.name()),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_parent(scope))),
+        otf2::definition::location::location_type::cpu_thread);
+
+    comm_locations_group_.add_member(intern_location);
+
+    if (groups_.get_parent(scope).is_process())
+    {
+        registry_
+            .get<otf2::definition::comm_group>(ByProcess(groups_.get_process(scope.as_thread())))
+            .add_member(intern_location);
+    }
+
+    return archive_(intern_location);
 }
 
 otf2::writer::local& Trace::cuda_writer(const Thread& thread)

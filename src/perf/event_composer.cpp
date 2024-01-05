@@ -114,7 +114,7 @@ EventAttr EventComposer::create_sampling_event()
     }
     else
     {
-        EventAttr event = EventResolver::instance().get_event_by_name("dummy");
+        sampling_event_ = EventResolver::instance().get_event_by_name("dummy");
     }
 
     sampling_event_->set_sample_id_all();

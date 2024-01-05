@@ -199,6 +199,11 @@ way to support the large PEBS feature of newer (Skylake+) Intel processors
 
 If set, only perf events for processes in the I<NAME> cgroup are recorded.
 
+=item B<-->[B<no->]B<process-recording>
+
+If set, process scheduling information is recorded. This is enabled by default in
+system-monitoring mode.
+
 =item B<--list-clockids>
 
 List the names of clocks that can be used as I<CLOCKID> argument.
