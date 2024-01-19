@@ -134,6 +134,7 @@ public:
     otf2::writer::local& syscall_writer(const Cpu& cpu);
     otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
+    otf2::writer::local& nec_writer(NecDevice device, const Thread& nec_thread);
 
     otf2::definition::io_handle& block_io_handle(BlockDevice dev);
 
@@ -225,6 +226,12 @@ public:
     {
         return interrupt_generator_;
     }
+
+    const otf2::definition::interrupt_generator nec_interrupt_generator() const
+    {
+        return nec_interrupt_generator_;
+    }
+
     const otf2::definition::system_tree_node& system_tree_cpu_node(Cpu cpu) const
     {
         return registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu));
@@ -327,6 +334,8 @@ private:
 
     otf2::definition::interrupt_generator& interrupt_generator_;
 
+    otf2::definition::detail::weak_ref<otf2::definition::interrupt_generator>
+        nec_interrupt_generator_;
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 
     std::map<Thread, std::string> thread_names_;

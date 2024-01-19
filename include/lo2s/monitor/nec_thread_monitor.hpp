@@ -21,56 +21,38 @@
 
 #pragma once
 
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
-#include <lo2s/trace/fwd.hpp>
-
 #include <chrono>
-#include <vector>
 
-extern "C"
-{
-#include <poll.h>
-}
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/calling_context_manager.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
-class PollMonitor : public ThreadedMonitor
+class NecThreadMonitor : public monitor::PollMonitor
 {
 public:
-    PollMonitor(trace::Trace& trace, const std::string& name,
-                std::chrono::nanoseconds read_interval);
-
-    void stop() override;
-
-    ~PollMonitor();
+    NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device);
 
 protected:
-    void run() override;
-    void monitor();
-
-    void add_fd(int fd);
-
-    virtual void monitor([[maybe_unused]] int fd){};
-
-    struct pollfd& stop_pfd()
+    std::string group() const override
     {
-        return pfds_[0];
+        return "nec::ThreadMonitor";
     }
 
-    struct pollfd& timer_pfd()
-    {
-        return pfds_[1];
-    }
+    void finalize_thread() override;
 
-    Pipe stop_pipe_;
+    void monitor(int fd) override;
 
 private:
-    std::vector<pollfd> pfds_;
+    std::chrono::microseconds nec_read_interval_;
+    otf2::writer::local& otf2_writer_;
+    Thread nec_thread_;
+    trace::Trace& trace_;
+    NecDevice device_;
+    perf::CallingContextManager cctx_manager_;
 };
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s

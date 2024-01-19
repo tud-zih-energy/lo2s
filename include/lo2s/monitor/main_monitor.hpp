@@ -33,8 +33,10 @@
 #endif
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/io_monitor.hpp>
+#ifdef HAVE_VEOSINFO
+#include <lo2s/monitor/nec_monitor_main.hpp>
+#endif
 #include <lo2s/monitor/tracepoint_monitor.hpp>
-#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
@@ -81,6 +83,9 @@ protected:
 #endif
 #ifdef HAVE_SENSORS
     std::unique_ptr<metric::sensors::Recorder> sensors_recorder_;
+#endif
+#ifdef HAVE_VEOSINFO
+    std::vector<std::unique_ptr<nec::NecMonitorMain>> nec_monitors_;
 #endif
 };
 } // namespace monitor

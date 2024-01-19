@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,56 +21,49 @@
 
 #pragma once
 
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
+#include <lo2s/monitor/nec_thread_monitor.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
-#include <lo2s/trace/fwd.hpp>
+#include <lo2s/trace/trace.hpp>
+#include <lo2s/types.hpp>
 
-#include <chrono>
-#include <vector>
+#include <filesystem>
+#include <utility>
 
 extern "C"
 {
-#include <poll.h>
+#include <veosinfo/veosinfo.h>
+
+#include <libved.h>
 }
 
 namespace lo2s
 {
-namespace monitor
+namespace nec
 {
-class PollMonitor : public ThreadedMonitor
+class NecMonitorMain : public monitor::ThreadedMonitor
 {
 public:
-    PollMonitor(trace::Trace& trace, const std::string& name,
-                std::chrono::nanoseconds read_interval);
+    NecMonitorMain(trace::Trace& trace, NecDevice device);
 
     void stop() override;
 
-    ~PollMonitor();
-
 protected:
+    std::string group() const override
+    {
+        return "nec::MonitorMain";
+    }
+
     void run() override;
-    void monitor();
-
-    void add_fd(int fd);
-
-    virtual void monitor([[maybe_unused]] int fd){};
-
-    struct pollfd& stop_pfd()
-    {
-        return pfds_[0];
-    }
-
-    struct pollfd& timer_pfd()
-    {
-        return pfds_[1];
-    }
-
-    Pipe stop_pipe_;
+    void finalize_thread() override;
 
 private:
-    std::vector<pollfd> pfds_;
+    std::optional<NecDevice> get_device_of(Thread thread);
+    std::vector<Thread> get_tasks_of(NecDevice device);
+    std::map<Thread, NecThreadMonitor> monitors_;
+    trace::Trace& trace_;
+    NecDevice device_;
+    std::atomic<bool> stopped_;
+    ve_nodeinfo nodeinfo_;
 };
-} // namespace monitor
+} // namespace nec
 } // namespace lo2s

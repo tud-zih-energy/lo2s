@@ -12,6 +12,7 @@
 #include <ios>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <regex>
 #include <set>
 
@@ -326,5 +327,43 @@ std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
     }
 
     return std::set<std::uint32_t>();
+}
+
+std::vector<std::string> get_thread_cmdline(Thread thread)
+{
+    std::ifstream cmdline(fmt::format("/proc/{}/cmdline", thread.as_pid_t()));
+    std::string cmdline_str;
+    cmdline >> cmdline_str;
+
+    const char* cmdline_c_str = cmdline_str.c_str();
+    std::vector<std::string> args;
+    while (cmdline_c_str < cmdline_str.c_str() + cmdline_str.length())
+    {
+        args.emplace_back(std::string(cmdline_c_str));
+        cmdline_c_str += args.back().length() + 1;
+    }
+    return args;
+}
+
+std::string get_nec_thread_comm(Thread thread)
+{
+    // We can't use /task/{pid}/comm to get the name of a NEC process because that will contain the
+    // name of the program offloader (ve_exec) instead of the program that is run. Instead, we have
+    // to parse the command line of the offloader. Thankfully, the kernel always puts '--' before
+    // the name of the program run.
+    auto args = get_thread_cmdline(thread);
+    for (std::size_t i = 0; i < args.size(); i++)
+    {
+        if (args[i] == "--")
+        {
+            if (i + 1 < args.size())
+            {
+                return fmt::format("{} ({})", args[i + 1], thread.as_pid_t());
+            }
+        }
+    }
+
+    // If no '--' is found, fall back to the complete commandline as a name
+    return std::accumulate(args.begin(), args.end(), std::string(""));
 }
 } // namespace lo2s

@@ -194,6 +194,13 @@ Trace::Trace()
             }
         }
     }
+
+    if (config().use_nec)
+    {
+        nec_interrupt_generator_ = registry_.create<otf2::definition::interrupt_generator>(
+            intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
+            otf2::common::base_type::decimal, 0, config().sampling_period);
+    }
 }
 
 void Trace::begin_record()
@@ -402,6 +409,25 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 
     return archive_(location(writer_scope));
+}
+
+otf2::writer::local& Trace::nec_writer(NecDevice device, const Thread& nec_thread)
+{
+
+    auto& intern_name = intern(fmt::format("{} {}", device, get_nec_thread_comm(nec_thread)));
+
+    const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
+        ByNecDevice(device), intern(fmt::format("{}", device)), intern("NEC vector accelerator"),
+        system_tree_root_node_);
+
+    const auto& nec_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByNecThread(nec_thread), intern_name, otf2::common::location_group_type::process, node);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByNecThread(nec_thread), intern_name, nec_location_group,
+        otf2::definition::location::location_type::cpu_thread);
+
+    return archive_(intern_location);
 }
 
 otf2::writer::local& Trace::syscall_writer(const Cpu& cpu)

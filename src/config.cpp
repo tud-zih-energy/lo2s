@@ -160,6 +160,7 @@ void parse_program_options(int argc, const char** argv)
     auto& x86_energy_options = parser.group("x86_energy options");
     auto& sensors_options = parser.group("sensors options");
     auto& io_options = parser.group("I/O recording options");
+    auto& nec_options = parser.group("NEC SX-Aurora Tsubasa recording options");
 
     lo2s::Config config;
 
@@ -333,6 +334,16 @@ void parse_program_options(int argc, const char** argv)
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
 
+    nec_options.toggle("nec", "Enable NEC Vector Engine sampling");
+    nec_options.option("nec-readout-interval", "NEC sampling interval")
+        .optional()
+        .metavar("USEC")
+        .default_value("1");
+    nec_options.option("nec-check-interval", "The interval between checks for new VE processes")
+        .optional()
+        .metavar("MSEC")
+        .default_value("100");
+
     nitro::options::arguments arguments;
     try
     {
@@ -358,6 +369,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
+    config.use_nec = arguments.given("nec");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
@@ -612,6 +624,12 @@ void parse_program_options(int argc, const char** argv)
 
     config.userspace_read_interval =
         std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
+
+    config.nec_read_interval =
+        std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
+
+    config.nec_check_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-check-interval"));
 
     if (arguments.provided("perf-readout-interval"))
     {
