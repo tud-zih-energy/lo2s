@@ -126,14 +126,17 @@ using ByEventDescription = SimpleKeyType<perf::EventDescription, ByEventDescript
 struct ByCounterCollectionTag
 {
 };
-
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
 struct ByNecDeviceTag
 {
 };
-
 using ByNecDevice = SimpleKeyType<NecDevice, ByNecDeviceTag>;
+
+struct ByMeasurementScopeTypeTag
+{
+};
+using ByMeasurementScopeType = SimpleKeyType<MeasurementScopeType, ByMeasurementScopeTypeTag>;
 
 template <typename Definition>
 struct Holder
@@ -156,7 +159,7 @@ template <>
 struct Holder<otf2::definition::metric_class>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString,
-                                                ByCounterCollection>;
+                                                ByCounterCollection, ByMeasurementScopeType>;
 };
 
 template <>
