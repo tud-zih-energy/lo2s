@@ -30,6 +30,7 @@ enum class MeasurementScopeType
     SAMPLE,
     GROUP_METRIC,
     USERSPACE_METRIC,
+    NEC_METRIC,
     BIO,
     SYSCALL,
     UNKNOWN
@@ -56,6 +57,11 @@ struct MeasurementScope
     static MeasurementScope group_metric(ExecutionScope s)
     {
         return { MeasurementScopeType::GROUP_METRIC, s };
+    }
+
+    static MeasurementScope nec_metric(ExecutionScope s)
+    {
+        return { MeasurementScopeType::NEC_METRIC, s };
     }
 
     static MeasurementScope userspace_metric(ExecutionScope s)
@@ -97,6 +103,8 @@ struct MeasurementScope
         case MeasurementScopeType::GROUP_METRIC:
         case MeasurementScopeType::USERSPACE_METRIC:
             return fmt::format("metrics for {}", scope.name());
+        case MeasurementScopeType::NEC_METRIC:
+            return fmt::format("metrics for NEC {}", scope.name());
         case MeasurementScopeType::SAMPLE:
             return fmt::format("samples for {}", scope.name());
         case MeasurementScopeType::BIO:
