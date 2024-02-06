@@ -373,7 +373,12 @@ struct rlimit initial_rlimit_fd()
 
     if (current.rlim_cur == 0)
     {
-        getrlimit(RLIMIT_NOFILE, &current);
+        auto ret = getrlimit(RLIMIT_NOFILE, &current);
+
+        if (ret == -1)
+        {
+            Log::warn() << "Could not read file descriptor resource limit!";
+        }
     }
 
     return current;
@@ -382,9 +387,28 @@ struct rlimit initial_rlimit_fd()
 void bump_rlimit_fd()
 {
     struct rlimit highest;
-    getrlimit(RLIMIT_NOFILE, &highest);
+
+    auto ret = getrlimit(RLIMIT_NOFILE, &highest);
+
+    if (ret == -1)
+    {
+        Log::warn()
+            << "Could not read file descriptor hard resource limit, lo2s might run out of file "
+               "descriptors!";
+        Log::warn()
+            << "If you encounter issues, try to manually increase the file descriptor rlimit.";
+        return;
+    }
 
     highest.rlim_cur = highest.rlim_max;
-    setrlimit(RLIMIT_NOFILE, &highest);
+    ret = setrlimit(RLIMIT_NOFILE, &highest);
+
+    if (ret == -1)
+    {
+        Log::warn() << "Could not increase file descriptor resource limit, lo2s might run out of "
+                       "file descriptors!";
+        Log::warn() << "If you encounter issues, try to manually increase the file descriptor "
+                       "resource limit.";
+    }
 }
 } // namespace lo2s

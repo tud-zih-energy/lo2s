@@ -56,7 +56,16 @@ namespace monitor
 [[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
     struct rlimit initial_rlimit = initial_rlimit_fd();
-    setrlimit(RLIMIT_NOFILE, &initial_rlimit);
+
+    if (initial_rlimit.rlim_cur == 0)
+    {
+        Log::warn() << "Could not reset file descriptor limit to initial limit, the program under "
+                       "measurement might behave erratically!";
+    }
+    else
+    {
+        setrlimit(RLIMIT_NOFILE, &initial_rlimit);
+    }
 
     /* kill yourself if the parent dies */
     prctl(PR_SET_PDEATHSIG, SIGHUP);
