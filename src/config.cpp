@@ -161,6 +161,7 @@ void parse_program_options(int argc, const char** argv)
     auto& sensors_options = parser.group("sensors options");
     auto& io_options = parser.group("I/O recording options");
     auto& nec_options = parser.group("NEC SX-Aurora Tsubasa recording options");
+    auto& nvidia_options = parser.group("Nvidia CUDA instrumentation options");
 
     lo2s::Config config;
 
@@ -344,6 +345,8 @@ void parse_program_options(int argc, const char** argv)
         .metavar("MSEC")
         .default_value("100");
 
+    nvidia_options.toggle("nvidia", "Enable Nvidia CUPTI instrumentation");
+
     nitro::options::arguments arguments;
     try
     {
@@ -370,6 +373,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
     config.use_nec = arguments.given("nec");
+    config.use_nvidia = arguments.given("nvidia");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))

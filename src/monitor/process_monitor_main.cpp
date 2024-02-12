@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <filesystem>
 #include <lo2s/monitor/process_monitor_main.hpp>
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
@@ -73,7 +74,15 @@ namespace monitor
     /* we need ptrace to get fork/clone/... */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
+    auto current_path = std::filesystem::current_path();
+    Log::error() << current_path;
+
+    std::vector<std::string> env = { "CUDA_INJECTION64_PATH=" + cuda_path,
+                                     "LO2S_RINGBUF_SIZE=1024" };
+
+    std::vector<char*> c_env;
     std::vector<char*> tmp;
+
     std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
                    [](const std::string& s)
                    {
@@ -82,6 +91,14 @@ namespace monitor
                        return pc;
                    });
     tmp.push_back(nullptr);
+    std::transform(env.begin(), env.end(), std::back_inserter(c_env),
+                   [](const std::string& s)
+                   {
+                       char* pc = new char[s.size() + 1];
+                       std::strcpy(pc, s.c_str());
+                       return pc;
+                   });
+    c_env.push_back(nullptr);
 
     Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
@@ -89,7 +106,7 @@ namespace monitor
     raise(SIGSTOP);
 
     // run the application which should be sampled
-    execvp(tmp[0], &tmp[0]);
+    execvpe(tmp[0], &tmp[0], &c_env[0]);
 
     // should not be executed -> exec failed, let's clean up anyway.
     for (auto cp : tmp)
