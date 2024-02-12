@@ -122,4 +122,6 @@ Thread gettid();
 
 std::set<std::uint32_t> parse_list(std::string list);
 std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);
+
+int timerfd_from_ns(std::chrono::nanoseconds duration);
 } // namespace lo2s

@@ -31,7 +31,6 @@
 
 extern "C"
 {
-#include <sys/timerfd.h>
 #include <unistd.h>
 }
 
@@ -43,26 +42,14 @@ namespace counter
 {
 namespace userspace
 {
-
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
 : counter_collection_(
       CounterProvider::instance().collection_for(MeasurementScope::userspace_metric(scope))),
-  counter_buffer_(counter_collection_.counters.size()), data_(counter_collection_.counters.size())
+  counter_buffer_(counter_collection_.counters.size()),
+  timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
+  data_(counter_collection_.counters.size())
 {
-    struct itimerspec tspec;
-    memset(&tspec, 0, sizeof(struct itimerspec));
-    tspec.it_value.tv_nsec = 1;
-
-    tspec.it_interval.tv_sec =
-        std::chrono::duration_cast<std::chrono::seconds>(config().userspace_read_interval).count();
-
-    tspec.it_interval.tv_nsec =
-        (config().userspace_read_interval % std::chrono::seconds(1)).count();
-    timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-
-    timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);
-
     for (auto& event : counter_collection_.counters)
     {
         counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
