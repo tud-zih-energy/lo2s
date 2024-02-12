@@ -94,6 +94,8 @@ struct Config
     std::vector<int64_t> syscall_filter;
     // NEC SX-Aurora Tsubasa
     bool use_nec;
+    // Nvidia CUPTI
+    bool use_nvidia;
     std::chrono::microseconds nec_read_interval;
     std::chrono::milliseconds nec_check_interval;
 };
