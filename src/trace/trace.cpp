@@ -19,7 +19,6 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "otf2xx/chrono/duration.hpp"
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/address.hpp>
@@ -411,6 +410,21 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
+otf2::writer::local& Trace::cuda_writer(const Thread& thread)
+{
+    MeasurementScope scope = MeasurementScope::cuda(thread.as_scope());
+
+    const auto& cuda_location_group = registry_.emplace<otf2::definition::location_group>(
+        ByMeasurementScope(scope), intern(scope.name()),
+        otf2::common::location_group_type::accelerator, system_tree_root_node_);
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(scope), intern(scope.name()), cuda_location_group,
+        otf2::definition::location::location_type::accelerator_stream);
+
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::nec_writer(NecDevice device, const Thread& nec_thread)
 {
 
@@ -487,6 +501,15 @@ otf2::writer::local& Trace::create_metric_writer(const std::string& name)
             ByExecutionScope(ExecutionScope(Thread(METRIC_PID)))),
         otf2::definition::location::location_type::metric);
     return archive_(location);
+}
+
+otf2::definition::calling_context& Trace::cuda_calling_context(std::string& file,
+                                                               std::string& function)
+{
+    LineInfo info = LineInfo::for_function(file.c_str(), function.c_str(), 0, "");
+
+    return registry_.emplace<otf2::definition::calling_context>(
+        ByLineInfo(info), intern_region(info), intern_scl(info));
 }
 
 otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)

@@ -28,9 +28,6 @@
 #include <lo2s/time/time.hpp>
 
 #include <memory>
-#include <string>
-
-#include <cassert>
 
 extern "C"
 {
@@ -42,7 +39,8 @@ namespace lo2s
 namespace monitor
 {
 
-ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec)
+ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec,
+                           bool is_process)
 : PollMonitor(parent.trace(), scope.name(), config().perf_read_interval), scope_(scope)
 {
     if (config().sampling || scope.is_cpu())
@@ -72,6 +70,13 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(userspace_counter_writer_->fd());
     }
 
+    if (config().use_nvidia && is_process)
+    {
+        cupti_reader_ =
+            std::make_unique<cupti::Reader>(parent.trace(), scope.as_thread().as_process());
+        add_fd(cupti_reader_->fd());
+    }
+
     // note: start() can now be called
 }
 
@@ -93,6 +98,11 @@ void ScopeMonitor::monitor(int fd)
     if (!scope_.is_cpu())
     {
         try_pin_to_scope(scope_);
+    }
+
+    if (cupti_reader_ && (fd == cupti_reader_->fd() || fd == stop_pfd().fd))
+    {
+        cupti_reader_->read();
     }
 
     if (syscall_writer_ &&
