@@ -45,7 +45,8 @@ public:
     ~ProcessMonitor();
     void insert_process(Process parent, Process child, std::string proc_name,
                         bool spawn = false) override;
-    void insert_thread(Process parent, Thread child, std::string name, bool spawn = false) override;
+    void insert_thread(Process parent, Thread child, std::string name, bool spawn = false,
+                       bool is_process = false) override;
 
     void exit_thread(Thread thread) override;
 

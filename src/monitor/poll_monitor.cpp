@@ -22,12 +22,9 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/util.hpp>
 
 #include <cmath>
-extern "C"
-{
-#include <sys/timerfd.h>
-}
 
 namespace lo2s
 {
@@ -51,18 +48,9 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
     if (read_interval.count() != 0)
     {
 
-        tspec.it_value.tv_nsec = 1;
-
-        tspec.it_interval.tv_sec =
-            std::chrono::duration_cast<std::chrono::seconds>(read_interval).count();
-
-        tspec.it_interval.tv_nsec = (read_interval % std::chrono::seconds(1)).count();
-
-        timer_pfd().fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+        timer_pfd().fd = timerfd_from_ns(read_interval);
         timer_pfd().events = POLLIN;
         timer_pfd().revents = 0;
-
-        timerfd_settime(timer_pfd().fd, TFD_TIMER_ABSTIME, &tspec, NULL);
     }
     else
     {

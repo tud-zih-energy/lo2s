@@ -24,14 +24,15 @@
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 
+#include <lo2s/cupti/reader.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
-
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/perf/syscall/writer.hpp>
 
 #include <array>
 #include <chrono>
+#include <memory>
 #include <thread>
 
 #include <cstddef>
@@ -50,7 +51,8 @@ namespace monitor
 class ScopeMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec);
+    ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec,
+                 bool is_process = false);
 
     void initialize_thread() override;
     void finalize_thread() override;
@@ -74,6 +76,7 @@ private:
     std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
+    std::unique_ptr<cupti::Reader> cupti_reader_;
 };
 } // namespace monitor
 } // namespace lo2s
