@@ -27,6 +27,7 @@ extern "C"
 #include <sys/syscall.h>
 #include <sys/sysmacros.h>
 #include <sys/time.h>
+#include <sys/timerfd.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -410,5 +411,28 @@ void bump_rlimit_fd()
         Log::warn() << "If you encounter issues, try to manually increase the file descriptor "
                        "resource limit.";
     }
+}
+
+int timerfd_from_ns(std::chrono::nanoseconds duration)
+{
+    int timerfd;
+    struct itimerspec tspec;
+    memset(&tspec, 0, sizeof(struct itimerspec));
+
+    tspec.it_interval.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
+    tspec.it_interval.tv_nsec = (duration % std::chrono::seconds(1)).count();
+
+    timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+
+    if (timerfd == -1)
+    {
+        throw_errno();
+    }
+
+    if (timerfd_settime(timerfd, TFD_TIMER_ABSTIME, &tspec, NULL) == -1)
+    {
+        throw_errno();
+    }
+    return timerfd;
 }
 } // namespace lo2s

@@ -34,7 +34,8 @@ void SystemProcessMonitor::insert_process([[maybe_unused]] Process parent,
 }
 
 void SystemProcessMonitor::insert_thread([[maybe_unused]] Process process, Thread thread,
-                                         std::string name, [[maybe_unused]] bool spawn)
+                                         std::string name, [[maybe_unused]] bool spawn,
+                                         [[maybe_unused]] bool is_process)
 {
     // in system monitoring, we only need to track the threads spawned from the process lo2s spawned
     // itself. Without this, these threads end up as "<unknown thread>". Sad times.

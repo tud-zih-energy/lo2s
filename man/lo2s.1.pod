@@ -28,6 +28,7 @@ S<[B<--metric-count> I<N> | B<--metric-frequency> I<HZ>]>
 S<[B<-x> I<KNOB>]>
 S<[B<-X>]>
 S<[B<-s SYSCALL>]>
+S<[B<--accel ACCEL>]>
 S<{ I<PROCESS_MONITORING> | I<SYSTEM_MONITORING> }>
 
 =item I<PROCESS_MONITORING> := { I<COMMAND> | B<--> I<COMMAND> [I<ARGS>...] | B<-p> I<PID> }
@@ -384,6 +385,24 @@ Size of the per-CPU cache in number-of-events. A larger cache size might increas
 =item B<-S>, B<--sensors>
 
 Record measurements for each sensor found by L<sensors(1)>.
+
+=back
+
+=head2 B<Accelerator> options
+
+=over
+
+=item B<--accel> I<ACCEL>
+
+Record activity events (instruction samples or kernel execution information) for the given accelerator. Usable accelerators are "nec" for NEC SX-Aurora and "nvidia" for NVidia CUDA accelerators.
+
+=item B<--nec-readout-interval> I<USEC>
+
+Set the interval (in microseconds) between NEC SX-Aurora instruction samples.
+
+=item B<--nec-check-interval> I<MSEC>
+
+Set the interval (in milliseconds) between checks for new NEC SX-Aurora processes.
 
 =back
 

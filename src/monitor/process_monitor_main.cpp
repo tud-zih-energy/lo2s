@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <filesystem>
 #include <lo2s/monitor/process_monitor_main.hpp>
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
@@ -26,6 +27,7 @@
 #include <lo2s/process_controller.hpp>
 #include <lo2s/util.hpp>
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
@@ -117,6 +119,19 @@ static void drop_privileges()
     assert(getgid() != 0);
 }
 
+std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
+{
+    std::vector<char*> res;
+    std::transform(vec.begin(), vec.end(), std::back_inserter(res), [](const std::string& s) {
+        char* pc = new char[s.size() + 1];
+        std::strcpy(pc, s.c_str());
+        return pc;
+    });
+    res.push_back(nullptr);
+
+    return res;
+}
+
 [[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
     struct rlimit initial_rlimit = initial_rlimit_fd();
@@ -137,14 +152,20 @@ static void drop_privileges()
     /* we need ptrace to get fork/clone/... */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
-    std::vector<char*> tmp;
-    std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
-                   [](const std::string& s) {
-                       char* pc = new char[s.size() + 1];
-                       std::strcpy(pc, s.c_str());
-                       return pc;
-                   });
-    tmp.push_back(nullptr);
+    std::vector<std::string> env;
+#ifdef HAVE_CUDA
+    if (config().use_nvidia)
+    {
+        env = { "CUDA_INJECTION64_PATH=" + config().cuda_injectionlib_path };
+
+        if (config().use_clockid)
+        {
+            env.push_back("LO2S_CLOCKID=" + std::to_string(config().clockid));
+        }
+    }
+#endif
+    std::vector<char*> c_env = to_vector_of_c_str(env);
+    std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
 
     Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
@@ -158,13 +179,19 @@ static void drop_privileges()
     }
 
     // run the application which should be sampled
-    execvp(tmp[0], &tmp[0]);
+    execvpe(c_args[0], &c_args[0], &c_env[0]);
 
     // should not be executed -> exec failed, let's clean up anyway.
-    for (auto cp : tmp)
+    for (auto cp : c_args)
     {
         delete[] cp;
     }
+
+    for (auto cp : c_env)
+    {
+        delete[] cp;
+    }
+
     Log::error() << "Could not execute the command: " << nitro::lang::join(command_and_args);
     throw_errno();
 }
