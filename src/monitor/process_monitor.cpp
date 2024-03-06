@@ -54,12 +54,19 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         perf::counter::CounterProvider::instance().has_group_counters(ExecutionScope(thread)) ||
         perf::counter::CounterProvider::instance().has_userspace_counters(ExecutionScope(thread)))
     {
-        auto inserted =
-            threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                             std::forward_as_tuple(ExecutionScope(thread), *this, spawn));
-        assert(inserted.second);
-        // actually start thread
-        inserted.first->second.start();
+        try
+        {
+            auto inserted =
+                threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                 std::forward_as_tuple(ExecutionScope(thread), *this, spawn));
+            assert(inserted.second);
+            // actually start thread
+            inserted.first->second.start();
+        }
+        catch (const std::exception& e)
+        {
+            Log::warn() << "Could not start measurement for " << thread << ": " << e.what();
+        }
     }
 
     trace_.update_thread_name(thread, name);
