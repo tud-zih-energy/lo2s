@@ -35,7 +35,7 @@ extern "C"
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
-};
+}
 
 #pragma once
 
