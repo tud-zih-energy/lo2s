@@ -140,6 +140,13 @@ if(NOT CLOCK_GETTIME_FOUND)
     unset(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
+check_function_exists(shm_open SHM_OPEN_FOUND)
+if(NOT SHM_OPEN_FOUND)
+    set(CMAKE_REQUIRED_LIBRARIES "rt")
+    check_function_exists(shm_open SHM_OPEN_FOUND_WITH_RT)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
 
 if(NOT HAVE_PERF_RECORD_SWITCH)
@@ -197,10 +204,15 @@ set(SOURCE_FILES
 )
 
 if (CUDAToolkit_FOUND)
-	add_library(lo2s_injection SHARED src/cupti/lib.cpp)
-	target_link_libraries(lo2s_injection PUBLIC CUDA::cupti)
-	target_include_directories(lo2s_injection PRIVATE include)
-  install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+	  add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+	  target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
+
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s_injection PRIVATE rt)
+    endif()
+
+    target_include_directories(lo2s_injection PRIVATE include)
+    install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif ()
 
 # define lo2s target
@@ -226,6 +238,14 @@ if(NOT CLOCK_GETTIME_FOUND)
         target_link_libraries(lo2s PRIVATE rt)
     else()
         message(SEND_ERROR "Could not find the function clock_gettime(), but it is required.")
+    endif()
+  endif()
+
+if(NOT SHM_OPEN_FOUND)
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s PRIVATE rt)
+    else()
+        message(SEND_ERROR "Could not find the function shm_open(), but it is required.")
     endif()
 endif()
 
