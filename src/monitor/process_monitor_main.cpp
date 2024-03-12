@@ -77,11 +77,10 @@ namespace monitor
     auto current_path = std::filesystem::current_path();
 
     std::vector<std::string> env;
-    if(config().use_nvidia)
-      {
-        env = { "CUDA_INJECTION64_PATH=" + cuda_path,
-                                     "LO2S_RINGBUF_SIZE=1024" };
-      }
+    if (config().use_nvidia)
+    {
+        env = { "CUDA_INJECTION64_PATH=" + cuda_path, "LO2S_RINGBUF_SIZE=1024" };
+    }
     std::vector<char*> c_env;
     std::vector<char*> tmp;
 

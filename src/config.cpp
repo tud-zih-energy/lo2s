@@ -334,9 +334,9 @@ void parse_program_options(int argc, const char** argv)
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
 
-
-    accel_options.multi_option("accel", "Accelerator to record execution events for").metavar("ACCEL").optional();
-
+    accel_options.multi_option("accel", "Accelerator to record execution events for")
+        .metavar("ACCEL")
+        .optional();
 
     accel_options.option("nec-readout-interval", "Accelerator sampling interval")
         .optional()
@@ -346,7 +346,6 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("MSEC")
         .default_value("100");
-
 
     nitro::options::arguments arguments;
     try
@@ -487,21 +486,21 @@ void parse_program_options(int argc, const char** argv)
     }
 
     for (const auto& accel : arguments.get_all("accel"))
-      {
-        if(accel == "nec")
-          {
+    {
+        if (accel == "nec")
+        {
             config.use_nec = true;
-          }
-        else if(accel == "nvidia")
-          {
+        }
+        else if (accel == "nvidia")
+        {
             config.use_nvidia = true;
-          }
+        }
         else
-          {
+        {
             std::cerr << "Unknown Accelerator " << accel << "!";
             std::exit(EXIT_FAILURE);
-          }
-      }
+        }
+    }
 
     std::vector<std::string> perf_group_events = arguments.get_all("metric-event");
     std::vector<std::string> perf_userspace_events = arguments.get_all("userspace-metric-event");
