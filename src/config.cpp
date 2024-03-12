@@ -160,8 +160,7 @@ void parse_program_options(int argc, const char** argv)
     auto& x86_energy_options = parser.group("x86_energy options");
     auto& sensors_options = parser.group("sensors options");
     auto& io_options = parser.group("I/O recording options");
-    auto& nec_options = parser.group("NEC SX-Aurora Tsubasa recording options");
-    auto& nvidia_options = parser.group("Nvidia CUDA instrumentation options");
+    auto& accel_options = parser.group("Accelerator options");
 
     lo2s::Config config;
 
@@ -335,17 +334,19 @@ void parse_program_options(int argc, const char** argv)
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
 
-    nec_options.toggle("nec", "Enable NEC Vector Engine sampling");
-    nec_options.option("nec-readout-interval", "NEC sampling interval")
+
+    accel_options.multi_option("accel", "Accelerator to record execution events for").metavar("ACCEL").optional();
+
+
+    accel_options.option("nec-readout-interval", "Accelerator sampling interval")
         .optional()
         .metavar("USEC")
         .default_value("1");
-    nec_options.option("nec-check-interval", "The interval between checks for new VE processes")
+    accel_options.option("nec-check-interval", "The interval between checks for new VE processes")
         .optional()
         .metavar("MSEC")
         .default_value("100");
 
-    nvidia_options.toggle("nvidia", "Enable Nvidia CUPTI instrumentation");
 
     nitro::options::arguments arguments;
     try
@@ -372,8 +373,6 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
-    config.use_nec = arguments.given("nec");
-    config.use_nvidia = arguments.given("nvidia");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
@@ -486,6 +485,23 @@ void parse_program_options(int argc, const char** argv)
 #endif
         }
     }
+
+    for (const auto& accel : arguments.get_all("accel"))
+      {
+        if(accel == "nec")
+          {
+            config.use_nec = true;
+          }
+        else if(accel == "nvidia")
+          {
+            config.use_nvidia = true;
+          }
+        else
+          {
+            std::cerr << "Unknown Accelerator " << accel << "!";
+            std::exit(EXIT_FAILURE);
+          }
+      }
 
     std::vector<std::string> perf_group_events = arguments.get_all("metric-event");
     std::vector<std::string> perf_userspace_events = arguments.get_all("userspace-metric-event");
