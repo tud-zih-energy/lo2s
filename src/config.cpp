@@ -216,12 +216,6 @@ void parse_program_options(int argc, const char** argv)
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
-    general_options
-        .option("cgroup",
-                "Only record perf events for the given cgroup. Can only be used in system-mode")
-        .metavar("NAME")
-        .optional();
-
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
                             "Monitor as long as COMMAND is running or until PID exits.")
@@ -231,6 +225,12 @@ void parse_program_options(int argc, const char** argv)
         .toggle("all-cpus-sampling", "System-monitoring mode with instruction sampling. "
                                      "Shorthand for \"-a --instruction-sampling\".")
         .short_name("A");
+
+    system_mode_options
+        .option("cgroup",
+                "Only record perf events for the given cgroup. Can only be used in system-mode")
+        .metavar("NAME")
+        .optional();
 
     sampling_options
         .toggle("instruction-sampling", "Enable instruction sampling. In system monitoring: "
