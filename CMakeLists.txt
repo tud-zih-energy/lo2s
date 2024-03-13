@@ -9,6 +9,7 @@ include(CheckIncludeFiles)
 include(CheckStructHasMember)
 include(CheckFunctionExists)
 include(FeatureSummary)
+include(GNUInstallDirs)
 
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
@@ -395,7 +396,7 @@ FILE(GLOB_RECURSE clion_dummy_headers *.hpp *.h)
 FILE(GLOB_RECURSE clion_dummy_source main.cpp)
 add_executable(clion_dummy_executable EXCLUDE_FROM_ALL ${clion_dummy_source} ${clion_dummy_headers})
 
-install(TARGETS lo2s RUNTIME DESTINATION bin)
+install(TARGETS lo2s RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 find_program(GIT_ARCHIVE_ALL git-archive-all PATHS ENV PATH)
 if(GIT_ARCHIVE_ALL)
