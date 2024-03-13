@@ -96,6 +96,8 @@ struct Config
     bool use_nec;
     std::chrono::microseconds nec_read_interval;
     std::chrono::milliseconds nec_check_interval;
+  //topdown
+  bool topdown;
 };
 
 const Config& config();

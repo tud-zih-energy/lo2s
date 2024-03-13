@@ -130,6 +130,7 @@ public:
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
+    otf2::writer::local& topdown_writer(const ExecutionScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const Cpu& cpu);
     otf2::writer::local& bio_writer(BlockDevice dev);
@@ -167,6 +168,32 @@ public:
                                                           otf2::common::type::int64, "cpuid"));
         }
         return cpuid_metric_class_;
+    }
+
+    otf2::definition::metric_class topdown_metric_class()
+    {
+        if (!topdown_metric_class_)
+        {
+            topdown_metric_class_ = registry_.create<otf2::definition::metric_class>(
+                otf2::common::metric_occurence::async, otf2::common::recorder_kind::abstract);
+            topdown_metric_class_->add_member(metric_member(
+                "slots", "Number of UOPS slots", otf2::common::metric_mode::absolute_point,
+                otf2::common::type::int64, "slots"));
+            topdown_metric_class_->add_member(metric_member(
+                "retiring", "Number of UOPS retired", otf2::common::metric_mode::absolute_point,
+                otf2::common::type::int64, "slots"));
+            topdown_metric_class_->add_member(metric_member(
+                "bad_spec", "Number of UOPS lost to bad speculation",
+                otf2::common::metric_mode::absolute_point, otf2::common::type::int64, "slots"));
+            topdown_metric_class_->add_member(metric_member(
+                "fe_bound", "Number of front-end bound UOPS",
+                otf2::common::metric_mode::absolute_point, otf2::common::type::int64, "slots"));
+            topdown_metric_class_->add_member(metric_member(
+                "be_bound", "Number of back-end bound UOPS",
+                otf2::common::metric_mode::absolute_point, otf2::common::type::int64, "slots"));
+        }
+
+        return topdown_metric_class_;
     }
 
     otf2::definition::metric_member& get_event_metric_member(perf::EventDescription event)
@@ -347,6 +374,7 @@ private:
     otf2::definition::regions_group& syscall_regions_group_;
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
+    otf2::definition::detail::weak_ref<otf2::definition::metric_class> topdown_metric_class_;
     std::map<std::set<Cpu>, otf2::definition::detail::weak_ref<otf2::definition::metric_class>>
         perf_group_metric_classes_;
     std::map<std::set<Cpu>, otf2::definition::detail::weak_ref<otf2::definition::metric_class>>
