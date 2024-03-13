@@ -222,9 +222,11 @@ void parse_program_options(int argc, const char** argv)
         .metavar("NAME")
         .optional();
 
+    system_mode_options.toggle("system-wide",
+                               "Start in system-monitoring mode for all CPUs"
+                               "Monitor as long as COMMAND is running or until PID exits.");
     system_mode_options
-        .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
-                            "Monitor as long as COMMAND is running or until PID exits.")
+        .toggle("all-cpus", "System-monitoring mode for all CPUs. with process recording")
         .short_name("a");
 
     system_mode_options
@@ -500,10 +502,12 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
-    if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
+    if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling") ||
+        arguments.given("system-wide"))
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
         config.sampling = false;
+        config.process_recording = false;
 
         // The check for instruction sampling is a bit more complicated, because the default value
         // is different depending on the monitoring mode. This check here is only relevant for
@@ -514,6 +518,10 @@ void parse_program_options(int argc, const char** argv)
             (arguments.provided("instruction-sampling") && arguments.given("instruction-sampling")))
         {
             config.sampling = true;
+        }
+        if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
+        {
+            config.process_recording = true;
         }
 
         if (arguments.provided("cgroup"))
@@ -554,6 +562,7 @@ void parse_program_options(int argc, const char** argv)
         }
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
+        config.process_recording = false;
 
         if (!arguments.given("instruction-sampling"))
         {
