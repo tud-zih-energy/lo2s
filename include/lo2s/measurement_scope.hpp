@@ -31,6 +31,7 @@ enum class MeasurementScopeType
     USERSPACE_METRIC,
     BIO,
     SYSCALL,
+    CUDA,
     UNKNOWN
 };
 
@@ -71,6 +72,11 @@ struct MeasurementScope
         return { MeasurementScopeType::SYSCALL, s };
     }
 
+    static MeasurementScope cuda(ExecutionScope s)
+    {
+        return { MeasurementScopeType::CUDA, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -101,6 +107,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
+        case lo2s::MeasurementScopeType::CUDA:
+            return fmt::format("cuda kernel events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

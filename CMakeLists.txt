@@ -102,6 +102,7 @@ find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 find_package(Veosinfo)
 find_package(PkgConfig)
+find_package(CUDAToolkit)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
@@ -122,6 +123,8 @@ CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" O
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
+CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
+add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -134,6 +137,13 @@ check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
     check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
+check_function_exists(shm_open SHM_OPEN_FOUND)
+if(NOT SHM_OPEN_FOUND)
+    set(CMAKE_REQUIRED_LIBRARIES "rt")
+    check_function_exists(shm_open SHM_OPEN_FOUND_WITH_RT)
     unset(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
@@ -193,6 +203,18 @@ set(SOURCE_FILES
     src/summary.cpp
 )
 
+if (CUDAToolkit_FOUND)
+	  add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+	  target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
+
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s_injection PRIVATE rt)
+    endif()
+
+    target_include_directories(lo2s_injection PRIVATE include)
+    install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif ()
+
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
 
@@ -216,6 +238,14 @@ if(NOT CLOCK_GETTIME_FOUND)
         target_link_libraries(lo2s PRIVATE rt)
     else()
         message(SEND_ERROR "Could not find the function clock_gettime(), but it is required.")
+    endif()
+  endif()
+
+if(NOT SHM_OPEN_FOUND)
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s PRIVATE rt)
+    else()
+        message(SEND_ERROR "Could not find the function shm_open(), but it is required.")
     endif()
 endif()
 
@@ -305,7 +335,7 @@ else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
-
+configure_file(include/lo2s/monitor/process_monitor_main.hpp.in include/lo2s/monitor/process_monitor_main.hpp @ONLY)
 
 # check for version dependent features and generate a build config
 
