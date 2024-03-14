@@ -93,7 +93,6 @@ public:
                 {
                     state.time = event->time;
                     earliest_available.push(state);
-                    readers_.at(state.identity).pop();
                     break;
                 }
 
