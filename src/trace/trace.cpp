@@ -210,7 +210,7 @@ void Trace::begin_record()
     starting_system_time_ = std::chrono::system_clock::now();
 
     const std::time_t t_c = std::chrono::system_clock::to_time_t(starting_system_time_);
-    add_lo2s_property("STARTING_TIME", fmt::format("{:%c}", fmt::localtime(t_c)));
+    add_lo2s_property("STARTING_TIME", fmt::format("{:%FT%T%z}", fmt::localtime(t_c)));
 }
 
 void Trace::end_record()
