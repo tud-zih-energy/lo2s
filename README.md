@@ -6,9 +6,13 @@
     <img src="share/logo/rendered/full.svg" alt="lo2s logo" width="300"/>
 </p>
 
-# `lo2s` - Lightweight Node-Level Performance Monitoring
+<p align="center">
+    lo2s is a lightweight node-level performance monitoring tool used to analyze applications, the operating system and hardware.
+</p>
 
-`lo2s` creates parallel OTF2 traces with a focus on both application and system view.
+# Lightweight Node-Level Performance Monitoring
+
+lo2s creates parallel OTF2 traces with a focus on both application and system view.
 The traces can contain any of the following information:
 
  * From running threads
@@ -106,8 +110,8 @@ Combine that with the abundance of backports of particular features by different
 
 In the effort to keep compatible with older kernels and some architectures that lack hardware breakpoint support, several quirks have been added to `lo2s`:
 
-1. The initial time synchronization between lo2s and the kernel-space perf is done with a hardware breakpoint. If your kernel or processor architecture doesn't support that, you can disable it using the CMake option `USE_HW_BREAKPOINT_COMPAT`.
-2. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using `--metric-leader bus-cycles`.
+1. The initial time synchronization between lo2s and the kernel-space perf is done with a hardware breakpoint. If your kernel or processor architecture doesn't support that, you can use a fallback using the CMake option `USE_HW_BREAKPOINT_COMPAT`.
+2. If you get the following error message: `event 'ref-cycles' is not available as a metric leader!`, you can fallback to the bus-cycles metric as leader using the lo2s command-lind argument `--metric-leader bus-cycles`.
 
 # Working with traces
 
