@@ -495,8 +495,17 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name + "'");
     }
 
+    // If the processor is heterogenous, "cpus" contains the cores that support this PMU. If the PMU
+    // is an uncore PMU "cpumask" contains the cores that are logically assigned to that PMU. Why
+    // there need to be two seperate files instead of one, nobody knows, but simply parse both.
     std::set<Cpu> cpus;
     auto cpuids = parse_list_from_file(pmu_path / "cpus");
+
+    if (cpuids.empty())
+    {
+        cpuids = parse_list_from_file(pmu_path / "cpumask");
+    }
+
     std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
     EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus);
