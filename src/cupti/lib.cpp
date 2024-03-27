@@ -22,7 +22,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <lo2s/cupti/ringbuf.hpp>
+#include <lo2s/cupti/events.hpp>
+#include <lo2s/ringbuf.hpp>
+#include <string>
 
 #include <iostream>
 #include <memory>
@@ -36,21 +38,29 @@ extern "C"
 #include <unistd.h>
 }
 
-std::unique_ptr<RingBufWriter> rb_writer;
-CUpti_SubscriberHandle subscriber = NULL;
+// Allocate 8 MiB every time CUPTI asks for more event memory
+constexpr size_t CUPTI_BUFFER_SIZE = 8 * 1024 * 1024;
+
+std::unique_ptr<lo2s::RingBufWriter> rb_writer;
+CUpti_SubscriberHandle subscriber = nullptr;
+
+clockid_t clockid = CLOCK_MONOTONIC_RAW;
 
 static void atExitHandler(void)
 {
+    // Flush all remaining activity records
     cuptiActivityFlushAll(1);
 }
 
 static void CUPTIAPI bufferRequested(uint8_t** buffer, size_t* size, size_t* maxNumRecords)
 {
-    *size = 8 * 1024 * 1024;
-    *buffer = (uint8_t*)malloc(*size);
-    *maxNumRecords = 0;
+    assert(buffer != nullptr && size != nullptr && maxNumRecords != nullptr);
 
-    if (*buffer == NULL)
+    *maxNumRecords = 0;
+    *size = CUPTI_BUFFER_SIZE;
+    *buffer = static_cast<uint8_t*>(malloc(*size));
+
+    if (*buffer == nullptr)
     {
         std::cerr << "Error: Out of memory.\n";
         exit(-1);
@@ -60,7 +70,7 @@ static void CUPTIAPI bufferRequested(uint8_t** buffer, size_t* size, size_t* max
 static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* buffer, size_t size,
                                      size_t validSize)
 {
-    CUpti_Activity* record = NULL;
+    CUpti_Activity* record = nullptr;
     while (cuptiActivityGetNextRecord(buffer, validSize, &record) == CUPTI_SUCCESS)
     {
         switch (record->kind)
@@ -68,19 +78,31 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         case CUPTI_ACTIVITY_KIND_KERNEL:
         case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
         {
-            const char* kindString =
-                (record->kind == CUPTI_ACTIVITY_KIND_KERNEL) ? "KERNEL" : "CONC KERNEL";
             CUpti_ActivityKernel6* kernel = (CUpti_ActivityKernel6*)record;
 
-            uint64_t len = sizeof(struct cupti_event_kernel) + strlen(kernel->name);
-            struct cupti_event_kernel* ev = (struct cupti_event_kernel*)rb_writer->reserve(
-                sizeof(struct cupti_event_kernel) + strlen(kernel->name));
+            uint64_t name_len = strlen(kernel->name);
 
-            ev->header.type = CuptiEventType::CUPTI_KERNEL;
-            ev->header.size = len;
+            struct lo2s::cupti::event_kernel* ev =
+                (struct lo2s::cupti::event_kernel*)rb_writer->reserve(
+                    sizeof(struct lo2s::cupti::event_kernel) + name_len);
+
+            if (ev == nullptr)
+            {
+                // std::cerr << "Ringbuffer full, dropping event. Try to increase
+                // --nvidia-ringbuf-size!" << std::endl;
+                continue;
+            }
+
+            while (1)
+            {
+                std::cerr << "LIB: " << kernel->start << kernel->end << ":" << ev << std::endl;
+            }
+            ev->header.type = lo2s::cupti::EventType::CUPTI_KERNEL;
+            ev->header.size = sizeof(struct lo2s::cupti::event_kernel) + name_len;
             ev->start = kernel->start;
             ev->end = kernel->end;
-            memcpy(ev->name, kernel->name, strlen(kernel->name) + 1);
+            std::cerr << kernel->name << std::endl;
+            memcpy(ev->name, kernel->name, name_len + 1);
 
             rb_writer->commit();
             break;
@@ -94,7 +116,7 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
     cuptiActivityGetNumDroppedRecords(ctx, streamId, &dropped);
     if (dropped != 0)
     {
-        std::cerr << "Dropped %u activity records.\n", (unsigned int)dropped;
+        std::cerr << "Dropped " << dropped << " activity records.\n";
     }
 
     free(buffer);
@@ -102,19 +124,17 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
 
 static CUptiResult enableCuptiActivity(CUcontext ctx)
 {
-    auto result = CUPTI_SUCCESS;
     cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API,
                         CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020);
 
-    if (ctx == NULL)
+    if (ctx == nullptr)
     {
-        result = cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
+        return cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
     }
     else
     {
-        result = cuptiActivityEnableContext(ctx, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
+        return cuptiActivityEnableContext(ctx, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
     }
-    return result;
 }
 
 void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid,
@@ -160,7 +180,7 @@ void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti
 uint64_t timestampfunc()
 {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    clock_gettime(clockid, &ts);
     uint64_t res = ts.tv_sec * 1000000000 + ts.tv_nsec;
     return res;
 }
@@ -168,21 +188,18 @@ uint64_t timestampfunc()
 extern "C" int InitializeInjection(void)
 {
     std::string rb_size_str;
-    try
+    rb_writer = std::make_unique<lo2s::RingBufWriter>(std::to_string(getpid()), false);
+
+    char* clockid_str = getenv("LO2S_CLOCKID");
+
+    if (clockid_str != nullptr)
     {
-        rb_size_str = getenv("LO2S_RINGBUF_SIZE");
-        uint64_t rb_size = stoi(rb_size_str);
-        rb_writer = std::make_unique<RingBufWriter>(std::to_string(getpid()), rb_size);
-    }
-    catch (std::exception const& e)
-    {
-        std::cerr << "Could not read lo2s ringbuffer size!";
-        exit(EXIT_FAILURE);
+        clockid = std::stoi(clockid_str);
     }
 
     atexit(&atExitHandler);
 
-    cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callbackHandler, NULL);
+    cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callbackHandler, nullptr);
 
     cuptiActivityRegisterTimestampCallback(timestampfunc);
 
@@ -190,7 +207,7 @@ extern "C" int InitializeInjection(void)
                         CUPTI_DRIVER_TRACE_CBID_cuProfilerStart);
     cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API,
                         CUPTI_DRIVER_TRACE_CBID_cuProfilerStop);
-    enableCuptiActivity(NULL);
+    enableCuptiActivity(nullptr);
 
     // Register buffer callbacks
     cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted);

@@ -334,7 +334,20 @@ void parse_program_options(int argc, const char** argv)
     io_options.toggle("block-io",
                       "Enable recording of block I/O events (requires access to debugfs)");
 
-    accel_options.multi_option("accel", "Accelerator to record execution events for")
+    std::vector<std::string> accelerators;
+
+#ifdef HAVE_CUDA
+    accelerators.push_back("nvidia");
+#endif
+#ifdef HAVE_VEOSINFO
+    accelerators.push_back("nec");
+#endif
+
+    accel_options
+        .multi_option(
+            "accel",
+            fmt::format("Accelerator to record execution events for. Available accelerators: {}",
+                        fmt::join(accelerators, ", ")))
         .metavar("ACCEL")
         .optional();
 
@@ -346,6 +359,16 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("MSEC")
         .default_value("100");
+
+    accel_options.option("nvidia-injection-path", "path to the lo2s cupti injection library")
+        .optional()
+        .metavar("PATH")
+        .default_value(CUDA_PATH);
+
+    accel_options.option("nvidia-ringbuf-size", "Size of the injection library ring-buffer")
+        .optional()
+        .metavar("BYTE")
+        .default_value("1024");
 
     nitro::options::arguments arguments;
     try
@@ -372,6 +395,10 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
+
+#ifdef HAVE_CUDA
+    config.cuda_path = arguments.get("nvidia-injection-path");
+#endif
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
@@ -489,15 +516,27 @@ void parse_program_options(int argc, const char** argv)
     {
         if (accel == "nec")
         {
+#ifdef HAVE_VEOSINFO
             config.use_nec = true;
+#else
+            std::cerr << "lo2s was built without support for NEC SX-Aurora sampling\n";
+            std::exit(EXIT_FAILURE);
+#endif
         }
         else if (accel == "nvidia")
         {
+#ifdef HAVE_CUDA
             config.use_nvidia = true;
+            config.nvidia_ringbuf_size = arguments.as<uint64_t>("nvidia-ringbuf-size");
+#else
+            std::cerr << "lo2s was built without support for CUDA kernel recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
         }
         else
         {
             std::cerr << "Unknown Accelerator " << accel << "!";
+            parser.usage();
             std::exit(EXIT_FAILURE);
         }
     }

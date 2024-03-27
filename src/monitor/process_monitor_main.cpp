@@ -27,6 +27,7 @@
 #include <lo2s/process_controller.hpp>
 #include <lo2s/util.hpp>
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
@@ -54,6 +55,20 @@ namespace lo2s
 namespace monitor
 {
 
+std::vector<char*> to_vector_of_c_str(std::vector<std::string> vec)
+{
+    std::vector<char*> res;
+    std::transform(vec.begin(), vec.end(), std::back_inserter(res),
+                   [](const std::string& s)
+                   {
+                       char* pc = new char[s.size() + 1];
+                       std::strcpy(pc, s.c_str());
+                       return pc;
+                   });
+    res.push_back(nullptr);
+
+    return res;
+}
 [[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
     struct rlimit initial_rlimit = initial_rlimit_fd();
@@ -74,32 +89,24 @@ namespace monitor
     /* we need ptrace to get fork/clone/... */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
-    auto current_path = std::filesystem::current_path();
-
     std::vector<std::string> env;
+#ifdef HAVE_CUDA
     if (config().use_nvidia)
     {
-        env = { "CUDA_INJECTION64_PATH=" + cuda_path, "LO2S_RINGBUF_SIZE=1024" };
+        env = { "CUDA_INJECTION64_PATH=" + config().cuda_path };
+        Log::error() << config().cuda_path;
+        if (config().use_clockid)
+        {
+            env.push_back("LO2S_CLOCKID=" + std::to_string(config().clockid));
+        }
+        else
+        {
+            env.push_back("LO2S_CLOCKID=" + std::to_string(CLOCK_MONOTONIC_RAW));
+        }
     }
-    std::vector<char*> c_env;
-    std::vector<char*> tmp;
-
-    std::transform(command_and_args.begin(), command_and_args.end(), std::back_inserter(tmp),
-                   [](const std::string& s)
-                   {
-                       char* pc = new char[s.size() + 1];
-                       std::strcpy(pc, s.c_str());
-                       return pc;
-                   });
-    tmp.push_back(nullptr);
-    std::transform(env.begin(), env.end(), std::back_inserter(c_env),
-                   [](const std::string& s)
-                   {
-                       char* pc = new char[s.size() + 1];
-                       std::strcpy(pc, s.c_str());
-                       return pc;
-                   });
-    c_env.push_back(nullptr);
+#endif
+    std::vector<char*> c_env = to_vector_of_c_str(env);
+    std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
 
     Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
@@ -107,13 +114,19 @@ namespace monitor
     raise(SIGSTOP);
 
     // run the application which should be sampled
-    execvpe(tmp[0], &tmp[0], &c_env[0]);
+    execvpe(c_args[0], &c_args[0], &c_env[0]);
 
     // should not be executed -> exec failed, let's clean up anyway.
-    for (auto cp : tmp)
+    for (auto cp : c_args)
     {
         delete[] cp;
     }
+
+    for (auto cp : c_env)
+    {
+        delete[] cp;
+    }
+
     Log::error() << "Could not execute the command: " << nitro::lang::join(command_and_args);
     throw_errno();
 }
