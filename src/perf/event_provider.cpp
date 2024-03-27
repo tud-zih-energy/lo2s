@@ -497,6 +497,12 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
 
     std::set<Cpu> cpus;
     auto cpuids = parse_list_from_file(pmu_path / "cpus");
+
+    if (cpuids.empty())
+    {
+        cpuids = parse_list_from_file(pmu_path / "cpumask");
+    }
+
     std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus, cpus.end()),
                    [](uint32_t cpuid) { return Cpu(cpuid); });
     EventDescription event(ev_desc, static_cast<perf_type_id>(type), 0, 0, cpus);

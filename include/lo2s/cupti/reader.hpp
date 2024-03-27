@@ -22,9 +22,10 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/cupti/ringbuf.hpp>
+#include <lo2s/cupti/events.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/ringbuf.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
 
@@ -48,48 +49,33 @@ class Reader
 public:
     Reader(trace::Trace& trace, Process process)
     : process_(process), trace_(trace), time_converter_(perf::time::Converter::instance()),
-      ringbuf_reader_(std::to_string(process.as_pid_t()), 512)
+      ringbuf_reader_(std::to_string(process.as_pid_t()), true, config().nvidia_ringbuf_size),
+      timer_fd_(timerfd_from_ns(config().userspace_read_interval)), exe(get_process_exe(process))
     {
-        struct itimerspec tspec;
-        memset(&tspec, 0, sizeof(struct itimerspec));
-        tspec.it_value.tv_nsec = 1;
-
-        tspec.it_interval.tv_sec =
-            std::chrono::duration_cast<std::chrono::seconds>(config().userspace_read_interval)
-                .count();
-
-        tspec.it_interval.tv_nsec =
-            (config().userspace_read_interval % std::chrono::seconds(1)).count();
-        timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-
-        timerfd_settime(timer_fd_, TFD_TIMER_ABSTIME, &tspec, NULL);
-        exe = get_process_exe(process);
     }
 
     void read()
     {
-        rb_ptr header_rb = ringbuf_reader_.get(sizeof(struct cupti_event_header));
+        struct event_header* header = nullptr;
 
-        if (!header_rb)
+        while ((header = reinterpret_cast<struct event_header*>(
+                    ringbuf_reader_.get(sizeof(struct event_header)))) != nullptr)
         {
-            return;
-        }
+            if (header->type == EventType::CUPTI_KERNEL)
+            {
+                struct event_kernel* kernel =
+                    reinterpret_cast<struct event_kernel*>(ringbuf_reader_.get(header->size));
 
-        struct cupti_event_header* header = (struct cupti_event_header*)header_rb.get();
+                auto& writer = trace_.cuda_writer(Thread(process_.as_thread()));
 
-        if (header->type == CuptiEventType::CUPTI_KERNEL)
-        {
-            rb_ptr kernel_rb = ringbuf_reader_.get(header->size);
-            struct cupti_event_kernel* kernel = (struct cupti_event_kernel*)kernel_rb.get();
+                std::string kernel_name = kernel->name;
+                auto& cu_cctx = trace_.cuda_calling_context(exe, kernel_name);
 
-            auto& writer = trace_.cuda_writer(Thread(process_.as_thread()));
-
-            std::string kernel_name = kernel->name;
-            auto& cu_cctx = trace_.cuda_calling_context(exe, kernel_name);
-
-            writer << otf2::event::calling_context_enter(time_converter_(kernel->start), cu_cctx,
-                                                         2);
-            writer << otf2::event::calling_context_leave(time_converter_(kernel->end), cu_cctx);
+                Log::error() << kernel->start << ":" << kernel->end;
+                writer << otf2::event::calling_context_enter(time_converter_(kernel->start),
+                                                             cu_cctx, 2);
+                writer << otf2::event::calling_context_leave(time_converter_(kernel->end), cu_cctx);
+            }
 
             ringbuf_reader_.pop(header->size);
         }

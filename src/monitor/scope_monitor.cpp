@@ -99,7 +99,7 @@ void ScopeMonitor::monitor(int fd)
         try_pin_to_scope(scope_);
     }
 
-    if (cupti_reader_ && fd == cupti_reader_->fd())
+    if (cupti_reader_ && (fd == cupti_reader_->fd() || fd == stop_pfd().fd))
     {
         cupti_reader_->read();
     }

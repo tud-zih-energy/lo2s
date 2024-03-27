@@ -26,8 +26,6 @@ namespace lo2s
 {
 namespace monitor
 {
-  const std::string cuda_path = "@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@/liblo2s_injection.so";
-
 void process_monitor_main(monitor::AbstractProcessMonitor& monitor);
 }
 } // namespace lo2s
