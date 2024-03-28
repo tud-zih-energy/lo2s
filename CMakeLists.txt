@@ -33,6 +33,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
+    CUDA_USE_STATIC_LIBS
 )
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
@@ -43,6 +44,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -53,6 +55,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -64,6 +67,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -135,16 +139,9 @@ endif()
 
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
-    set(CMAKE_REQUIRED_LIBRARIES "rt")
-    check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
-    unset(CMAKE_REQUIRED_LIBRARIES)
-endif()
-
-check_function_exists(shm_open SHM_OPEN_FOUND)
-if(NOT SHM_OPEN_FOUND)
-    set(CMAKE_REQUIRED_LIBRARIES "rt")
-    check_function_exists(shm_open SHM_OPEN_FOUND_WITH_RT)
-    unset(CMAKE_REQUIRED_LIBRARIES)
+  set(CMAKE_REQUIRED_LIBRARIES "rt")
+  check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+  unset(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)
@@ -203,22 +200,9 @@ set(SOURCE_FILES
     src/summary.cpp
 )
 
-if (CUDAToolkit_FOUND)
-	  add_library(lo2s_injection SHARED src/cupti/lib.cpp)
-	  target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
-
-    if(SHM_OPEN_FOUND_WITH_RT)
-        target_link_libraries(lo2s_injection PRIVATE rt)
-    endif()
-
-    target_include_directories(lo2s_injection PRIVATE include)
-    install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-endif ()
-
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
 
-# define dependencies of lo2s target
 target_link_libraries(lo2s
     PRIVATE
         otf2xx::Writer
@@ -239,14 +223,10 @@ if(NOT CLOCK_GETTIME_FOUND)
     else()
         message(SEND_ERROR "Could not find the function clock_gettime(), but it is required.")
     endif()
-  endif()
+endif()
 
-if(NOT SHM_OPEN_FOUND)
-    if(SHM_OPEN_FOUND_WITH_RT)
-        target_link_libraries(lo2s PRIVATE rt)
-    else()
-        message(SEND_ERROR "Could not find the function shm_open(), but it is required.")
-    endif()
+set(CUDA_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
+if(CUDAToolkit_Found)
 endif()
 
 # handle x86_adapt dependency
@@ -320,6 +300,39 @@ if (USE_LIBAUDIT)
     endif()
 endif()
 
+if(USE_CUPTI)
+    add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+    target_include_directories(lo2s_injection PRIVATE include
+    ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+    if (CUDA_USE_STATIC_LIBS)
+        target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
+    else()
+        target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
+    endif()
+
+    if(CUDAToolkit_FOUND)
+        check_function_exists(shm_open SHM_OPEN_FOUND)
+        if(NOT SHM_OPEN_FOUND)
+            set(CMAKE_REQUIRED_LIBRARIES "rt")
+            check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+            unset(CMAKE_REQUIRED_LIBRARIES)
+
+            if(SHM_OPEN_FOUND_WITH_RT)
+                target_link_libraries(lo2s PRIVATE rt)
+                target_link_libraries(lo2s-injection PRIVATE rt)
+            else()
+                message(SEND_ERROR "Could not find the function shm_open(), but it is required.")
+            endif()
+        endif()
+        target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
+        install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    else()
+        message(SEND_ERROR "Cupti not found but requested.")
+    endif()
+endif()
+
+
 
 # generate version string used in lo2s
 if(Git_FOUND)
@@ -335,7 +348,6 @@ else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
-configure_file(include/lo2s/monitor/process_monitor_main.hpp.in include/lo2s/monitor/process_monitor_main.hpp @ONLY)
 
 # check for version dependent features and generate a build config
 

@@ -41,7 +41,7 @@ extern "C"
 // Allocate 8 MiB every time CUPTI asks for more event memory
 constexpr size_t CUPTI_BUFFER_SIZE = 8 * 1024 * 1024;
 
-std::unique_ptr<lo2s::RingBufWriter> rb_writer;
+std::unique_ptr<lo2s::RingBufWriter> rb_writer = nullptr;
 CUpti_SubscriberHandle subscriber = nullptr;
 
 clockid_t clockid = CLOCK_MONOTONIC_RAW;
@@ -88,20 +88,16 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
 
             if (ev == nullptr)
             {
-                // std::cerr << "Ringbuffer full, dropping event. Try to increase
-                // --nvidia-ringbuf-size!" << std::endl;
+                std::cerr
+                    << "Ringbuffer full, dropping event. Try to increase --nvidia-ringbuf-size!"
+                    << std::endl;
                 continue;
             }
 
-            while (1)
-            {
-                std::cerr << "LIB: " << kernel->start << kernel->end << ":" << ev << std::endl;
-            }
             ev->header.type = lo2s::cupti::EventType::CUPTI_KERNEL;
             ev->header.size = sizeof(struct lo2s::cupti::event_kernel) + name_len;
             ev->start = kernel->start;
             ev->end = kernel->end;
-            std::cerr << kernel->name << std::endl;
             memcpy(ev->name, kernel->name, name_len + 1);
 
             rb_writer->commit();
@@ -187,9 +183,9 @@ uint64_t timestampfunc()
 
 extern "C" int InitializeInjection(void)
 {
+
     std::string rb_size_str;
     rb_writer = std::make_unique<lo2s::RingBufWriter>(std::to_string(getpid()), false);
-
     char* clockid_str = getenv("LO2S_CLOCKID");
 
     if (clockid_str != nullptr)

@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <lo2s/util.hpp>
-
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -117,13 +115,13 @@ public:
             throw std::system_error(errno, std::system_category());
         }
 
-        size_t pagesize = get_page_size();
+        size_t pagesize = sysconf(_SC_PAGESIZE);
         size_t ringbuf_size;
 
         if (create)
         {
             ringbuf_size = pagesize * pages;
-            ftruncate(fd_, ringbuf_size + get_page_size());
+            ftruncate(fd_, ringbuf_size + sysconf(_SC_PAGESIZE));
         }
         else
         {
@@ -224,8 +222,8 @@ public:
     {
         assert(reserved_size_ != 0);
 
-        std::cerr << "HEAD: " << head() << std::endl;
         head((head() + reserved_size_) % ringbuf_size());
+        reserved_size_ = 0;
     }
 
 private:

@@ -71,7 +71,6 @@ public:
                 std::string kernel_name = kernel->name;
                 auto& cu_cctx = trace_.cuda_calling_context(exe, kernel_name);
 
-                Log::error() << kernel->start << ":" << kernel->end;
                 writer << otf2::event::calling_context_enter(time_converter_(kernel->start),
                                                              cu_cctx, 2);
                 writer << otf2::event::calling_context_leave(time_converter_(kernel->end), cu_cctx);
