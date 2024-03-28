@@ -72,7 +72,8 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
 
     if (config().use_nvidia && is_process)
     {
-        cupti_reader_ = std::make_unique<cupti::Reader>(parent.trace(), scope.as_process());
+        cupti_reader_ =
+            std::make_unique<cupti::Reader>(parent.trace(), scope.as_thread().as_process());
         add_fd(cupti_reader_->fd());
     }
 
