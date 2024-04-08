@@ -28,12 +28,11 @@
 
 #include <iostream>
 #include <memory>
-#include <mutex>
 #include <string>
 
-#include <cupti.h>
 extern "C"
 {
+#include <cupti.h>
 #include <time.h>
 #include <unistd.h>
 }
@@ -78,13 +77,12 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         case CUPTI_ACTIVITY_KIND_KERNEL:
         case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
         {
-            CUpti_ActivityKernel6* kernel = (CUpti_ActivityKernel6*)record;
+            CUpti_ActivityKernel6* kernel = static_cast<CUpti_ActivityKernel6*>(record);
 
             uint64_t name_len = strlen(kernel->name);
 
-            struct lo2s::cupti::event_kernel* ev =
-                (struct lo2s::cupti::event_kernel*)rb_writer->reserve(
-                    sizeof(struct lo2s::cupti::event_kernel) + name_len);
+            struct lo2s::cupti::event_kernel* ev = static_cast<struct lo2s::cupti::event_kernel*>(
+                rb_writer->reserve(sizeof(struct lo2s::cupti::event_kernel) + name_len));
 
             if (ev == nullptr)
             {
@@ -118,21 +116,6 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
     free(buffer);
 }
 
-static CUptiResult enableCuptiActivity(CUcontext ctx)
-{
-    cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API,
-                        CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020);
-
-    if (ctx == nullptr)
-    {
-        return cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
-    }
-    else
-    {
-        return cuptiActivityEnableContext(ctx, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
-    }
-}
-
 void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid,
                               void* cbdata)
 {
@@ -142,15 +125,13 @@ void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti
     {
         if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStart)
         {
-            /* We start profiling collection on exit of the API. */
             if (cbInfo->callbackSite == CUPTI_API_EXIT)
             {
-                enableCuptiActivity(cbInfo->context);
+                cupttiActivityEnableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
             }
         }
         else if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStop)
         {
-            /* We stop profiling collection on entry of the API. */
             if (cbInfo->callbackSite == CUPTI_API_ENTER)
             {
                 cuptiActivityFlushAll(0);
@@ -161,6 +142,8 @@ void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti
             }
         }
     }
+
+    // Also flush on CUDA device reset
     else if (domain == CUPTI_CB_DOMAIN_RUNTIME_API)
     {
         if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020)
@@ -193,19 +176,25 @@ extern "C" int InitializeInjection(void)
         clockid = std::stoi(clockid_str);
     }
 
+    // Register an atexit() handler for clean-up
     atexit(&atExitHandler);
 
     cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callbackHandler, nullptr);
 
+    // Supply or own timestamp generation function. Save us the work of converting timestamps
     cuptiActivityRegisterTimestampCallback(timestampfunc);
 
+    // Register CUDA API callbacks for us to attach to new CUDA contexts
     cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API,
                         CUPTI_DRIVER_TRACE_CBID_cuProfilerStart);
     cuptiEnableCallback(1, subscriber, CUPTI_CB_DOMAIN_DRIVER_API,
                         CUPTI_DRIVER_TRACE_CBID_cuProfilerStop);
-    enableCuptiActivity(nullptr);
 
-    // Register buffer callbacks
+    cuptiActivityEnable(CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
+
+    // Register buffer callbacks. When cupti needs a new buffer for recording date, it calls
+    // bufferRequested. When the buffer is full, bufferCompleted is used to write the data to the
+    // lo2s ring-buffer
     cuptiActivityRegisterCallbacks(bufferRequested, bufferCompleted);
 
     return 1;

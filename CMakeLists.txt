@@ -203,6 +203,7 @@ set(SOURCE_FILES
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
 
+# define dependencies of lo2s target
 target_link_libraries(lo2s
     PRIVATE
         otf2xx::Writer
@@ -223,10 +224,6 @@ if(NOT CLOCK_GETTIME_FOUND)
     else()
         message(SEND_ERROR "Could not find the function clock_gettime(), but it is required.")
     endif()
-endif()
-
-set(CUDA_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
-if(CUDAToolkit_Found)
 endif()
 
 # handle x86_adapt dependency
@@ -300,6 +297,7 @@ if (USE_LIBAUDIT)
     endif()
 endif()
 
+set(CUDA_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
 if(USE_CUPTI)
     add_library(lo2s_injection SHARED src/cupti/lib.cpp)
     target_include_directories(lo2s_injection PRIVATE include
@@ -348,6 +346,7 @@ else()
     set(LO2S_VERSION_STRING ${lo2s_VERSION})
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
+
 
 # check for version dependent features and generate a build config
 
