@@ -107,8 +107,10 @@ private:
 class ShmRingbuf
 {
 public:
-    ShmRingbuf(std::string filename, bool create, size_t pages)
+    ShmRingbuf(std::string component, pid_t pid, bool create, size_t pages)
     {
+        std::string filename = "/lo2s-" + component + "-" + std::to_string(pid);
+
         fd_ = shm_open(filename.c_str(), create ? O_RDWR | O_CREAT | O_EXCL : O_RDWR, 0600);
         if (fd_ == -1)
         {
@@ -195,8 +197,8 @@ private:
 class RingBufWriter : public ShmRingbuf
 {
 public:
-    RingBufWriter(std::string filename, bool create, size_t pages = 0)
-    : ShmRingbuf(filename, create, pages)
+    RingBufWriter(std::string component, pid_t pid, bool create, size_t pages = 0)
+    : ShmRingbuf(component, pid, create, pages)
     {
     }
 
@@ -233,8 +235,8 @@ private:
 class RingBufReader : public ShmRingbuf
 {
 public:
-    RingBufReader(std::string filename, bool create, size_t pages = 0)
-    : ShmRingbuf(filename, create, pages)
+    RingBufReader(std::string component, pid_t pid, bool create, size_t pages = 0)
+    : ShmRingbuf(component, pid, create, pages)
     {
     }
     std::byte* get(size_t size)

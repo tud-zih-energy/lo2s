@@ -29,7 +29,7 @@ namespace cupti
 {
 enum class EventType : uint64_t
 {
-    CUPTI_KERNEL = 0,
+    CUPTI_KERNEL = 1,
 };
 
 struct event_header

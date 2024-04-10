@@ -49,8 +49,9 @@ class Reader
 public:
     Reader(trace::Trace& trace, Process process)
     : process_(process), trace_(trace), time_converter_(perf::time::Converter::instance()),
-      ringbuf_reader_(std::to_string(process.as_pid_t()), true, config().nvidia_ringbuf_size),
-      timer_fd_(timerfd_from_ns(config().userspace_read_interval)), exe(get_process_exe(process))
+      ringbuf_reader_("cupti", process.as_pid_t(), true, config().nvidia_ringbuf_size),
+      timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
+      executable_name_(get_process_exe(process))
     {
     }
 
@@ -69,11 +70,11 @@ public:
                 auto& writer = trace_.cuda_writer(Thread(process_.as_thread()));
 
                 std::string kernel_name = kernel->name;
-                auto& cu_cctx = trace_.cuda_calling_context(exe, kernel_name);
+                auto& cu_cctx = trace_.cuda_calling_context(executable_name_, kernel_name);
 
-                writer << otf2::event::calling_context_enter(time_converter_(kernel->start),
-                                                             cu_cctx, 2);
-                writer << otf2::event::calling_context_leave(time_converter_(kernel->end), cu_cctx);
+                writer.write_calling_context_enter(time_converter_(kernel->start), cu_cctx.ref(),
+                                                   2);
+                writer.write_calling_context_leave(time_converter_(kernel->end), cu_cctx.ref());
             }
 
             ringbuf_reader_.pop(header->size);
@@ -91,7 +92,7 @@ private:
     perf::time::Converter& time_converter_;
     RingBufReader ringbuf_reader_;
     int timer_fd_;
-    std::string exe;
+    std::string executable_name_;
 };
 } // namespace cupti
 } // namespace lo2s

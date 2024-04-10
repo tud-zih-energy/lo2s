@@ -77,12 +77,13 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         case CUPTI_ACTIVITY_KIND_KERNEL:
         case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
         {
-            CUpti_ActivityKernel6* kernel = static_cast<CUpti_ActivityKernel6*>(record);
+            CUpti_ActivityKernel6* kernel = reinterpret_cast<CUpti_ActivityKernel6*>(record);
 
             uint64_t name_len = strlen(kernel->name);
 
-            struct lo2s::cupti::event_kernel* ev = static_cast<struct lo2s::cupti::event_kernel*>(
-                rb_writer->reserve(sizeof(struct lo2s::cupti::event_kernel) + name_len));
+            struct lo2s::cupti::event_kernel* ev =
+                reinterpret_cast<struct lo2s::cupti::event_kernel*>(
+                    rb_writer->reserve(sizeof(struct lo2s::cupti::event_kernel) + name_len));
 
             if (ev == nullptr)
             {
@@ -127,7 +128,7 @@ void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti
         {
             if (cbInfo->callbackSite == CUPTI_API_EXIT)
             {
-                cupttiActivityEnableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
+                cuptiActivityEnableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
             }
         }
         else if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStop)
@@ -168,7 +169,7 @@ extern "C" int InitializeInjection(void)
 {
 
     std::string rb_size_str;
-    rb_writer = std::make_unique<lo2s::RingBufWriter>(std::to_string(getpid()), false);
+    rb_writer = std::make_unique<lo2s::RingBufWriter>("cupti", getpid(), false);
     char* clockid_str = getenv("LO2S_CLOCKID");
 
     if (clockid_str != nullptr)

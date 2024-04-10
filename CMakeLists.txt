@@ -139,9 +139,9 @@ endif()
 
 check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
-  set(CMAKE_REQUIRED_LIBRARIES "rt")
-  check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
-  unset(CMAKE_REQUIRED_LIBRARIES)
+    set(CMAKE_REQUIRED_LIBRARIES "rt")
+    check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+    unset(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
 CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_event.h HAVE_PERF_RECORD_SWITCH)

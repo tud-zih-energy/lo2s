@@ -94,7 +94,7 @@ std::vector<char*> to_vector_of_c_str(std::vector<std::string> vec)
     if (config().use_nvidia)
     {
         env = { "CUDA_INJECTION64_PATH=" + config().cuda_path };
-        Log::error() << config().cuda_path;
+
         if (config().use_clockid)
         {
             env.push_back("LO2S_CLOCKID=" + std::to_string(config().clockid));
