@@ -145,10 +145,10 @@ public:
         // another mapping of the ringbuffer using MMAP_FIXED. This way we only touch mappings we
         // control. Also, put the ringbuffer header on a separate page to make life easier.
 
-        first_mapping_ = std::move(Mmap(fd_, ringbuf_size * 2 + pagesize, 0));
+        first_mapping_ = Mmap(fd_, ringbuf_size * 2 + pagesize, 0);
 
-        second_mapping_ = std::move(
-            Mmap(fd_, ringbuf_size, pagesize, first_mapping_.as<std::byte*>() + ringbuf_size));
+        second_mapping_ =
+            Mmap(fd_, ringbuf_size, pagesize, first_mapping_.as<std::byte*>() + ringbuf_size);
 
         header_ = first_mapping_.as<struct ringbuf_header*>();
         start_ = first_mapping_.as<std::byte*>() + pagesize;
