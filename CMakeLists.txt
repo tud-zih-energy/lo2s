@@ -313,7 +313,7 @@ if(USE_CUPTI)
         check_function_exists(shm_open SHM_OPEN_FOUND)
         if(NOT SHM_OPEN_FOUND)
             set(CMAKE_REQUIRED_LIBRARIES "rt")
-            check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+            check_function_exists(shm_open SHM_OPEN_FOUND_WITH_RT)
             unset(CMAKE_REQUIRED_LIBRARIES)
 
             if(SHM_OPEN_FOUND_WITH_RT)

@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "lo2s/error.hpp"
 #include <atomic>
 #include <cassert>
 #include <cstddef>
@@ -84,7 +85,7 @@ public:
         }
         if (addr_ == MAP_FAILED)
         {
-            throw std::system_error(errno, std::system_category());
+            throw_errno();
         }
     }
 
