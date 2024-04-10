@@ -326,7 +326,7 @@ if(USE_CUPTI)
 
     if(SHM_OPEN_FOUND_WITH_RT)
         target_link_libraries(lo2s_injection PRIVATE rt)
-    else()
+    endif()
 
     if(CUDAToolkit_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
