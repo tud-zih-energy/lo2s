@@ -33,6 +33,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
+    CUDA_USE_STATIC_LIBS
 )
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
@@ -43,6 +44,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -53,6 +55,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -64,6 +67,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -102,6 +106,7 @@ find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 find_package(Veosinfo)
 find_package(PkgConfig)
+find_package(CUDAToolkit)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
@@ -122,6 +127,8 @@ CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" O
 add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
 CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
+CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
+add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -134,6 +141,13 @@ check_function_exists(clock_gettime CLOCK_GETTIME_FOUND)
 if(NOT CLOCK_GETTIME_FOUND)
     set(CMAKE_REQUIRED_LIBRARIES "rt")
     check_function_exists(clock_gettime CLOCK_GETTIME_FOUND_WITH_RT)
+    unset(CMAKE_REQUIRED_LIBRARIES)
+endif()
+
+check_function_exists(shm_open SHM_OPEN_FOUND)
+if(NOT SHM_OPEN_FOUND)
+    set(CMAKE_REQUIRED_LIBRARIES "rt")
+    check_function_exists(shm_open SHM_OPEN_FOUND_WITH_RT)
     unset(CMAKE_REQUIRED_LIBRARIES)
 endif()
 
@@ -219,6 +233,14 @@ if(NOT CLOCK_GETTIME_FOUND)
     endif()
 endif()
 
+if(NOT SHM_OPEN_FOUND)
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s PRIVATE rt)
+    else()
+        message(SEND_ERROR "Could not find the function shm_open(), but it is required.")
+    endif()
+endif()
+
 # handle x86_adapt dependency
 if(X86Adapt_FOUND)
     target_sources(lo2s PRIVATE
@@ -289,6 +311,31 @@ if (USE_LIBAUDIT)
         message(SEND_ERROR "Libaudit not found but requested.")
     endif()
 endif()
+
+set(CUDA_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
+if(USE_CUPTI)
+    add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+    target_include_directories(lo2s_injection PRIVATE include
+    ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+    if (CUDA_USE_STATIC_LIBS)
+        target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
+    else()
+        target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
+    endif()
+
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s_injection PRIVATE rt)
+    else()
+
+    if(CUDAToolkit_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
+        install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    else()
+        message(SEND_ERROR "Cupti not found but requested.")
+    endif()
+endif()
+
 
 
 # generate version string used in lo2s

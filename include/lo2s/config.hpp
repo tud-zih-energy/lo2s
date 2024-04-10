@@ -96,6 +96,10 @@ struct Config
     bool use_nec;
     std::chrono::microseconds nec_read_interval;
     std::chrono::milliseconds nec_check_interval;
+    // Nvidia CUPTI
+    bool use_nvidia;
+    std::string cuda_path;
+    uint64_t nvidia_ringbuf_size;
 };
 
 const Config& config();

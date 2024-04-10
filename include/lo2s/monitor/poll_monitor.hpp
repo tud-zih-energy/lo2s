@@ -55,7 +55,7 @@ protected:
 
     void add_fd(int fd);
 
-    virtual void monitor([[maybe_unused]] int fd){};
+    virtual void monitor([[maybe_unused]] int fd) {};
 
     struct pollfd& stop_pfd()
     {

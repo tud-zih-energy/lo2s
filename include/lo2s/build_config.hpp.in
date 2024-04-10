@@ -34,3 +34,7 @@
 
 
 #cmakedefine LO2S_COPYRIGHT_YEAR "@LO2S_COPYRIGHT_YEAR@"
+
+// The CUDA injection library installation path
+
+#cmakedefine CUDA_PATH "@CUDA_PATH@"

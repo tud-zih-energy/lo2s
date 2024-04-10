@@ -202,8 +202,8 @@ struct Holder<otf2::definition::region>
 template <>
 struct Holder<otf2::definition::calling_context>
 {
-    using type =
-        otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread, BySyscall>;
+    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread,
+                                                ByLineInfo, BySyscall>;
 };
 template <>
 struct Holder<otf2::definition::source_code_location>
