@@ -59,7 +59,7 @@ private:
     void fd_flags(std::size_t fd, int flags);
     void close_fd(std::size_t fd);
 
-    int fds_[2];
-    bool fd_open_[2];
+    int fds_[2] = { -1, -1 };
+    bool fd_open_[2] = { false, false };
 };
 } // namespace lo2s
