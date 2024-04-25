@@ -1,33 +1,46 @@
 ---
-BasedOnStyle:  LLVM
+BasedOnStyle: LLVM
 AccessModifierOffset: -4
-AlignEscapedNewlinesLeft: false
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: false
-AlwaysBreakTemplateDeclarations: true
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakTemplateDeclarations: Yes
 AlwaysBreakBeforeMultilineStrings: false
 BinPackParameters: true
-BreakBeforeBinaryOperators: false
-BreakBeforeBraces: Allman
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterExternBlock: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyNamespace: true
+  SplitEmptyRecord: true
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit:     100
+ColumnLimit: 100
 ConstructorInitializerIndentWidth: 0
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 Cpp11BracedListStyle: false
-DerivePointerBinding: false
 ExperimentalAutoDetectBinPacking: false
 IndentCaseLabels: false
-IndentWidth:     4
-IndentFunctionDeclarationAfterType: false
+IndentWidth: 4
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-FixNamespaceComments: true
-
-PointerBindsToType: true
 
 PenaltyBreakBeforeFirstCallParameter: 19
 PenaltyBreakComment: 60
@@ -35,20 +48,18 @@ PenaltyBreakString: 1000
 PenaltyBreakFirstLessLess: 120
 PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 60
+PointerAlignment: Left
 
-
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 
-
-Standard:        Cpp11
-TabWidth:        4
-UseTab:          Never
+Standard: Latest
+TabWidth: 4
+UseTab: Never
 
 SpacesInParentheses: false
-SpacesInAngles:  false
-SpaceInEmptyParentheses: false
+SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
-SpaceAfterControlStatementKeyword: true
-SpaceBeforeAssignmentOperators: true
 ContinuationIndentWidth: 4
 ...

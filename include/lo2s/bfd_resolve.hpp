@@ -149,9 +149,9 @@ public:
 private:
     void filter_symbols()
     {
-        symbols_.erase(std::remove_if(
-            symbols_.begin(), symbols_.end(),
-            [](const asymbol* sym) { return (sym != nullptr) && !(sym->flags & BSF_FUNCTION); }));
+        symbols_.erase(std::remove_if(symbols_.begin(), symbols_.end(), [](const asymbol* sym) {
+            return (sym != nullptr) && !(sym->flags & BSF_FUNCTION);
+        }));
     }
 
     void read_symbols();
