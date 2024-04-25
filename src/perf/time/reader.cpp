@@ -124,6 +124,7 @@ bool Reader::handle(const RecordSyncType* sync_event)
     perf_time = convert_time_point(sync_event->time);
     return true;
 }
+
 Reader::~Reader()
 {
     close(fd_);

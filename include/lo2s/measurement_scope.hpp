@@ -21,6 +21,7 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+
 namespace lo2s
 {
 
@@ -66,6 +67,7 @@ struct MeasurementScope
     {
         return { MeasurementScopeType::BIO, s };
     }
+
     static MeasurementScope syscall(ExecutionScope s)
     {
         return { MeasurementScopeType::SYSCALL, s };

@@ -37,6 +37,7 @@ extern "C"
 {
 #include <sys/types.h>
 }
+
 namespace lo2s
 {
 namespace trace
@@ -57,70 +58,85 @@ struct SimpleKeyType
 struct ByCoreTag
 {
 };
+
 using ByCore = SimpleKeyType<Core, ByCoreTag>;
 
 struct ByPackageTag
 {
 };
+
 using ByPackage = SimpleKeyType<Package, ByPackageTag>;
 
 struct ByCpuTag
 {
 };
+
 using ByCpu = SimpleKeyType<Cpu, ByCpuTag>;
 
 struct ByThreadTag
 {
 };
+
 using ByThread = SimpleKeyType<Thread, ByThreadTag>;
 
 struct ByNecThreadTag
 {
 };
+
 using ByNecThread = SimpleKeyType<Thread, ByNecThreadTag>;
 
 struct ByProcessTag
 {
 };
+
 using ByProcess = SimpleKeyType<Process, ByProcessTag>;
 
 struct ByBlockDeviceTag
 {
 };
+
 using ByBlockDevice = SimpleKeyType<BlockDevice, ByBlockDeviceTag>;
 
 struct ByStringTag
 {
 };
+
 using ByString = SimpleKeyType<std::string, ByStringTag>;
 
 struct BySyscallTag
 {
 };
+
 using BySyscall = SimpleKeyType<int64_t, BySyscallTag>;
+
 struct ByAddressTag
 {
 };
+
 using ByAddress = SimpleKeyType<Address, ByAddressTag>;
 
 struct ByLineInfoTag
 {
 };
+
 using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
 
 struct ByExecutionScopeTag
 {
 };
+
 using ByExecutionScope = SimpleKeyType<ExecutionScope, ByExecutionScopeTag>;
 
 struct ByMeasurementScopeTag
 {
 };
+
 using ByMeasurementScope = SimpleKeyType<MeasurementScope, ByMeasurementScopeTag>;
 
 struct ByEventDescriptionTag
 {
 };
+
 using ByEventDescription = SimpleKeyType<perf::EventDescription, ByEventDescriptionTag>;
 
 struct ByCounterCollectionTag
@@ -140,18 +156,21 @@ struct Holder
 {
     using type = typename otf2::get_default_holder<Definition>::type;
 };
+
 template <>
 struct Holder<otf2::definition::system_tree_node>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::system_tree_node, ByNecDevice,
                                                 ByCore, ByProcess, ByBlockDevice, ByCpu, ByPackage>;
 };
+
 template <>
 struct Holder<otf2::definition::regions_group>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString,
                                                 ByProcess, ByThread>;
 };
+
 template <>
 struct Holder<otf2::definition::metric_class>
 {
@@ -165,21 +184,25 @@ struct Holder<otf2::definition::metric_member>
     using type = otf2::lookup_definition_holder<otf2::definition::metric_member, ByString,
                                                 ByEventDescription>;
 };
+
 template <>
 struct Holder<otf2::definition::io_handle>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::io_handle, ByBlockDevice>;
 };
+
 template <>
 struct Holder<otf2::definition::io_regular_file>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::io_regular_file, ByBlockDevice>;
 };
+
 template <>
 struct Holder<otf2::definition::string>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::string, ByString>;
 };
+
 template <>
 struct Holder<otf2::definition::location_group>
 {
@@ -187,35 +210,41 @@ struct Holder<otf2::definition::location_group>
         otf2::lookup_definition_holder<otf2::definition::location_group, ByMeasurementScope,
                                        ByExecutionScope, ByNecThread, ByBlockDevice>;
 };
+
 template <>
 struct Holder<otf2::definition::location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
                                                 ByMeasurementScope, ByNecThread, ByBlockDevice>;
 };
+
 template <>
 struct Holder<otf2::definition::region>
 {
     using type =
         otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo, BySyscall>;
 };
+
 template <>
 struct Holder<otf2::definition::calling_context>
 {
     using type =
         otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread, BySyscall>;
 };
+
 template <>
 struct Holder<otf2::definition::source_code_location>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::source_code_location, ByLineInfo,
                                                 BySyscall>;
 };
+
 template <>
 struct Holder<otf2::definition::comm>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::comm, ByProcess, ByBlockDevice>;
 };
+
 template <>
 struct Holder<otf2::definition::comm_group>
 {

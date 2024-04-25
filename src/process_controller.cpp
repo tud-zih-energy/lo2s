@@ -133,6 +133,7 @@ ProcessController::~ProcessController()
 {
     summary().record_perf_wakeups(num_wakeups_);
 }
+
 void ProcessController::run()
 {
     // monitor fork/exit/... via ptrace

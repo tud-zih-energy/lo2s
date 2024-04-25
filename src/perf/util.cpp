@@ -99,6 +99,7 @@ void perf_check_disabled()
         throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
     }
 }
+
 int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                         unsigned long flags, int cgroup_fd)
 {

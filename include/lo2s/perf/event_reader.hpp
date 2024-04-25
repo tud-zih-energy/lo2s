@@ -91,6 +91,7 @@ public:
         char filename[1];
         // struct sample_id sample_id;
     };
+
     struct RecordLostType
     {
         struct perf_event_header header;
@@ -116,6 +117,7 @@ public:
         uint64_t time;
         // struct sample_id sample_id;
     };
+
     struct RecordSwitchType
     {
         struct perf_event_header header;
@@ -124,6 +126,7 @@ public:
         uint32_t cpu, res;
         // struct sample_id sample_id;
     };
+
     struct RecordSwitchCpuWideType
     {
         struct perf_event_header header;

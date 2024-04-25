@@ -94,6 +94,7 @@ struct EventDescription
         }
         return lhs.type < rhs.type;
     }
+
     std::string name;
     perf_type_id type;
     std::uint64_t config;

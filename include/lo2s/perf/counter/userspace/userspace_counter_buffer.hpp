@@ -38,6 +38,7 @@ struct UserspaceReadFormat
     UserspaceReadFormat() : value(0), time_enabled(0), time_running(0)
     {
     }
+
     uint64_t value;
     uint64_t time_enabled;
     uint64_t time_running;
@@ -57,6 +58,7 @@ public:
         update_buffers();
         std::swap(current_, previous_);
     }
+
     std::size_t diff_enabled(size_t nr)
     {
         return current_[nr].time_enabled - previous_[nr].time_enabled;

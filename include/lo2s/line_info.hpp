@@ -80,6 +80,7 @@ public:
         return std::tie(file, function, line, dso) <
                std::tie(other.file, other.function, other.line, dso);
     }
+
     bool operator==(const LineInfo& other) const
     {
         return std::tie(file, function, line, dso) ==

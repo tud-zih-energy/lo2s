@@ -468,6 +468,7 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
         ED_PMU,
         ED_NAME,
     };
+
     static const std::regex ev_desc_regex(R"(([a-z0-9-_]+)[\/:]([a-z0-9-_]+)\/?)");
     std::smatch ev_desc_match;
 

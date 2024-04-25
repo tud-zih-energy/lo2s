@@ -139,6 +139,7 @@ const Config& config()
 {
     return *instance;
 }
+
 void parse_program_options(int argc, const char** argv)
 {
     std::stringstream description;

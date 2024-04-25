@@ -146,6 +146,7 @@ std::vector<std::string> EventFormat::get_tracepoint_event_names()
         return {};
     }
 }
+
 const std::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
 } // namespace tracepoint
 } // namespace perf

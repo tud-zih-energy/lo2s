@@ -81,6 +81,7 @@ public:
     {
         return previous_->time_running;
     }
+
     void read(const GroupReadFormat* inbuf)
     {
         assert(accumulated_.size() == inbuf->nr);
@@ -98,14 +99,17 @@ public:
     {
         return previous_->time_enabled;
     }
+
     std::size_t running()
     {
         return previous_->time_running;
     }
+
     std::size_t diff_enabled([[maybe_unused]] size_t nr)
     {
         return current_->time_enabled - previous_->time_enabled;
     }
+
     std::size_t diff_running([[maybe_unused]] size_t nr)
     {
         return current_->time_running - previous_->time_running;
