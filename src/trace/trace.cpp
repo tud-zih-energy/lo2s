@@ -815,6 +815,7 @@ const otf2::definition::string& Trace::intern_syscall_str(int64_t syscall_nr)
 {
     return intern(syscall_name_for_nr(syscall_nr));
 }
+
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
 {
     return registry_.emplace<otf2::definition::source_code_location>(ByLineInfo(info),
@@ -841,6 +842,7 @@ const otf2::definition::region& Trace::intern_region(const LineInfo& info)
     }
     return region;
 }
+
 const otf2::definition::string& Trace::intern(const std::string& name)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);

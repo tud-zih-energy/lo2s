@@ -74,6 +74,7 @@ public:
             return otf2::definition::calling_context::reference_type::undefined();
         }
     }
+
     otf2::definition::calling_context::reference_type sample_ref(uint64_t num_ips,
                                                                  const uint64_t ips[])
     {

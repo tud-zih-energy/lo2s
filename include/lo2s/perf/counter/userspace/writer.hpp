@@ -28,6 +28,7 @@
 #include <lo2s/trace/trace.hpp>
 
 #include <vector>
+
 namespace lo2s
 {
 namespace perf

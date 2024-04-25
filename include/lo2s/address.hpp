@@ -40,6 +40,7 @@ public:
         ss << std::hex << s;
         ss >> v_;
     }
+
     Address(uint64_t v) : v_(v)
     {
     }
@@ -63,14 +64,17 @@ public:
     {
         return v_ < rhs.v_;
     }
+
     bool operator<=(Address rhs) const
     {
         return v_ <= rhs.v_;
     }
+
     bool operator>(Address rhs) const
     {
         return v_ > rhs.v_;
     }
+
     bool operator>=(Address rhs) const
     {
         return v_ >= rhs.v_;
@@ -113,9 +117,11 @@ struct Range
         {
         }
     };
+
     Range(Address point) : Range(point, point + 1)
     {
     }
+
     Range(Address min_, Address max_) : start(min_), end(max_)
     {
         if (min_ >= max_)
@@ -123,6 +129,7 @@ struct Range
             throw Error("malformed range");
         }
     }
+
     Address start;
     Address end;
 

@@ -135,6 +135,7 @@ void Writer::update_current_thread(Process process, Thread thread, otf2::chrono:
     cctx_manager_.thread_enter(process, thread);
     otf2_writer_.write_calling_context_enter(tp, cctx_manager_.current(), 2);
 }
+
 void Writer::leave_current_thread(Thread thread, otf2::chrono::time_point tp)
 {
     otf2_writer_.write_calling_context_leave(tp, cctx_manager_.current());

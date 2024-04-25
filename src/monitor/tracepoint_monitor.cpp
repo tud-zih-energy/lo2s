@@ -48,10 +48,12 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
                               std::forward_as_tuple(std::move(writer)));
     }
 }
+
 void TracepointMonitor::initialize_thread()
 {
     try_pin_to_scope(cpu_.as_scope());
 }
+
 void TracepointMonitor::monitor(int fd)
 {
     if (fd == timer_pfd().fd)

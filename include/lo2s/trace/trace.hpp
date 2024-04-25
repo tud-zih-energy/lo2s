@@ -66,6 +66,7 @@ struct ThreadCctxRefs
     : process(p), entry(r)
     {
     }
+
     Process process;
     IpRefEntry entry;
 };
@@ -176,6 +177,7 @@ public:
             otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
             otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit));
     }
+
     otf2::definition::metric_class& perf_metric_class(MeasurementScope scope)
     {
         const perf::counter::CounterCollection& counter_collection =

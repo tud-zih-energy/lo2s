@@ -30,6 +30,7 @@ extern "C"
 {
 #include <sys/sysmacros.h>
 }
+
 namespace lo2s
 {
 namespace perf

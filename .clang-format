@@ -62,4 +62,9 @@ SpacesInParentheses: false
 SpacesInAngles: false
 SpacesInCStyleCastParentheses: false
 ContinuationIndentWidth: 4
+
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: true
+EmptyLineBeforeAccessModifier: Always
+SeparateDefinitionBlocks: Always
 ...

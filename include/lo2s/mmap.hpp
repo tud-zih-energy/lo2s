@@ -59,7 +59,9 @@ public:
     {
         throw std::runtime_error("lookup_instruction not implemented.");
     };
+
     virtual LineInfo lookup_line_info(Address ip) = 0;
+
     const std::string& name() const
     {
         return name_;

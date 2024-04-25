@@ -142,6 +142,7 @@ int Pipe::read_fd() const
 
     return fds_[READ_FD];
 }
+
 int Pipe::write_fd() const
 {
     if (!fd_open_[WRITE_FD])
@@ -202,6 +203,7 @@ void Pipe::close_read_fd()
 {
     close_fd(READ_FD);
 }
+
 void Pipe::close_write_fd()
 {
     close_fd(WRITE_FD);

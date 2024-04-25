@@ -155,6 +155,7 @@ public:
     explicit Cpu(int cpuid) : cpu_(cpuid)
     {
     }
+
     int as_int() const;
     ExecutionScope as_scope() const;
 
@@ -162,6 +163,7 @@ public:
     {
         return Cpu(-1);
     }
+
     friend bool operator==(const Cpu& lhs, const Cpu& rhs)
     {
         return lhs.cpu_ == rhs.cpu_;
@@ -243,6 +245,7 @@ public:
     {
         return lhs.id_ == rhs.id_;
     }
+
     friend bool operator<(const Package& lhs, const Package& rhs)
     {
         return lhs.id_ < rhs.id_;
@@ -273,6 +276,7 @@ public:
     {
         return lhs.id_ == rhs.id_;
     }
+
     friend bool operator<(const NecDevice& lhs, const NecDevice& rhs)
     {
         return lhs.id_ < rhs.id_;

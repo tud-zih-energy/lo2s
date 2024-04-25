@@ -21,6 +21,7 @@
 
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/types.hpp>
+
 namespace lo2s
 {
 
@@ -33,10 +34,12 @@ ExecutionScope Process::as_scope() const
 {
     return ExecutionScope(*this);
 }
+
 Process Thread::as_process() const
 {
     return Process(tid_);
 }
+
 Thread Process::as_thread() const
 {
     return Thread(pid_);

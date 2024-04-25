@@ -78,6 +78,7 @@ protected:
 };
 } // namespace group
 } // namespace counter
+
 // namespace counter
 } // namespace perf
 } // namespace lo2s

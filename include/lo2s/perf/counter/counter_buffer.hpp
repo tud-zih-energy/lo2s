@@ -106,6 +106,7 @@ protected:
             }
         }
     }
+
     std::vector<double> accumulated_;
 };
 

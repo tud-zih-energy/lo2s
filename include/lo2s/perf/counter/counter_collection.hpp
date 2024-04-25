@@ -35,6 +35,7 @@ struct CounterCollection
 {
     EventDescription leader;
     std::vector<EventDescription> counters;
+
     double get_scale(int index) const
     {
         if (index == 0)
@@ -46,6 +47,7 @@ struct CounterCollection
             return counters[index - 1].scale;
         }
     }
+
     friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
     {
         if (lhs.leader == rhs.leader)

@@ -27,6 +27,7 @@
 
 #include <lo2s/log.hpp>
 #include <lo2s/types.hpp>
+
 namespace lo2s
 {
 
@@ -41,6 +42,7 @@ enum class ExecutionScopeType
 class Cpu;
 class Process;
 class Thread;
+
 // This is a wrapper around Cpus Threads and Processes. This allows us to simplify the middle-end of
 // lo2s as almost all of it doesn't care if it deals with processes, threads or cpus.
 class ExecutionScope
@@ -83,11 +85,13 @@ public:
         assert(type == ExecutionScopeType::THREAD);
         return Thread(id);
     }
+
     Process as_process() const
     {
         assert(type == ExecutionScopeType::PROCESS);
         return Process(id);
     }
+
     Cpu as_cpu() const
     {
         assert(type == ExecutionScopeType::CPU);
@@ -108,6 +112,7 @@ public:
     {
         return type == ExecutionScopeType::CPU;
     }
+
     // Needed because this is used as a Key in some Structures.
     // Simply order (arbitrarly) by type first, then by scope
     friend bool operator<(const ExecutionScope& lhs, const ExecutionScope& rhs)
@@ -221,6 +226,7 @@ private:
     ~ExecutionScopeGroup()
     {
     }
+
     std::map<ExecutionScope, ExecutionScope> groups_;
 };
 
