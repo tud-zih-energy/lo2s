@@ -185,6 +185,14 @@ void parse_program_options(int argc, const char** argv)
         .metavar("PID")
         .optional();
 
+    general_options.toggle("as-pre-sudo-user", "Drop root privileges before launching COMMAND.")
+        .short_name("u");
+
+    general_options.option("as-user", "User to drop privileges to before launching COMMAND.")
+        .short_name("U")
+        .metavar("USERNAME")
+        .optional();
+
     general_options.option("mmap-pages", "Number of pages to be used by internal buffers.")
         .short_name("m")
         .default_value("16")
@@ -362,6 +370,7 @@ void parse_program_options(int argc, const char** argv)
     config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
     config.process =
         arguments.provided("pid") ? Process(arguments.as<pid_t>("pid")) : Process::invalid();
+    config.drop_root = arguments.given("as-pre-sudo-user");
     config.sampling_event = arguments.get("event");
     config.sampling_period = arguments.as<std::uint64_t>("count");
     config.enable_cct = arguments.given("call-graph");
@@ -419,6 +428,18 @@ void parse_program_options(int argc, const char** argv)
                 break;
             }
         }
+    }
+
+    if (arguments.given("as-pre-sudo-user") && std::getenv("SUDO_UID") == NULL)
+    {
+        Log::error() << "-u was specified but no sudo was detected.";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (arguments.provided("as-user"))
+    {
+        config.drop_root = true;
+        config.user = arguments.get("as-user");
     }
 
     // list arguments to arguments and exit
