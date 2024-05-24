@@ -52,6 +52,8 @@ struct Config
     std::vector<std::string> command;
     std::string command_line;
     bool quiet;
+    bool drop_root;
+    std::string user = "";
     // Optional features
     std::vector<std::string> tracepoint_events;
 #ifdef HAVE_X86_ADAPT

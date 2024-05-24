@@ -41,6 +41,8 @@
 
 extern "C"
 {
+#include <grp.h>
+#include <pwd.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -52,6 +54,72 @@ namespace lo2s
 {
 namespace monitor
 {
+
+static void drop_privileges()
+{
+    // get original uid & gid
+    gid_t original_uid;
+    uid_t original_gid;
+
+    if (config().user != "")
+    {
+        auto orig_user = getpwnam(config().user.c_str());
+        if (orig_user == nullptr)
+        {
+            Log::error() << "No user found with username '" + config().user + ".";
+            throw_errno();
+        }
+
+        original_uid = orig_user->pw_uid;
+        original_gid = orig_user->pw_gid;
+    }
+    else
+    {
+        // sudo is garanteed in this case, see check in config.hpp
+        try
+        {
+            original_uid = std::stoi(std::getenv("SUDO_UID"));
+            original_gid = std::stoi(std::getenv("SUDO_GID"));
+        }
+        catch (std::invalid_argument const& e)
+        {
+            Log::error() << "Cannot parse SUDO_UID/SUDO_GID into int.";
+            throw_errno();
+        }
+        catch (std::out_of_range const& e)
+        {
+            Log::error() << "SUDO_UID/SUDO_GID out of range.";
+            throw_errno();
+        }
+    }
+
+    // drop ancillary group if root is to be dropped, this needs root permissions
+    if (getuid() == 0 || getgid() == 0)
+    {
+        if (setgroups(1, &original_gid) != 0)
+        {
+            Log::error() << "Dropping ancillary group failed.";
+            throw_errno();
+        }
+    }
+
+    if (setgid(original_gid) != 0)
+    {
+        Log::error() << "Setting GID failed.";
+        throw_errno();
+    }
+
+    if (setuid(original_uid) != 0)
+    {
+        Log::error() << "Setting UID failed.";
+        throw_errno();
+    }
+
+    Log::debug() << "Dropped privileges successfully";
+
+    assert(getuid() != 0);
+    assert(getgid() != 0);
+}
 
 [[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
 {
@@ -86,6 +154,12 @@ namespace monitor
 
     // Stop yourself so the parent tracer can do initialize the options
     raise(SIGSTOP);
+
+    // change user if option was set
+    if (config().drop_root == true)
+    {
+        drop_privileges();
+    }
 
     // run the application which should be sampled
     execvp(tmp[0], &tmp[0]);

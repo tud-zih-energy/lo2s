@@ -154,6 +154,14 @@ determine the trace path instead, including variable substitution.
 Attach to a running process with process ID I<PID> instead of launching
 I<COMMAND>.
 
+=item B<-u>, B<--as-pre-sudo-user>
+
+Launch I<COMMAND> as the user that called on sudo. Requires a lo2s call with sudo.
+
+=item B<-U>, B<--as-user> I<USERNAME>
+
+Launch I<COMMAND> as I<USERNAME>. The caller needs to have CAP_SETUID. Will take priority over B<-u> if specified together.
+
 =item B<-m>, B<--mmap-pages> I<N> (default: C<16>)
 
 Allocate I<N> pages for each internal buffer shared between B<lo2s> and the
