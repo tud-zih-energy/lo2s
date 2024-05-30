@@ -162,6 +162,7 @@ void parse_program_options(int argc, const char** argv)
     auto& sensors_options = parser.group("sensors options");
     auto& io_options = parser.group("I/O recording options");
     auto& nec_options = parser.group("NEC SX-Aurora Tsubasa recording options");
+    auto& topdown_options = parser.group("Topdown metrics recording options");
 
     lo2s::Config config;
 
@@ -353,6 +354,8 @@ void parse_program_options(int argc, const char** argv)
         .metavar("MSEC")
         .default_value("100");
 
+    topdown_options.toggle("topdown", "Enable recording of topdown metrics");
+
     nitro::options::arguments arguments;
     try
     {
@@ -380,6 +383,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
     config.use_nec = arguments.given("nec");
+    config.topdown = arguments.given("topdown");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
