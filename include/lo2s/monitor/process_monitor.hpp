@@ -22,6 +22,7 @@
 #pragma once
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/posix_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
@@ -53,6 +54,7 @@ public:
 
 private:
     std::map<Thread, ScopeMonitor> threads_;
+    std::unique_ptr<PosixMonitor> posix_monitor_;
 };
 } // namespace monitor
 } // namespace lo2s

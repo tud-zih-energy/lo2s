@@ -353,6 +353,9 @@ void parse_program_options(int argc, const char** argv)
         .metavar("MSEC")
         .default_value("100");
 
+    io_options.toggle("posix-io",
+                      "Enable recording of POSIX I/o events (requires access to debugfs)");
+
     nitro::options::arguments arguments;
     try
     {
@@ -380,6 +383,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
     config.use_nec = arguments.given("nec");
+    config.use_posix_io = arguments.given("posix-io");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
