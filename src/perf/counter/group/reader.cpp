@@ -110,6 +110,12 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
                         << " counters at once might exceed the hardware limit of simultaneously "
                            "openable counters.";
                 }
+
+                if (perf::counter::CounterProvider::instance().has_group_counters(
+                        ExecutionScope(scope)))
+                {
+                    Log::error() << "Try using --userspace-metric-event if the error persists.";
+                }
                 throw e;
             }
         }
