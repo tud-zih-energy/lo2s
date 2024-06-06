@@ -75,21 +75,17 @@ static void drop_privileges()
     }
     else
     {
-        // sudo is garanteed in this case, see check in config.hpp
+        assert(std::getenv("SUDO_UID") != nullptr);
+
         try
         {
             original_uid = std::stoi(std::getenv("SUDO_UID"));
             original_gid = std::stoi(std::getenv("SUDO_GID"));
         }
-        catch (std::invalid_argument const& e)
+        catch (const std::exception& e)
         {
-            Log::error() << "Cannot parse SUDO_UID/SUDO_GID into int.";
-            throw_errno();
-        }
-        catch (std::out_of_range const& e)
-        {
-            Log::error() << "SUDO_UID/SUDO_GID out of range.";
-            throw_errno();
+            Log::error() << "Cannot parse the environment variables SUDO_UID and/or SUDO_GID.";
+            throw;
         }
     }
 
