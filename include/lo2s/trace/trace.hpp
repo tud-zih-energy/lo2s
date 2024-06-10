@@ -180,6 +180,52 @@ public:
 
     otf2::definition::metric_class& perf_metric_class(MeasurementScope scope)
     {
+
+        if (scope.type == MeasurementScopeType::NEC_METRIC)
+        {
+            if (registry_.has<otf2::definition::metric_class>(ByMeasurementScopeType(scope.type)))
+            {
+                return registry_.get<otf2::definition::metric_class>(
+                    ByMeasurementScopeType(scope.type));
+            }
+            auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
+                ByMeasurementScopeType(scope.type), otf2::common::metric_occurence::async,
+                otf2::common::recorder_kind::abstract);
+
+            // https://sxauroratsubasa.sakura.ne.jp/documents/guide/pdfs/Aurora_ISA_guide.pdf
+            // (page 38)
+            const std::vector<std::pair<std::string, std::string>> nec_counters = {
+                { "execution_count", "Execution Count (EX)" },
+                { "vector_execution_count", "Vector execution count (VX)" },
+                { "fpec", "Floating point data element count (FPEC)" },
+                { "vector_elements_count", "Vector elements count (VE)" },
+                { "vecc", "Vector execution clock count (VECC)" },
+                { "l1mcc", "L1 cache miss clocc count (L1MCC)" },
+                { "vector_elements_count2", "Vector elements count 2 (VE2)" },
+                { "varec", "Vector arithmetic execution clock count (VAREC)" },
+                { "vldec", "Vector load execution clock count (VLDEC)" },
+                { "pccc", "Port conflict clock count (PCCC)" },
+                { "vlpc", "Vector Load packet count (VLPC)" },
+                { "vlec", "Vector load element count (VLEC)" },
+                { "vlcme", "Vector load cache miss element count (VLCME)" },
+                { "fmaec", "Fused multiply add element count (FMAEC)" },
+                { "ptcc", "Power throttling clock count (PTCC)" },
+                { "ttcc", "Thermal throttling clock coung (TTCC)" }
+            };
+
+            for (const auto& counter : nec_counters)
+            {
+                auto& member = registry_.emplace<otf2::definition::metric_member>(
+                    ByString(counter.first), intern(counter.first), intern(counter.second),
+                    otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
+                    otf2::common::type::uint64, otf2::common::base_type::decimal, 0, intern("#"));
+
+                metric_class.add_member(member);
+            }
+
+            return metric_class;
+        }
+
         const perf::counter::CounterCollection& counter_collection =
             perf::counter::CounterProvider::instance().collection_for(scope);
 
