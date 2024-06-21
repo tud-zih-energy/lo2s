@@ -82,10 +82,6 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
     update_current_thread(Process(sample->pid), Thread(sample->tid), tp);
 
-    cpuid_metric_event_.timestamp(tp);
-    cpuid_metric_event_.raw_values()[0] = sample->cpu;
-    otf2_writer_ << cpuid_metric_event_;
-
     if (!has_cct_)
     {
         otf2_writer_.write_calling_context_sample(tp, cctx_manager_.sample_ref(sample->ip), 2,
