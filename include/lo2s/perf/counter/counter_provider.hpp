@@ -23,7 +23,7 @@
 
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event_description.hpp>
+#include <lo2s/perf/reader.hpp>
 
 #include <vector>
 
@@ -56,9 +56,9 @@ public:
     CounterCollection collection_for(MeasurementScope scope);
 
 private:
-    EventDescription group_leader_;
-    std::vector<EventDescription> group_events_;
-    std::vector<EventDescription> userspace_events_;
+    SysfsEvent group_leader_;
+    std::vector<SysfsEvent> group_events_;
+    std::vector<SysfsEvent> userspace_events_;
 };
 } // namespace counter
 } // namespace perf

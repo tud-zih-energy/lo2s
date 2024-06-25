@@ -175,12 +175,13 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::EventDescription event)
+    otf2::definition::metric_member& get_event_metric_member(perf::SysfsEvent event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
-            ByEventDescription(event), intern(event.name), intern(event.name),
+            BySamplingEvent(event), intern(event.get_name()), intern(event.get_name()),
             otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
-            otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit));
+            otf2::common::type::Double, otf2::common::base_type::decimal, 0,
+            intern(event.get_unit()));
     }
 
     otf2::definition::metric_class& perf_metric_class(MeasurementScope scope)
