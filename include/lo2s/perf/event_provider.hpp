@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/event_description.hpp>
+#include <lo2s/perf/event.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -36,43 +36,6 @@ namespace perf
 class EventProvider
 {
 public:
-    struct DescriptionCache
-    {
-    private:
-        DescriptionCache()
-        : description(std::string(), static_cast<perf_type_id>(-1), 0, 0), valid_(false)
-        {
-        }
-
-    public:
-        DescriptionCache(const EventDescription& description)
-        : description(description), valid_(true)
-        {
-        }
-
-        DescriptionCache(EventDescription&& description)
-        : description(std::move(description)), valid_(true)
-        {
-        }
-
-        static DescriptionCache make_invalid()
-        {
-            return DescriptionCache();
-        }
-
-        bool is_valid() const
-        {
-            return valid_;
-        }
-
-        EventDescription description;
-
-    private:
-        bool valid_;
-    };
-
-    using EventMap = std::unordered_map<std::string, DescriptionCache>;
-
     EventProvider();
     EventProvider(const EventProvider&) = delete;
     void operator=(const EventProvider&) = delete;
@@ -82,14 +45,14 @@ public:
         return instance_mutable();
     }
 
-    static EventDescription get_event_by_name(const std::string& name);
+    static SysfsEvent get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name);
 
-    static std::vector<EventDescription> get_predefined_events();
-    static std::vector<EventDescription> get_pmu_events();
+    static std::vector<SysfsEvent> get_predefined_events();
+    static std::vector<SysfsEvent> get_pmu_events();
 
-    static EventDescription fallback_metric_leader_event();
+    static SysfsEvent fallback_metric_leader_event();
 
     class InvalidEvent : public std::runtime_error
     {
@@ -107,11 +70,10 @@ private:
         return e;
     }
 
-    EventDescription cache_event(const std::string& name);
+    SysfsEvent cache_event(const std::string& name);
 
-    EventMap event_map_;
+    std::unordered_map<std::string, SysfsEvent> event_map_;
 };
 
-bool event_is_openable(EventDescription& ev);
 } // namespace perf
 } // namespace lo2s

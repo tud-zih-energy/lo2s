@@ -1,7 +1,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_description.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
 
@@ -49,27 +49,6 @@ int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int
     return syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags);
 }
 
-// Default options we use in every perf_event_open call
-struct perf_event_attr common_perf_event_attrs()
-{
-    struct perf_event_attr attr;
-    memset(&attr, 0, sizeof(struct perf_event_attr));
-
-    attr.size = sizeof(struct perf_event_attr);
-    attr.disabled = 1;
-
-#ifndef USE_HW_BREAKPOINT_COMPAT
-    attr.use_clockid = config().use_clockid;
-    attr.clockid = config().clockid;
-#endif
-    // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
-    // Default behaviour is to wakeup on every event, which is horrible performance wise
-    attr.watermark = 1;
-    attr.wakeup_watermark = static_cast<uint32_t>(0.8 * config().mmap_pages * get_page_size());
-
-    return attr;
-}
-
 void perf_warn_paranoid()
 {
     static bool warning_issued = false;
@@ -98,46 +77,6 @@ void perf_check_disabled()
 
         throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
     }
-}
-
-int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                        unsigned long flags, int cgroup_fd)
-{
-    int fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
-    if (fd < 0 && errno == EACCES && !perf_attr->exclude_kernel && perf_event_paranoid() > 1)
-    {
-        perf_attr->exclude_kernel = 1;
-        perf_warn_paranoid();
-        fd = perf_event_open(perf_attr, scope, group_fd, flags, cgroup_fd);
-    }
-    return fd;
-}
-
-int perf_event_description_open(ExecutionScope scope, const EventDescription& desc, int group_fd)
-{
-    struct perf_event_attr perf_attr;
-    memset(&perf_attr, 0, sizeof(perf_attr));
-    perf_attr.size = sizeof(perf_attr);
-    perf_attr.sample_period = 0;
-    perf_attr.type = desc.type;
-    perf_attr.config = desc.config;
-    perf_attr.config1 = desc.config1;
-    perf_attr.exclude_kernel = config().exclude_kernel;
-    // Needed when scaling multiplexed events, and recognize activation phases
-    perf_attr.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-
-#ifndef USE_HW_BREAKPOINT_COMPAT
-    perf_attr.use_clockid = config().use_clockid;
-    perf_attr.clockid = config().clockid;
-#endif
-
-    int fd = perf_try_event_open(&perf_attr, scope, group_fd, 0, config().cgroup_fd);
-    if (fd < 0)
-    {
-        Log::error() << "perf_event_open for counter failed";
-        throw_errno();
-    }
-    return fd;
 }
 } // namespace perf
 } // namespace lo2s

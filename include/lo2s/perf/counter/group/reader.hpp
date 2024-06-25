@@ -24,6 +24,7 @@
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/reader.hpp>
 
 #include <vector>
 
@@ -58,21 +59,9 @@ public:
         struct GroupReadFormat v;
     };
 
-    ~Reader()
-    {
-        for (int fd : counter_fds_)
-        {
-            if (fd != -1)
-            {
-                ::close(fd);
-            }
-        }
-        ::close(group_leader_fd_);
-    }
-
 protected:
-    int group_leader_fd_;
-    std::vector<int> counter_fds_;
+    PerfEventInstance counter_leader_;
+    std::vector<PerfEventInstance> counters_;
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };

@@ -23,6 +23,7 @@
 
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -92,15 +93,13 @@ class IoReader : public PullReader
 public:
     IoReader(IoReaderIdentity identity) : identity_(identity)
     {
-        struct perf_event_attr attr = common_perf_event_attrs();
-        attr.type = PERF_TYPE_TRACEPOINT;
+        perf::TracepointEvent event(0, identity.tracepoint.id());
 
-        attr.config = identity.tracepoint.id();
-
-        attr.sample_period = 1;
-        attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
-        fd_ = perf_event_open(&attr, identity.cpu.as_scope(), -1, 0);
-        if (fd_ < 0)
+        try
+        {
+            ev_instance_ = event.open(identity.cpu);
+        }
+        catch (const std::system_error& e)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -110,45 +109,21 @@ public:
 
         try
         {
-            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
-            {
-                throw_errno();
-            }
-
-            init_mmap(fd_);
+            init_mmap(ev_instance_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
-            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
-            if (ret == -1)
-            {
-                throw_errno();
-            }
+            ev_instance_.enable();
         }
         catch (...)
         {
             Log::error() << "Couldn't initialize block:rq_insert reading";
-            close(fd_);
             throw;
-        }
-    }
-
-    ~IoReader()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
         }
     }
 
     void stop()
     {
-        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
-        Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
-        if (ret == -1)
-        {
-            throw_errno();
-        }
+        ev_instance_.disable();
     }
 
     TracepointSampleType* top()
@@ -158,7 +133,7 @@ public:
 
     int fd() const
     {
-        return fd_;
+        return ev_instance_.get_fd();
     }
 
     IoReader& operator=(const IoReader&) = delete;
@@ -168,19 +143,19 @@ public:
     {
         PullReader::operator=(std::move(other));
         std::swap(identity_, other.identity_);
-        std::swap(fd_, other.fd_);
+        std::swap(ev_instance_, other.ev_instance_);
 
         return *this;
     }
 
     IoReader(IoReader&& other) : PullReader(std::move(other)), identity_(other.identity_)
     {
-        std::swap(fd_, other.fd_);
+        std::swap(ev_instance_, other.ev_instance_);
     }
 
 private:
     IoReaderIdentity identity_;
-    int fd_ = -1;
+    perf::PerfEventInstance ev_instance_;
 };
 } // namespace perf
 } // namespace lo2s
