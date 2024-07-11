@@ -21,6 +21,7 @@ S<[B<-->[B<no->]B<disassemble>]>
 S<[B<-->[B<no->]B<kernel>]>
 S<[B<-t> I<TRACEPOINT>]>
 S<[B<-E> I<EVENT>]>
+S<[B<--userspace-metric-event> I<EVENT>]>
 S<[B<--standard-metrics>]>
 S<[B<--metric-leader> I<EVENT>]>
 S<[B<--metric-count> I<N> | B<--metric-frequency> I<HZ>]>
@@ -287,6 +288,11 @@ Reading events from kernel space requires a I<paranoid level> of at most 1.
 
 Record metrics for this perf event.
 May be specified multiple times to record metrics for more than one event.
+Try B<--userspace-metric-event> if I<EVENT> is not openable.
+
+=item B<--userspace-metric-event> I<EVENT>
+
+This is a more compatible but slower version of B<-E>.
 
 =item B<--standard-metrics>
 
