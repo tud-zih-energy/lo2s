@@ -154,7 +154,7 @@ determine the trace path instead, including variable substitution.
 Attach to a running process with process ID I<PID> instead of launching
 I<COMMAND>.
 
-=item B<-u>, B<--as-pre-sudo-user>
+=item B<-u>, B<--drop-root>
 
 Launch I<COMMAND> as the user that called on sudo. Requires a lo2s call with sudo.
 
@@ -315,7 +315,7 @@ Can not be used in conjunction with B<--metric-leader>
 =item B<--syscall> I<SYSCALLS>
 
 Record syscall activity for the given syscall or "all" to record all syscalls.
-Can be given multiple times to record multiple syscalls at once. 
+Can be given multiple times to record multiple syscalls at once.
 Argument may either be a syscall name, like "read", or a syscall number.
 Note that due to the high event-rate of many syscalls it is advised to keep the number of recorded syscalls limited.
 
