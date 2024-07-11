@@ -64,6 +64,11 @@ public:
         return lhs.tid_ < rhs.tid_;
     }
 
+    friend bool operator>(const Thread& lhs, const Thread& rhs)
+    {
+        return lhs.tid_ > rhs.tid_;
+    }
+
     friend bool operator!(const Thread& thread)
     {
         return thread.tid_ == -1;
