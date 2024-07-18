@@ -19,31 +19,35 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <filesystem>
+
+#include <lo2s/log.hpp>
 #include <lo2s/monitor/nec_monitor_main.hpp>
+
+extern "C"
+{
+    extern int ve_sysfs_path_info(int nodeid, char* ve_sysfs_path);
+}
 
 namespace lo2s
 {
 namespace nec
 {
 
-std::optional<NecDevice> NecMonitorMain::get_device_of(Thread thread)
-{
-    // /sys/class/ve/ve0 is not device 0, because that would make too much sense
-    // So look the device id up here
-
-    for (int i = 0; i < nodeinfo_.total_node_count; i++)
-    {
-        if (!ve_check_pid(nodeinfo_.nodeid[i], thread.as_pid_t()))
-        {
-            return NecDevice(nodeinfo_.nodeid[i]);
-        }
-    }
-    return std::optional<NecDevice>();
-}
-
 std::vector<Thread> NecMonitorMain::get_tasks_of(NecDevice device)
 {
-    std::ifstream task_stream(fmt::format("/sys/class/ve/ve{}/task_id_all", device.as_int()));
+    char sysfs_path_str[PATH_MAX];
+    memset(sysfs_path_str, 0, PATH_MAX);
+
+    auto ret = ve_sysfs_path_info(device.as_int(), sysfs_path_str);
+    if (ret == -1)
+    {
+        throw_errno();
+    }
+
+    std::filesystem::path sysfs_path(sysfs_path_str);
+    sysfs_path /= "task_id_all";
+    std::ifstream task_stream(sysfs_path);
 
     std::vector<Thread> threads;
 
@@ -97,17 +101,8 @@ void NecMonitorMain::run()
                 continue;
             }
 
-            auto real_device_id = get_device_of(thread);
-
-            if (!real_device_id)
-            {
-                Log::warn() << "Could not find real vector accelerator id for "
-                            << thread.as_pid_t();
-                continue;
-            }
-
             auto ret = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                         std::forward_as_tuple(thread, trace_, *real_device_id));
+                                         std::forward_as_tuple(thread, trace_, device_));
             if (ret.second)
             {
                 ret.first->second.start();
