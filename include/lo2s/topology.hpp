@@ -36,7 +36,16 @@
 
 #include <filesystem>
 
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/types.hpp>
+
+#ifdef HAVE_VEOSINFO
+extern "C"
+{
+#include <veosinfo/veosinfo.h>
+}
+#endif
 
 using namespace std::literals::string_literals;
 
@@ -71,25 +80,25 @@ public:
         return cpus_;
     }
 
+#ifdef HAVE_VEOSINFO
     const std::set<NecDevice> nec_devices() const
     {
-        std::set<NecDevice> devices;
-
-        const std::regex nec_regex("/sys/class/ve/ve(\\d)");
-
-        for (auto& dir_entry : std::filesystem::directory_iterator("/sys/class/ve"))
+        ve_nodeinfo nodeinfo;
+        auto ret = ve_node_info(&nodeinfo);
+        if (ret == -1)
         {
-            std::smatch nec_match;
-
-            auto path = dir_entry.path().string();
-            if (std::regex_match(path, nec_match, nec_regex))
-            {
-                devices.emplace(NecDevice(std::stoi(nec_match[1])));
-            }
+            Log::error() << "Failed to get Vector Engine node information!";
+            throw_errno();
         }
 
+        std::set<NecDevice> devices;
+        for (int i = 0; i < nodeinfo.total_node_count; i++)
+        {
+            devices.emplace(NecDevice(i));
+        }
         return devices;
     }
+#endif
 
     Core core_of(Cpu cpu) const
     {
