@@ -171,7 +171,7 @@ set(SOURCE_FILES
     src/process_controller.cpp
 
     src/perf/event_provider.cpp
-    src/perf/reader.cpp
+    src/perf/event.cpp
 
     src/perf/bio/block_device.cpp
     src/perf/counter/counter_provider.cpp
@@ -183,8 +183,8 @@ set(SOURCE_FILES
 
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
-    src/perf/tracepoint/format.cpp
     src/perf/tracepoint/writer.cpp
+    src/perf/tracepoint/event.cpp
     src/perf/syscall/writer.cpp
 
     src/time/time.cpp

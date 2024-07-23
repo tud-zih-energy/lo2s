@@ -21,9 +21,9 @@
 
 #pragma once
 
+#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
@@ -85,7 +85,7 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        SysfsEvent event(enable_on_exec, config().sampling_event);
+        SysfsEvent event(config().sampling_event, enable_on_exec);
 
         event.as_sample();
 
@@ -93,14 +93,7 @@ protected:
         {
             try
             {
-                if (scope.is_cpu())
-                {
-                    ev_instance_ = event.open(scope.as_cpu());
-                }
-                else
-                {
-                    ev_instance_ = event.open(scope.as_thread());
-                }
+                event_ = event.open(scope);
             }
             catch (const std::system_error& e)
             {
@@ -112,7 +105,7 @@ protected:
                     continue;
                 }
 
-                if (!event.degrade_percision())
+                if (!event.degrade_precision())
                 {
                     Log::error() << "perf_event_open for sampling failed: " << e.what();
 
@@ -123,19 +116,19 @@ protected:
                     throw_errno();
                 }
             }
-        } while (!ev_instance_.is_valid());
+        } while (!event_.is_valid());
 
         Log::debug() << "Using precise_ip level: " << event.get_attr().precise_ip;
 
         // Exception safe, so much wow!
         try
         {
-            init_mmap(ev_instance_.get_fd());
+            init_mmap(event_.get_fd());
             Log::debug() << "mmap initialized";
 
             if (!enable_on_exec)
             {
-                ev_instance_.enable();
+                event_.enable();
             }
         }
         catch (...)
@@ -168,7 +161,7 @@ protected:
     bool has_cct_;
 
 private:
-    PerfEventInstance ev_instance_;
+    PerfEventGuard event_;
 };
 } // namespace sample
 } // namespace perf
