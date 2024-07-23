@@ -29,6 +29,7 @@
 #include <lo2s/mmap.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/counter_provider.hpp>
+#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types.hpp>
@@ -175,7 +176,7 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::SysfsEvent event)
+    otf2::definition::metric_member& get_event_metric_member(perf::PerfEvent event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
             BySamplingEvent(event), intern(event.get_name()), intern(event.get_name()),
@@ -274,7 +275,8 @@ public:
         return metric_class;
     }
 
-    otf2::definition::metric_class& tracepoint_metric_class(const std::string& event_name);
+    otf2::definition::metric_class&
+    tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {

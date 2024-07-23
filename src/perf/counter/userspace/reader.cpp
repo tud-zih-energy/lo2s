@@ -22,7 +22,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/reader.hpp>
+#include <lo2s/perf/event.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/measurement_scope.hpp>
@@ -53,18 +53,11 @@ Reader<T>::Reader(ExecutionScope scope)
 {
     for (auto& event : counter_collection_.counters)
     {
-        PerfEventInstance counter;
+        PerfEventGuard counter;
 
         try
         {
-            if (scope.is_cpu())
-            {
-                counter = event.open(scope.as_cpu());
-            }
-            else
-            {
-                counter = event.open(scope.as_thread());
-            }
+            counter = event.open(scope);
         }
         catch (const std::system_error& e)
         {
@@ -75,14 +68,7 @@ Reader<T>::Reader(ExecutionScope scope)
                 event.get_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
-                if (scope.is_cpu())
-                {
-                    counter = std::move(event.open(scope.as_cpu()));
-                }
-                else
-                {
-                    counter = std::move(event.open(scope.as_thread()));
-                }
+                counter = event.open(scope);
             }
 
             if (!counter.is_valid())

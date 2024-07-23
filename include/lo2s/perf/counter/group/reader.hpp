@@ -23,8 +23,8 @@
 
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
+#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/reader.hpp>
 
 #include <vector>
 
@@ -60,8 +60,8 @@ public:
     };
 
 protected:
-    PerfEventInstance counter_leader_;
-    std::vector<PerfEventInstance> counters_;
+    PerfEventGuard counter_leader_;
+    std::vector<PerfEventGuard> counters_;
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };

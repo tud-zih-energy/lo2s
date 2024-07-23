@@ -155,12 +155,11 @@ public:
         }
     }
 
-    std::vector<tracepoint::EventFormat> get_tracepoints()
+    std::vector<perf::tracepoint::TracepointEvent> get_tracepoints()
     {
-
-        bio_queue_ = tracepoint::EventFormat("block:block_bio_queue");
-        bio_issue_ = tracepoint::EventFormat("block:block_rq_issue");
-        bio_complete_ = tracepoint::EventFormat("block:block_rq_complete");
+        bio_queue_ = perf::tracepoint::TracepointEvent("block:block_bio_queue");
+        bio_issue_ = perf::tracepoint::TracepointEvent("block:block_rq_issue");
+        bio_complete_ = perf::tracepoint::TracepointEvent("block:block_rq_complete");
 
         return { bio_queue_, bio_issue_, bio_complete_ };
     }
@@ -182,9 +181,9 @@ private:
     trace::Trace& trace_;
     time::Converter& time_converter_;
 
-    tracepoint::EventFormat bio_queue_;
-    tracepoint::EventFormat bio_issue_;
-    tracepoint::EventFormat bio_complete_;
+    perf::tracepoint::TracepointEvent bio_queue_;
+    perf::tracepoint::TracepointEvent bio_issue_;
+    perf::tracepoint::TracepointEvent bio_complete_;
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
     static constexpr int SECTOR_SIZE = 512;
 };
