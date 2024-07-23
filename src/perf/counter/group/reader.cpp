@@ -25,8 +25,8 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 
+#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_provider.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <cstring>
@@ -53,19 +53,12 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
       CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    counter_collection_.leader.as_group_leader();
+    counter_collection_.leader.set_sample_freq();
     do
     {
         try
         {
-            if (scope.is_cpu())
-            {
-                counter_leader_ = std::move(counter_collection_.leader.open(scope.as_cpu()));
-            }
-            else
-            {
-                counter_leader_ = std::move(counter_collection_.leader.open(scope.as_thread()));
-            }
+            counter_leader_ = counter_collection_.leader.open_as_group_leader(scope);
         }
         catch (const std::system_error& e)
         {
@@ -94,34 +87,17 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         if (counter_ev.is_available_in(scope))
         {
-            PerfEventInstance counter;
+            PerfEventGuard counter;
+            counter_ev.get_attr().exclude_kernel =
+                counter_collection_.leader.get_attr().exclude_kernel;
             do
             {
                 try
                 {
-                    if (scope.is_cpu())
-                    {
-                        counter =
-                            std::move(counter_ev.open(scope.as_cpu(), counter_leader_.get_fd()));
-                    }
-                    else
-                    {
-                        counter =
-                            std::move(counter_ev.open(scope.as_thread(), counter_leader_.get_fd()));
-                    }
+                    counter = counter_leader_.open_child(counter_ev, scope);
                 }
                 catch (const std::system_error& e)
                 {
-                    // perf_try_event_open was used here before
-                    if (counter.get_fd() < 0 && errno == EACCES &&
-                        !counter_ev.get_attr().exclude_kernel && perf_event_paranoid() > 1)
-                    {
-                        counter_ev.get_attr().exclude_kernel = 1;
-                        perf_warn_paranoid();
-
-                        continue;
-                    }
-
                     if (!counter.is_valid())
                     {
                         Log::error() << "failed to add counter '" << counter_ev.get_name()
@@ -146,6 +122,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         counter_leader_.enable();
     }
+
     EventReader<T>::init_mmap(counter_leader_.get_fd());
 }
 template class Reader<Writer>;

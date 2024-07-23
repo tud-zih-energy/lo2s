@@ -32,7 +32,7 @@
 
 #include <cstdint>
 
-#include <lo2s/perf/reader.hpp>
+#include <lo2s/perf/event.hpp>
 
 /* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
 
@@ -94,6 +94,6 @@ enum class Processor
     ARM1176 = 204,
 };
 
-std::vector<perf::SysfsEvent> get_mem_events();
+std::vector<perf::PerfEvent> get_mem_events();
 } // namespace platform
 } // namespace lo2s

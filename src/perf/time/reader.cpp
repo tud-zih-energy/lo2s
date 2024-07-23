@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/reader.hpp>
+#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/time/reader.hpp>
 
 #include <lo2s/log.hpp>
@@ -57,7 +57,7 @@ Reader::Reader()
     static_assert(sizeof(local_time) == 8, "The local time object must not be a big fat "
                                            "object, or the hardware breakpoint won't work.");
 
-    TimeEvent event(0, (uint64_t)&local_time);
+    PerfEvent event((uint64_t)&local_time);
 
     try
     {

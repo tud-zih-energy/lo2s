@@ -21,10 +21,10 @@
 
 #pragma once
 
+#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
@@ -108,17 +108,17 @@ public:
     {
         struct perf_event_header header;
         uint64_t time;
+        uint64_t id;
         // uint32_t size;
         // char data[size];
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, int event_id) : cpu_(cpu)
+    Reader(Cpu cpu, std::string name) : event_(name), cpu_(cpu)
     {
-        TracepointEvent event(0, event_id);
         try
         {
-            ev_instance_ = event.open(cpu_);
+            ev_instance_ = event_.open(cpu_);
         }
         catch (const std::system_error& e)
         {
@@ -127,7 +127,7 @@ public:
         }
 
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
-                     << event_id;
+                     << event_.id();
 
         try
         {
@@ -156,16 +156,13 @@ public:
 
 protected:
     using EventReader<T>::init_mmap;
+    TracepointEvent event_;
 
 private:
     Cpu cpu_;
-    PerfEventInstance ev_instance_;
-    const static std::filesystem::path base_path;
+    PerfEventGuard ev_instance_;
 };
 
-template <typename T>
-const std::filesystem::path Reader<T>::base_path =
-    std::filesystem::path("/sys/kernel/debug/tracing/events");
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s

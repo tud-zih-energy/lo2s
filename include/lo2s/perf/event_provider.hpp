@@ -45,14 +45,14 @@ public:
         return instance_mutable();
     }
 
-    static SysfsEvent get_event_by_name(const std::string& name);
+    static PerfEvent get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name);
 
-    static std::vector<SysfsEvent> get_predefined_events();
+    static std::vector<PerfEvent> get_predefined_events();
     static std::vector<SysfsEvent> get_pmu_events();
 
-    static SysfsEvent fallback_metric_leader_event();
+    static PerfEvent fallback_metric_leader_event();
 
     class InvalidEvent : public std::runtime_error
     {
@@ -70,9 +70,9 @@ private:
         return e;
     }
 
-    SysfsEvent cache_event(const std::string& name);
+    PerfEvent cache_event(const std::string& name);
 
-    std::unordered_map<std::string, SysfsEvent> event_map_;
+    std::unordered_map<std::string, PerfEvent> event_map_;
 };
 
 } // namespace perf

@@ -72,7 +72,7 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      const std::vector<perf::SysfsEvent>& events)
+                                      std::vector<perf::PerfEvent> events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
@@ -489,8 +489,11 @@ void parse_program_options(int argc, const char** argv)
         {
             print_availability(std::cout, "predefined events",
                                perf::EventProvider::get_predefined_events());
-            print_availability(std::cout, "Kernel PMU events",
-                               perf::EventProvider::get_pmu_events());
+
+            // TODO: find a better solution ?
+            std::vector<perf::SysfsEvent> sys_events = perf::EventProvider::get_pmu_events();
+            std::vector<perf::PerfEvent> events(sys_events.begin(), sys_events.end());
+            print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
             print_availability(std::cout, "Libpfm events",
@@ -505,7 +508,8 @@ void parse_program_options(int argc, const char** argv)
 
         if (arguments.given("list-tracepoints"))
         {
-            auto tracepoints = perf::tracepoint::EventFormat::get_tracepoint_event_names();
+            std::vector<std::string> tracepoints =
+                perf::counter::CounterProvider::instance().get_tracepoint_event_names();
 
             if (tracepoints.empty())
             {
