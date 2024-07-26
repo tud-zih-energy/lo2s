@@ -72,6 +72,11 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(userspace_counter_writer_->fd());
     }
 
+    if(config().topdown)
+      {
+    topdown_writer_ = std::make_unique<perf::counter::topdown::Writer>(scope, parent.trace());
+    add_fd(topdown_writer_->fd());
+      }
     // note: start() can now be called
 }
 
@@ -115,6 +120,10 @@ void ScopeMonitor::monitor(int fd)
         (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
     {
         userspace_counter_writer_->read();
+    }
+    if (fd == topdown_writer_->fd())
+    {
+        topdown_writer_->read();
     }
 }
 } // namespace monitor
