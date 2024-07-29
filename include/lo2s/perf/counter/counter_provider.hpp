@@ -23,7 +23,7 @@
 
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/tracepoint/event.hpp>
 
 #include <vector>
 
@@ -49,6 +49,7 @@ public:
     void initialize_group_counters(const std::string& leader,
                                    const std::vector<std::string>& counters);
     void initialize_userspace_counters(const std::vector<std::string>& counters);
+    void initialize_tracepoints(const std::vector<std::string>& tracepoints);
 
     bool has_group_counters(ExecutionScope scope);
     bool has_userspace_counters(ExecutionScope scope);
@@ -57,9 +58,10 @@ public:
     std::vector<std::string> get_tracepoint_event_names();
 
 private:
-    PerfEvent group_leader_;
-    std::vector<PerfEvent> group_events_;
-    std::vector<PerfEvent> userspace_events_;
+    Event group_leader_;
+    std::vector<Event> group_events_;
+    std::vector<Event> userspace_events_;
+    std::vector<tracepoint::TracepointEvent> tracepoint_events_;
 };
 } // namespace counter
 } // namespace perf

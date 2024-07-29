@@ -72,7 +72,7 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::PerfEvent> events)
+                                      std::vector<perf::Event> events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
@@ -404,7 +404,6 @@ void parse_program_options(int argc, const char** argv)
     config.sampling_period = arguments.as<std::uint64_t>("count");
     config.enable_cct = arguments.given("call-graph");
     config.suppress_ip = arguments.given("no-ip");
-    config.tracepoint_events = arguments.get_all("tracepoint");
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
@@ -492,7 +491,7 @@ void parse_program_options(int argc, const char** argv)
 
             // TODO: find a better solution ?
             std::vector<perf::SysfsEvent> sys_events = perf::EventProvider::get_pmu_events();
-            std::vector<perf::PerfEvent> events(sys_events.begin(), sys_events.end());
+            std::vector<perf::Event> events(sys_events.begin(), sys_events.end());
             print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
@@ -796,6 +795,8 @@ void parse_program_options(int argc, const char** argv)
         perf_group_events.emplace_back("cpu-cycles");
     }
 
+    perf::counter::CounterProvider::instance().initialize_tracepoints(
+        arguments.get_all("tracepoint"));
     perf::counter::CounterProvider::instance().initialize_group_counters(
         arguments.get("metric-leader"), perf_group_events);
     perf::counter::CounterProvider::instance().initialize_userspace_counters(perf_userspace_events);
