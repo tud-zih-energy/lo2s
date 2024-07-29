@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
@@ -85,15 +84,13 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        SysfsEvent event(config().sampling_event, enable_on_exec);
-
-        event.as_sample();
+        Event event = EventProvider::instance().create_sampling_event(enable_on_exec);
 
         do
         {
             try
             {
-                event_ = event.open(scope);
+                event_ = event.open(scope, config().cgroup_fd);
             }
             catch (const std::system_error& e)
             {
@@ -161,7 +158,7 @@ protected:
     bool has_cct_;
 
 private:
-    PerfEventGuard event_;
+    EventGuard event_;
 };
 } // namespace sample
 } // namespace perf

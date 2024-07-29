@@ -66,7 +66,7 @@ Reader<T>::Reader(ExecutionScope scope)
 
     for (auto& event : counter_collection_.counters)
     {
-        PerfEventGuard counter;
+        EventGuard counter;
 
         try
         {

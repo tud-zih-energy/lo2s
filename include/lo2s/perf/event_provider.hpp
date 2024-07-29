@@ -21,12 +21,12 @@
 
 #pragma once
 
-#include <lo2s/perf/event.hpp>
-
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <lo2s/perf/tracepoint/event.hpp>
 
 namespace lo2s
 {
@@ -45,14 +45,25 @@ public:
         return instance_mutable();
     }
 
-    static PerfEvent get_event_by_name(const std::string& name);
+    static Event get_event_by_name(const std::string& name);
 
     static bool has_event(const std::string& name);
 
-    static std::vector<PerfEvent> get_predefined_events();
+    static std::vector<Event> get_predefined_events();
     static std::vector<SysfsEvent> get_pmu_events();
 
-    static PerfEvent fallback_metric_leader_event();
+    static Event fallback_metric_leader_event();
+
+    static Event create_time_event(uint64_t local_time);
+    static Event create_raw_event(const std::string& name, perf_type_id type, std::uint64_t config,
+                                  std::uint64_t config1 = 0);
+    static SysfsEvent create_sampling_event(const bool& enable_on_exec);
+    static SysfsEvent create_raw_sysfs_event(const std::string& name);
+    static SysfsEvent create_sysfs_event(const std::string& name);
+    static tracepoint::TracepointEvent
+    create_raw_tracepoint_event(const std::string& name, const bool& enable_on_exec = false);
+    static tracepoint::TracepointEvent create_tracepoint_event(const std::string& name,
+                                                               const bool& enable_on_exec = false);
 
     class InvalidEvent : public std::runtime_error
     {
@@ -70,9 +81,12 @@ private:
         return e;
     }
 
-    PerfEvent cache_event(const std::string& name);
+    static void apply_config_attrs(Event& event);
+    static void apply_default_attrs(Event& event);
 
-    std::unordered_map<std::string, PerfEvent> event_map_;
+    Event cache_event(const std::string& name);
+
+    std::unordered_map<std::string, Event> event_map_;
 };
 
 } // namespace perf

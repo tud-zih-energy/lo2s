@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -114,11 +114,12 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, std::string name) : event_(name), cpu_(cpu)
+    Reader(Cpu cpu, std::string name)
+    : event_(EventProvider::instance().create_tracepoint_event(name)), cpu_(cpu)
     {
         try
         {
-            ev_instance_ = event_.open(cpu_);
+            ev_instance_ = event_.open(cpu_, config().cgroup_fd);
         }
         catch (const std::system_error& e)
         {
@@ -160,7 +161,7 @@ protected:
 
 private:
     Cpu cpu_;
-    PerfEventGuard ev_instance_;
+    EventGuard ev_instance_;
 };
 
 } // namespace tracepoint

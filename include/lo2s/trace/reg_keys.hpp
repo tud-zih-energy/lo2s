@@ -137,7 +137,7 @@ struct BySamplingEventName
 {
 };
 
-using BySamplingEvent = SimpleKeyType<perf::PerfEvent, BySamplingEventName>;
+using BySamplingEvent = SimpleKeyType<perf::Event, BySamplingEventName>;
 
 struct ByCounterCollectionTag
 {

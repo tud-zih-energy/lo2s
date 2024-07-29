@@ -23,8 +23,8 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
@@ -68,13 +68,15 @@ public:
 
     Reader(Cpu cpu) : cpu_(cpu)
     {
-        tracepoint::TracepointEvent enter_event("raw_syscalls:sys_enter");
-        tracepoint::TracepointEvent exit_event("raw_syscalls:sys_exit");
+        tracepoint::TracepointEvent enter_event =
+            EventProvider::instance().create_tracepoint_event("raw_syscalls:sys_enter");
+        tracepoint::TracepointEvent exit_event =
+            EventProvider::instance().create_tracepoint_event("raw_syscalls:sys_exit");
 
         try
         {
-            enter_ev_ = enter_event.open(cpu_);
-            exit_ev_ = exit_event.open(cpu_);
+            enter_ev_ = enter_event.open(cpu_, config().cgroup_fd);
+            exit_ev_ = exit_event.open(cpu_, config().cgroup_fd);
         }
         catch (const std::system_error& e)
         {
@@ -87,11 +89,8 @@ public:
 
         exit_ev_.set_output(enter_ev_);
 
-        if (!config().syscall_filter.empty())
-        {
-            enter_ev_.set_syscall_filter();
-            exit_ev_.set_syscall_filter();
-        }
+        enter_ev_.set_syscall_filter(config().syscall_filter);
+        exit_ev_.set_syscall_filter(config().syscall_filter);
 
         enter_ev_.enable();
         exit_ev_.enable();
@@ -119,8 +118,8 @@ protected:
 
 private:
     Cpu cpu_;
-    PerfEventGuard enter_ev_;
-    PerfEventGuard exit_ev_;
+    EventGuard enter_ev_;
+    EventGuard exit_ev_;
 };
 
 } // namespace syscall
