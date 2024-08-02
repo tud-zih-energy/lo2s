@@ -27,6 +27,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/platform.hpp>
+#include <lo2s/shared_memory.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>
@@ -149,6 +150,22 @@ public:
         // struct sample_id sample_id;
     };
 
+    EventReader() = default;
+
+    EventReader(EventReader<T>&) = delete;
+    EventReader& operator=(EventReader<T>&) = delete;
+
+    EventReader(EventReader<T>&& other)
+    {
+        std::swap(this->shmem_, other.shmem_);
+    }
+
+    EventReader& operator=(EventReader&& other)
+    {
+        std::swap(this->shmem_, other.shmem_);
+        return *this;
+    }
+
     ~EventReader()
     {
         if (lost_samples > 0)
@@ -165,16 +182,17 @@ protected:
 
         mmap_pages_ = config().mmap_pages;
 
-        base = mmap(NULL, (mmap_pages_ + 1) * get_page_size(), PROT_READ | PROT_WRITE, MAP_SHARED,
-                    fd, 0);
-        // Should not be necessary to check for nullptr, but we've seen it!
-        if (base == MAP_FAILED || base == nullptr)
+        try
+        {
+            shmem_ = SharedMemory(fd, (mmap_pages_ + 1) * get_page_size());
+        }
+        catch (const std::system_error& e)
         {
             Log::error() << "mapping memory for recording events failed. You can try "
                             "to decrease the buffer size with the -m flag, or try to increase "
                             "the amount of mappable memory by increasing /proc/sys/kernel/"
                             "perf_event_mlock_kb";
-            throw_errno();
+            throw;
         }
     }
 
@@ -305,12 +323,12 @@ public:
 private:
     const struct perf_event_mmap_page* header() const
     {
-        return (const struct perf_event_mmap_page*)base;
+        return shmem_.as<struct perf_event_mmap_page>();
     }
 
     struct perf_event_mmap_page* header()
     {
-        return (struct perf_event_mmap_page*)base;
+        return shmem_.as<struct perf_event_mmap_page>();
     }
 
     uint64_t data_head() const
@@ -341,7 +359,7 @@ private:
     {
         // workaround for old kernels
         // assert(header()->data_offset == get_page_size());
-        return reinterpret_cast<std::byte*>(base) + get_page_size();
+        return shmem_.as<std::byte>() + get_page_size();
     }
 
 public:
@@ -373,7 +391,7 @@ protected:
 
 private:
     int fd_;
-    void* base;
+    SharedMemory shmem_;
     std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
 
