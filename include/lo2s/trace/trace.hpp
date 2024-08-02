@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
+#include "otf2xx/definition/calling_context.hpp"
 #include <chrono>
 #include <lo2s/address.hpp>
 #include <lo2s/bfd_resolve.hpp>
@@ -131,11 +132,15 @@ public:
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
+    otf2::writer::local& cuda_writer(const Thread& thread);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const Cpu& cpu);
     otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
     otf2::writer::local& nec_writer(NecDevice device, const Thread& nec_thread);
+
+    otf2::definition::calling_context& cuda_calling_context(std::string& exe,
+                                                            std::string& function);
 
     otf2::definition::io_handle& block_io_handle(BlockDevice dev);
 
