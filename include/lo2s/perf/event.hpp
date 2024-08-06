@@ -32,19 +32,17 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
-#ifndef USE_HW_BREAKPOINT_COMPAT
 extern "C"
 {
-#include <linux/hw_breakpoint.h>
 #include <sys/ioctl.h>
-}
+
+#ifndef USE_HW_BREAKPOINT_COMPAT
+#include <linux/hw_breakpoint.h>
 #else
-extern "C"
-{
 #include <sys/types.h>
 #include <sys/wait.h>
-}
 #endif
+}
 
 namespace lo2s
 {
@@ -123,7 +121,8 @@ public:
         unit_ = unit;
     }
 
-    void set_clock_attrs(const bool& use_clockid, const clockid_t& clockid)
+    void set_clock_attrs([[maybe_unused]] const bool& use_clockid,
+                         [[maybe_unused]] const clockid_t& clockid)
     {
 #ifndef USE_HW_BREAKPOINT_COMPAT
         attr_.use_clockid = use_clockid;
