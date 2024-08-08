@@ -25,6 +25,7 @@
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/topology.hpp>
 
 #include <lo2s/trace/trace.hpp>
 
@@ -52,7 +53,7 @@ public:
         {
             for (auto tp : writer_.get_tracepoints())
             {
-                IoReaderIdentity id(tp, cpu);
+                IoReaderIdentity id(tp.name(), cpu);
                 auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
                                                std::forward_as_tuple(id));
                 fds_.emplace_back(reader.first->second.fd());

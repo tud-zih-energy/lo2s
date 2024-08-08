@@ -33,6 +33,7 @@ enum class MeasurementScopeType
     NEC_METRIC,
     BIO,
     SYSCALL,
+    TRACEPOINT,
     UNKNOWN
 };
 
@@ -79,6 +80,11 @@ struct MeasurementScope
         return { MeasurementScopeType::SYSCALL, s };
     }
 
+    static MeasurementScope tracepoint(ExecutionScope s)
+    {
+        return { MeasurementScopeType::TRACEPOINT, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -111,6 +117,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
+        case MeasurementScopeType::TRACEPOINT:
+            return fmt::format("tracepoint events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }
