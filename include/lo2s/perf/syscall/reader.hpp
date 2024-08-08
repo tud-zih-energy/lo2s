@@ -95,8 +95,8 @@ public:
         enter_ev_.enable();
         exit_ev_.enable();
 
-        enter_ev_.set_id(sys_enter_id);
-        exit_ev_.set_id(sys_exit_id);
+        sys_enter_id = enter_ev_.get_id();
+        sys_exit_id = exit_ev_.get_id();
     }
 
     Reader(Reader&& other)
