@@ -184,7 +184,7 @@ private:
     trace::Trace& trace_;
     time::Converter& time_converter_;
 
-    // Unabailable until get_tracepoints() is called
+    // Unavailable until get_tracepoints() is called
     perf::tracepoint::TracepointEvent bio_queue_;
     perf::tracepoint::TracepointEvent bio_issue_;
     perf::tracepoint::TracepointEvent bio_complete_;

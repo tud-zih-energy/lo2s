@@ -118,7 +118,7 @@ struct MeasurementScope
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
         case MeasurementScopeType::TRACEPOINT:
-            return fmt::format("tracepoints for {}", scope.name());
+            return fmt::format("tracepoint events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }
