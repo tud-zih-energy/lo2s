@@ -359,6 +359,7 @@ private:
     otf2::definition::comm_locations_group& hardware_comm_locations_group_;
     otf2::definition::regions_group& lo2s_regions_group_;
     otf2::definition::regions_group& syscall_regions_group_;
+    otf2::definition::regions_group& kernel_regions_group_;
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
     std::map<std::set<Cpu>, otf2::definition::detail::weak_ref<otf2::definition::metric_class>>
