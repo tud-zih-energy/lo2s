@@ -128,4 +128,7 @@ int timerfd_from_ns(std::chrono::nanoseconds duration);
 bool known_non_executable(const std::string& filename);
 
 std::map<Mapping, std::string> read_maps(Process p);
+
+bool is_kernel_thread(Thread thread);
+
 } // namespace lo2s

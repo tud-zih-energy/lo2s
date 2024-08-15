@@ -97,6 +97,9 @@ Trace::Trace()
   syscall_regions_group_(registry_.create<otf2::definition::regions_group>(
       intern("<syscalls>"), otf2::common::paradigm_type::user,
       otf2::common::group_flag_type::none)),
+  kernel_regions_group_(registry_.create<otf2::definition::regions_group>(
+      intern("<kernel threads>"), otf2::common::paradigm_type::user,
+      otf2::common::group_flag_type::none)),
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
       intern(nitro::env::hostname()), intern("machine"))),
   groups_(ExecutionScopeGroup::instance())
@@ -952,6 +955,11 @@ void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
     auto& thread_region = registry_.emplace<otf2::definition::region>(
         ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
         otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
+
+    if (is_kernel_thread(thread))
+    {
+        kernel_regions_group_.add_member(thread_region);
+    }
 
     // create calling context
     registry_.create<otf2::definition::calling_context>(ByThread(thread), thread_region,

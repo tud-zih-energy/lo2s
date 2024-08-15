@@ -494,4 +494,26 @@ std::map<Mapping, std::string> read_maps(Process p)
 
     return mappings;
 }
+
+bool is_kernel_thread(Thread thread)
+{
+
+    std::ifstream cmdline(std::filesystem::path(fmt::format("/proc/{}", thread.as_pid_t())) /
+                          "cmdline");
+
+    if (cmdline.good())
+    {
+        std::string cmdline_str = "";
+        cmdline >> cmdline_str;
+
+        // Kernel threads can be distinguished from normal threads by the empty
+        // /proc/[pid]/cmdline file. This is how the ps utility does it.
+        if (cmdline_str == "")
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace lo2s
