@@ -185,12 +185,35 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads()
         {
             continue;
         }
+
+        std::ifstream cmdline(entry.path() / "cmdline");
+
         std::string name = get_process_comm(process);
+
+        std::string cmdline_str = "";
+        if (cmdline.good())
+        {
+            cmdline >> cmdline_str;
+
+            // Kernel threads can be distinguished from normal threads by the empty
+            // /proc/[pid]/cmdline file. This is how the ps utility does it.
+            if (cmdline_str == "")
+            {
+                ret.emplace(Thread(std::stoi(entry.path().filename().string()), true), name);
+            }
+            else
+            {
+                ret.emplace(Thread(std::stoi(entry.path().filename().string()), false), name);
+            }
+        }
+        else
+        {
+            ret.emplace(Thread(std::stoi(entry.path().filename().string()), false), name);
+        }
 
         scope_group.add_process(process);
 
         Log::trace() << "mapping from /proc/" << process.as_pid_t() << ": " << name;
-        ret.emplace(process.as_thread(), name);
         try
         {
             std::filesystem::path task(fmt::format("/proc/{}/task", process.as_pid_t()));

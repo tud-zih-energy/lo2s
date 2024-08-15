@@ -41,7 +41,8 @@ class Process;
 class Thread
 {
 public:
-    explicit Thread(pid_t tid) : tid_(tid)
+    explicit Thread(pid_t tid, bool is_kernel_thread = false)
+    : tid_(tid), kernel_thread_(is_kernel_thread)
     {
     }
 
@@ -77,6 +78,11 @@ public:
         return Thread(-1);
     }
 
+    bool is_kernel_thread()
+    {
+        return kernel_thread_;
+    }
+
     friend std::ostream& operator<<(std::ostream& stream, const Thread& thread)
     {
         return stream << fmt::format("{}", thread);
@@ -89,6 +95,7 @@ public:
 
 private:
     pid_t tid_;
+    bool kernel_thread_;
 };
 
 class Process
