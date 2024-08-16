@@ -89,6 +89,15 @@ static lo2s::perf::EventDescription SW_EVENT_TABLE[] = {
 #ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
     PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
 #endif
+#ifdef HAVE_PERF_EVENT_DUMMY
+    PERF_EVENT_SW("dummy", DUMMY),
+#endif
+#ifdef HAVE_PERF_EVENT_BPF_OUTPUT
+    PERF_EVENT_SW("bpf-output", BPF_OUTPUT),
+#endif
+#ifdef HAVE_PERF_EVENT_CGROUP_SWITCHES
+    PERF_EVENT_SW("cgroup-switches", CGROUP_SWITCHES),
+#endif
 };
 
 #define PERF_MAKE_CACHE_ID(id) (id)
