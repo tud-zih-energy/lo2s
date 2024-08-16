@@ -12,6 +12,12 @@
 
 #cmakedefine HAVE_PERF_EVENT_CACHE_NODE
 
+#cmakedefine HAVE_PERF_EVENT_DUMMY
+
+#cmakedefine HAVE_PERF_EVENT_BPF_OUTPUT
+
+#cmakedefine HAVE_PERF_EVENT_CGROUP_SWITCHES
+
 #cmakedefine HAVE_PERF_RECORD_LOST_SAMPLES
 
 // Clocks which might only be available in more modern kernels
