@@ -92,6 +92,8 @@ add_subdirectory(lib/fmt)
 # configure Nitro submodule
 add_subdirectory(lib/nitro)
 
+add_subdirectory(lib/pmu-events)
+
 # configure x64_adapt_cxx library
 include(lib/x86_adapt/x86_adapt.cmake)
 
@@ -215,6 +217,7 @@ target_link_libraries(lo2s
         Binutils::Binutils
         fmt::fmt
         std::filesystem
+        pmu-events
 )
 
 # old glibc versions require -lrt for clock_gettime()
