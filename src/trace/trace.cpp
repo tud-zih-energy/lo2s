@@ -30,6 +30,7 @@
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf_map_resolve.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
@@ -600,11 +601,16 @@ void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
         auto& local_children = elem.second.children;
         LineInfo line_info = LineInfo::for_unknown_function();
 
+        PerfMapCache& cache = PerfMapCache::instance();
         auto info_it = infos.find(process);
         if (info_it != infos.end())
         {
             MemoryMap maps = info_it->second.maps();
             line_info = maps.lookup_line_info(ip);
+        }
+        if (line_info == LineInfo::for_unknown_function())
+        {
+            line_info = cache.lookup_line_info(process.as_pid_t(), ip);
         }
 
         Log::trace() << "resolved " << ip << ": " << line_info;

@@ -30,6 +30,12 @@ struct LineInfo
 private:
     static constexpr unsigned int UNKNOWN_LINE = 0;
 
+    LineInfo(const char* file, const char* function, unsigned int line, const std::string& dso)
+    : file(file), function(function), line((line != UNKNOWN_LINE) ? line : 1), dso(dso)
+    {
+    }
+
+public:
     // Note: If line is not known, we write 1 anyway so the rest is shown in vampir
     // phijor 2018-11-08: I think this workaround is not needed anymore? vampir
     // shows source code locations with line == 0 just fine.
@@ -39,12 +45,6 @@ private:
     {
     }
 
-    LineInfo(const char* file, const char* function, unsigned int line, const std::string& dso)
-    : file(file), function(function), line((line != UNKNOWN_LINE) ? line : 1), dso(dso)
-    {
-    }
-
-public:
     static LineInfo for_function(const char* file, const char* function, unsigned int line,
                                  const std::string& dso)
     {

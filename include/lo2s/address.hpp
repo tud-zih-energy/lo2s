@@ -150,5 +150,14 @@ struct Range
 
         return end <= other.start;
     }
+
+    bool in(Address addr) const
+    {
+        if (addr > start && addr <= end)
+        {
+            return true;
+        }
+        return false;
+    }
 };
 } // namespace lo2s
