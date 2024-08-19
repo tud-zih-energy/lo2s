@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <lo2s/perf/event_description.hpp>
 
 extern "C"
@@ -22,6 +24,9 @@ void perf_check_disabled();
 int perf_event_description_open(ExecutionScope scope, const EventDescription& desc, int group_fd);
 int perf_try_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                         unsigned long flags, int cgroup_fd = -1);
+
+void parse_event_configuration(EventDescription& event, std::filesystem::path pmu_path,
+                               std::string ev_cfg);
 
 } // namespace perf
 } // namespace lo2s

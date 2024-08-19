@@ -20,57 +20,25 @@
  */
 
 #pragma once
-
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
-#include <lo2s/trace/fwd.hpp>
-
-#include <chrono>
+#include <filesystem>
+#include <optional>
 #include <vector>
+
+#include <lo2s/perf/util.hpp>
 
 extern "C"
 {
-#include <poll.h>
+#include <pmu-events/pmu-events.h>
 }
 
 namespace lo2s
 {
-namespace monitor
+namespace perf
 {
-class PollMonitor : public ThreadedMonitor
+namespace pmu_events
 {
-public:
-    PollMonitor(trace::Trace& trace, const std::string& name,
-                std::chrono::nanoseconds read_interval);
-
-    void stop() override;
-
-    ~PollMonitor();
-
-protected:
-    void run() override;
-    void monitor();
-
-    void add_fd(int fd);
-
-    virtual void monitor([[maybe_unused]] int fd) {};
-
-    struct pollfd& stop_pfd()
-    {
-        return pfds_[0];
-    }
-
-    struct pollfd& timer_pfd()
-    {
-        return pfds_[1];
-    }
-
-    Pipe stop_pipe_;
-
-private:
-    std::vector<pollfd> pfds_;
-};
-} // namespace monitor
+std::optional<EventDescription> read_event(const std::string& ev_desc);
+std::vector<EventDescription> get_events();
+} // namespace pmu_events
+} // namespace perf
 } // namespace lo2s

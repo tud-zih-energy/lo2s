@@ -23,6 +23,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/pmu-events.hpp>
 #include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #ifdef HAVE_LIBPFM
@@ -138,15 +139,6 @@ inline constexpr std::size_t array_size(T (&)[N])
     return N;
 }
 
-constexpr std::uint64_t operator"" _u64(unsigned long long int lit)
-{
-    return static_cast<std::uint64_t>(lit);
-}
-
-constexpr std::uint64_t bit(int bitnumber)
-{
-    return static_cast<std::uint64_t>(1_u64 << bitnumber);
-}
 } // namespace
 
 namespace lo2s
@@ -318,98 +310,6 @@ EventDescription EventProvider::fallback_metric_leader_event()
     throw InvalidEvent{ "no suitable metric leader event found" };
 }
 
-static std::uint64_t parse_bitmask(const std::string& format)
-{
-    enum BITMASK_REGEX_GROUPS
-    {
-        BM_WHOLE_MATCH,
-        BM_BEGIN,
-        BM_END,
-    };
-
-    std::uint64_t mask = 0x0;
-
-    static const std::regex bit_mask_regex(R"((\d+)?(?:-(\d+)))");
-    const std::sregex_iterator end;
-    std::smatch bit_mask_match;
-    for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
-    {
-        const auto& match = *i;
-        int start = std::stoi(match[BM_BEGIN]);
-        int end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
-
-        const auto len = (end + 1) - start;
-        if (start < 0 || end > 63 || len > 64)
-        {
-            throw EventProvider::InvalidEvent("invalid config mask");
-        }
-
-        /* Set `len` bits and shift them to where they should start.
-         * 4-bit example: format "1-3" produces mask 0b1110.
-         *    start := 1, end := 3
-         *    len  := 3 + 1 - 1 = 3
-         *    bits := bit(3) - 1 = 0b1000 - 1 = 0b0111
-         *    mask := 0b0111 << 1 = 0b1110
-         * */
-
-        // Shifting by 64 bits causes undefined behaviour, so in this case set
-        // all bits by assigning the maximum possible value for std::uint64_t.
-        const std::uint64_t bits =
-            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : bit(len) - 1;
-
-        mask |= bits << start;
-    }
-    Log::debug() << std::showbase << std::hex << "config mask: " << format << " = " << mask
-                 << std::dec << std::noshowbase;
-    return mask;
-}
-
-static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mask)
-{
-    std::uint64_t res = 0;
-    for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
-    {
-        if (mask & bit(mask_bit))
-        {
-            res |= ((value >> value_bit) & bit(0)) << mask_bit;
-            value_bit++;
-        }
-    }
-    return res;
-}
-
-static void event_description_update(EventDescription& event, std::uint64_t value,
-                                     const std::string& format)
-{
-    // Parse config terms //
-
-    /* Format:  <term>:<bitmask>
-     *
-     * We only assign the terms 'config' and 'config1'.
-     *
-     * */
-
-    static constexpr auto npos = std::string::npos;
-    const auto colon = format.find_first_of(':');
-    if (colon == npos)
-    {
-        throw EventProvider::InvalidEvent("invalid format description: missing colon");
-    }
-
-    const auto target_config = format.substr(0, colon);
-    const auto mask = parse_bitmask(format.substr(colon + 1));
-
-    if (target_config == "config")
-    {
-        event.config |= apply_mask(value, mask);
-    }
-
-    if (target_config == "config1")
-    {
-        event.config1 |= apply_mask(value, mask);
-    }
-}
-
 const EventDescription raw_read_event(const std::string& ev_desc)
 {
     uint64_t code = std::stoull(ev_desc.substr(1), nullptr, 16);
@@ -525,56 +425,7 @@ const EventDescription sysfs_read_event(const std::string& ev_desc)
                                           pmu_name + "'");
     }
 
-    /* Event configuration format:
-     *   One or more terms with optional values, separated by ','.  (Taken from
-     *   linux/Documentation/ABI/testing/sysfs-bus-event_source-devices-events):
-     *
-     *     <term>[=<value>][,<term>[=<value>]...]
-     *
-     *   Example (config for 'cpu/cache-misses' on an Intel Core i5-7200U):
-     *
-     *     event=0x2e,umask=0x41
-     *
-     *  */
-
-    enum EVENT_CONFIG_REGEX_GROUPS
-    {
-        EC_WHOLE_MATCH,
-        EC_TERM,
-        EC_VALUE,
-    };
-
-    static const std::regex kv_regex(R"(([^=,]+)(?:=([^,]+))?)");
-
-    Log::debug() << "parsing event configuration: " << ev_cfg;
-    std::smatch kv_match;
-    while (std::regex_search(ev_cfg, kv_match, kv_regex))
-    {
-        static const std::string default_value("0x1");
-
-        const std::string& term = kv_match[EC_TERM];
-        const std::string& value =
-            (kv_match[EC_VALUE].length() != 0) ? kv_match[EC_VALUE] : default_value;
-
-        std::string format;
-        std::ifstream format_stream(pmu_path / "format" / term);
-        format_stream >> format;
-        if (!format_stream)
-        {
-            throw EventProvider::InvalidEvent("cannot read event format");
-        }
-
-        static_assert(sizeof(std::uint64_t) >= sizeof(unsigned long),
-                      "May not convert from unsigned long to uint64_t!");
-
-        std::uint64_t val = std::stol(value, nullptr, 0);
-        Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
-                     << val << std::dec << std::noshowbase;
-        event_description_update(event, val, format);
-
-        ev_cfg = kv_match.suffix();
-    }
-
+    parse_event_configuration(event, pmu_path, ev_cfg);
     Log::debug() << std::hex << std::showbase << "parsed event description: " << pmu_name << "/"
                  << event_name << "/type=" << event.type << ",config=" << event.config
                  << ",config1=" << event.config1 << std::dec << std::noshowbase << "/";
@@ -632,8 +483,12 @@ EventDescription EventProvider::cache_event(const std::string& name)
         auto ev = PFM4::instance().pfm4_read_event(name);
         if (!ev)
         {
-            event_map_.emplace(name, DescriptionCache::make_invalid());
-            throw e;
+            auto ev = pmu_events::read_event(name);
+            if(!ev)
+            {
+                event_map_.emplace(name, DescriptionCache::make_invalid());
+                throw e;
+            }
         }
 
         return *ev;

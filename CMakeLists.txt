@@ -198,6 +198,7 @@ set(SOURCE_FILES
     src/mmap.cpp
     src/util.cpp
     src/perf/util.cpp
+    src/perf/pmu-events.cpp
     src/syscalls.cpp
     src/summary.cpp
 )

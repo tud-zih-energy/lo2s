@@ -142,16 +142,19 @@ using ByEventDescription = SimpleKeyType<perf::EventDescription, ByEventDescript
 struct ByCounterCollectionTag
 {
 };
+
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
 struct ByNecDeviceTag
 {
 };
+
 using ByNecDevice = SimpleKeyType<NecDevice, ByNecDeviceTag>;
 
 struct ByMeasurementScopeTypeTag
 {
 };
+
 using ByMeasurementScopeType = SimpleKeyType<MeasurementScopeType, ByMeasurementScopeTypeTag>;
 
 template <typename Definition>

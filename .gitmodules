@@ -7,3 +7,6 @@
 [submodule "lib/fmt"]
 	path = lib/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "lib/pmu-events"]
+	path = lib/pmu-events
+	url = https://github.com/cvonelm/pmu-events.git
