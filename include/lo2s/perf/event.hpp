@@ -234,13 +234,11 @@ public:
     EventGuard(EventGuard&& other)
     {
         std::swap(fd_, other.fd_);
-        std::swap(ev_, other.ev_);
     }
 
     EventGuard& operator=(EventGuard&& other)
     {
         std::swap(fd_, other.fd_);
-        std::swap(ev_, other.ev_);
         return *this;
     }
 
@@ -297,7 +295,6 @@ public:
 
 protected:
     int fd_;
-    Event ev_;
 };
 
 } // namespace perf

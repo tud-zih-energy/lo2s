@@ -573,13 +573,12 @@ EventGuard::EventGuard() : fd_(-1)
 }
 
 EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd)
-: ev_(ev)
 {
     // can be deleted when scope gets replaced
     ExecutionScope scope;
     std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
 
-    fd_ = perf_event_open(&ev_.mut_attr(), scope, group_fd, 0, cgroup_fd);
+    fd_ = perf_event_open(&ev.mut_attr(), scope, group_fd, 0, cgroup_fd);
 
     if (fd_ < 0)
     {
