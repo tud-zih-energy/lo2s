@@ -61,7 +61,7 @@ void CounterProvider::initialize_userspace_counters(const std::vector<std::strin
         try
         {
             userspace_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            userspace_events_.back().set_sample_period(0);
+            userspace_events_.back().sample_period(0);
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -115,14 +115,14 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
         }
     }
 
-    // DONT do group_leader_.set_sample_freq() here, since it requires config() to be complete
+    // DONT do group_leader_.sample_freq() here, since it requires config() to be complete
 
     for (const auto& ev : counters)
     {
         try
         {
             // skip event if it has already been declared as group leader
-            if (ev == group_leader_.get_name())
+            if (ev == group_leader_.name())
             {
                 Log::info() << "'" << ev
                             << "' has been requested as both the metric leader event and a regular "
@@ -131,7 +131,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
             }
 
             group_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            group_events_.back().set_sample_period(0);
+            group_events_.back().sample_period(0);
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {

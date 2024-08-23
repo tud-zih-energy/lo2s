@@ -62,10 +62,10 @@ Reader<T>::Reader(ExecutionScope scope)
         catch (const std::system_error& e)
         {
             // perf_try_event_open was used here before
-            if (counter.get_fd() < 0 && errno == EACCES && !event.get_attr().exclude_kernel &&
+            if (counter.get_fd() < 0 && errno == EACCES && !event.attr().exclude_kernel &&
                 perf_event_paranoid() > 1)
             {
-                event.get_attr().exclude_kernel = 1;
+                event.mut_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
                 counter = event.open(scope);
