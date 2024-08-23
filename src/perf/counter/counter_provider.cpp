@@ -42,7 +42,7 @@ void CounterProvider::initialize_tracepoints(const std::vector<std::string>& tra
         try
         {
             tracepoint_events_.emplace_back(
-                EventProvider::instance().create_raw_tracepoint_event(ev_name));
+                EventProvider::instance().create_tracepoint_event(ev_name, false));
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {

@@ -58,11 +58,9 @@ public:
     static Event create_raw_event(const std::string& name, perf_type_id type, std::uint64_t config,
                                   std::uint64_t config1 = 0);
     static SysfsEvent create_sampling_event(bool enable_on_exec);
-    static SysfsEvent create_raw_sysfs_event(const std::string& name);
-    static SysfsEvent create_sysfs_event(const std::string& name);
-    static tracepoint::TracepointEvent create_raw_tracepoint_event(const std::string& name,
-                                                                   bool enable_on_exec = false);
+    static SysfsEvent create_sysfs_event(const std::string& name, bool use_config = true);
     static tracepoint::TracepointEvent create_tracepoint_event(const std::string& name,
+                                                               bool use_config = true,
                                                                bool enable_on_exec = false);
 
     class InvalidEvent : public std::runtime_error
