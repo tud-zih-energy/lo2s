@@ -48,15 +48,6 @@ constexpr std::uint64_t bit(int bitnumber)
     return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
 
-// helper for visit function
-template <class... Ts>
-struct overloaded : Ts...
-{
-    using Ts::operator()...;
-};
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 template <typename T>
 T read_file_or_else(const std::string& filename, T or_else)
 {
@@ -592,9 +583,7 @@ EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_
 {
     // can be deleted when scope gets replaced
     ExecutionScope scope;
-    std::visit(overloaded{ [&](Cpu cpu) { scope = cpu.as_scope(); },
-                           [&](Thread thread) { scope = thread.as_scope(); } },
-               location);
+    std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
 
     fd_ = perf_event_open(&ev_.mut_attr(), scope, group_fd, 0, cgroup_fd);
 
