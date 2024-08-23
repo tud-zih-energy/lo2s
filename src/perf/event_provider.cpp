@@ -369,7 +369,7 @@ std::vector<Event> EventProvider::get_predefined_events()
 }
 
 tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::string& name,
-                                                                   const bool& enable_on_exec)
+                                                                   bool enable_on_exec)
 {
     tracepoint::TracepointEvent event(name, enable_on_exec);
     event.set_sample_period(0);
@@ -379,7 +379,7 @@ tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::st
 }
 
 tracepoint::TracepointEvent EventProvider::create_raw_tracepoint_event(const std::string& name,
-                                                                       const bool& enable_on_exec)
+                                                                       bool enable_on_exec)
 {
     tracepoint::TracepointEvent event(name, enable_on_exec);
     event.set_sample_period(0);
@@ -411,7 +411,7 @@ Event EventProvider::create_raw_event(const std::string& name, perf_type_id type
     return event;
 }
 
-SysfsEvent EventProvider::create_sampling_event(const bool& enable_on_exec)
+SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
 {
     SysfsEvent event(config().sampling_event, enable_on_exec);
     apply_config_attrs(event);

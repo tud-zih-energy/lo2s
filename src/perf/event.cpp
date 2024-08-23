@@ -58,7 +58,7 @@ template <class... Ts>
 overloaded(Ts...) -> overloaded<Ts...>;
 
 template <typename T>
-T read_file_or_else(std::string filename, T or_else)
+T read_file_or_else(const std::string& filename, T or_else)
 {
     T val;
     std::ifstream stream(filename);
@@ -83,7 +83,6 @@ static std::uint64_t parse_bitmask(const std::string& format)
 
     static const std::regex bit_mask_regex(R"((\d+)?(?:-(\d+)))");
     const std::sregex_iterator end;
-    std::smatch bit_mask_match;
     for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
     {
         const auto& match = *i;
@@ -161,7 +160,8 @@ Event::Event([[maybe_unused]] uint64_t addr, bool enable_on_exec)
 #endif
 }
 
-Event::Event(std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1)
+Event::Event(const std::string& name, perf_type_id type, std::uint64_t config,
+             std::uint64_t config1)
 : name_(name)
 {
     memset(&attr_, 0, sizeof(attr_));
