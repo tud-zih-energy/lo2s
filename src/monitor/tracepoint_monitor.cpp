@@ -42,9 +42,9 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 
     for (const auto& event : tracepoint_collection.counters)
     {
-        auto& mc = trace.tracepoint_metric_class(event.get_name());
+        auto& mc = trace.tracepoint_metric_class(event.name());
         std::unique_ptr<perf::tracepoint::Writer> writer =
-            std::make_unique<perf::tracepoint::Writer>(cpu, event.get_name(), trace, mc);
+            std::make_unique<perf::tracepoint::Writer>(cpu, event.name(), trace, mc);
 
         add_fd(writer->fd());
         perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),

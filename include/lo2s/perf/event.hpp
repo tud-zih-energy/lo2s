@@ -82,47 +82,52 @@ public:
      */
     EventGuard open_as_group_leader(ExecutionScope location, int cgroup_fd = -1);
 
-    const Availability& get_availability() const
+    const Availability& availability() const
     {
         return availability_;
     };
 
-    std::string get_name() const
+    std::string name() const
     {
         return name_;
     }
 
-    std::set<Cpu> get_cpus() const
+    std::set<Cpu> cpus() const
     {
         return cpus_;
     }
 
-    std::string get_unit() const
+    std::string unit() const
     {
         return unit_;
     }
 
-    perf_event_attr& get_attr()
+    const perf_event_attr& attr() const
     {
         return attr_;
     }
 
-    double get_scale() const
+    perf_event_attr& mut_attr()
+    {
+        return attr_;
+    }
+
+    double scale() const
     {
         return scale_;
     }
 
-    void set_scale(double scale)
+    void scale(double scale)
     {
         scale_ = scale;
     }
 
-    void set_unit(const std::string& unit)
+    void unit(const std::string& unit)
     {
         unit_ = unit;
     }
 
-    void set_clock_attrs([[maybe_unused]] bool use_clockid, [[maybe_unused]] clockid_t clockid)
+    void clock_attrs([[maybe_unused]] bool use_clockid, [[maybe_unused]] clockid_t clockid)
     {
 #ifndef USE_HW_BREAKPOINT_COMPAT
         attr_.use_clockid = use_clockid;
@@ -132,19 +137,19 @@ public:
 
     // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
     // Default behaviour is to wakeup on every event, which is horrible performance wise
-    void set_watermark(size_t mmap_pages)
+    void watermark(size_t mmap_pages)
     {
         attr_.watermark = 1;
         attr_.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * sysconf(_SC_PAGESIZE));
     }
 
-    void set_exclude_kernel(bool exclude_kernel)
+    void exclude_kernel(bool exclude_kernel)
     {
         attr_.exclude_kernel = exclude_kernel;
     }
 
-    void set_sample_period(const int& period);
-    void set_sample_freq(const uint64_t& freq);
+    void sample_period(const int& period);
+    void sample_freq(const uint64_t& freq);
     void event_attr_update(std::uint64_t value, const std::string& format);
 
     void parse_pmu_path(const std::string& ev_name);
