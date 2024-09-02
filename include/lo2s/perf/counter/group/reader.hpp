@@ -26,6 +26,7 @@
 #include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
+#include <optional>
 #include <vector>
 
 extern "C"
@@ -60,7 +61,7 @@ public:
     };
 
 protected:
-    EventGuard counter_leader_;
+    std::optional<EventGuard> counter_leader_;
     std::vector<EventGuard> counters_;
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;

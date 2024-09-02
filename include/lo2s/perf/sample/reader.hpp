@@ -113,19 +113,19 @@ protected:
                     throw_errno();
                 }
             }
-        } while (!event_.is_valid());
+        } while (!event_.value().is_valid());
 
         Log::debug() << "Using precise_ip level: " << event.attr().precise_ip;
 
         // Exception safe, so much wow!
         try
         {
-            init_mmap(event_.get_fd());
+            init_mmap(event_.value().get_fd());
             Log::debug() << "mmap initialized";
 
             if (!enable_on_exec)
             {
-                event_.enable();
+                event_.value().enable();
             }
         }
         catch (...)
@@ -158,7 +158,7 @@ protected:
     bool has_cct_;
 
 private:
-    EventGuard event_;
+    std::optional<EventGuard> event_;
 };
 } // namespace sample
 } // namespace perf

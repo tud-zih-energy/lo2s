@@ -72,7 +72,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         catch (const std::system_error& e)
         {
             // perf_try_event_open was used here before
-            if (counter_leader_.get_fd() < 0 && errno == EACCES &&
+            if (counter_leader_.value().get_fd() < 0 && errno == EACCES &&
                 !counter_collection_.leader.attr().exclude_kernel && perf_event_paranoid() > 1)
             {
                 counter_collection_.leader.mut_attr().exclude_kernel = 1;
@@ -81,13 +81,13 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
                 continue;
             }
 
-            if (!counter_leader_.is_valid())
+            if (!counter_leader_.value().is_valid())
             {
                 Log::error() << "perf_event_open for counter group leader failed";
                 throw_errno();
             }
         }
-    } while (!counter_leader_.is_valid());
+    } while (!counter_leader_.value().is_valid());
 
     Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name() << "'";
 
@@ -95,17 +95,17 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         if (counter_ev.is_available_in(scope))
         {
-            EventGuard counter;
+            std::optional<EventGuard> counter;
             counter_ev.mut_attr().exclude_kernel = counter_collection_.leader.attr().exclude_kernel;
             do
             {
                 try
                 {
-                    counter = counter_leader_.open_child(counter_ev, scope);
+                    counter = counter_leader_.value().open_child(counter_ev, scope);
                 }
                 catch (const std::system_error& e)
                 {
-                    if (!counter.is_valid())
+                    if (!counter.value().is_valid())
                     {
                         Log::error() << "failed to add counter '" << counter_ev.name()
                                      << "': " << e.code().message();
@@ -119,18 +119,18 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
                         }
                         throw e;
                     }
-                    counters_.emplace_back(std::move(counter));
+                    counters_.emplace_back(std::move(counter.value()));
                 }
-            } while (!counter.is_valid());
+            } while (!counter.value().is_valid());
         }
     }
 
     if (!enable_on_exec)
     {
-        counter_leader_.enable();
+        counter_leader_.value().enable();
     }
 
-    EventReader<T>::init_mmap(counter_leader_.get_fd());
+    EventReader<T>::init_mmap(counter_leader_.value().get_fd());
 }
 template class Reader<Writer>;
 } // namespace group

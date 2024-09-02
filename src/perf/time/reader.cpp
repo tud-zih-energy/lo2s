@@ -63,8 +63,8 @@ Reader::Reader()
     {
         ev_instance_ = event.open(Thread(0));
 
-        init_mmap(ev_instance_.get_fd());
-        ev_instance_.enable();
+        init_mmap(ev_instance_.value().get_fd());
+        ev_instance_.value().enable();
     }
     catch (...)
     {
