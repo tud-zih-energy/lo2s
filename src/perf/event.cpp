@@ -38,16 +38,6 @@ namespace lo2s
 namespace perf
 {
 
-constexpr std::uint64_t operator"" _u64(unsigned long long int lit)
-{
-    return static_cast<std::uint64_t>(lit);
-}
-
-constexpr std::uint64_t bit(int bitnumber)
-{
-    return static_cast<std::uint64_t>(1_u64 << bitnumber);
-}
-
 template <typename T>
 T read_file_or_else(const std::string& filename, T or_else)
 {
@@ -97,7 +87,7 @@ static std::uint64_t parse_bitmask(const std::string& format)
         // Shifting by 64 bits causes undefined behaviour, so in this case set
         // all bits by assigning the maximum possible value for std::uint64_t.
         const std::uint64_t bits =
-            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : bit(len) - 1;
+            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : (1ull << len) - 1;
 
         mask |= bits << start;
     }
@@ -111,9 +101,9 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     std::uint64_t res = 0;
     for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
     {
-        if (mask & bit(mask_bit))
+        if (mask & (1ull << mask_bit))
         {
-            res |= ((value >> value_bit) & bit(0)) << mask_bit;
+            res |= ((value >> value_bit) & (1ull << 0)) << mask_bit;
             value_bit++;
         }
     }
