@@ -27,6 +27,8 @@
 
 #include <nitro/lang/string.hpp>
 
+#include <optional>
+
 extern "C"
 {
 #include <fcntl.h>
@@ -39,14 +41,14 @@ namespace perf
 {
 
 template <typename T>
-T read_file_or_else(const std::string& filename, T or_else)
+std::optional<T> try_read_file(const std::string& filename)
 {
     T val;
     std::ifstream stream(filename);
     stream >> val;
     if (stream.fail())
     {
-        return or_else;
+        return {};
     }
     return val;
 }
@@ -393,14 +395,15 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
     Log::debug() << "parsing event description: pmu='" << pmu_name_ << "', event='" << name_ << "'";
 
     // read PMU type id
-    std::underlying_type<perf_type_id>::type type = read_file_or_else(pmu_path_ / "type", 0);
-    if (!type)
+    auto type = try_read_file<std::underlying_type<perf_type_id>::type>(pmu_path_ / "type");
+
+    if (!type.has_value())
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown PMU '"s + pmu_name_ + "'");
     }
 
-    attr_.type = static_cast<perf_type_id>(type);
+    attr_.type = static_cast<perf_type_id>(type.value());
     attr_.config = 0;
     attr_.config1 = 0;
 
@@ -408,8 +411,8 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
 
     // read event configuration
     std::filesystem::path event_path = pmu_path_ / "events" / name_;
-    std::string ev_cfg = read_file_or_else(event_path, std::string("0"));
-    if (ev_cfg == "0")
+    auto ev_cfg = try_read_file<std::string>(event_path);
+    if (!ev_cfg.has_value())
     {
         using namespace std::string_literals;
         throw EventProvider::InvalidEvent("unknown event '"s + name_ + "' for PMU '"s + pmu_name_ +
@@ -439,9 +442,9 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
 
     static const std::regex kv_regex(R"(([^=,]+)(?:=([^,]+))?)");
 
-    Log::debug() << "parsing event configuration: " << ev_cfg;
+    Log::debug() << "parsing event configuration: " << ev_cfg.value();
     std::smatch kv_match;
-    while (std::regex_search(ev_cfg, kv_match, kv_regex))
+    while (std::regex_search(ev_cfg.value(), kv_match, kv_regex))
     {
         static const std::string default_value("0x1");
 
@@ -449,8 +452,8 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
         const std::string& value =
             (kv_match[EC_VALUE].length() != 0) ? kv_match[EC_VALUE] : default_value;
 
-        std::string format = read_file_or_else(pmu_path_ / "format" / term, std::string("0"));
-        if (format == "0")
+        auto format = try_read_file<std::string>(pmu_path_ / "format" / term);
+        if (!format.has_value())
         {
             throw EventProvider::InvalidEvent("cannot read event format");
         }
@@ -461,7 +464,7 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
         std::uint64_t val = std::stol(value, nullptr, 0);
         Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
                      << val << std::dec << std::noshowbase;
-        event_attr_update(val, format);
+        event_attr_update(val, format.value());
 
         ev_cfg = kv_match.suffix();
     }
@@ -470,8 +473,8 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
                  << name_ << "/type=" << attr_.type << ",config=" << attr_.config
                  << ",config1=" << attr_.config1 << std::dec << std::noshowbase << "/";
 
-    scale(read_file_or_else<double>(event_path.replace_extension(".scale"), 1.0));
-    unit(read_file_or_else<std::string>(event_path.replace_extension(".unit"), "#"));
+    scale(try_read_file<double>(event_path.replace_extension(".scale")).value_or(1.0));
+    unit(try_read_file<std::string>(event_path.replace_extension(".unit")).value_or("#"));
 
     if (!event_is_openable())
     {
