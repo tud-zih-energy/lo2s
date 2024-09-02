@@ -573,6 +573,7 @@ EventGuard::EventGuard() : fd_(-1)
 }
 
 EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd)
+: fd_(-1)
 {
     // can be deleted when scope gets replaced
     ExecutionScope scope;
