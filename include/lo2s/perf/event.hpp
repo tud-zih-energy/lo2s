@@ -21,16 +21,17 @@
 
 #pragma once
 
-#include <cstdint>
-#include <set>
-#include <type_traits>
-#include <variant>
+#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
+
+#include <cstdint>
+#include <set>
+#include <type_traits>
+#include <variant>
 
 extern "C"
 {
