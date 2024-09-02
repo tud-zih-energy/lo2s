@@ -180,16 +180,11 @@ static void populate_event_map(std::unordered_map<std::string, Event>& map)
             name_fmt.str(std::string());
             name_fmt << cache.name << '-' << operation.name;
 
-            // can't use create_raw_event here, will create deadlock
-            Event event(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                        make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
-
-            event.sample_period(0);
-            event.exclude_kernel(true);
-            event.watermark(16);
-            event.clock_attrs(true, CLOCK_MONOTONIC_RAW);
-
-            map.emplace(name_fmt.str(), event);
+            // don't use EventProvider::instance() here, will cause recursive init
+            map.emplace(name_fmt.str(),
+                        EventProvider::create_event(name_fmt.str(), PERF_TYPE_HW_CACHE,
+                                                    make_cache_config(cache.id, operation.id.op_id,
+                                                                      operation.id.result_id)));
         }
     }
 }
@@ -275,8 +270,8 @@ const Event raw_read_event(const std::string& ev_name)
 {
     // Do not check whether the event_is_openable because we don't know whether we are in
     // system or process mode
-    return EventProvider::instance().create_raw_event(
-        ev_name, PERF_TYPE_RAW, std::stoull(ev_name.substr(1), nullptr, 16), 0);
+    return EventProvider::instance().create_event(ev_name, PERF_TYPE_RAW,
+                                                  std::stoull(ev_name.substr(1), nullptr, 16), 0);
 }
 
 EventProvider::EventProvider()
@@ -377,6 +372,7 @@ std::vector<Event> EventProvider::get_predefined_events()
     return events;
 }
 
+// returns a standard TracepointEvent, can use config() if specified, otherwise sets default values
 tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::string& name,
                                                                    bool use_config,
                                                                    bool enable_on_exec)
@@ -396,10 +392,17 @@ tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::st
     return event;
 }
 
-Event EventProvider::create_time_event(uint64_t local_time)
+// returns a Event with bp_addr set to local_time, uses config()
+Event EventProvider::create_time_event(uint64_t local_time, bool enable_on_exec)
 {
-    Event event(local_time);
-    event.sample_period(1);
+#ifndef USE_HW_BREAKPOINT_COMPAT
+    Event event("", PERF_TYPE_BREAKPOINT, 0); // TODO: name for time events
+#else
+    Event event("", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
+#endif
+
+    event.sample_period(1); // may be overwritten by event.time_attrs
+    event.time_attrs(local_time, enable_on_exec);
 
     apply_config_attrs(event);
     event.exclude_kernel(true); // overwrite config value
@@ -407,18 +410,27 @@ Event EventProvider::create_time_event(uint64_t local_time)
     return event;
 }
 
-Event EventProvider::create_raw_event(const std::string& name, perf_type_id type,
-                                      std::uint64_t config, std::uint64_t config1)
+// returns a standard Event, uses config() if possible, else sets default values
+Event EventProvider::create_event(const std::string& name, perf_type_id type, std::uint64_t config,
+                                  std::uint64_t config1)
 {
     Event event(name, type, config, config1);
     event.sample_period(0);
 
-    apply_config_attrs(event);
-    event.exclude_kernel(true); // overwrite config value
+    try
+    {
+        apply_config_attrs(event);
+        event.exclude_kernel(true); // overwrite config value
+    }
+    catch (...)
+    {
+        apply_default_attrs(event);
+    }
 
     return event;
 }
 
+// returns a SysfsEvent with sampling options enabled, uses config()
 SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
 {
     SysfsEvent event(config().sampling_event, enable_on_exec);
@@ -430,6 +442,7 @@ SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
     return event;
 }
 
+// returns a standard SysfsEvent, can use config() if specified, otherwise sets default values
 SysfsEvent EventProvider::create_sysfs_event(const std::string& name, bool use_config)
 {
     SysfsEvent event(name);
