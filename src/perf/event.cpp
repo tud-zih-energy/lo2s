@@ -561,10 +561,6 @@ EventGuard EventGuard::open_child(Event child, ExecutionScope location, int cgro
     }
 }
 
-EventGuard::EventGuard() : fd_(-1)
-{
-}
-
 EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd)
 : fd_(-1)
 {
