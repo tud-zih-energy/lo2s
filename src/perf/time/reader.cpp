@@ -61,7 +61,7 @@ Reader::Reader()
 
     try
     {
-        ev_instance_ = event.open(Thread(0));
+        ev_instance_ = std::move(event.open(Thread(0)));
 
         init_mmap(ev_instance_.value().get_fd());
         ev_instance_.value().enable();
