@@ -90,7 +90,7 @@ protected:
         {
             try
             {
-                event_ = event.open(scope, config().cgroup_fd);
+                event_ = std::move(event.open(scope, config().cgroup_fd));
             }
             catch (const std::system_error& e)
             {
