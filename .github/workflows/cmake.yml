@@ -45,9 +45,10 @@ jobs:
       - name: Build
         run: make -j 2
       - name: Create source tarball
-        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' }}
+        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
         run: make dist
-      - uses: actions/upload-artifact@v2
-        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
         with:
+          overwrite: true
           path: lo2s*.tar.bz2
