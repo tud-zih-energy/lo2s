@@ -230,7 +230,7 @@ public:
     EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
 
     EventGuard() = delete;
-    EventGuard(EventGuard&) = delete;
+    EventGuard(const EventGuard& other) = delete;
     EventGuard& operator=(const EventGuard&) = delete;
 
     EventGuard(EventGuard&& other)
