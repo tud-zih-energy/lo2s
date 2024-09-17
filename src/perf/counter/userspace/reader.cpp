@@ -22,6 +22,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
+#include <lo2s/perf/event.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/measurement_scope.hpp>
@@ -65,19 +66,44 @@ Reader<T>::Reader(ExecutionScope scope)
 
     for (auto& event : counter_collection_.counters)
     {
-        counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
+        std::optional<EventGuard> counter = std::nullopt;
+
+        try
+        {
+            counter = event.open(scope);
+            counters_.emplace_back(std::move(counter.value()));
+        }
+        catch (const std::system_error& e)
+        {
+            // perf_try_event_open was used here before
+            if (counter.value().get_fd() < 0 && errno == EACCES && !event.attr().exclude_kernel &&
+                perf_event_paranoid() > 1)
+            {
+                event.mut_attr().exclude_kernel = 1;
+                perf_warn_paranoid();
+
+                counter = event.open(scope);
+            }
+
+            if (!counter.value().is_valid())
+            {
+                Log::error() << "perf_event_open for counter failed";
+                throw_errno();
+            }
+            else
+            {
+                counters_.emplace_back(std::move(counter.value()));
+            }
+        }
     }
 }
 
 template <class T>
 void Reader<T>::read()
 {
-    for (std::size_t i = 0; i < counter_fds_.size(); i++)
+    for (std::size_t i = 0; i < counters_.size(); i++)
     {
-        [[maybe_unused]] auto bytes_read =
-            ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
-
-        assert(bytes_read == sizeof(UserspaceReadFormat));
+        data_[i] = counters_[i].read<UserspaceReadFormat>();
     }
 
     static_cast<T*>(this)->handle(data_);
