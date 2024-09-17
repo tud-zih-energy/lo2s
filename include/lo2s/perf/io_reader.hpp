@@ -93,11 +93,11 @@ struct IoReaderIdentity
 class IoReader : public PullReader
 {
 public:
-    IoReader(IoReaderIdentity identity) : identity_(identity)
+    IoReader(IoReaderIdentity identity) : identity_(identity), event_(std::nullopt)
     {
         try
         {
-            event_ = std::move(identity_.tracepoint.open(identity.cpu));
+            event_ = identity_.tracepoint.open(identity.cpu);
         }
         catch (const std::system_error& e)
         {
