@@ -53,11 +53,11 @@ Reader<T>::Reader(ExecutionScope scope)
 {
     for (auto& event : counter_collection_.counters)
     {
-        std::optional<EventGuard> counter;
+        std::optional<EventGuard> counter = std::nullopt;
 
         try
         {
-            counter = std::move(event.open(scope));
+            counter = event.open(scope);
             counters_.emplace_back(std::move(counter.value()));
         }
         catch (const std::system_error& e)
@@ -69,7 +69,7 @@ Reader<T>::Reader(ExecutionScope scope)
                 event.mut_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
-                counter = std::move(event.open(scope));
+                counter = event.open(scope);
             }
 
             if (!counter.value().is_valid())
