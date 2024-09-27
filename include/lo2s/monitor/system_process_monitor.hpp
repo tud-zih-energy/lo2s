@@ -46,8 +46,8 @@ public:
     virtual void insert_process(Process parent, Process process, std::string proc_name,
                                 bool spawn) override;
 
-    virtual void insert_thread(Process process, Thread thread, std::string name,
-                               bool spawn) override;
+    virtual void insert_thread(Process process, Thread thread, std::string name, bool spawn,
+                               bool is_process) override;
 
     virtual void exit_thread(Thread thread) override;
 
