@@ -98,6 +98,20 @@ Lib::Lib(const std::string& name)
     read_sections();
 }
 
+Address Lib::reverse_lookup(const char* symbol_name) const
+{
+    for (const auto& sym : symbols_)
+    {
+        if (sym == nullptr)
+        {
+            continue;
+        }
+        if (strcmp(sym->name, symbol_name) == 0)
+        {
+        }
+    }
+}
+
 LineInfo Lib::lookup(Address addr) const
 {
     const char* file = nullptr;

@@ -28,6 +28,11 @@
 
 #include <system_error>
 
+extern "C"
+{
+
+    void call_ompd_initialize();
+}
 int main(int argc, const char** argv)
 {
     // The resource limit for file descriptors (which lo2s uses a lot of, especially in
@@ -38,6 +43,7 @@ int main(int argc, const char** argv)
     lo2s::initial_rlimit_fd();
     lo2s::bump_rlimit_fd();
 
+    call_ompd_initialize();
     try
     {
         lo2s::parse_program_options(argc, argv);

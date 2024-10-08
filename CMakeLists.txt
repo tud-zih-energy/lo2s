@@ -108,6 +108,8 @@ find_package(Veosinfo)
 find_package(Libpfm)
 find_package(PkgConfig)
 
+find_package(OpenMP REQUIRED)
+
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
     pkg_check_modules(Radare IMPORTED_TARGET r_main>=5.8.0)
@@ -198,6 +200,7 @@ set(SOURCE_FILES
     src/perf/util.cpp
     src/syscalls.cpp
     src/summary.cpp
+    src/ompd/callbacks.cpp
 )
 
 # define lo2s target
@@ -215,6 +218,7 @@ target_link_libraries(lo2s
         Binutils::Binutils
         fmt::fmt
         std::filesystem
+        OpenMP::OpenMP_CXX
 )
 
 # old glibc versions require -lrt for clock_gettime()

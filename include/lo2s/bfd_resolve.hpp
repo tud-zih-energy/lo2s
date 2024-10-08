@@ -141,6 +141,7 @@ public:
 
     LineInfo lookup(Address addr) const;
 
+    Address reverse_lookup(const char* symbol_name) const;
     const std::string& name() const
     {
         return name_;
