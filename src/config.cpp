@@ -72,23 +72,23 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      const std::vector<perf::EventDescription>& events)
+                                      std::vector<perf::Event> events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
     {
-        if (ev.availability == perf::Availability::UNAVAILABLE)
+        if (!ev.is_valid())
         {
             continue;
         }
 
         std::string availability = "";
         std::string cpu = "";
-        if (ev.availability == perf::Availability::PROCESS_MODE)
+        if (ev.availability() == perf::Availability::PROCESS_MODE)
         {
             availability = " *";
         }
-        else if (ev.availability == perf::Availability::SYSTEM_MODE)
+        else if (ev.availability() == perf::Availability::SYSTEM_MODE)
         {
             availability = " #";
         }
@@ -100,7 +100,7 @@ static inline void print_availability(std::ostream& os, const std::string& descr
                             std::max_element(cpus.begin(), cpus.end())->as_int());
         }
 
-        event_names.push_back(ev.name + availability + cpu);
+        event_names.push_back(ev.name() + availability + cpu);
     }
     list_arguments_sorted(os, description, event_names);
 }
@@ -378,7 +378,6 @@ void parse_program_options(int argc, const char** argv)
     config.sampling_period = arguments.as<std::uint64_t>("count");
     config.enable_cct = arguments.given("call-graph");
     config.suppress_ip = arguments.given("no-ip");
-    config.tracepoint_events = arguments.get_all("tracepoint");
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
@@ -460,8 +459,11 @@ void parse_program_options(int argc, const char** argv)
         {
             print_availability(std::cout, "predefined events",
                                perf::EventProvider::get_predefined_events());
-            print_availability(std::cout, "Kernel PMU events",
-                               perf::EventProvider::get_pmu_events());
+
+            // TODO: find a better solution ?
+            std::vector<perf::SysfsEvent> sys_events = perf::EventProvider::get_pmu_events();
+            std::vector<perf::Event> events(sys_events.begin(), sys_events.end());
+            print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
             print_availability(std::cout, "Libpfm events",
@@ -476,7 +478,8 @@ void parse_program_options(int argc, const char** argv)
 
         if (arguments.given("list-tracepoints"))
         {
-            auto tracepoints = perf::tracepoint::EventFormat::get_tracepoint_event_names();
+            std::vector<std::string> tracepoints =
+                perf::counter::CounterProvider::instance().get_tracepoint_event_names();
 
             if (tracepoints.empty())
             {
@@ -728,12 +731,14 @@ void parse_program_options(int argc, const char** argv)
     {
         for (const auto& mem_event : platform::get_mem_events())
         {
-            perf_group_events.emplace_back(mem_event.name);
+            perf_group_events.emplace_back(mem_event.name());
         }
         perf_group_events.emplace_back("instructions");
         perf_group_events.emplace_back("cpu-cycles");
     }
 
+    perf::counter::CounterProvider::instance().initialize_tracepoints(
+        arguments.get_all("tracepoint"));
     perf::counter::CounterProvider::instance().initialize_group_counters(
         arguments.get("metric-leader"), perf_group_events);
     perf::counter::CounterProvider::instance().initialize_userspace_counters(perf_userspace_events);

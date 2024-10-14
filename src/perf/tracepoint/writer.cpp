@@ -14,9 +14,9 @@ namespace perf
 namespace tracepoint
 {
 
-Writer::Writer(Cpu cpu, const EventFormat& event, trace::Trace& trace_,
+Writer::Writer(Cpu cpu, const std::string& name, trace::Trace& trace_,
                const otf2::definition::metric_class& metric_class)
-: Reader(cpu, event.id()), event_(event),
+: Reader(cpu, name),
   writer_(trace_.create_metric_writer(fmt::format("tracepoint metrics for {}", cpu))),
   metric_instance_(
       trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
@@ -30,7 +30,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     metric_event_.timestamp(time_converter_(sample->time));
 
     std::size_t index = 0;
-    for (const auto& field : event_.fields())
+    for (const auto& field : Reader<Writer>::event_.fields())
     {
         if (!field.is_integer())
         {
