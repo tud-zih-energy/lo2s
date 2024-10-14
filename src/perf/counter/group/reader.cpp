@@ -97,31 +97,29 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         {
             std::optional<EventGuard> counter = std::nullopt;
             counter_ev.mut_attr().exclude_kernel = counter_collection_.leader.attr().exclude_kernel;
-            do
-            {
-                try
-                {
-                    counter = counter_leader_.value().open_child(counter_ev, scope);
-                }
-                catch (const std::system_error& e)
-                {
-                    if (!counter.value().is_valid())
-                    {
-                        Log::error() << "failed to add counter '" << counter_ev.name()
-                                     << "': " << e.code().message();
 
-                        if (e.code().value() == EINVAL)
-                        {
-                            Log::error() << "opening " << counter_collection_.counters.size()
-                                         << " counters at once might exceed the hardware limit of "
-                                            "simultaneously "
-                                            "openable counters.";
-                        }
-                        throw e;
+            try
+            {
+                counter.value() = counter_leader_.value().open_child(counter_ev, scope);
+                counters_.emplace_back(std::move(counter.value()));
+            }
+            catch (const std::system_error& e)
+            {
+                if (!counter.value().is_valid())
+                {
+                    Log::error() << "failed to add counter '" << counter_ev.name()
+                                 << "': " << e.code().message();
+
+                    if (e.code().value() == EINVAL)
+                    {
+                        Log::error() << "opening " << counter_collection_.counters.size()
+                                     << " counters at once might exceed the hardware limit of "
+                                        "simultaneously "
+                                        "openable counters.";
                     }
-                    counters_.emplace_back(std::move(counter.value()));
+                    throw e;
                 }
-            } while (!counter.value().is_valid());
+            }
         }
     }
 
