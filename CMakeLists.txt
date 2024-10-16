@@ -28,7 +28,6 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
-    Binutils_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Libpfm_USE_STATIC_LIBS
@@ -38,7 +37,6 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
@@ -49,7 +47,6 @@ endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -61,7 +58,6 @@ endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -97,7 +93,6 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Binutils REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
@@ -192,7 +187,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
+    src/topology.cpp src/elf_resolve.cpp src/pipe.cpp
     src/mmap.cpp
     src/util.cpp
     src/perf/util.cpp
@@ -206,13 +201,13 @@ add_executable(lo2s ${SOURCE_FILES})
 # define dependencies of lo2s target
 target_link_libraries(lo2s
     PRIVATE
+        elf
         otf2xx::Writer
         Nitro::log
         Nitro::env
         Nitro::dl
         Nitro::options
         Threads::Threads
-        Binutils::Binutils
         fmt::fmt
         std::filesystem
 )

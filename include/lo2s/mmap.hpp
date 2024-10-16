@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/bfd_resolve.hpp>
+#include <lo2s/elf_resolve.hpp>
 #ifdef HAVE_RADARE
 #include <lo2s/radare.hpp>
 #endif
@@ -97,11 +97,11 @@ public:
 /**
  * TODO Split this... it's ugly
  */
-class BfdRadareBinary : public Binary
+class ElfRadareBinary : public Binary
 {
 public:
-    BfdRadareBinary(const std::string& name)
-    : Binary(name), bfd_(name)
+    ElfRadareBinary(const std::string& name)
+    : Binary(name), elf_(name)
 #ifdef HAVE_RADARE
       ,
       radare_(name)
@@ -111,7 +111,7 @@ public:
 
     static Binary& cache(const std::string& name)
     {
-        return StringCache<BfdRadareBinary>::instance()[name];
+        return StringCache<ElfRadareBinary>::instance()[name];
     }
 
 #ifdef HAVE_RADARE
@@ -125,16 +125,17 @@ public:
     {
         try
         {
-            return bfd_.lookup(ip);
+            Log::error() << "LOKUP!";
+            return elf_.lookup(ip);
         }
-        catch (bfdr::LookupError&)
+        catch (...)
         {
             return LineInfo::for_unknown_function_in_dso(name());
         }
     }
 
 private:
-    bfdr::Lib bfd_;
+    elfr::Elf elf_;
 #ifdef HAVE_RADARE
     RadareResolver radare_;
 #endif // HAVE_RADARE

@@ -23,8 +23,8 @@
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/address.hpp>
-#include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/elf_resolve.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/monitor/main_monitor.hpp>

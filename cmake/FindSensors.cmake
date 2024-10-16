@@ -48,10 +48,9 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(Sensors DEFAULT_MSG
         Sensors_INCLUDE_DIRS)
 
 if(Sensors_FOUND)
-    add_library(libsensors INTERFACE)
-    target_include_directories(libsensors SYSTEM INTERFACE ${Sensors_INCLUDE_DIRS})
-    target_link_libraries(binutils INTERFACE ${Sensors_LIBRARIES})
-    add_library(Sensors::sensors ALIAS libsensors)
+    add_library(Sensors::sensors UNKNOWN IMPORTED)
+    set_property(TARGET Sensors::sensors PROPERTY IMPORTED_LOCATION ${Sensors_LIBRARIES})
+    target_include_directories(Sensors::sensors INTERFACE ${Sensors_INCLUDE_DIRS})
 endif()
 
 mark_as_advanced(Sensors_LIBRARIES Sensors_INCLUDE_DIRS)

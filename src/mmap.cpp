@@ -101,16 +101,18 @@ void MemoryMap::mmap(const RawMemoryMapEntry& entry)
         try
         {
 
-            lb = &BfdRadareBinary::cache(entry.filename);
+            lb = &ElfRadareBinary::cache(entry.filename);
         }
+        /*
         catch (bfdr::InitError& e)
         {
             Log::warn() << "could not initialize bfd: " << e.what();
             lb = &NamedBinary::cache(entry.filename);
-        }
-        catch (bfdr::InvalidFileError& e)
+        }*/
+        // TODO: Real errors
+        catch (std::exception& e)
         {
-            Log::debug() << "dso is not a valid file: " << e.what();
+            Log::debug() << "dso is not a valid file:" << e.what();
             lb = &NamedBinary::cache(entry.filename);
         }
     }
