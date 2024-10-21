@@ -32,6 +32,7 @@
 #include <deque>
 #include <map>
 #include <mutex>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 
@@ -138,6 +139,84 @@ private:
 #ifdef HAVE_RADARE
     RadareResolver radare_;
 #endif // HAVE_RADARE
+};
+
+class Kallsyms : public Binary
+{
+public:
+    Kallsyms() : Binary("[kernel]")
+    {
+        std::map<Address, std::string> entries;
+        std::ifstream ksyms_file("/proc/kallsyms");
+
+        std::regex ksym_regex("([0-9a-f]+) (?:t|T) ([^[:space:]]+)");
+        std::smatch ksym_match;
+
+        std::string line;
+
+        // Emplacing into entries map takes care of sorting symbols by address
+        while (getline(ksyms_file, line))
+        {
+            if (std::regex_match(line, ksym_match, ksym_regex))
+            {
+                std::string sym_str = ksym_match[2];
+                uint64_t sym_addr = stoull(ksym_match[1], nullptr, 16);
+                entries.emplace(std::piecewise_construct, std::forward_as_tuple(sym_addr),
+                                std::forward_as_tuple(sym_str));
+            }
+        }
+
+        std::string sym_str = "";
+        Address prev = 0;
+
+        for (auto& entry : entries)
+        {
+            if (prev != 0 && prev != entry.first)
+            {
+                kallsyms_.emplace(std::piecewise_construct,
+                                  std::forward_as_tuple(prev, entry.first),
+                                  std::forward_as_tuple(sym_str));
+            }
+            else
+            {
+                start_ = entry.first.value();
+            }
+            sym_str = entry.second;
+            prev = entry.first;
+        }
+
+        if (sym_str != "")
+        {
+            kallsyms_.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(prev, Address((uint64_t)-1)),
+                              std::forward_as_tuple(sym_str));
+        }
+    }
+
+    static Kallsyms& cache()
+    {
+        static Kallsyms k;
+        return k;
+    }
+
+    uint64_t start()
+    {
+        return start_;
+    }
+
+    virtual std::string lookup_instruction(Address) override
+    {
+        throw std::domain_error("Unknown instruction.");
+    }
+
+    virtual LineInfo lookup_line_info(Address addr) override
+    {
+        return LineInfo::for_function("[kernel]", kallsyms_.at(addr + start_).c_str(), 1, "");
+    }
+
+private:
+    std::map<Range, std::string> kallsyms_;
+    uint64_t start_;
 };
 
 struct RecordMmapType
