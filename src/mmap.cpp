@@ -40,6 +40,11 @@ MemoryMap::MemoryMap()
 
 MemoryMap::MemoryMap(Process process, bool read_initial)
 {
+    Binary* kall = &Kallsyms::cache();
+    map_.emplace(std::piecewise_construct,
+                 std::forward_as_tuple(Kallsyms::cache().start(), (uint64_t)-1),
+                 std::forward_as_tuple(Kallsyms::cache().start(), (uint64_t)-1, 0, *kall));
+
     if (!read_initial)
     {
         return;
