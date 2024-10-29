@@ -22,6 +22,9 @@
 #pragma once
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#ifdef HAVE_BPF
+#include <lo2s/monitor/posix_monitor.hpp>
+#endif
 #include <lo2s/monitor/scope_monitor.hpp>
 #include <lo2s/process_info.hpp>
 
@@ -54,6 +57,9 @@ public:
 
 private:
     std::map<Thread, ScopeMonitor> threads_;
+#ifdef HAVE_BPF
+    std::unique_ptr<PosixMonitor> posix_monitor_;
+#endif
 };
 } // namespace monitor
 } // namespace lo2s

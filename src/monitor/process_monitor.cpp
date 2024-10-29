@@ -31,6 +31,13 @@ namespace monitor
 
 ProcessMonitor::ProcessMonitor() : MainMonitor()
 {
+#ifdef HAVE_BPF
+    if (config().use_posix_io)
+    {
+        posix_monitor_ = std::make_unique<PosixMonitor>(trace_);
+        posix_monitor_->start();
+    }
+#endif
     trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
@@ -44,6 +51,13 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
 void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn,
                                    bool is_process)
 {
+
+#ifdef HAVE_BPF
+    if (posix_monitor_)
+    {
+        posix_monitor_->insert_thread(thread);
+    }
+#endif
     trace_.add_thread(thread, name);
 
     if (config().sampling)
@@ -80,6 +94,12 @@ void ProcessMonitor::update_process_name(Process process, const std::string& nam
 
 void ProcessMonitor::exit_thread(Thread thread)
 {
+#ifdef HAVE_BPF
+    if (posix_monitor_)
+    {
+        posix_monitor_->exit_thread(thread);
+    }
+#endif
     if (threads_.count(thread) != 0)
     {
         threads_.at(thread).stop();
@@ -93,6 +113,12 @@ ProcessMonitor::~ProcessMonitor()
     {
         thread.second.stop();
     }
+#ifdef HAVE_BPF
+    if (posix_monitor_)
+    {
+        posix_monitor_->stop();
+    }
+#endif
 }
 } // namespace monitor
 } // namespace lo2s
