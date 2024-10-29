@@ -1,8 +1,15 @@
+include(${CMAKE_CURRENT_LIST_DIR}/UnsetIfUpdated.cmake)
+
+option(Veosinfo_USE_STATIC_LIBS "link veosinfo statically" OFF)
+UnsetIfUpdated(Veosinfo_LIBRARIES Veosinfo_USE_STATIC_LIBS)
 
 find_path(Veosinfo_INCLUDE_DIRS veosinfo/veosinfo.h PATHS ENV C_INCLUDE_PATH ENV CPATH PATH_SUFFIXES include)
 
-find_library(Veosinfo_LIBRARIES veosinfo HINT ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
-
+if(Veosinfo_USE_STATIC_LIBS)
+    find_library(Veosinfo_LIBRARIES libveosinfo.a HINT ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+else()
+    find_library(Veosinfo_LIBRARIES libveosinfo.so HINT ENV LIBRARY_PATH ENV LD_LIBRARY_PATH)
+endif()
 
 include (FindPackageHandleStandardArgs)
 
