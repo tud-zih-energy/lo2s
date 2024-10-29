@@ -35,7 +35,10 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
     CUDA_USE_STATIC_LIBS
-)
+    Radare_USE_STATIC_LIBS
+    Sensors_USE_STATIC_LIBS
+    Veosinfo_USE_STATIC_LIBS
+    Audit_USE_STATIC_LIBS)
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
@@ -45,39 +48,36 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
     set(x86_energy_STATIC        OFF CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
-    set(Libpfm_USE_STATIC_LIBS  OFF CACHE BOOL "")
+    set(Libpfm_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
-endif()
+    set(Veosinfo_USE_STATIC_LIBS OFF CACHE BOOL "")
+    set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
+    set(Audit_USE_STATIC_LIBS    OFF CACHE BOOL "")
+else()
+    if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
+        set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
 
-if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
-    set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+    elseif(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
+        set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
+
+        # Doesn't seem to work with clang, even though it should,
+        # but at least it doesn't complain about it either
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
+        set(CMAKE_LINK_SEARCH_START_STATIC 1)
+        set(CMAKE_LINK_SEARCH_END_STATIC 1)
+    endif()
     set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
     set(x86_energy_STATIC        ON CACHE BOOL "")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
-    set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
+    set(Libpfm_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
-endif()
-
-if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
-    set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
-    set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
-    set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
-    set(X86Adapt_STATIC          ON CACHE BOOL "")
-    set(x86_energy_STATIC        ON CACHE BOOL "")
-    set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
-    set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
-    set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
-
-    # Doesn't seem to work with clang, even though it should,
-    # but at least it doesn't complain about it either
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
-    set(CMAKE_LINK_SEARCH_START_STATIC 1)
-    set(CMAKE_LINK_SEARCH_END_STATIC 1)
+    set(Veosinfo_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
+    set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
 endif()
 
 # Check if we are running Linux
@@ -110,13 +110,9 @@ find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 find_package(Veosinfo)
 find_package(Libpfm)
-find_package(PkgConfig)
 find_package(CUDAToolkit)
-
-if(PkgConfig_FOUND)
-    pkg_check_modules(Audit audit)
-    pkg_check_modules(Radare IMPORTED_TARGET r_asm>=5.8.0 r_anal>=5.8.0)
-endif()
+find_package(Radare)
+find_package(Audit)
 
 
 # configurable options
@@ -323,7 +319,7 @@ endif()
 if (USE_LIBAUDIT)
     if (Audit_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_LIBAUDIT)
-        target_link_libraries(lo2s PRIVATE ${Audit_LIBRARIES})
+        target_link_libraries(lo2s PRIVATE Audit::Audit)
     else()
         message(SEND_ERROR "Libaudit not found but requested.")
     endif()
