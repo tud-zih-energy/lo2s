@@ -28,7 +28,7 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
-    Binutils_USE_STATIC_LIBS
+    LibElf_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Libpfm_USE_STATIC_LIBS
@@ -39,7 +39,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
@@ -51,7 +51,7 @@ endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -64,7 +64,7 @@ endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS       ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -101,7 +101,6 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Binutils REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
@@ -112,6 +111,7 @@ find_package(Veosinfo)
 find_package(Libpfm)
 find_package(PkgConfig)
 find_package(CUDAToolkit)
+find_package(LibElf REQUIRED)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
@@ -206,8 +206,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
-    src/mmap.cpp
+    src/topology.cpp src/pipe.cpp src/dwarf_resolve.cpp
     src/util.cpp
     src/perf/util.cpp
     src/syscalls.cpp
@@ -226,10 +225,12 @@ target_link_libraries(lo2s
         Nitro::dl
         Nitro::options
         Threads::Threads
-        Binutils::Binutils
         fmt::fmt
         std::filesystem
-)
+        LibElf::LibElf
+        LibElf::LibDw
+        debuginfod
+    )
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
