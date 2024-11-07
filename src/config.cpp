@@ -228,6 +228,17 @@ void parse_program_options(int argc, const char** argv)
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
+    general_options
+#ifdef HAVE_DEBUGINFOD
+        .option("dwarf",
+                "Set DWARF resolve mode. none disables DWARF, local uses only locally cached "
+                "debuginfo, full uses debuginfod to download debug information on demand")
+        .default_value("full")
+#else
+        .option("dwarf", "Set DWARF resolve mode. none disables DWARF, local enables DWARF support")
+        .default_value("local")
+#endif
+        .metavar("DWARFMODE");
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
                             "Monitor as long as COMMAND is running or until PID exits.")
@@ -589,6 +600,30 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    std::string dwarf_mode = arguments.get("dwarf");
+
+    if (dwarf_mode == "full")
+    {
+#ifdef HAVE_DEBUGINFOD
+        config.dwarf = DwarfUsage::FULL;
+#else
+        Log::warn() << "No Debuginfod support available, downgrading to use only local files!";
+        config.dwarf = DwarfUsage::LOCAL;
+#endif
+    }
+    else if (dwarf_mode == "local")
+    {
+        config.dwarf = DwarfUsage::LOCAL;
+    }
+    else if (dwarf_mode == "none")
+    {
+        config.dwarf = DwarfUsage::NONE;
+    }
+    else
+    {
+        std::cerr << "Unknown DWARF mode: " << dwarf_mode << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
     if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;

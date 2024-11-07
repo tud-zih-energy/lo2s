@@ -164,6 +164,7 @@ if(NOT HAVE_PERF_RECORD_SWITCH)
     message(FATAL_ERROR "lo2s requires support for perf context switch recording. Make sure that you are running on a kernel that support context_switch with perf_event_open")
 endif()
 
+
 # detect version of running kernel
 string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSION})
 
@@ -206,6 +207,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
+    src/process_info.cpp
     src/topology.cpp src/pipe.cpp src/dwarf_resolve.cpp
     src/util.cpp
     src/perf/util.cpp
@@ -231,6 +233,14 @@ target_link_libraries(lo2s
         LibElf::LibDw
         debuginfod
     )
+
+find_path(DEBUGINFOD_INCLUDE_DIRS elfutils/debuginfod.h
+    PATHS ENV C_INCLUDE_PATH ENV CPATH
+    PATH_SUFFIXES include)
+
+if(DEBUGINFOD_INCLUDE_DIRS)
+    target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
+endif()
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
