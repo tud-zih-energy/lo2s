@@ -85,14 +85,14 @@ struct RecordMmapType
  * \brief structure for PERF_RECORD_COMM events
  **/
 
-struct __attribute((__packed__)) sample_id
+struct sample_id
 {
     uint32_t pid, tid;
     uint64_t time;
     uint32_t cpu, res;
 };
 
-struct __attribute((__packed__)) RecordCommType
+struct RecordCommType
 {
     struct perf_event_header header;
     uint32_t pid;
@@ -101,7 +101,7 @@ struct __attribute((__packed__)) RecordCommType
     // struct sample_id id;
 };
 
-struct __attribute((__packed__)) RecordMmap2Type
+struct RecordMmap2Type
 {
     // BAD things happen if you try this
     RecordMmap2Type() = delete;

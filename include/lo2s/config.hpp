@@ -45,6 +45,13 @@ enum class MonitorType
     CPU_SET
 };
 
+enum class DwarfUsage
+{
+    NONE,
+    LOCAL,
+    FULL
+};
+
 struct Config
 {
     // General
@@ -105,6 +112,7 @@ struct Config
     bool use_nvidia = false;
     std::string cuda_injectionlib_path;
     uint64_t nvidia_ringbuf_size;
+    DwarfUsage dwarf;
 };
 
 const Config& config();
