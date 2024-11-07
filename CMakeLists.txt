@@ -35,6 +35,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
     CUDA_USE_STATIC_LIBS
+    Debuginfod_USE_STATIC_LIBS
 )
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
@@ -47,6 +48,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
     set(Libpfm_USE_STATIC_LIBS  OFF CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
+    set(Debuginfod_USE_STATIC_LIBS     OFF CACHE BOOL "")
 endif()
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
@@ -59,6 +61,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
@@ -72,6 +75,7 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(Libpfm_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
 
     # Doesn't seem to work with clang, even though it should,
     # but at least it doesn't complain about it either
@@ -112,6 +116,7 @@ find_package(Libpfm)
 find_package(PkgConfig)
 find_package(CUDAToolkit)
 find_package(LibElf REQUIRED)
+find_package(Debuginfod)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
@@ -136,6 +141,8 @@ CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsu
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
 CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
 add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
+CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand." ON "Debuginfod_FOUND" OFF)
+add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -231,16 +238,7 @@ target_link_libraries(lo2s
         std::filesystem
         LibElf::LibElf
         LibElf::LibDw
-        debuginfod
     )
-
-find_path(DEBUGINFOD_INCLUDE_DIRS elfutils/debuginfod.h
-    PATHS ENV C_INCLUDE_PATH ENV CPATH
-    PATH_SUFFIXES include)
-
-if(DEBUGINFOD_INCLUDE_DIRS)
-    target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
-endif()
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
@@ -318,6 +316,15 @@ if (USE_VEOSINFO)
                                     src/monitor/nec_monitor_main.cpp)
     else()
         message(SEND_ERROR "Veosinfo not found but requested.")
+    endif()
+endif()
+
+if (USE_DEBUGINFOD)
+    if (Debuginfod_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
+        target_link_libraries(lo2s PRIVATE Debuginfod::Debuginfod)
+    else()
+        message(SEND_ERROR "Debuginfod not found but requested")
     endif()
 endif()
 
