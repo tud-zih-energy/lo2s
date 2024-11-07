@@ -20,11 +20,15 @@ class DwarfFunctionResolver : public FunctionResolver
 public:
     DwarfFunctionResolver(std::string name);
 
-    static FunctionResolver& cache(std::string name)
+    static std::shared_ptr<FunctionResolver> cache(std::string name)
     {
-        return StringCache<DwarfFunctionResolver>::instance()[name];
+        return BinaryCache<DwarfFunctionResolver>::instance()[name];
     }
 
+    DwarfFunctionResolver(DwarfFunctionResolver&) = delete;
+    DwarfFunctionResolver& operator=(DwarfFunctionResolver&) = delete;
+    DwarfFunctionResolver(DwarfFunctionResolver&&) = delete;
+    DwarfFunctionResolver& operator=(DwarfFunctionResolver&&) = delete;
     ~DwarfFunctionResolver();
     virtual LineInfo lookup_line_info(Address addr) override;
 

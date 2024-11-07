@@ -43,6 +43,17 @@ public:
     PerfEventCache(const PerfEventCache&) = delete;
     PerfEventCache& operator=(const PerfEventCache&) = delete;
 
+    PerfEventCache(PerfEventCache&& other)
+    {
+        std::swap(data_, other.data_);
+    }
+
+    PerfEventCache& operator=(PerfEventCache&& other)
+    {
+        std::swap(data_, other.data_);
+        return *this;
+    }
+
     PerfEventCache(const T* event) : data_(std::make_unique<std::byte[]>(event->header.size))
     {
         memcpy(data_.get(), event, event->header.size);
@@ -101,33 +112,7 @@ struct RecordCommType
     // struct sample_id id;
 };
 
-struct RecordMmap2Type
-{
-    // BAD things happen if you try this
-    RecordMmap2Type() = delete;
-    RecordMmap2Type(const RecordMmap2Type&) = delete;
-    RecordMmap2Type& operator=(const RecordMmap2Type&) = delete;
-    RecordMmap2Type(RecordMmap2Type&&) = delete;
-    RecordMmap2Type& operator=(RecordMmap2Type&&) = delete;
-
-    struct perf_event_header header;
-    uint32_t pid;
-    uint32_t tid;
-    uint64_t addr;
-    uint64_t len;
-    uint64_t pgoff;
-    uint32_t maj;
-    uint32_t min;
-    uint64_t ino;
-    uint64_t ino_generation;
-    uint32_t prot;
-    uint32_t flags;
-    // Note ISO C++ forbids zero-size array, but this struct is exclusively used as pointer
-    char filename[1];
-    // struct sample_id sample_id;
-};
-
-using RawMemoryMapCache = std::deque<PerfEventCache<RecordMmap2Type>>;
+using RawMemoryMapCache = std::deque<PerfEventCache<RecordMmapType>>;
 using RawCommCache = std::deque<PerfEventCache<RecordCommType>>;
 
 } // namespace lo2s

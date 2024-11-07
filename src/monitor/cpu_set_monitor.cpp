@@ -57,12 +57,12 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
             {
                 pid = std::stol(pid_match[1]);
 
-                process_infos_.insert(Process(pid), 0, true);
+                process_infos_.insert(Process(pid), true);
             }
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
+    trace_.emplace_threads(get_comms_for_running_threads());
 
     try
     {
@@ -137,7 +137,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
+    trace_.emplace_threads(get_comms_for_running_threads());
 
     for (auto& monitor_elem : monitors_)
     {

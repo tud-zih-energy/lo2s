@@ -77,8 +77,7 @@ DwarfFunctionResolver::DwarfFunctionResolver(std::string name) : FunctionResolve
     mod_ = dwfl_report_offline(dwfl_, name.c_str(), name.c_str(), -1);
     if (mod_ == nullptr)
     {
-        const char* errmsg = dwfl_errmsg(dwfl_errno());
-        Log::error() << "Could not add " << name << " " << errmsg;
+        throw std::runtime_error(dwfl_errmsg(dwfl_errno()));
     }
     dwfl_report_end(dwfl_, NULL, NULL);
 }

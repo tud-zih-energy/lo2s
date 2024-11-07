@@ -70,17 +70,14 @@ public:
     otf2::chrono::time_point record_from() const;
     otf2::chrono::time_point record_to() const;
 
-    void add_process(Process parent, Process process, const std::string& name = "");
+    void emplace_process(Process parent, Process process, const std::string& name = "");
 
-    void add_thread(Thread t, const std::string& name);
-    void add_threads(const std::unordered_map<Thread, std::string>& thread_map);
+    void emplace_thread(Thread t, const std::string& name = "");
+    void emplace_threads(const std::unordered_map<Thread, std::string>& thread_map);
 
     void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
 
-    void update_process_name(Process p, const std::string& name);
-    void update_thread_name(Thread t, const std::string& name);
-
-    LocalCctxMap& create_local_cctx_map();
+    LocalCctxMap& create_local_cctx_map(MeasurementScope scope);
     otf2::definition::mapping_table merge_calling_contexts(const LocalCctxMap& local_cctxs,
                                                            ProcessMap& infos);
     void merge_calling_contexts(ProcessMap& process_infos);
@@ -296,12 +293,13 @@ private:
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #add_threads.
      **/
-    void add_thread_exclusive(Thread thread, const std::string& name,
-                              const std::lock_guard<std::recursive_mutex>&);
+    void emplace_thread_exclusive(Thread thread, const std::string& name,
+                                  const std::lock_guard<std::recursive_mutex>&);
 
     void merge_ips(const std::map<Address, LocalCctx>& new_children,
                    std::map<Address, GlobalCctx>& children, std::vector<uint32_t>& mapping_table,
-                   otf2::definition::calling_context& parent, ProcessMap& infos, Process p);
+                   otf2::definition::calling_context& parent, ProcessInfo& info,
+                   MeasurementScope scope);
 
     const otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
     {
@@ -317,13 +315,13 @@ private:
         return bio_system_tree_node_;
     }
 
+    void update_thread(Thread t, const std::string& name);
+    void update_process(Process parent, Process process, const std::string& name);
     const otf2::definition::string& intern_syscall_str(int64_t syscall_nr);
 
     const otf2::definition::source_code_location& intern_scl(const LineInfo&);
 
     const otf2::definition::region& intern_region(const LineInfo&);
-
-    const otf2::definition::system_tree_node& intern_process_node(Process process);
 
     const otf2::definition::string& intern(const std::string&);
 
@@ -351,7 +349,7 @@ private:
     std::map<Thread, std::string> thread_names_;
 
     std::map<Thread, GlobalCctx> global_thread_cctxs_;
-    std::map<Process, std::map<Address, GlobalCctx>> calling_context_tree_;
+    std::map<MeasurementScope, std::map<Address, GlobalCctx>> calling_context_tree_;
 
     otf2::definition::comm_locations_group& comm_locations_group_;
     otf2::definition::comm_locations_group& hardware_comm_locations_group_;

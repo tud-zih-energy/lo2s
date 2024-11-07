@@ -129,38 +129,22 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-static uint64_t mmap_get_time(const RecordMmap2Type* t)
-{
-    struct sample_id* id =
-        (struct sample_id*)((char*)t + t->header.size - sizeof(struct sample_id));
-    return id->time;
-}
-
-static uint64_t comm_get_time(const RecordCommType* t)
-{
-    struct sample_id* id =
-        (struct sample_id*)((char*)t + t->header.size - sizeof(struct sample_id));
-    return id->time;
-}
-
 void MainMonitor::insert_cached_events(const RawMemoryMapCache& cached_mmaps,
                                        const RawCommCache& cached_execs)
 {
     for (auto& event : cached_execs)
     {
-        process_infos_.insert(Process(event.get()->pid), comm_get_time(event.get()), false);
+        process_infos_.insert(Process(event.get()->pid), false);
     }
     for (auto& event : cached_mmaps)
     {
-        const uint64_t timestamp = mmap_get_time(event.get());
         Process p = Process(event.get()->pid);
 
-        if (!process_infos_.has(p, timestamp))
+        if (!process_infos_.has(p))
         {
-            process_infos_.insert(p, timestamp, false);
+            process_infos_.insert(p, false);
         }
-
-        ProcessInfo& pinfo = process_infos_.get(p, timestamp);
+        ProcessInfo& pinfo = process_infos_.get(p);
 
         pinfo.mmap(*event.get());
     }

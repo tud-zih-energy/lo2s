@@ -26,11 +26,24 @@ namespace lo2s
 
 ProcessInfo::ProcessInfo(Process p, bool read_initial) : process_(p)
 {
-    FunctionResolver& kall = Kallsyms::cache();
-    InstructionResolver& kernel_ir = InstructionResolver::cache();
-    map_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(Kallsyms::cache().start(), (uint64_t)-1),
-        std::forward_as_tuple(Kallsyms::cache().start(), (uint64_t)-1, 0, kall, kernel_ir));
+    try
+    {
+
+        std::shared_ptr<FunctionResolver> kall = Kallsyms::cache();
+
+        auto& fr_map = function_resolvers_
+                           .emplace(MeasurementScope::sample(p.as_scope()),
+                                    std::map<Mapping, std::shared_ptr<FunctionResolver>>())
+                           .first->second;
+
+        fr_map.emplace(std::piecewise_construct,
+                       std::forward_as_tuple(Kallsyms::cache()->start(), (uint64_t)-1, 0),
+                       std::forward_as_tuple(kall));
+    }
+    catch (std::exception& e)
+    {
+        Log::debug() << "Could not read kallsyms: " << e.what();
+    }
     if (!read_initial)
     {
         return;
@@ -65,6 +78,121 @@ ProcessInfo::ProcessInfo(Process p, bool read_initial) : process_(p)
     }
 }
 
+void ProcessInfo::emplace_fr(Address addr, Address end, Address pgoff, std::string filename)
+{
+    std::shared_ptr<FunctionResolver> fr;
+    try
+    {
+        if (nitro::lang::starts_with(filename, "["))
+        {
+            fr = FunctionResolver::cache(filename);
+        }
+        else
+        {
+            fr = DwarfFunctionResolver::cache(filename);
+        }
+    }
+    catch (std::exception& e)
+    {
+        fr = FunctionResolver::cache(filename);
+    }
+
+    if (fr == nullptr)
+    {
+        return;
+    }
+    auto& fr_map = function_resolvers_
+                       .emplace(MeasurementScope::sample(process_.as_scope()),
+                                std::map<Mapping, std::shared_ptr<FunctionResolver>>())
+                       .first->second;
+
+    auto fr_entry = fr_map.find(Mapping(addr));
+    if (fr_entry != fr_map.end())
+    {
+        // Overlapping with existing entry
+        auto fr_mapping = fr_entry->first;
+        auto fr = std::move(fr_entry->second);
+        fr_map.erase(fr_entry);
+        if (fr_mapping.range.start != addr)
+        {
+            // Truncate entry
+            assert(fr_mapping.range.start < addr);
+            fr_mapping.range.end = addr;
+            Log::debug() << "truncating map entry at " << fr_mapping.range.start << " to "
+                         << fr_mapping.range.end;
+            [[maybe_unused]] auto r = fr_map.emplace(fr_mapping, std::move(fr));
+            assert(r.second);
+        }
+    }
+
+    try
+    {
+        fr_map.emplace(std::piecewise_construct, std::forward_as_tuple(addr, end, pgoff),
+                       std::forward_as_tuple(fr));
+    }
+    catch (Range::Error& e)
+    {
+        // Very common, can't warn here
+        // TODO consider handling this somehow...
+        Log::debug() << "invalid address range in /proc/.../maps: " << e.what();
+    }
+}
+
+void ProcessInfo::emplace_ir(Address addr, Address end, Address pgoff, std::string filename)
+{
+    std::shared_ptr<InstructionResolver> ir = nullptr;
+#ifdef HAVE_RADARE
+    try
+    {
+        ir = RadareInstructionResolver::cache(filename);
+    }
+    catch (...)
+    {
+    }
+#endif
+
+    if (ir == nullptr)
+    {
+        return;
+    }
+
+    auto& ir_map = instruction_resolvers_
+                       .emplace(MeasurementScope::sample(process_.as_scope()),
+                                std::map<Mapping, std::shared_ptr<InstructionResolver>>())
+                       .first->second;
+
+    auto ir_entry = ir_map.find(Mapping(addr));
+    if (ir_entry != ir_map.end())
+    {
+        // Overlapping with existing entry
+        auto ir_mapping = ir_entry->first;
+        auto ir = std::move(ir_entry->second);
+        ir_map.erase(ir_entry);
+        if (ir_mapping.range.start != addr)
+        {
+            // Truncate entry
+            assert(ir_mapping.range.start < addr);
+            ir_mapping.range.end = addr;
+            Log::debug() << "truncating map entry at " << ir_mapping.range.start << " to "
+                         << ir_mapping.range.end;
+            [[maybe_unused]] auto r = ir_map.emplace(ir_mapping, std::move(ir));
+            assert(r.second);
+        }
+    }
+
+    try
+    {
+        ir_map.emplace(std::piecewise_construct, std::forward_as_tuple(addr, end, pgoff),
+                       std::forward_as_tuple(ir));
+    }
+    catch (Range::Error& e)
+    {
+        // Very common, can't warn here
+        // TODO consider handling this somehow...
+        Log::debug() << "invalid address range in /proc/.../maps: " << e.what();
+    }
+}
+
 void ProcessInfo::mmap(Address addr, Address end, Address pgoff, std::string filename)
 {
 
@@ -81,151 +209,62 @@ void ProcessInfo::mmap(Address addr, Address end, Address pgoff, std::string fil
         return;
     }
 
-    FunctionResolver* fr;
-    InstructionResolver* ir;
-
-    try
-    {
-        if (nitro::lang::starts_with(filename, "["))
-        {
-            fr = &FunctionResolver::cache(filename);
-        }
-        else
-        {
-            fr = &DwarfFunctionResolver::cache(filename);
-        }
-    }
-    catch (...)
-    {
-        fr = &FunctionResolver::cache(filename);
-    }
-
-#ifdef HAVE_RADARE
-    try
-    {
-        ir = &RadareInstructionResolver::cache(filename);
-    }
-    catch (...)
-    {
-        ir = &InstructionResolver::cache();
-    }
-#else
-    ir = &InstructionResolver::cache();
-#endif
-    auto ex_it = map_.find(addr);
-    if (ex_it != map_.end())
-    {
-        // Overlapping with existing entry
-        auto ex_range = ex_it->first;
-        auto ex_elem = std::move(ex_it->second);
-        map_.erase(ex_it);
-        if (ex_range.start != addr)
-        {
-            // Truncate entry
-            assert(ex_range.start < addr);
-            ex_range.end = addr;
-            Log::debug() << "truncating map entry at " << ex_range.start << " to " << ex_range.end;
-            [[maybe_unused]] auto r = map_.emplace(ex_range, std::move(ex_elem));
-            assert(r.second);
-        }
-    }
-
-    try
-    {
-        auto r = map_.emplace(std::piecewise_construct, std::forward_as_tuple(addr, end),
-                              std::forward_as_tuple(addr, end, pgoff, *fr, *ir));
-        if (!r.second)
-        {
-            // very common, so only debug
-            // TODO handle better
-            Log::debug() << "duplicate memory range from mmap event. new: " << addr << "-" << end
-                         << "%" << pgoff << " " << filename << "\n"
-                         << "OLD: " << r.first->second.start << "-" << r.first->second.end << "%"
-                         << r.first->second.pgoff << " " << r.first->second.fr.name();
-        }
-    }
-    catch (Range::Error& e)
-    {
-        // Very common, can't warn here
-        // TODO consider handling this somehow...
-        Log::debug() << "invalid address range in /proc/.../maps: " << e.what();
-    }
+    emplace_fr(addr, end, pgoff, filename);
+    emplace_ir(addr, end, pgoff, filename);
 }
 
-LineInfo ProcessInfo::lookup_line_info(Address ip)
+LineInfo ProcessInfo::lookup_line_info(MeasurementScope scope, Address ip)
 {
     try
     {
         std::shared_lock lock(mutex_);
-        return map_.at(ip).fr.lookup_line_info(ip - map_.at(ip).start + map_.at(ip).pgoff);
+
+        auto& fr_map = function_resolvers_.at(scope);
+        for (auto& fr : fr_map)
+        {
+            if (ip >= fr.first.range.start && ip < fr.first.range.end)
+            {
+                return fr.second->lookup_line_info(ip - fr.first.range.start + fr.first.pgoff);
+            }
+        }
     }
     catch (std::exception& e)
     {
-        Log::error() << process_ << ": Could not find mapping for ip: " << ip << e.what();
-        return LineInfo::for_unknown_function();
+        Log::debug() << process_ << ": Could not find mapping for ip: " << ip << e.what();
     }
+    return LineInfo::for_unknown_function();
 }
 
-std::string ProcessInfo::lookup_instruction(Address ip) const
+std::string ProcessInfo::lookup_instruction(MeasurementScope scope, Address ip) const
 {
-    return map_.at(ip).ir.lookup_instruction(ip - map_.at(ip).start + map_.at(ip).pgoff);
+    auto& ir_map = instruction_resolvers_.at(scope);
+
+    auto ir = ir_map.find(Mapping(ip));
+    if (ir != ir_map.end())
+    {
+        return ir->second->lookup_instruction(ip - ir->first.range.start + ir->first.pgoff);
+    }
+    return "";
 }
 
-bool ProcessMap::has(Process p, uint64_t timepoint)
+bool ProcessMap::has(Process p)
 {
-    auto it = infos_.find(p);
-    if (it == infos_.end())
-    {
-        return false;
-    }
-    for (auto& elem : it->second)
-    {
-        if (timepoint >= elem.first)
-        {
-            return true;
-        }
-    }
-    return false;
+    return infos_.count(p) != 0;
 }
 
-ProcessInfo& ProcessMap::get(Process p, uint64_t timepoint)
+ProcessInfo& ProcessMap::get(Process p)
 {
-    auto& infos = infos_.at(p);
-
-    auto it = std::find_if(infos.begin(), infos.end(),
-                           [&timepoint](auto& arg) { return arg.first > timepoint; });
-
-    if (it == infos.begin())
-    {
-        if (timepoint >= it->first)
-        {
-            return it->second;
-        }
-        else
-        {
-            throw std::out_of_range("no matching timepoint");
-        }
-    }
-    else
-    {
-        it--;
-        if (timepoint >= it->first)
-        {
-            return it->second;
-        }
-        else
-        {
-            throw std::out_of_range("no matching timepoint it--");
-        }
-    }
-
-    return infos_.at(p).at(timepoint);
+    return infos_.at(p);
 }
 
-ProcessInfo& ProcessMap::insert(Process p, uint64_t timepoint, bool read_initial)
+ProcessInfo& ProcessMap::insert(Process p, bool read_initial)
 {
-    auto it = infos_[p].emplace(std::piecewise_construct, std::forward_as_tuple(timepoint),
-                                std::forward_as_tuple(p, read_initial));
+    if (infos_.count(p))
+    {
+        infos_.erase(p);
+    }
+    auto it = infos_.emplace(std::piecewise_construct, std::forward_as_tuple(p),
+                             std::forward_as_tuple(p, read_initial));
     return it.first->second;
 }
 } // namespace lo2s

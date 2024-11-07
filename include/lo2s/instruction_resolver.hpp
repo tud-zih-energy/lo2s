@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once 
+#pragma once
 
 #include <lo2s/address.hpp>
 #ifdef HAVE_RADARE
@@ -28,6 +28,7 @@
 #include <lo2s/util.hpp>
 
 #include <string>
+
 namespace lo2s
 {
 class InstructionResolver
@@ -47,6 +48,10 @@ public:
     {
         return "";
     }
+
+    virtual ~InstructionResolver()
+    {
+    }
 };
 #ifdef HAVE_RADARE
 class RadareInstructionResolver : public InstructionResolver
@@ -56,9 +61,9 @@ public:
     {
     }
 
-    static RadareInstructionResolver& cache(const std::string& name)
+    static std::shared_ptr<RadareInstructionResolver> cache(const std::string& name)
     {
-        return StringCache<RadareInstructionResolver>::instance()[name];
+        return BinaryCache<RadareInstructionResolver>::instance()[name];
     }
 
     virtual std::string lookup_instruction(Address ip)

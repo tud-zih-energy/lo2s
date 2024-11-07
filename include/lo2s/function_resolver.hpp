@@ -24,8 +24,8 @@
 #include <lo2s/line_info.hpp>
 #include <lo2s/util.hpp>
 
-#include <string>
 #include <regex>
+#include <string>
 
 namespace lo2s
 {
@@ -36,9 +36,9 @@ public:
     {
     }
 
-    static FunctionResolver& cache(const std::string& name)
+    static std::shared_ptr<FunctionResolver> cache(const std::string& name)
     {
-        return StringCache<FunctionResolver>::instance()[name];
+        return BinaryCache<FunctionResolver>::instance()[name];
     }
 
     virtual LineInfo lookup_line_info(Address)
@@ -51,6 +51,15 @@ public:
         return name_;
     }
 
+    virtual void insert(std::map<Address, std::string>& functions [[maybe_unused]])
+    {
+        throw std::runtime_error("Class does not support inserting elements");
+    }
+
+    virtual ~FunctionResolver()
+    {
+    }
+
 protected:
     std::string name_;
 };
@@ -61,8 +70,14 @@ public:
     Kallsyms() : FunctionResolver("[kernel]")
     {
         std::map<Address, std::string> entries;
-        std::ifstream ksyms_file("/proc/kallsyms");
+        std::ifstream ksyms_file;
+        ksyms_file.exceptions(std::ifstream::badbit);
+        ksyms_file.open("/proc/kallsyms");
 
+        if (!ksyms_file.good())
+        {
+            return;
+        }
         std::regex ksym_regex("([0-9a-f]+) (?:t|T) ([^[:space:]]+)");
         std::smatch ksym_match;
 
@@ -107,9 +122,9 @@ public:
         }
     }
 
-    static Kallsyms& cache()
+    static std::shared_ptr<Kallsyms> cache()
     {
-        static Kallsyms k;
+        static std::shared_ptr<Kallsyms> k = std::make_shared<Kallsyms>();
         return k;
     }
 
@@ -125,6 +140,6 @@ public:
 
 private:
     std::map<Range, std::string> kallsyms_;
-    uint64_t start_;
+    uint64_t start_ = UINT64_MAX;
 };
-}
+} // namespace lo2s
