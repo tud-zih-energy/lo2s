@@ -43,9 +43,9 @@ public:
     PerfEventCache(const PerfEventCache&) = delete;
     PerfEventCache& operator=(const PerfEventCache&) = delete;
 
-    PerfEventCache(const T* event, size_t size) : data_(std::make_unique<std::byte[]>(size))
+    PerfEventCache(const T* event) : data_(std::make_unique<std::byte[]>(event->header.size))
     {
-        memcpy(data_.get(), event, size);
+        memcpy(data_.get(), event, event->header.size);
     }
 
     T* get()
