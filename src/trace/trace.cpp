@@ -892,7 +892,7 @@ void Trace::merge_calling_contexts(ProcessMap& process_infos)
 {
     for (auto& local_cctx : local_cctx_maps_)
     {
-        assert(local_cctx.writer != nullptr);
+        assert(local_cctx.writer() != nullptr);
         if (local_cctx.num_cctx() > 0)
         {
             const auto& mapping = merge_calling_contexts(local_cctx, process_infos);
