@@ -22,10 +22,8 @@
 #include <lo2s/trace/trace.hpp>
 
 #include <lo2s/address.hpp>
-#include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/mmap.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -230,7 +228,7 @@ otf2::chrono::time_point Trace::record_to() const
 
 Trace::~Trace()
 {
-    if (!cctx_refs_finalized_)
+    if (!local_cctx_maps_finalized_)
     {
         Log::error()
             << "cctx refs have not been finalized, please report this bug to the developers";
@@ -611,10 +609,9 @@ otf2::definition::metric_class& Trace::metric_class()
                                                             otf2::common::recorder_kind::abstract);
 }
 
-void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
-                      std::vector<uint32_t>& mapping_table,
-                      otf2::definition::calling_context& parent,
-                      const std::map<Process, ProcessInfo>& infos, Process process)
+void Trace::merge_ips(const std::map<Address, LocalCctx>& new_children,
+                      std::map<Address, GlobalCctx>& children, std::vector<uint32_t>& mapping_table,
+                      otf2::definition::calling_context& parent, ProcessMap& infos, Process process)
 {
     for (const auto& elem : new_children)
     {
@@ -623,11 +620,14 @@ void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
         auto& local_children = elem.second.children;
         LineInfo line_info = LineInfo::for_unknown_function();
 
-        auto info_it = infos.find(process);
-        if (info_it != infos.end())
+        if (infos.has(process, UINT64_MAX))
         {
-            MemoryMap maps = info_it->second.maps();
-            line_info = maps.lookup_line_info(ip);
+            line_info = infos.get(process, UINT64_MAX).lookup_line_info(ip);
+        }
+        else
+        {
+            infos.insert(process, 0, false);
+            line_info = infos.get(process, UINT64_MAX).lookup_line_info(ip);
         }
 
         Log::trace() << "resolved " << ip << ": " << line_info;
@@ -639,11 +639,11 @@ void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
             auto r = children.emplace(ip, new_cctx);
             cctx_it = r.first;
 
-            if (config().disassemble && infos.count(process) == 1)
+            if (config().disassemble && infos.has(process, UINT64_MAX) == 1)
             {
                 try
                 {
-                    auto instruction = infos.at(process).maps().lookup_instruction(ip);
+                    auto instruction = infos.get(process, UINT64_MAX).lookup_instruction(ip);
                     Log::trace() << "mapped " << ip << " to " << instruction;
 
                     registry_.create<otf2::definition::calling_context_property>(
@@ -663,64 +663,71 @@ void Trace::merge_ips(const IpRefMap& new_children, IpCctxMap& children,
     }
 }
 
-otf2::definition::mapping_table
-Trace::merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, size_t num_ip_refs,
-                              const std::map<Process, ProcessInfo>& infos)
+otf2::definition::mapping_table Trace::merge_calling_contexts(const LocalCctxMap& local_cctxs,
+                                                              ProcessMap& infos)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
 #ifndef NDEBUG
-    std::vector<uint32_t> mappings(num_ip_refs, -1u);
+    std::vector<uint32_t> mappings(local_cctxs.num_cctx(), -1u);
 #else
-    std::vector<uint32_t> mappings(num_ip_refs);
+    std::vector<uint32_t> mappings(local_cctxs.num_cctx());
 #endif
 
     // Merge local thread tree into global thread tree
-    for (auto& local_thread_cctx : new_ips)
+    for (auto& process_map : local_cctxs.get_threads())
     {
+        Process process = process_map.first;
 
-        auto thread = local_thread_cctx.first;
-        auto process = local_thread_cctx.second.process;
-
-        groups_.add_thread(thread, process);
-        auto local_ref = local_thread_cctx.second.entry.ref;
-
-        auto global_thread_cctx = calling_context_tree_.find(thread);
-
-        if (global_thread_cctx == calling_context_tree_.end())
+        for (auto& local_thread_cctx : process_map.second)
         {
-            if (thread != Thread(0))
-            {
+            Thread thread = local_thread_cctx.first;
+            groups_.add_thread(thread, process);
 
-                if (auto thread_name = thread_names_.find(thread);
-                    thread_name != thread_names_.end())
+            auto local_ref = local_thread_cctx.second;
+
+            auto global_thread_cctx = global_thread_cctxs_.find(thread);
+
+            if (global_thread_cctx == global_thread_cctxs_.end())
+            {
+                if (thread != Thread(0))
                 {
-                    add_thread(thread, thread_name->second);
-                }
-                else
-                {
-                    if (auto process_name = thread_names_.find(process.as_thread());
-                        process_name != thread_names_.end())
+
+                    if (auto thread_name = thread_names_.find(thread);
+                        thread_name != thread_names_.end())
                     {
-                        add_thread(thread, process_name->second);
+                        add_thread(thread, thread_name->second);
                     }
                     else
                     {
-                        add_thread(thread, "<unknown thread>");
+                        if (auto process_name = thread_names_.find(process.as_thread());
+                            process_name != thread_names_.end())
+                        {
+                            add_thread(thread, process_name->second);
+                        }
+                        else
+                        {
+                            add_thread(thread, "<unknown thread>");
+                        }
                     }
                 }
+                else
+                {
+                    add_thread(thread, "<idle>");
+                }
             }
-            else
-            {
-                add_thread(thread, "<idle>");
-            }
-            global_thread_cctx = calling_context_tree_.find(thread);
+            const auto& foo = global_thread_cctxs_.at(thread).cctx.ref();
+            mappings.at(local_ref.ref) = foo;
         }
+    }
 
-        assert(global_thread_cctx != calling_context_tree_.end());
-        mappings.at(local_ref) = global_thread_cctx->second.cctx.ref();
-
-        merge_ips(local_thread_cctx.second.entry.children, global_thread_cctx->second.children,
-                  mappings, global_thread_cctx->second.cctx, infos, process);
+    for (auto& local_process_map : local_cctxs.get_functions())
+    {
+        auto& parent = registry_.get<otf2::definition::calling_context>(
+            ByThread(local_process_map.first.as_thread()));
+        auto ret =
+            calling_context_tree_.emplace(local_process_map.first, std::map<Address, GlobalCctx>());
+        merge_ips(local_process_map.second, ret.first->second, mappings, parent, infos,
+                  local_process_map.first);
     }
 
 #ifndef NDEBUG
@@ -785,9 +792,8 @@ void Trace::add_thread_exclusive(Thread thread, const std::string& name,
     // create calling context
     auto& thread_cctx = registry_.create<otf2::definition::calling_context>(
         ByThread(thread), thread_region, otf2::definition::source_code_location());
-
-    calling_context_tree_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                  std::forward_as_tuple(thread_cctx));
+    global_thread_cctxs_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                 std::forward_as_tuple(thread_cctx));
 }
 
 void Trace::add_thread(Thread thread, const std::string& name)
@@ -817,8 +823,8 @@ void Trace::add_monitoring_thread(Thread thread, const std::string& name, const 
 
         auto& lo2s_cctx = registry_.create<otf2::definition::calling_context>(
             ByThread(thread), ret, otf2::definition::source_code_location());
-        calling_context_tree_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                      std::forward_as_tuple(lo2s_cctx));
+        global_thread_cctxs_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                     std::forward_as_tuple(lo2s_cctx));
     }
 }
 
@@ -873,28 +879,28 @@ const otf2::definition::string& Trace::intern(const std::string& name)
     return registry_.emplace<otf2::definition::string>(ByString(name), name);
 }
 
-ThreadCctxRefMap& Trace::create_cctx_refs()
+LocalCctxMap& Trace::create_local_cctx_map()
 {
-    std::lock_guard<std::mutex> guard(cctx_refs_mutex_);
+    std::lock_guard<std::mutex> guard(local_cctx_maps_mutex_);
 
-    assert(!cctx_refs_finalized_);
+    assert(!local_cctx_maps_finalized_);
 
-    return cctx_refs_.emplace_back();
+    return local_cctx_maps_.emplace_back();
 }
 
-void Trace::merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos)
+void Trace::merge_calling_contexts(ProcessMap& process_infos)
 {
-    for (auto& cctx : cctx_refs_)
+    for (auto& local_cctx : local_cctx_maps_)
     {
-        assert(cctx.writer != nullptr);
-        if (cctx.ref_count > 0)
+        assert(local_cctx.writer != nullptr);
+        if (local_cctx.num_cctx() > 0)
         {
-            const auto& mapping = merge_calling_contexts(cctx.map, cctx.ref_count, process_infos);
-            (*cctx.writer) << mapping;
+            const auto& mapping = merge_calling_contexts(local_cctx, process_infos);
+            (*local_cctx.writer()) << mapping;
         }
     }
-    cctx_refs_.clear();
-    auto finalized_twice = cctx_refs_finalized_.exchange(true);
+    local_cctx_maps_.clear();
+    auto finalized_twice = local_cctx_maps_finalized_.exchange(true);
     if (finalized_twice)
     {
         Log::error() << "Trace::merge_calling_contexts was called twice."

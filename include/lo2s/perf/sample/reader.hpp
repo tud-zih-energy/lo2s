@@ -109,6 +109,7 @@ protected:
             perf_attr.config1 = sampling_event.config1;
 
             perf_attr.mmap = 1;
+            perf_attr.mmap2 = 1;
         }
         else
         {
