@@ -22,9 +22,9 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/instruction_resolver.hpp>
-#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/types.hpp>
 
@@ -72,6 +72,7 @@ private:
         FunctionResolver& fr;
         InstructionResolver& ir;
     };
+
     const Process process_;
     mutable std::shared_mutex mutex_;
     std::map<Range, Mapping> map_;

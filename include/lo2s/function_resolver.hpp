@@ -24,8 +24,8 @@
 #include <lo2s/line_info.hpp>
 #include <lo2s/util.hpp>
 
-#include <string>
 #include <regex>
+#include <string>
 
 namespace lo2s
 {
@@ -127,4 +127,4 @@ private:
     std::map<Range, std::string> kallsyms_;
     uint64_t start_;
 };
-}
+} // namespace lo2s

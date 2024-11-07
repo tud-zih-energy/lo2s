@@ -731,6 +731,7 @@ void SysfsEvent::use_sampling_options(const bool& use_pebs, const bool& sampling
         Log::debug() << "using sampling event \'" << name_ << "\', period: " << attr_.sample_period;
 
         attr_.mmap = 1;
+        attr_.mmap2 = 1;
     }
     else
     {

@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once 
+#pragma once
 
 #include <lo2s/address.hpp>
 #ifdef HAVE_RADARE
@@ -28,6 +28,7 @@
 #include <lo2s/util.hpp>
 
 #include <string>
+
 namespace lo2s
 {
 class InstructionResolver
