@@ -47,7 +47,7 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
 
     if (config().sampling)
     {
-        process_infos_.try_emplace(process, process, spawn);
+        process_infos_.insert(process, 0, !spawn);
     }
 
     ExecutionScope scope = ExecutionScope(thread);

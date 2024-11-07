@@ -20,62 +20,45 @@
  */
 #pragma once
 
-#include <lo2s/config.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/address.hpp>
+#include <lo2s/log.hpp>
 
 #include <otf2xx/otf2.hpp>
 
+extern "C"
+{
+#include <linux/perf_event.h>
+}
+
 namespace lo2s
 {
-namespace perf
-{
 
-class CallingContextManager
+struct LocalCctx
 {
-public:
-    CallingContextManager(trace::Trace& trace) : local_cctx_refs_(trace.create_cctx_refs())
+    LocalCctx(otf2::definition::calling_context::reference_type r) : ref(r)
     {
     }
 
-    void thread_enter(Process process, Thread thread)
-    {
-        auto ret =
-            local_cctx_refs_.map.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                         std::forward_as_tuple(process, next_cctx_ref_));
-        if (ret.second)
-        {
-            next_cctx_ref_++;
-        }
+    otf2::definition::calling_context::reference_type ref;
+    std::map<Address, LocalCctx> children;
+};
 
-        current_thread_cctx_refs_ = &(*ret.first);
+class LocalCctxMap
+{
+public:
+    LocalCctxMap()
+    {
     }
 
     void finalize(otf2::writer::local* otf2_writer)
     {
-        local_cctx_refs_.ref_count = next_cctx_ref_;
+        ref_count_ = next_cctx_ref_;
         // set writer last, because it is used as sentry to confirm that the cctx refs are properly
         // finalized.
-        local_cctx_refs_.writer = otf2_writer;
+        writer_ = otf2_writer;
     }
 
-    bool thread_changed(Thread thread)
-    {
-        return !current_thread_cctx_refs_ || current_thread_cctx_refs_->first != thread;
-    }
-
-    otf2::definition::calling_context::reference_type current()
-    {
-        if (current_thread_cctx_refs_)
-        {
-            return current_thread_cctx_refs_->second.entry.ref;
-        }
-        else
-        {
-            return otf2::definition::calling_context::reference_type::undefined();
-        }
-    }
-
-    otf2::definition::calling_context::reference_type sample_ref(uint64_t num_ips,
+    otf2::definition::calling_context::reference_type sample_ref(Process p, uint64_t num_ips,
                                                                  const uint64_t ips[])
     {
         // For unwind distance definiton, see:
@@ -96,40 +79,80 @@ public:
         // information.
         //
         // Having these things in mind, look at this line and tell me, why it is still wrong:
-        auto children = &current_thread_cctx_refs_->second.entry.children;
+        auto children = &map[p];
+        uint64_t ref = -1;
         for (uint64_t i = num_ips - 1;; i--)
         {
-            auto it = find_ip_child(ips[i], *children);
-            // We intentionally discard the last sample as it is somewhere in the kernel
-            if (i == 1)
+            if (ips[i] == PERF_CONTEXT_KERNEL)
             {
-                return it->second.ref;
+                if (i <= 1)
+                {
+                    return ref;
+                }
+                continue;
+            }
+            else if (ips[i] == PERF_CONTEXT_USER)
+            {
+                if (i <= 1)
+                {
+                    return ref;
+                }
+                continue;
+            }
+            auto it = find_ip_child(ips[i], *children);
+            ref = it->second.ref;
+            if (i == 0)
+            {
+                return ref;
             }
 
             children = &it->second.children;
         }
     }
 
-    otf2::definition::calling_context::reference_type sample_ref(uint64_t ip)
+    otf2::definition::calling_context::reference_type sample_ref(Process p, uint64_t ip)
     {
-        auto it = find_ip_child(ip, current_thread_cctx_refs_->second.entry.children);
+        auto it = find_ip_child(ip, map[p]);
 
         return it->second.ref;
     }
 
-    void thread_leave(Thread thread)
+    otf2::definition::calling_context::reference_type thread(Process process, Thread thread)
     {
-        assert(current_thread_cctx_refs_);
-        if (current_thread_cctx_refs_->first != thread)
+        auto ret =
+            thread_cctxs_[process].emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                           std::forward_as_tuple(next_cctx_ref_));
+        if (ret.second)
         {
-            Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or
-                                                         // later
+            next_cctx_ref_++;
         }
-        current_thread_cctx_refs_ = nullptr;
+
+        return ret.first->second.ref;
+    }
+
+    size_t num_cctx() const
+    {
+        return ref_count_;
+    }
+
+    const std::map<Process, std::map<Thread, LocalCctx>>& get_threads() const
+    {
+        return thread_cctxs_;
+    }
+
+    const std::map<Process, std::map<Address, LocalCctx>>& get_functions() const
+    {
+        return map;
+    }
+
+    otf2::writer::local* writer()
+    {
+        return writer_;
     }
 
 private:
-    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children)
+    std::map<Address, LocalCctx>::iterator find_ip_child(Address addr,
+                                                         std::map<Address, LocalCctx>& children)
     {
         // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
         if (addr == -1)
@@ -147,9 +170,17 @@ private:
     }
 
 private:
-    trace::ThreadCctxRefMap& local_cctx_refs_;
+    std::map<Process, std::map<Address, LocalCctx>> map;
+    std::map<Process, std::map<Thread, LocalCctx>> thread_cctxs_;
+
+    /*
+     * Stores calling context information for each sample writer / monitoring thread.
+     * While the `Trace` always owns this data, the `sample::Writer` should have exclusive access to
+     * this data during its lifetime. Only afterwards, the `writer` and `refcount` are set by the
+     * `sample::Writer`.
+     */
+    std::atomic<otf2::writer::local*> writer_ = nullptr;
+    std::atomic<size_t> ref_count_;
     size_t next_cctx_ref_ = 0;
-    trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 };
-} // namespace perf
 } // namespace lo2s
