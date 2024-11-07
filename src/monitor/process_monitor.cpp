@@ -36,18 +36,21 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
 void ProcessMonitor::insert_process(Process parent, Process process, std::string proc_name,
                                     bool spawn)
 {
-    trace_.add_process(parent, process, proc_name);
-    insert_thread(process, process.as_thread(), proc_name, spawn, true);
+    trace_.emplace_process(parent, process, proc_name);
+    insert_thread(process, process.as_thread(), proc_name, spawn);
 }
 
 void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn,
                                    bool is_process)
 {
-    trace_.add_thread(thread, name);
+    trace_.emplace_thread(thread, name);
 
     if (config().sampling)
     {
-        process_infos_.insert(process, 0, !spawn);
+        if (!process_infos_.has(process))
+        {
+            process_infos_.insert(process, !spawn);
+        }
     }
 
     ExecutionScope scope = ExecutionScope(thread);
@@ -74,12 +77,12 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         }
     }
 
-    trace_.update_thread_name(thread, name);
+    trace_.emplace_thread(thread, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.update_process_name(process, name);
+    trace_.emplace_process(trace::Trace::NO_PARENT_PROCESS, process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

@@ -39,6 +39,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <map>
 
 extern "C"
 {
@@ -59,7 +60,7 @@ Writer::Writer(ExecutionScope scope, monitor::MainMonitor& Monitor, trace::Trace
   cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer_.location(),
                                                otf2_writer_.location())),
   cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  local_cctx_map_(trace.create_local_cctx_map()),
+  local_cctx_map_(trace.create_local_cctx_map(MeasurementScope::sample(scope))),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -98,7 +99,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     return false;
 }
 
-bool Writer::handle(const Reader::RecordMmap2Type* mmap_event)
+bool Writer::handle(const Reader::RecordMmapType* mmap_event)
 {
     // Since this is an mmap record (as opposed to mmap2), it will only be generated for executable
     if (!scope_.is_cpu() && scope_ != ExecutionScope(Thread(mmap_event->tid)))
@@ -211,12 +212,13 @@ bool Writer::handle(const Reader::RecordCommType* comm)
                      << " changed name to \"" << new_command << "\"";
 
         // update task name
-        trace_.update_thread_name(Thread(comm->tid), new_command);
+        trace_.emplace_thread(Thread(comm->tid), new_command);
 
         // only update name of process if the main thread changes its name
         if (comm->pid == comm->tid)
         {
-            trace_.update_process_name(Process(comm->pid), new_command);
+            trace_.emplace_process(trace::Trace::NO_PARENT_PROCESS, Process(comm->pid),
+                                   new_command);
         }
     }
 
@@ -257,7 +259,7 @@ void Writer::end()
                                                 trace_.process_comm(scope_.as_thread()), -1);
     }
 
-    trace_.add_threads(comms_);
+    trace_.emplace_threads(comms_);
 
     monitor_.insert_cached_events(cached_mmap_events_, cached_comm_events_);
 }

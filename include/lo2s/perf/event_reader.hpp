@@ -66,7 +66,6 @@ public:
     using RecordUnknownType = perf_event_header;
 
     using RecordMmapType = lo2s::RecordMmapType;
-    using RecordMmap2Type = lo2s::RecordMmap2Type;
     using RecordCommType = lo2s::RecordCommType;
 
     struct RecordLostType
@@ -175,9 +174,6 @@ public:
             {
             case PERF_RECORD_MMAP:
                 stop = crtp_this->handle((const RecordMmapType*)event_header_p);
-                break;
-            case PERF_RECORD_MMAP2:
-                stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                 break;
             case PERF_RECORD_SWITCH:
                 stop = crtp_this->handle((const RecordSwitchType*)event_header_p);

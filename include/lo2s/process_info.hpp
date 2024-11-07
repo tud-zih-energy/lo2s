@@ -22,10 +22,11 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/instruction_resolver.hpp>
-#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/types.hpp>
 
 #include <nitro/lang/string.hpp>
@@ -48,33 +49,60 @@ public:
         return process_;
     }
 
-    void mmap(const RecordMmap2Type& entry)
+    void mmap(const RecordMmapType& entry)
     {
         mmap(entry.addr, entry.addr + entry.len, entry.pgoff, entry.filename);
     }
 
     void mmap(Address addr, Address end, Address pgoff, std::string filename);
 
-    LineInfo lookup_line_info(Address ip);
-    std::string lookup_instruction(Address ip) const;
+    LineInfo lookup_line_info(MeasurementScope scope, Address ip);
+    std::string lookup_instruction(MeasurementScope scope, Address ip) const;
 
 private:
+    void emplace_fr(Address addr, Address end, Address pgoff, std::string filename);
+    void emplace_ir(Address addr, Address end, Address pgoff, std::string filename);
+
     struct Mapping
     {
-        Mapping(Address s, Address e, Address o, FunctionResolver& f, InstructionResolver& i)
-        : start(s), end(e), pgoff(o), fr(f), ir(i)
+        Mapping(Address s, Address e, Address o) : range(s, e), pgoff(o)
         {
         }
 
-        Address start;
-        Address end;
+        Mapping(Address s) : range(s), pgoff(0)
+        {
+        }
+
+        Range range;
         Address pgoff;
-        FunctionResolver& fr;
-        InstructionResolver& ir;
+
+        bool operator==(const Address& other) const
+        {
+            return other >= range.start && other < range.end;
+        }
+
+        bool operator<(const Mapping& other) const
+        {
+            return range < other.range;
+        }
+
+        bool operator<(const Address& other) const
+        {
+            return range < other;
+        }
+
+        static Mapping max()
+        {
+            return Mapping(0, (uint64_t)-1, 0);
+        }
     };
+
     const Process process_;
     mutable std::shared_mutex mutex_;
-    std::map<Range, Mapping> map_;
+    std::map<MeasurementScope, std::map<Mapping, std::shared_ptr<FunctionResolver>>>
+        function_resolvers_;
+    std::map<MeasurementScope, std::map<Mapping, std::shared_ptr<InstructionResolver>>>
+        instruction_resolvers_;
 };
 
 class ProcessMap
@@ -84,13 +112,13 @@ public:
     {
     }
 
-    bool has(Process p, uint64_t timepoint);
+    bool has(Process p);
 
-    ProcessInfo& get(Process p, uint64_t timepoint);
+    ProcessInfo& get(Process p);
 
-    ProcessInfo& insert(Process p, uint64_t timepoint, bool read_initial);
+    ProcessInfo& insert(Process p, bool read_initial);
 
 private:
-    std::map<Process, std::map<uint64_t, ProcessInfo>> infos_;
+    std::map<Process, ProcessInfo> infos_;
 };
 } // namespace lo2s

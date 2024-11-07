@@ -22,7 +22,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/log.hpp>
-
+#include <lo2s/measurement_scope.hpp>
 #include <otf2xx/otf2.hpp>
 
 extern "C"
@@ -46,7 +46,7 @@ struct LocalCctx
 class LocalCctxMap
 {
 public:
-    LocalCctxMap()
+    LocalCctxMap(MeasurementScope scope) : scope_(scope)
     {
     }
 
@@ -79,7 +79,7 @@ public:
         // information.
         //
         // Having these things in mind, look at this line and tell me, why it is still wrong:
-        auto children = &map[p];
+        auto children = &map[scope_.from_ex_scope(p.as_scope())];
         uint64_t ref = -1;
         for (uint64_t i = num_ips - 1;; i--)
         {
@@ -112,7 +112,7 @@ public:
 
     otf2::definition::calling_context::reference_type sample_ref(Process p, uint64_t ip)
     {
-        auto it = find_ip_child(ip, map[p]);
+        auto it = find_ip_child(ip, map[scope_.from_ex_scope(p.as_scope())]);
 
         return it->second.ref;
     }
@@ -140,7 +140,7 @@ public:
         return thread_cctxs_;
     }
 
-    const std::map<Process, std::map<Address, LocalCctx>>& get_functions() const
+    const std::map<MeasurementScope, std::map<Address, LocalCctx>>& get_functions() const
     {
         return map;
     }
@@ -170,8 +170,9 @@ private:
     }
 
 private:
-    std::map<Process, std::map<Address, LocalCctx>> map;
+    std::map<MeasurementScope, std::map<Address, LocalCctx>> map;
     std::map<Process, std::map<Thread, LocalCctx>> thread_cctxs_;
+    MeasurementScope scope_;
 
     /*
      * Stores calling context information for each sample writer / monitoring thread.

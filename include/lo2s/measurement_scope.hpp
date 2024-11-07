@@ -96,6 +96,11 @@ struct MeasurementScope
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
     }
 
+    MeasurementScope from_ex_scope(ExecutionScope new_scope)
+    {
+        return MeasurementScope(type, new_scope);
+    }
+
     friend bool operator<(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         if (lhs.type != rhs.type)
