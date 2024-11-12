@@ -301,7 +301,10 @@ Event EventProvider::cache_event(const std::string& name)
     catch (const InvalidEvent& e)
     {
         // emplace unavailable Sampling Event
-        event_map_.emplace(name, SysfsEvent());
+        SysfsEvent event = EventProvider::instance().create_sysfs_event(name, false);
+        event.make_invalid();
+
+        event_map_.emplace(name, event);
         throw e;
     }
 }

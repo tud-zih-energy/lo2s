@@ -82,7 +82,7 @@ public:
 
     void write(IoReaderIdentity& identity, TracepointSampleType* header)
     {
-        if (identity.tracepoint == bio_queue_)
+        if (identity.tracepoint() == bio_queue_)
         {
             struct RecordBioQueue* event = (RecordBioQueue*)header;
 
@@ -112,7 +112,7 @@ public:
                 time_converter_(event->header.time), handle, mode,
                 otf2::common::io_operation_flag_type::non_blocking, size, event->sector);
         }
-        else if (identity.tracepoint == bio_issue_)
+        else if (identity.tracepoint() == bio_issue_)
         {
             struct RecordBlock* event = (RecordBlock*)header;
 
@@ -129,7 +129,7 @@ public:
             writer << otf2::event::io_operation_issued(time_converter_(event->header.time), handle,
                                                        event->sector);
         }
-        else if (identity.tracepoint == bio_complete_)
+        else if (identity.tracepoint() == bio_complete_)
         {
             struct RecordBlock* event = (RecordBlock*)header;
 
@@ -150,7 +150,7 @@ public:
         }
         else
         {
-            throw std::runtime_error("tracepoint " + identity.tracepoint.name() +
+            throw std::runtime_error("tracepoint " + identity.tracepoint().name() +
                                      " not valid for block I/O");
         }
     }
@@ -164,7 +164,7 @@ public:
         bio_complete_ =
             perf::EventProvider::instance().create_tracepoint_event("block:block_rq_complete");
 
-        return { bio_queue_, bio_issue_, bio_complete_ };
+        return { bio_queue_.value(), bio_issue_.value(), bio_complete_.value() };
     }
 
 private:
@@ -185,9 +185,9 @@ private:
     time::Converter& time_converter_;
 
     // Unavailable until get_tracepoints() is called
-    perf::tracepoint::TracepointEvent bio_queue_;
-    perf::tracepoint::TracepointEvent bio_issue_;
-    perf::tracepoint::TracepointEvent bio_complete_;
+    std::optional<perf::tracepoint::TracepointEvent> bio_queue_;
+    std::optional<perf::tracepoint::TracepointEvent> bio_issue_;
+    std::optional<perf::tracepoint::TracepointEvent> bio_complete_;
 
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
     static constexpr int SECTOR_SIZE = 512;

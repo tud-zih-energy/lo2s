@@ -63,17 +63,22 @@ struct IoReaderIdentity
 {
     IoReaderIdentity(std::string tracepoint_name, Cpu cpu) : cpu(cpu)
     {
-        tracepoint = EventProvider::instance().create_tracepoint_event(tracepoint_name);
+        tracepoint_.value() = EventProvider::instance().create_tracepoint_event(tracepoint_name);
     }
 
-    tracepoint::TracepointEvent tracepoint;
+    std::optional<tracepoint::TracepointEvent> tracepoint_;
     Cpu cpu;
+
+    tracepoint::TracepointEvent tracepoint()
+    {
+        return tracepoint_.value();
+    }
 
     friend bool operator>(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tracepoint > rhs.tracepoint;
+            return lhs.tracepoint_.value() > rhs.tracepoint_.value();
         }
 
         return lhs.cpu > rhs.cpu;
@@ -83,7 +88,7 @@ struct IoReaderIdentity
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tracepoint < rhs.tracepoint;
+            return lhs.tracepoint_.value() < rhs.tracepoint_.value();
         }
 
         return lhs.cpu < rhs.cpu;
@@ -97,7 +102,7 @@ public:
     {
         try
         {
-            event_ = identity_.tracepoint.open(identity.cpu);
+            event_ = identity_.tracepoint().open(identity.cpu);
         }
         catch (const std::system_error& e)
         {

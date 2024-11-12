@@ -122,7 +122,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
         try
         {
             // skip event if it has already been declared as group leader
-            if (ev == group_leader_.name())
+            if (ev == group_leader_.value().name())
             {
                 Log::info() << "'" << ev
                             << "' has been requested as both the metric leader event and a regular "
@@ -150,9 +150,9 @@ CounterCollection CounterProvider::collection_for(MeasurementScope scope)
     CounterCollection res;
     if (scope.type == MeasurementScopeType::GROUP_METRIC)
     {
-        if (group_leader_.is_available_in(scope.scope))
+        if (group_leader_.value().is_available_in(scope.scope))
         {
-            res.leader = group_leader_;
+            res.leader() = group_leader_.value();
             for (auto& ev : group_events_)
             {
                 if (ev.is_available_in(scope.scope))
@@ -219,7 +219,7 @@ bool CounterProvider::has_group_counters(ExecutionScope scope)
     }
     else
     {
-        return group_leader_.is_available_in(scope) &&
+        return group_leader_.value().is_available_in(scope) &&
                std::any_of(group_events_.begin(), group_events_.end(),
                            [scope](const auto& ev) { return ev.is_available_in(scope); });
     }

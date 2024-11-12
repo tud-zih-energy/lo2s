@@ -55,11 +55,11 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 {
     if (config().metric_use_frequency)
     {
-        counter_collection_.leader.sample_freq(config().metric_frequency);
+        counter_collection_.leader().sample_freq(config().metric_frequency);
     }
     else
     {
-        counter_collection_.leader.sample_period(config().metric_count);
+        counter_collection_.leader().sample_period(config().metric_count);
     }
 
     do
@@ -67,15 +67,15 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         try
         {
             counter_leader_ =
-                counter_collection_.leader.open_as_group_leader(scope, config().cgroup_fd);
+                counter_collection_.leader().open_as_group_leader(scope, config().cgroup_fd);
         }
         catch (const std::system_error& e)
         {
             // perf_try_event_open was used here before
             if (counter_leader_.value().get_fd() < 0 && errno == EACCES &&
-                !counter_collection_.leader.attr().exclude_kernel && perf_event_paranoid() > 1)
+                !counter_collection_.leader().attr().exclude_kernel && perf_event_paranoid() > 1)
             {
-                counter_collection_.leader.mut_attr().exclude_kernel = 1;
+                counter_collection_.leader().mut_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
                 continue;
@@ -89,14 +89,16 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         }
     } while (!counter_leader_.value().is_valid());
 
-    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name() << "'";
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader().name()
+                 << "'";
 
     for (auto& counter_ev : counter_collection_.counters)
     {
         if (counter_ev.is_available_in(scope))
         {
             std::optional<EventGuard> counter = std::nullopt;
-            counter_ev.mut_attr().exclude_kernel = counter_collection_.leader.attr().exclude_kernel;
+            counter_ev.mut_attr().exclude_kernel =
+                counter_collection_.leader().attr().exclude_kernel;
 
             try
             {
