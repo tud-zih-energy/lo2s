@@ -112,19 +112,6 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-Event::Event() : name_("")
-{
-    memset(&attr_, 0, sizeof(attr_));
-    attr_.size = sizeof(attr_);
-    attr_.type = PERF_TYPE_RAW;
-
-    attr_.config = 0;
-    attr_.config1 = 0;
-
-    attr_.sample_period = 0;
-    attr_.exclude_kernel = 1;
-}
-
 Event::Event(const std::string& name, perf_type_id type, std::uint64_t config,
              std::uint64_t config1)
 : name_(name)
@@ -361,7 +348,8 @@ bool Event::degrade_precision()
     }
 }
 
-SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event()
+SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec)
+: Event(ev_name, static_cast<perf_type_id>(0), 0)
 {
     set_common_attrs(enable_on_exec);
 
@@ -481,6 +469,11 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
         throw EventProvider::InvalidEvent(
             "Event can not be opened in process- or system-monitoring-mode");
     }
+}
+
+void SysfsEvent::make_invalid()
+{
+    availability_ = Availability::UNAVAILABLE;
 }
 
 void SysfsEvent::use_sampling_options(const bool& use_pebs, const bool& sampling,

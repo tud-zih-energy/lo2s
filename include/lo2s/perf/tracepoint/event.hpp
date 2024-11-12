@@ -46,10 +46,6 @@ public:
         ParseError(const std::string& what, int error_code);
     };
 
-    TracepointEvent() : id_(-1)
-    {
-    }
-
     TracepointEvent(const std::string& name, bool enable_on_exec = false);
 
     void parse_format();

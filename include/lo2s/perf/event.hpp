@@ -74,7 +74,6 @@ class Event
 public:
     Event(const std::string& name, perf_type_id type, std::uint64_t config,
           std::uint64_t config1 = 0);
-    Event();
 
     /**
      * returns an opened instance of any Event object
@@ -214,9 +213,9 @@ protected:
 class SysfsEvent : public Event
 {
 public:
-    using Event::Event;
     SysfsEvent(const std::string& ev_name, bool enable_on_exec = false);
 
+    void make_invalid();
     void use_sampling_options(const bool& use_pebs, const bool& sampling, const bool& enable_cct);
 };
 
