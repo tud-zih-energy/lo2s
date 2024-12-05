@@ -72,7 +72,11 @@ public:
         if (create)
         {
             size = pagesize * pages;
-            ftruncate(fd_, size + sysconf(_SC_PAGESIZE));
+            if (ftruncate(fd_, size + sysconf(_SC_PAGESIZE)) == -1)
+            {
+                close(fd_);
+                throw std::system_error(errno, std::system_category());
+            }
         }
         else
         {
