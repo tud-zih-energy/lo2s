@@ -43,7 +43,7 @@ void CounterProvider::initialize_userspace_counters(const std::vector<std::strin
         try
         {
             userspace_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            userspace_events_.back().set_sample_period(0);
+            userspace_events_.back().as_counter();
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -97,7 +97,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
         }
     }
 
-    // DONT do group_leader_.set_sample_freq() here, since it requires config() to be complete
+    // DONT do group_leader_.as_group_leader() here, since it requires config() to be complete
 
     for (const auto& ev : counters)
     {
@@ -113,7 +113,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
             }
 
             group_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            group_events_.back().set_sample_period(0);
+            group_events_.back().as_counter();
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -154,32 +154,6 @@ CounterCollection CounterProvider::collection_for(MeasurementScope scope)
         }
     }
     return res;
-}
-
-std::vector<std::string> CounterProvider::get_tracepoint_event_names()
-{
-    try
-    {
-        std::ifstream ifs_available_events;
-        ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
-
-        ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
-        ifs_available_events.exceptions(std::ios::badbit);
-
-        std::vector<std::string> available;
-
-        for (std::string tracepoint; std::getline(ifs_available_events, tracepoint);)
-        {
-            available.emplace_back(std::move(tracepoint));
-        }
-
-        return available;
-    }
-    catch (const std::ios_base::failure& e)
-    {
-        Log::debug() << "Retrieving kernel tracepoint event names failed: " << e.what();
-        return {};
-    }
 }
 
 bool CounterProvider::has_group_counters(ExecutionScope scope)

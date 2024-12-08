@@ -27,7 +27,7 @@
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/util.hpp>
 #include <otf2xx/otf2.hpp>
 
@@ -137,24 +137,21 @@ struct BySamplingEventName
 {
 };
 
-using BySamplingEvent = SimpleKeyType<perf::PerfEvent, BySamplingEventName>;
+using BySamplingEvent = SimpleKeyType<perf::SysfsEvent, BySamplingEventName>;
 
 struct ByCounterCollectionTag
 {
 };
-
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
 
 struct ByNecDeviceTag
 {
 };
-
 using ByNecDevice = SimpleKeyType<NecDevice, ByNecDeviceTag>;
 
 struct ByMeasurementScopeTypeTag
 {
 };
-
 using ByMeasurementScopeType = SimpleKeyType<MeasurementScopeType, ByMeasurementScopeTypeTag>;
 
 template <typename Definition>

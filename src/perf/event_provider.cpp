@@ -55,7 +55,7 @@ namespace
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
-static lo2s::perf::PerfEvent HW_EVENT_TABLE[] = {
+static lo2s::perf::SysfsEvent HW_EVENT_TABLE[] = {
     PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
     PERF_EVENT_HW("instructions", INSTRUCTIONS),
     PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
@@ -74,7 +74,7 @@ static lo2s::perf::PerfEvent HW_EVENT_TABLE[] = {
 #endif
 };
 
-static lo2s::perf::PerfEvent SW_EVENT_TABLE[] = {
+static lo2s::perf::SysfsEvent SW_EVENT_TABLE[] = {
     PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
     PERF_EVENT_SW("task-clock", TASK_CLOCK),
     PERF_EVENT_SW("page-faults", PAGE_FAULTS),
@@ -193,20 +193,20 @@ static bool event_is_openable(SysfsEvent& provider)
     return true;
 }
 
-static void populate_event_map(std::unordered_map<std::string, PerfEvent>& map)
+static void populate_event_map(std::unordered_map<std::string, SysfsEvent>& map)
 {
     Log::info() << "checking available events...";
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
                 array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
     for (auto& ev : HW_EVENT_TABLE)
     {
-        PerfEvent event(ev);
+        SysfsEvent event(ev);
         map.emplace(event.get_name(), event);
     }
 
     for (auto& ev : SW_EVENT_TABLE)
     {
-        PerfEvent event(ev);
+        SysfsEvent event(ev);
         map.emplace(event.get_name(), event);
     }
 
@@ -218,9 +218,9 @@ static void populate_event_map(std::unordered_map<std::string, PerfEvent>& map)
             name_fmt.str(std::string());
             name_fmt << cache.name << '-' << operation.name;
 
-            map.emplace(name_fmt.str(), PerfEvent(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                                                  make_cache_config(cache.id, operation.id.op_id,
-                                                                    operation.id.result_id)));
+            map.emplace(name_fmt.str(), SysfsEvent(name_fmt.str(), PERF_TYPE_HW_CACHE,
+                                                   make_cache_config(cache.id, operation.id.op_id,
+                                                                     operation.id.result_id)));
         }
     }
 }
@@ -273,7 +273,7 @@ std::vector<SysfsEvent> EventProvider::get_pmu_events()
     return events;
 }
 
-PerfEvent EventProvider::fallback_metric_leader_event()
+SysfsEvent EventProvider::fallback_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
@@ -284,7 +284,7 @@ PerfEvent EventProvider::fallback_metric_leader_event()
     {
         try
         {
-            const PerfEvent ev = get_event_by_name(candidate);
+            const SysfsEvent ev = get_event_by_name(candidate);
             Log::debug() << "found suitable metric leader event: " << candidate;
             return ev;
         }
@@ -357,7 +357,7 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-static void event_attr_update(PerfEvent& event, std::uint64_t value, const std::string& format)
+static void event_attr_update(SysfsEvent& event, std::uint64_t value, const std::string& format)
 {
     // Parse config terms //
 
@@ -389,14 +389,14 @@ static void event_attr_update(PerfEvent& event, std::uint64_t value, const std::
 }
 
 /**
- * takes the name of an event, checks if it can be opened with each cpu and returns a PerfEvent
+ * takes the name of an event, checks if it can be opened with each cpu and returns a SysfsEvent
  * with a set of working cpus
  */
-const PerfEvent raw_read_event(const std::string& ev_name)
+const SysfsEvent raw_read_event(const std::string& ev_name)
 {
     uint64_t code = std::stoull(ev_name.substr(1), nullptr, 16);
 
-    PerfEvent ev(0);
+    RawEvent ev(0);
     ev.get_attr().config = code;
 
     std::set<Cpu> cpus;
@@ -404,7 +404,7 @@ const PerfEvent raw_read_event(const std::string& ev_name)
     {
         try
         {
-            PerfEventGuard ev_instance = ev.open(cpu, -1);
+            PerfEventInstance ev_instance = ev.open(cpu, -1, -1);
             cpus.emplace(cpu);
         }
         catch (const std::system_error& e)
@@ -412,7 +412,7 @@ const PerfEvent raw_read_event(const std::string& ev_name)
         }
     }
 
-    const PerfEvent event(ev_name, PERF_TYPE_RAW, code, 0, cpus);
+    const SysfsEvent event(ev_name, PERF_TYPE_RAW, code, 0, cpus);
     // Do not check whether the event_is_openable because we don't know whether we are in
     // system or process mode
     return event;
@@ -580,7 +580,7 @@ EventProvider::EventProvider()
     populate_event_map(event_map_);
 }
 
-PerfEvent EventProvider::cache_event(const std::string& name)
+SysfsEvent EventProvider::cache_event(const std::string& name)
 {
     // Format for raw events is r followed by a hexadecimal number
     static const std::regex raw_regex("r[[:xdigit:]]{1,8}");
@@ -608,10 +608,10 @@ PerfEvent EventProvider::cache_event(const std::string& name)
 
 /**
  * takes the name of an event and looks it up in an internal event list.
- * @returns The corresponding PerfEvent if it is available
+ * @returns The corresponding SysfsEvent if it is available
  * @throws InvalidEvent if the event is unavailable
  */
-PerfEvent EventProvider::get_event_by_name(const std::string& name)
+SysfsEvent EventProvider::get_event_by_name(const std::string& name)
 {
     auto& ev_map = instance().event_map_;
     auto event_it = ev_map.find(name);
@@ -654,11 +654,11 @@ bool EventProvider::has_event(const std::string& name)
     }
 }
 
-std::vector<PerfEvent> EventProvider::get_predefined_events()
+std::vector<SysfsEvent> EventProvider::get_predefined_events()
 {
     const auto& ev_map = instance().event_map_;
 
-    std::vector<PerfEvent> events;
+    std::vector<SysfsEvent> events;
     events.reserve(ev_map.size());
 
     for (const auto& event : ev_map)

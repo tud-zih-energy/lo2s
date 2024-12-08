@@ -23,7 +23,7 @@
 
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -60,11 +60,11 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(std::string tracepoint, Cpu cpu) : tracepoint(tracepoint), cpu(cpu)
+    IoReaderIdentity(tracepoint::EventFormat tracepoint, Cpu cpu) : tracepoint(tracepoint), cpu(cpu)
     {
     }
 
-    tracepoint::TracepointEvent tracepoint;
+    tracepoint::EventFormat tracepoint;
     Cpu cpu;
 
     friend bool operator>(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
@@ -93,9 +93,11 @@ class IoReader : public PullReader
 public:
     IoReader(IoReaderIdentity identity) : identity_(identity)
     {
+        perf::TracepointEvent event(0, identity.tracepoint.id());
+
         try
         {
-            event_ = identity_.tracepoint.open(identity.cpu);
+            ev_instance_ = event.open(identity.cpu);
         }
         catch (const std::system_error& e)
         {
@@ -107,10 +109,10 @@ public:
 
         try
         {
-            init_mmap(event_.get_fd());
+            init_mmap(ev_instance_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            event_.enable();
+            ev_instance_.enable();
         }
         catch (...)
         {
@@ -121,7 +123,7 @@ public:
 
     void stop()
     {
-        event_.disable();
+        ev_instance_.disable();
     }
 
     TracepointSampleType* top()
@@ -131,7 +133,7 @@ public:
 
     int fd() const
     {
-        return event_.get_fd();
+        return ev_instance_.get_fd();
     }
 
     IoReader& operator=(const IoReader&) = delete;
@@ -141,19 +143,19 @@ public:
     {
         PullReader::operator=(std::move(other));
         std::swap(identity_, other.identity_);
-        std::swap(event_, other.event_);
+        std::swap(ev_instance_, other.ev_instance_);
 
         return *this;
     }
 
     IoReader(IoReader&& other) : PullReader(std::move(other)), identity_(other.identity_)
     {
-        std::swap(event_, other.event_);
+        std::swap(ev_instance_, other.ev_instance_);
     }
 
 private:
     IoReaderIdentity identity_;
-    PerfEventGuard event_;
+    perf::PerfEventInstance ev_instance_;
 };
 } // namespace perf
 } // namespace lo2s

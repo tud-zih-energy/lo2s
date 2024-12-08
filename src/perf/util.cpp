@@ -1,7 +1,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
 

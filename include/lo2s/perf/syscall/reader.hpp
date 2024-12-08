@@ -24,7 +24,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
@@ -39,6 +39,7 @@ extern "C"
 {
 #include <fcntl.h>
 #include <linux/perf_event.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 }
 
@@ -68,11 +69,15 @@ public:
 
     Reader(Cpu cpu) : cpu_(cpu)
     {
-        tracepoint::TracepointEvent enter_event("raw_syscalls:sys_enter");
-        tracepoint::TracepointEvent exit_event("raw_syscalls:sys_exit");
+        TracepointEvent enter_event(0, tracepoint::EventFormat("raw_syscalls:sys_enter").id());
+        TracepointEvent exit_event(0, tracepoint::EventFormat("raw_syscalls:sys_exit").id());
+
+        enter_event.as_syscall();
+        exit_event.as_syscall();
 
         try
         {
+            // instance with tracepoint::EventFormat enter (default)
             enter_ev_ = enter_event.open(cpu_);
             exit_ev_ = exit_event.open(cpu_);
         }
@@ -96,8 +101,8 @@ public:
         enter_ev_.enable();
         exit_ev_.enable();
 
-        enter_ev_.set_id(sys_enter_id);
-        exit_ev_.set_id(sys_exit_id);
+        ioctl(enter_ev_.get_fd(), PERF_EVENT_IOC_ID, &sys_enter_id);
+        ioctl(exit_ev_.get_fd(), PERF_EVENT_IOC_ID, &sys_exit_id);
     }
 
     Reader(Reader&& other)
@@ -119,10 +124,14 @@ protected:
 
 private:
     Cpu cpu_;
-    PerfEventGuard enter_ev_;
-    PerfEventGuard exit_ev_;
+    PerfEventInstance enter_ev_;
+    PerfEventInstance exit_ev_;
+    const static std::filesystem::path base_path;
 };
 
+template <typename T>
+const std::filesystem::path Reader<T>::base_path =
+    std::filesystem::path("/sys/kernel/debug/tracing/events");
 } // namespace syscall
 } // namespace perf
 } // namespace lo2s

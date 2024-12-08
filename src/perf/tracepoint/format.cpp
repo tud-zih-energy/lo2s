@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2024,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,8 +19,18 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
+
+#include <lo2s/log.hpp>
+
+#include <filesystem>
+#include <fstream>
 #include <regex>
+#include <string>
+
+#include <nitro/lang/string.hpp>
+
+#include <cerrno>
 
 namespace lo2s
 {
@@ -28,26 +38,12 @@ namespace perf
 {
 namespace tracepoint
 {
-
-TracepointEvent::TracepointEvent(const std::string& name, bool enable_on_exec)
-: PerfEvent(), name_(name)
-{
-    set_common_attrs(enable_on_exec);
-    parse_format();
-
-    attr_.config = id_;
-    attr_.type = PERF_TYPE_TRACEPOINT;
-    attr_.sample_type |= PERF_SAMPLE_RAW | PERF_SAMPLE_IDENTIFIER;
-}
-
-const std::filesystem::path TracepointEvent::base_path_ = "/sys/kernel/debug/tracing/events";
-
-TracepointEvent::ParseError::ParseError(const std::string& what, int error_code)
+EventFormat::ParseError::ParseError(const std::string& what, int error_code)
 : std::runtime_error{ what + ": " + std::strerror(error_code) }
 {
 }
 
-void TracepointEvent::parse_format()
+EventFormat::EventFormat(const std::string& name) : name_(name)
 {
     using namespace std::string_literals;
 
@@ -87,7 +83,7 @@ void TracepointEvent::parse_format()
     }
 }
 
-void TracepointEvent::parse_format_line(const std::string& line)
+void EventFormat::parse_format_line(const std::string& line)
 {
     static std::regex field_regex(
         "^\\s+field:([^;]+);\\s+offset:(\\d+);\\s+size:(\\d+);\\s+signed:(\\d+);$");
@@ -113,14 +109,45 @@ void TracepointEvent::parse_format_line(const std::string& line)
     }
 
     std::string name = type_name_match[2];
-    tracepoint::EventField field(name, offset, size);
+    EventField field(name, offset, size);
 
-    if (!nitro::lang::starts_with(name, "common_"))
+    if (nitro::lang::starts_with(name, "common_"))
+    {
+        common_fields_.emplace_back(field);
+    }
+    else
     {
         fields_.emplace_back(field);
     }
 }
 
+std::vector<std::string> EventFormat::get_tracepoint_event_names()
+{
+    try
+    {
+        std::ifstream ifs_available_events;
+        ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
+
+        ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
+        ifs_available_events.exceptions(std::ios::badbit);
+
+        std::vector<std::string> available;
+
+        for (std::string tracepoint; std::getline(ifs_available_events, tracepoint);)
+        {
+            available.emplace_back(std::move(tracepoint));
+        }
+
+        return available;
+    }
+    catch (const std::ios_base::failure& e)
+    {
+        Log::debug() << "Retrieving kernel tracepoint event names failed: " << e.what();
+        return {};
+    }
+}
+
+const std::filesystem::path EventFormat::base_path_ = "/sys/kernel/debug/tracing/events";
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s
