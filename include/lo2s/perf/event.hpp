@@ -242,12 +242,9 @@ public:
     void enable();
     void disable();
 
-    uint64_t get_id()
+    void set_id(const uint64_t& id)
     {
-        uint64_t id;
         ioctl(fd_, PERF_EVENT_IOC_ID, &id);
-
-        return id;
     }
 
     void set_output(const EventGuard& other_ev);
