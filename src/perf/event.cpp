@@ -601,7 +601,8 @@ EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_
 
 void EventGuard::enable()
 {
-    if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
+    auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
+    if (ret == -1)
     {
         throw_errno();
     }
@@ -609,7 +610,8 @@ void EventGuard::enable()
 
 void EventGuard::disable()
 {
-    if (ioctl(fd_, PERF_EVENT_IOC_DISABLE) == -1)
+    auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+    if (ret == -1)
     {
         throw_errno();
     }
