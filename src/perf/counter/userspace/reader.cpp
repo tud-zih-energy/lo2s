@@ -57,8 +57,7 @@ Reader<T>::Reader(ExecutionScope scope)
 
         try
         {
-            counter = std::move(event.open(scope));
-            counters_.emplace_back(std::move(counter.value()));
+            counter = event.open(scope);
         }
         catch (const std::system_error& e)
         {
@@ -69,7 +68,7 @@ Reader<T>::Reader(ExecutionScope scope)
                 event.mut_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
-                counter = std::move(event.open(scope));
+                counter = event.open(scope);
             }
 
             if (!counter.value().is_valid())

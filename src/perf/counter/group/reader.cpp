@@ -66,8 +66,8 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         try
         {
-            counter_leader_ = std::move(
-                counter_collection_.leader.open_as_group_leader(scope, config().cgroup_fd));
+            counter_leader_ =
+                counter_collection_.leader.open_as_group_leader(scope, config().cgroup_fd);
         }
         catch (const std::system_error& e)
         {

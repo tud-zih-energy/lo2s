@@ -97,7 +97,7 @@ public:
     {
         try
         {
-            event_ = std::move(identity_.tracepoint.open(identity.cpu));
+            event_ = identity_.tracepoint.open(identity.cpu);
         }
         catch (const std::system_error& e)
         {
