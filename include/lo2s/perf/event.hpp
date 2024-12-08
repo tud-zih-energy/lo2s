@@ -67,8 +67,7 @@ class Event
 {
 public:
     Event([[maybe_unused]] uint64_t addr, bool enable_on_exec = false);
-    Event(const std::string& name, perf_type_id type, std::uint64_t config,
-          std::uint64_t config1 = 0);
+    Event(std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1 = 0);
     Event();
 
     /**
@@ -117,12 +116,13 @@ public:
         scale_ = scale;
     }
 
-    void set_unit(const std::string& unit)
+    void set_unit(std::string unit)
     {
         unit_ = unit;
     }
 
-    void set_clock_attrs([[maybe_unused]] bool use_clockid, [[maybe_unused]] clockid_t clockid)
+    void set_clock_attrs([[maybe_unused]] const bool& use_clockid,
+                         [[maybe_unused]] const clockid_t& clockid)
     {
 #ifndef USE_HW_BREAKPOINT_COMPAT
         attr_.use_clockid = use_clockid;
@@ -132,13 +132,13 @@ public:
 
     // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
     // Default behaviour is to wakeup on every event, which is horrible performance wise
-    void set_watermark(size_t mmap_pages)
+    void set_watermark(const size_t& mmap_pages)
     {
         attr_.watermark = 1;
         attr_.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * sysconf(_SC_PAGESIZE));
     }
 
-    void set_exclude_kernel(bool exclude_kernel)
+    void set_exclude_kernel(const bool& exclude_kernel)
     {
         attr_.exclude_kernel = exclude_kernel;
     }
