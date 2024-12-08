@@ -51,10 +51,7 @@ extern "C"
 
 namespace
 {
-#define PERF_EVENT(name, type, id)                                                                 \
-    {                                                                                              \
-        (name), (type), (id)                                                                       \
-    }
+#define PERF_EVENT(name, type, id) { (name), (type), (id) }
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
@@ -147,6 +144,16 @@ template <std::size_t N, typename T>
 inline constexpr std::size_t array_size(T (&)[N])
 {
     return N;
+}
+
+constexpr std::uint64_t operator"" _u64(unsigned long long int lit)
+{
+    return static_cast<std::uint64_t>(lit);
+}
+
+constexpr std::uint64_t bit(int bitnumber)
+{
+    return static_cast<std::uint64_t>(1_u64 << bitnumber);
 }
 } // namespace
 
