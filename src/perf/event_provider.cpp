@@ -396,9 +396,9 @@ tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::st
 Event EventProvider::create_time_event(uint64_t local_time, bool enable_on_exec)
 {
 #ifndef USE_HW_BREAKPOINT_COMPAT
-    Event event("Time", PERF_TYPE_BREAKPOINT, 0); // TODO: name for time events
+    Event event("", PERF_TYPE_BREAKPOINT, 0); // TODO: name for time events
 #else
-    Event event("Time", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
+    Event event("", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS);
 #endif
 
     event.sample_period(1); // may be overwritten by event.time_attrs
