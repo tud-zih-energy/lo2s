@@ -84,11 +84,11 @@ static inline void print_availability(std::ostream& os, const std::string& descr
 
         std::string availability = "";
         std::string cpu = "";
-        if (ev.availability() == perf::Availability::PROCESS_MODE)
+        if (ev.get_availability() == perf::Availability::PROCESS_MODE)
         {
             availability = " *";
         }
-        else if (ev.availability() == perf::Availability::SYSTEM_MODE)
+        else if (ev.get_availability() == perf::Availability::SYSTEM_MODE)
         {
             availability = " #";
         }
@@ -100,7 +100,7 @@ static inline void print_availability(std::ostream& os, const std::string& descr
                             std::max_element(cpus.begin(), cpus.end())->as_int());
         }
 
-        event_names.push_back(ev.name() + availability + cpu);
+        event_names.push_back(ev.get_name() + availability + cpu);
     }
     list_arguments_sorted(os, description, event_names);
 }
@@ -789,7 +789,7 @@ void parse_program_options(int argc, const char** argv)
     {
         for (const auto& mem_event : platform::get_mem_events())
         {
-            perf_group_events.emplace_back(mem_event.name());
+            perf_group_events.emplace_back(mem_event.get_name());
         }
         perf_group_events.emplace_back("instructions");
         perf_group_events.emplace_back("cpu-cycles");

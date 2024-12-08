@@ -40,11 +40,11 @@ struct CounterCollection
     {
         if (index == 0)
         {
-            return leader.scale();
+            return leader.get_scale();
         }
         else
         {
-            return counters[index - 1].scale();
+            return counters[index - 1].get_scale();
         }
     }
 

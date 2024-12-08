@@ -163,13 +163,13 @@ static void populate_event_map(std::unordered_map<std::string, Event>& map)
     for (auto& ev : HW_EVENT_TABLE)
     {
         Event event(ev);
-        map.emplace(event.name(), event);
+        map.emplace(event.get_name(), event);
     }
 
     for (auto& ev : SW_EVENT_TABLE)
     {
         Event event(ev);
-        map.emplace(event.name(), event);
+        map.emplace(event.get_name(), event);
     }
 
     std::stringstream name_fmt;
@@ -184,10 +184,10 @@ static void populate_event_map(std::unordered_map<std::string, Event>& map)
             Event event(name_fmt.str(), PERF_TYPE_HW_CACHE,
                         make_cache_config(cache.id, operation.id.op_id, operation.id.result_id));
 
-            event.sample_period(0);
-            event.exclude_kernel(true);
-            event.watermark(16);
-            event.clock_attrs(true, CLOCK_MONOTONIC_RAW);
+            event.set_sample_period(0);
+            event.set_exclude_kernel(true);
+            event.set_watermark(16);
+            event.set_clock_attrs(true, CLOCK_MONOTONIC_RAW);
 
             map.emplace(name_fmt.str(), event);
         }
@@ -381,7 +381,7 @@ tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::st
                                                                    bool enable_on_exec)
 {
     tracepoint::TracepointEvent event(name, enable_on_exec);
-    event.sample_period(0);
+    event.set_sample_period(0);
     apply_config_attrs(event);
 
     return event;
@@ -391,7 +391,7 @@ tracepoint::TracepointEvent EventProvider::create_raw_tracepoint_event(const std
                                                                        bool enable_on_exec)
 {
     tracepoint::TracepointEvent event(name, enable_on_exec);
-    event.sample_period(0);
+    event.set_sample_period(0);
     apply_default_attrs(event);
 
     return event;
@@ -400,10 +400,10 @@ tracepoint::TracepointEvent EventProvider::create_raw_tracepoint_event(const std
 Event EventProvider::create_time_event(uint64_t local_time)
 {
     Event event(local_time);
-    event.sample_period(1);
+    event.set_sample_period(1);
 
     apply_config_attrs(event);
-    event.exclude_kernel(true); // overwrite config value
+    event.set_exclude_kernel(true); // overwrite config value
 
     return event;
 }
@@ -412,10 +412,10 @@ Event EventProvider::create_raw_event(const std::string& name, perf_type_id type
                                       std::uint64_t config, std::uint64_t config1)
 {
     Event event(name, type, config, config1);
-    event.sample_period(0);
+    event.set_sample_period(0);
 
     apply_config_attrs(event);
-    event.exclude_kernel(true); // overwrite config value
+    event.set_exclude_kernel(true); // overwrite config value
 
     return event;
 }
@@ -425,7 +425,7 @@ SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
     SysfsEvent event(config().sampling_event, enable_on_exec);
     apply_config_attrs(event);
 
-    event.sample_period(config().sampling_period);
+    event.set_sample_period(config().sampling_period);
     event.use_sampling_options(config().use_pebs, config().sampling, config().enable_cct);
 
     return event;
@@ -434,7 +434,7 @@ SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
 SysfsEvent EventProvider::create_raw_sysfs_event(const std::string& name)
 {
     SysfsEvent event(name);
-    event.sample_period(0);
+    event.set_sample_period(0);
     apply_default_attrs(event);
 
     return event;
@@ -443,7 +443,7 @@ SysfsEvent EventProvider::create_raw_sysfs_event(const std::string& name)
 SysfsEvent EventProvider::create_sysfs_event(const std::string& name)
 {
     SysfsEvent event(name);
-    event.sample_period(0);
+    event.set_sample_period(0);
     apply_config_attrs(event);
 
     return event;
@@ -451,16 +451,16 @@ SysfsEvent EventProvider::create_sysfs_event(const std::string& name)
 
 void EventProvider::apply_config_attrs(Event& event)
 {
-    event.watermark(config().mmap_pages);
-    event.exclude_kernel(config().exclude_kernel);
-    event.clock_attrs(config().use_clockid, config().clockid);
+    event.set_watermark(config().mmap_pages);
+    event.set_exclude_kernel(config().exclude_kernel);
+    event.set_clock_attrs(config().use_clockid, config().clockid);
 }
 
 void EventProvider::apply_default_attrs(Event& event)
 {
-    event.watermark(16);        // default mmap-pages value
-    event.exclude_kernel(true); // enabled by default
-    event.clock_attrs(true, CLOCK_MONOTONIC_RAW);
+    event.set_watermark(16);        // default mmap-pages value
+    event.set_exclude_kernel(true); // enabled by default
+    event.set_clock_attrs(true, CLOCK_MONOTONIC_RAW);
 }
 
 } // namespace perf

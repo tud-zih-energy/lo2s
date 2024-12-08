@@ -55,11 +55,11 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 {
     if (config().metric_use_frequency)
     {
-        counter_collection_.leader.sample_freq(config().metric_frequency);
+        counter_collection_.leader.set_sample_freq(config().metric_frequency);
     }
     else
     {
-        counter_collection_.leader.sample_period(config().metric_count);
+        counter_collection_.leader.set_sample_period(config().metric_count);
     }
 
     do
@@ -73,9 +73,9 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         {
             // perf_try_event_open was used here before
             if (counter_leader_.get_fd() < 0 && errno == EACCES &&
-                !counter_collection_.leader.attr().exclude_kernel && perf_event_paranoid() > 1)
+                !counter_collection_.leader.get_attr().exclude_kernel && perf_event_paranoid() > 1)
             {
-                counter_collection_.leader.mut_attr().exclude_kernel = 1;
+                counter_collection_.leader.get_attr().exclude_kernel = 1;
                 perf_warn_paranoid();
 
                 continue;
@@ -89,14 +89,16 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         }
     } while (!counter_leader_.is_valid());
 
-    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name() << "'";
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.get_name()
+                 << "'";
 
     for (auto& counter_ev : counter_collection_.counters)
     {
         if (counter_ev.is_available_in(scope))
         {
             EventGuard counter;
-            counter_ev.mut_attr().exclude_kernel = counter_collection_.leader.attr().exclude_kernel;
+            counter_ev.get_attr().exclude_kernel =
+                counter_collection_.leader.get_attr().exclude_kernel;
             do
             {
                 try
@@ -107,7 +109,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
                 {
                     if (!counter.is_valid())
                     {
-                        Log::error() << "failed to add counter '" << counter_ev.name()
+                        Log::error() << "failed to add counter '" << counter_ev.get_name()
                                      << "': " << e.code().message();
 
                         if (e.code().value() == EINVAL)

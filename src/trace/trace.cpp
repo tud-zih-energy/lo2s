@@ -582,17 +582,17 @@ Trace::metric_instance(const otf2::definition::metric_class& metric_class,
 otf2::definition::metric_class&
 Trace::tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event)
 {
-    if (!registry_.has<otf2::definition::metric_class>(ByString(event.name())))
+    if (!registry_.has<otf2::definition::metric_class>(ByString(event.get_name())))
     {
         auto& mc = registry_.create<otf2::definition::metric_class>(
-            ByString(event.name()), otf2::common::metric_occurence::async,
+            ByString(event.get_name()), otf2::common::metric_occurence::async,
             otf2::common::recorder_kind::abstract);
 
         for (const auto& field : event.fields())
         {
             if (field.is_integer())
             {
-                mc.add_member(metric_member(event.name() + "::" + field.name(), "?",
+                mc.add_member(metric_member(event.get_name() + "::" + field.name(), "?",
                                             otf2::common::metric_mode::absolute_next,
                                             otf2::common::type::int64, "#"));
             }
@@ -601,7 +601,7 @@ Trace::tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event)
     }
     else
     {
-        return registry_.get<otf2::definition::metric_class>(ByString(event.name()));
+        return registry_.get<otf2::definition::metric_class>(ByString(event.get_name()));
     }
 }
 

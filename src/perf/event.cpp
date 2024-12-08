@@ -283,13 +283,13 @@ void Event::parse_cpus()
                    [](uint32_t cpuid) { return Cpu(cpuid); });
 }
 
-void Event::sample_period(const int& period)
+void Event::set_sample_period(const int& period)
 {
     Log::debug() << "counter::Reader: sample_period: " << period;
     attr_.sample_period = period;
 }
 
-void Event::sample_freq(const uint64_t& freq)
+void Event::set_sample_freq(const uint64_t& freq)
 {
     Log::debug() << "counter::Reader: sample_freq: " << freq;
     attr_.sample_freq = freq;
@@ -495,8 +495,8 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec) : Event(
                  << name_ << "/type=" << attr_.type << ",config=" << attr_.config
                  << ",config1=" << attr_.config1 << std::dec << std::noshowbase << "/";
 
-    scale(read_file_or_else<double>(event_path.replace_extension(".scale"), 1.0));
-    unit(read_file_or_else<std::string>(event_path.replace_extension(".unit"), "#"));
+    set_scale(read_file_or_else<double>(event_path.replace_extension(".scale"), 1.0));
+    set_unit(read_file_or_else<std::string>(event_path.replace_extension(".unit"), "#"));
 
     if (!event_is_openable())
     {
@@ -596,7 +596,7 @@ EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_
                            [&](Thread thread) { scope = thread.as_scope(); } },
                location);
 
-    fd_ = perf_event_open(&ev_.mut_attr(), scope, group_fd, 0, cgroup_fd);
+    fd_ = perf_event_open(&ev_.get_attr(), scope, group_fd, 0, cgroup_fd);
 
     if (fd_ < 0)
     {

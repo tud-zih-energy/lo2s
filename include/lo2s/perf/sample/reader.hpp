@@ -94,10 +94,10 @@ protected:
             }
             catch (const std::system_error& e)
             {
-                if (e.code().value() == EACCES && !event.attr().exclude_kernel &&
+                if (e.code().value() == EACCES && !event.get_attr().exclude_kernel &&
                     perf_event_paranoid() > 1)
                 {
-                    event.mut_attr().exclude_kernel = 1;
+                    event.get_attr().exclude_kernel = 1;
                     perf_warn_paranoid();
                     continue;
                 }
@@ -106,7 +106,7 @@ protected:
                 {
                     Log::error() << "perf_event_open for sampling failed: " << e.what();
 
-                    if (event.attr().use_clockid)
+                    if (event.get_attr().use_clockid)
                     {
                         Log::error() << "maybe the specified clock is unavailable?";
                     }
@@ -115,7 +115,7 @@ protected:
             }
         } while (!event_.is_valid());
 
-        Log::debug() << "Using precise_ip level: " << event.attr().precise_ip;
+        Log::debug() << "Using precise_ip level: " << event.get_attr().precise_ip;
 
         // Exception safe, so much wow!
         try
