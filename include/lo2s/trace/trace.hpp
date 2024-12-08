@@ -176,7 +176,7 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::Event event)
+    otf2::definition::metric_member& get_event_metric_member(perf::PerfEvent event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
             BySamplingEvent(event), intern(event.get_name()), intern(event.get_name()),

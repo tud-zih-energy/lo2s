@@ -53,21 +53,12 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
       CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    if (config().metric_use_frequency)
-    {
-        counter_collection_.leader.set_sample_freq(config().metric_frequency);
-    }
-    else
-    {
-        counter_collection_.leader.set_sample_period(config().metric_count);
-    }
-
+    counter_collection_.leader.set_sample_freq();
     do
     {
         try
         {
-            counter_leader_ =
-                counter_collection_.leader.open_as_group_leader(scope, config().cgroup_fd);
+            counter_leader_ = counter_collection_.leader.open_as_group_leader(scope);
         }
         catch (const std::system_error& e)
         {
@@ -96,7 +87,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
     {
         if (counter_ev.is_available_in(scope))
         {
-            EventGuard counter;
+            PerfEventGuard counter;
             counter_ev.get_attr().exclude_kernel =
                 counter_collection_.leader.get_attr().exclude_kernel;
             do

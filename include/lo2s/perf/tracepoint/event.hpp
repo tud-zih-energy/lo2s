@@ -33,7 +33,7 @@ namespace tracepoint
 /**
  * Contains an event that is addressable via name
  */
-class TracepointEvent : public Event
+class TracepointEvent : public PerfEvent
 {
 public:
     class ParseError : public std::runtime_error

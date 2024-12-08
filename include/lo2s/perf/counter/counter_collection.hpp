@@ -33,8 +33,8 @@ namespace counter
 {
 struct CounterCollection
 {
-    Event leader;
-    std::vector<Event> counters;
+    PerfEvent leader;
+    std::vector<PerfEvent> counters;
 
     double get_scale(int index) const
     {

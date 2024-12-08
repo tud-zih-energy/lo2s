@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lo2s/perf/clock.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
 #include <lo2s/log.hpp>
@@ -67,7 +67,7 @@ public:
     perf::Clock::time_point perf_time;
 
 private:
-    EventGuard ev_instance_;
+    PerfEventGuard ev_instance_;
 };
 } // namespace time
 } // namespace perf

@@ -30,7 +30,7 @@ namespace tracepoint
 {
 
 TracepointEvent::TracepointEvent(const std::string& name, bool enable_on_exec)
-: Event(), name_(name)
+: PerfEvent(), name_(name)
 {
     set_common_attrs(enable_on_exec);
     parse_format();
@@ -38,8 +38,6 @@ TracepointEvent::TracepointEvent(const std::string& name, bool enable_on_exec)
     attr_.config = id_;
     attr_.type = PERF_TYPE_TRACEPOINT;
     attr_.sample_type |= PERF_SAMPLE_RAW | PERF_SAMPLE_IDENTIFIER;
-
-    update_availability();
 }
 
 const std::filesystem::path TracepointEvent::base_path_ = "/sys/kernel/debug/tracing/events";

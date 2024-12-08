@@ -60,8 +60,8 @@ public:
     };
 
 protected:
-    EventGuard counter_leader_;
-    std::vector<EventGuard> counters_;
+    PerfEventGuard counter_leader_;
+    std::vector<PerfEventGuard> counters_;
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };

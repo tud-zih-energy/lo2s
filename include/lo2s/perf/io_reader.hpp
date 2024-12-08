@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -61,9 +60,8 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(std::string tracepoint_name, Cpu cpu) : cpu(cpu)
+    IoReaderIdentity(std::string tracepoint, Cpu cpu) : tracepoint(tracepoint), cpu(cpu)
     {
-        tracepoint = EventProvider::instance().create_tracepoint_event(tracepoint_name);
     }
 
     tracepoint::TracepointEvent tracepoint;
@@ -155,7 +153,7 @@ public:
 
 private:
     IoReaderIdentity identity_;
-    EventGuard event_;
+    PerfEventGuard event_;
 };
 } // namespace perf
 } // namespace lo2s

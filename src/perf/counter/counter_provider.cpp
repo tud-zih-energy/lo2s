@@ -33,24 +33,6 @@ namespace perf
 {
 namespace counter
 {
-void CounterProvider::initialize_tracepoints(const std::vector<std::string>& tracepoints)
-{
-    assert(tracepoint_events_.empty());
-
-    for (const auto& ev_name : tracepoints)
-    {
-        try
-        {
-            tracepoint_events_.emplace_back(
-                EventProvider::instance().create_raw_tracepoint_event(ev_name));
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "'" << ev_name
-                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
-        }
-    }
-}
 
 void CounterProvider::initialize_userspace_counters(const std::vector<std::string>& counters)
 {
@@ -144,8 +126,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
 CounterCollection CounterProvider::collection_for(MeasurementScope scope)
 {
     assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
-           scope.type == MeasurementScopeType::USERSPACE_METRIC ||
-           scope.type == MeasurementScopeType::TRACEPOINT);
+           scope.type == MeasurementScopeType::USERSPACE_METRIC);
 
     CounterCollection res;
     if (scope.type == MeasurementScopeType::GROUP_METRIC)
@@ -162,19 +143,9 @@ CounterCollection CounterProvider::collection_for(MeasurementScope scope)
             }
         }
     }
-    else if (scope.type == MeasurementScopeType::USERSPACE_METRIC)
-    {
-        for (auto& ev : userspace_events_)
-        {
-            if (ev.is_available_in(scope.scope))
-            {
-                res.counters.emplace_back(std::move(ev));
-            }
-        }
-    }
     else
     {
-        for (auto& ev : tracepoint_events_)
+        for (auto& ev : userspace_events_)
         {
             if (ev.is_available_in(scope.scope))
             {

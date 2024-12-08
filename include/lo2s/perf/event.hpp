@@ -59,29 +59,34 @@ enum class Availability
     UNIVERSAL
 };
 
-class EventGuard;
+class PerfEventGuard;
 
 /**
  * Base class for all Event types
  * contains common attributes
  */
-class Event
+class PerfEvent
 {
 public:
-    Event([[maybe_unused]] uint64_t addr, bool enable_on_exec = false);
-    Event(std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1 = 0);
-    Event();
+    PerfEvent(const std::string& ev_name, bool enable_on_exec = false);
+    PerfEvent([[maybe_unused]] uint64_t addr, bool enable_on_exec = false);
+    PerfEvent(std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1 = 0,
+              std::set<Cpu> cpus = std::set<Cpu>());
+    PerfEvent();
 
     /**
-     * returns an opened instance of any Event object
+     * returns an opened instance of any PerfEvent object
      */
-    EventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
-    EventGuard open(ExecutionScope location, int cgroup_fd = -1);
+    PerfEventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = config().cgroup_fd);
+    PerfEventGuard open(ExecutionScope location, int cgroup_fd = config().cgroup_fd);
 
     /**
-     * returns an opened instance of a Event object after formating it as a leader Event
+     * returns an opened instance of a PerfEvent object after formating it as a leader Event
      */
-    EventGuard open_as_group_leader(ExecutionScope location, int cgroup_fd = -1);
+    PerfEventGuard open_as_group_leader(std::variant<Cpu, Thread> location,
+                                        int cgroup_fd = config().cgroup_fd);
+    PerfEventGuard open_as_group_leader(ExecutionScope location,
+                                        int cgroup_fd = config().cgroup_fd);
 
     const Availability& get_availability() const
     {
@@ -123,37 +128,12 @@ public:
         unit_ = unit;
     }
 
-    void set_clock_attrs(const bool& use_clockid, const clockid_t& clockid)
-    {
-#ifndef USE_HW_BREAKPOINT_COMPAT
-        attr_.use_clockid = use_clockid;
-        attr_.clockid = clockid;
-#endif
-    }
-
-    // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
-    // Default behaviour is to wakeup on every event, which is horrible performance wise
-    void set_watermark(const size_t& mmap_pages)
-    {
-        attr_.watermark = 1;
-        attr_.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * sysconf(_SC_PAGESIZE));
-    }
-
-    void set_exclude_kernel(const bool& exclude_kernel)
-    {
-        attr_.exclude_kernel = exclude_kernel;
-    }
-
     void set_sample_period(const int& period);
-    void set_sample_freq(const uint64_t& freq);
-    void event_attr_update(std::uint64_t value, const std::string& format);
+    void set_sample_freq();
+    void set_availability();
 
-    void parse_pmu_path(const std::string& ev_name);
-    void parse_cpus();
     const std::set<Cpu>& supported_cpus() const;
-
     bool is_valid() const;
-    bool event_is_openable();
 
     bool is_available_in(ExecutionScope scope) const
     {
@@ -164,23 +144,22 @@ public:
 
     bool degrade_precision();
 
-    friend bool operator==(const Event& lhs, const Event& rhs)
+    friend bool operator==(const PerfEvent& lhs, const PerfEvent& rhs)
     {
         return !memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
     }
 
-    friend bool operator<(const Event& lhs, const Event& rhs)
+    friend bool operator<(const PerfEvent& lhs, const PerfEvent& rhs)
     {
         return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
     }
 
-    friend bool operator>(const Event& lhs, const Event& rhs)
+    friend bool operator>(const PerfEvent& lhs, const PerfEvent& rhs)
     {
         return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
     }
 
 protected:
-    void update_availability();
     void set_common_attrs(bool enable_on_exec);
 
     struct perf_event_attr attr_;
@@ -190,45 +169,41 @@ protected:
     std::string name_ = "";
     std::set<Cpu> cpus_;
     Availability availability_ = Availability::UNAVAILABLE;
-
-    std::filesystem::path pmu_path_;
-    std::string pmu_name_;
 };
 
 /**
  * Contains an event parsed from sysfs
- * @note call on use_sampling_options() after creation to get a valid
+ * @note call on as_sample() after creation to get a valid
  * event, otherwise the availability will be set to UNAVAILABLE
  */
-class SysfsEvent : public Event
+class SysfsEvent : public PerfEvent
 {
 public:
-    using Event::Event;
-    SysfsEvent(const std::string& ev_name, bool enable_on_exec = false);
+    using PerfEvent::PerfEvent;
 
-    void use_sampling_options(const bool& use_pebs, const bool& sampling, const bool& enable_cct);
+    void as_sample();
 };
 
 /**
- * Contains an opened instance of Event.
- * Use any Event.open() method to construct an object
+ * Contains an opened instance of PerfEvent.
+ * Use any PerfEvent.open() method to construct an object
  */
-class EventGuard
+class PerfEventGuard
 {
 public:
-    EventGuard();
-    EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
+    PerfEventGuard();
+    PerfEventGuard(PerfEvent& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
 
-    EventGuard(EventGuard&) = delete;
-    EventGuard& operator=(const EventGuard&) = delete;
+    PerfEventGuard(PerfEventGuard&) = delete;
+    PerfEventGuard& operator=(const PerfEventGuard&) = delete;
 
-    EventGuard(EventGuard&& other)
+    PerfEventGuard(PerfEventGuard&& other)
     {
         std::swap(fd_, other.fd_);
         std::swap(ev_, other.ev_);
     }
 
-    EventGuard& operator=(EventGuard&& other)
+    PerfEventGuard& operator=(PerfEventGuard&& other)
     {
         std::swap(fd_, other.fd_);
         std::swap(ev_, other.ev_);
@@ -238,7 +213,10 @@ public:
     /**
      * opens child as a counter of the calling (leader) event
      */
-    EventGuard open_child(Event child, ExecutionScope location, int cgroup_fd = -1);
+    PerfEventGuard open_child(PerfEvent child, std::variant<Cpu, Thread> location,
+                              int cgroup_fd = config().cgroup_fd);
+    PerfEventGuard open_child(PerfEvent child, ExecutionScope location,
+                              int cgroup_fd = config().cgroup_fd);
 
     void enable();
     void disable();
@@ -248,8 +226,8 @@ public:
         ioctl(fd_, PERF_EVENT_IOC_ID, &id);
     }
 
-    void set_output(const EventGuard& other_ev);
-    void set_syscall_filter(const std::vector<int64_t>& filter);
+    void set_output(const PerfEventGuard& other_ev);
+    void set_syscall_filter();
 
     int get_fd() const
     {
@@ -264,7 +242,6 @@ public:
     template <class T>
     T read()
     {
-        static_assert(std::is_pod_v<T> == true);
         T val;
 
         if (::read(fd_, &val, sizeof(val)) == -1)
@@ -275,14 +252,14 @@ public:
         return val;
     }
 
-    ~EventGuard()
+    ~PerfEventGuard()
     {
         close(fd_);
     }
 
 protected:
     int fd_;
-    Event ev_;
+    PerfEvent ev_;
 };
 
 } // namespace perf
