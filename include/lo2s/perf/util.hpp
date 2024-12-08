@@ -1,7 +1,5 @@
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
-
 extern "C"
 {
 #include <linux/perf_event.h>
