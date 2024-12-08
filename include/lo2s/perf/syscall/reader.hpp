@@ -33,7 +33,6 @@
 #include <cstddef>
 #include <filesystem>
 #include <ios>
-#include <optional>
 
 #include <fmt/format.h>
 extern "C"
@@ -85,19 +84,19 @@ public:
             throw_errno();
         }
 
-        init_mmap(enter_ev_.value().get_fd());
+        init_mmap(enter_ev_.get_fd());
         Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-        exit_ev_.value().set_output(enter_ev_.value());
+        exit_ev_.set_output(enter_ev_);
 
-        enter_ev_.value().set_syscall_filter(config().syscall_filter);
-        exit_ev_.value().set_syscall_filter(config().syscall_filter);
+        enter_ev_.set_syscall_filter(config().syscall_filter);
+        exit_ev_.set_syscall_filter(config().syscall_filter);
 
-        enter_ev_.value().enable();
-        exit_ev_.value().enable();
+        enter_ev_.enable();
+        exit_ev_.enable();
 
-        sys_enter_id = enter_ev_.value().get_id();
-        sys_exit_id = exit_ev_.value().get_id();
+        sys_enter_id = enter_ev_.get_id();
+        sys_exit_id = exit_ev_.get_id();
     }
 
     Reader(Reader&& other)
@@ -108,7 +107,7 @@ public:
 
     void stop()
     {
-        enter_ev_.value().disable();
+        enter_ev_.disable();
         this->read();
     }
 
@@ -119,8 +118,8 @@ protected:
 
 private:
     Cpu cpu_;
-    std::optional<EventGuard> enter_ev_;
-    std::optional<EventGuard> exit_ev_;
+    EventGuard enter_ev_;
+    EventGuard exit_ev_;
 };
 
 } // namespace syscall

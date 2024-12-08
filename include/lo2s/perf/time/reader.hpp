@@ -29,8 +29,6 @@
 
 #include <otf2xx/chrono/chrono.hpp>
 
-#include <optional>
-
 namespace lo2s
 {
 namespace perf
@@ -69,7 +67,7 @@ public:
     perf::Clock::time_point perf_time;
 
 private:
-    std::optional<EventGuard> ev_instance_;
+    EventGuard ev_instance_;
 };
 } // namespace time
 } // namespace perf

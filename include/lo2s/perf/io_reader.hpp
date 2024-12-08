@@ -109,10 +109,10 @@ public:
 
         try
         {
-            init_mmap(event_.value().get_fd());
+            init_mmap(event_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            event_.value().enable();
+            event_.enable();
         }
         catch (...)
         {
@@ -123,7 +123,7 @@ public:
 
     void stop()
     {
-        event_.value().disable();
+        event_.disable();
     }
 
     TracepointSampleType* top()
@@ -133,7 +133,7 @@ public:
 
     int fd() const
     {
-        return event_.value().get_fd();
+        return event_.get_fd();
     }
 
     IoReader& operator=(const IoReader&) = delete;
@@ -155,7 +155,7 @@ public:
 
 private:
     IoReaderIdentity identity_;
-    std::optional<EventGuard> event_;
+    EventGuard event_;
 };
 } // namespace perf
 } // namespace lo2s

@@ -32,7 +32,6 @@
 #include <lo2s/util.hpp>
 
 #include <filesystem>
-#include <optional>
 
 #include <ios>
 
@@ -133,10 +132,10 @@ public:
 
         try
         {
-            init_mmap(ev_instance_.value().get_fd());
+            init_mmap(ev_instance_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            ev_instance_.value().enable();
+            ev_instance_.enable();
         }
         catch (...)
         {
@@ -152,7 +151,7 @@ public:
 
     void stop()
     {
-        ev_instance_.value().disable();
+        ev_instance_.disable();
         this->read();
     }
 
@@ -162,7 +161,7 @@ protected:
 
 private:
     Cpu cpu_;
-    std::optional<EventGuard> ev_instance_;
+    EventGuard ev_instance_;
 };
 
 } // namespace tracepoint
