@@ -54,9 +54,9 @@ public:
 
     static Event fallback_metric_leader_event();
 
-    static Event create_time_event(std::uint64_t local_time, bool enable_on_exec = false);
-    static Event create_event(const std::string& name, perf_type_id type, std::uint64_t config,
-                              std::uint64_t config1 = 0);
+    static Event create_time_event(uint64_t local_time);
+    static Event create_raw_event(const std::string& name, perf_type_id type, std::uint64_t config,
+                                  std::uint64_t config1 = 0);
     static SysfsEvent create_sampling_event(bool enable_on_exec);
     static SysfsEvent create_sysfs_event(const std::string& name, bool use_config = true);
     static tracepoint::TracepointEvent create_tracepoint_event(const std::string& name,

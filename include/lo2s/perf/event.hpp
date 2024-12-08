@@ -71,6 +71,7 @@ class EventGuard;
 class Event
 {
 public:
+    Event([[maybe_unused]] uint64_t addr, bool enable_on_exec = false);
     Event(const std::string& name, perf_type_id type, std::uint64_t config,
           std::uint64_t config1 = 0);
     Event();
@@ -138,8 +139,6 @@ public:
         attr_.clockid = clockid;
 #endif
     }
-
-    void time_attrs([[maybe_unused]] uint64_t addr, bool enable_on_exec);
 
     // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
     // Default behaviour is to wakeup on every event, which is horrible performance wise

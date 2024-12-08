@@ -133,6 +133,24 @@ Event::Event() : name_("")
     attr_.exclude_kernel = 1;
 }
 
+Event::Event([[maybe_unused]] uint64_t addr, bool enable_on_exec)
+{
+    set_common_attrs(enable_on_exec);
+
+#ifndef USE_HW_BREAKPOINT_COMPAT
+    attr_.type = PERF_TYPE_BREAKPOINT;
+    attr_.bp_type = HW_BREAKPOINT_W;
+    attr_.bp_addr = addr;
+    attr_.bp_len = HW_BREAKPOINT_LEN_8;
+    attr_.wakeup_events = 1;
+#else
+    attr_.type = PERF_TYPE_HARDWARE;
+    attr_.config = PERF_COUNT_HW_INSTRUCTIONS;
+    attr_.sample_period = 100000000;
+    attr_.task = 1;
+#endif
+}
+
 Event::Event(const std::string& name, perf_type_id type, std::uint64_t config,
              std::uint64_t config1)
 : name_(name)
@@ -220,24 +238,6 @@ void Event::event_attr_update(std::uint64_t value, const std::string& format)
     {
         attr_.config1 |= apply_mask(value, mask);
     }
-}
-
-void Event::time_attrs([[maybe_unused]] uint64_t addr, bool enable_on_exec)
-{
-    set_common_attrs(enable_on_exec);
-
-#ifndef USE_HW_BREAKPOINT_COMPAT
-    attr_.type = PERF_TYPE_BREAKPOINT;
-    attr_.bp_type = HW_BREAKPOINT_W;
-    attr_.bp_addr = addr;
-    attr_.bp_len = HW_BREAKPOINT_LEN_8;
-    attr_.wakeup_events = 1;
-#else
-    attr_.type = PERF_TYPE_HARDWARE;
-    attr_.config = PERF_COUNT_HW_INSTRUCTIONS;
-    attr_.sample_period = 100000000;
-    attr_.task = 1;
-#endif
 }
 
 void Event::parse_cpus()
