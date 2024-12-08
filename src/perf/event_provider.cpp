@@ -299,7 +299,7 @@ Event EventProvider::cache_event(const std::string& name)
         }
         else
         {
-            SysfsEvent event = EventProvider::instance().create_sysfs_event(name, false);
+            SysfsEvent event = EventProvider::instance().create_raw_sysfs_event(name);
             return event_map_.emplace(name, event).first->second;
         }
     }
@@ -378,20 +378,21 @@ std::vector<Event> EventProvider::get_predefined_events()
 }
 
 tracepoint::TracepointEvent EventProvider::create_tracepoint_event(const std::string& name,
-                                                                   bool use_config,
                                                                    bool enable_on_exec)
 {
     tracepoint::TracepointEvent event(name, enable_on_exec);
     event.sample_period(0);
+    apply_config_attrs(event);
 
-    if (use_config)
-    {
-        apply_config_attrs(event);
-    }
-    else
-    {
-        apply_default_attrs(event);
-    }
+    return event;
+}
+
+tracepoint::TracepointEvent EventProvider::create_raw_tracepoint_event(const std::string& name,
+                                                                       bool enable_on_exec)
+{
+    tracepoint::TracepointEvent event(name, enable_on_exec);
+    event.sample_period(0);
+    apply_default_attrs(event);
 
     return event;
 }
@@ -430,19 +431,20 @@ SysfsEvent EventProvider::create_sampling_event(bool enable_on_exec)
     return event;
 }
 
-SysfsEvent EventProvider::create_sysfs_event(const std::string& name, bool use_config)
+SysfsEvent EventProvider::create_raw_sysfs_event(const std::string& name)
 {
     SysfsEvent event(name);
     event.sample_period(0);
+    apply_default_attrs(event);
 
-    if (use_config)
-    {
-        apply_config_attrs(event);
-    }
-    else
-    {
-        apply_default_attrs(event);
-    }
+    return event;
+}
+
+SysfsEvent EventProvider::create_sysfs_event(const std::string& name)
+{
+    SysfsEvent event(name);
+    event.sample_period(0);
+    apply_config_attrs(event);
 
     return event;
 }
