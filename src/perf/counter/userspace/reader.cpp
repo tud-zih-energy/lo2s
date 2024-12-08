@@ -57,7 +57,7 @@ Reader<T>::Reader(ExecutionScope scope)
 
         try
         {
-            counter.value() = event.open(scope);
+            counter = event.open(scope);
             counters_.emplace_back(std::move(counter.value()));
         }
         catch (const std::system_error& e)
