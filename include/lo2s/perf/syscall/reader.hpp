@@ -24,7 +24,6 @@
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
@@ -69,51 +68,110 @@ public:
 
     Reader(Cpu cpu) : cpu_(cpu)
     {
-        TracepointEvent enter_event(0, tracepoint::EventFormat("raw_syscalls:sys_enter").id());
-        TracepointEvent exit_event(0, tracepoint::EventFormat("raw_syscalls:sys_exit").id());
+        struct perf_event_attr attr = common_perf_event_attrs();
+        attr.type = PERF_TYPE_TRACEPOINT;
+        attr.config = tracepoint::EventFormat("raw_syscalls:sys_enter").id();
+        attr.sample_period = 1;
+        attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME | PERF_SAMPLE_IDENTIFIER;
 
-        enter_event.as_syscall();
-        exit_event.as_syscall();
-
-        try
-        {
-            // instance with tracepoint::EventFormat enter (default)
-            enter_ev_ = enter_event.open(cpu_);
-            exit_ev_ = exit_event.open(cpu_);
-        }
-        catch (const std::system_error& e)
+        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0, config().cgroup_fd);
+        if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
 
-        init_mmap(enter_ev_.get_fd());
-        Log::debug() << "perf_tracepoint_reader mmap initialized";
-
-        exit_ev_.set_output(enter_ev_);
-
-        if (!config().syscall_filter.empty())
+        attr.config = tracepoint::EventFormat("raw_syscalls:sys_exit").id();
+        other_fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0, config().cgroup_fd);
+        if (other_fd_ < 0)
         {
-            enter_ev_.set_syscall_filter();
-            exit_ev_.set_syscall_filter();
+            Log::error() << "perf_event_open for raw tracepoint failed.";
+            throw_errno();
+            close(fd_);
         }
 
-        enter_ev_.enable();
-        exit_ev_.enable();
+        try
+        {
+            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
+            {
+                throw_errno();
+            }
 
-        ioctl(enter_ev_.get_fd(), PERF_EVENT_IOC_ID, &sys_enter_id);
-        ioctl(exit_ev_.get_fd(), PERF_EVENT_IOC_ID, &sys_exit_id);
+            init_mmap(fd_);
+            Log::debug() << "perf_tracepoint_reader mmap initialized";
+            if (ioctl(other_fd_, PERF_EVENT_IOC_SET_OUTPUT, fd_) == -1)
+            {
+                throw_errno();
+            }
+            if (!config().syscall_filter.empty())
+            {
+                std::vector<std::string> names;
+                std::transform(config().syscall_filter.cbegin(), config().syscall_filter.end(),
+                               std::back_inserter(names),
+                               [](const auto& elem) { return fmt::format("id == {}", elem); });
+                std::string filter = fmt::format("{}", fmt::join(names, "||"));
+
+                if (ioctl(other_fd_, PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
+                {
+                    throw_errno();
+                }
+                if (ioctl(fd_, PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
+                {
+                    throw_errno();
+                }
+            }
+            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
+
+            ret = ioctl(other_fd_, PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
+        }
+        catch (...)
+        {
+            close(other_fd_);
+            close(fd_);
+            throw;
+        }
+
+        ioctl(fd_, PERF_EVENT_IOC_ID, &sys_enter_id);
+        ioctl(other_fd_, PERF_EVENT_IOC_ID, &sys_exit_id);
     }
 
     Reader(Reader&& other)
     : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
     {
-        std::swap(enter_ev_, other.enter_ev_);
+        std::swap(fd_, other.fd_);
+    }
+
+    ~Reader()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
+
+        if (other_fd_ != -1)
+        {
+            close(other_fd_);
+        }
     }
 
     void stop()
     {
-        enter_ev_.disable();
+        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        if (ret == -1)
+        {
+            throw_errno();
+        }
         this->read();
     }
 
@@ -124,8 +182,8 @@ protected:
 
 private:
     Cpu cpu_;
-    PerfEventInstance enter_ev_;
-    PerfEventInstance exit_ev_;
+    int fd_ = -1;
+    int other_fd_ = -1;
     const static std::filesystem::path base_path;
 };
 

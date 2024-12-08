@@ -25,7 +25,6 @@
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/topology.hpp>
 
 #include <lo2s/trace/trace.hpp>
 

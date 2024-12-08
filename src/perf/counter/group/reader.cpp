@@ -25,8 +25,8 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 
+#include <lo2s/perf/event_description.hpp>
 #include <lo2s/perf/event_provider.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <cstring>
@@ -53,100 +53,85 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
       CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    counter_collection_.leader.as_group_leader();
-    do
+    perf_event_attr leader_attr = common_perf_event_attrs();
+
+    leader_attr.type = counter_collection_.leader.type;
+    leader_attr.config = counter_collection_.leader.config;
+    leader_attr.config1 = counter_collection_.leader.config1;
+
+    leader_attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_READ;
+    leader_attr.freq = config().metric_use_frequency;
+
+    if (leader_attr.freq)
     {
-        try
-        {
-            if (scope.is_cpu())
-            {
-                counter_leader_ = std::move(counter_collection_.leader.open(scope.as_cpu()));
-            }
-            else
-            {
-                counter_leader_ = std::move(counter_collection_.leader.open(scope.as_thread()));
-            }
-        }
-        catch (const std::system_error& e)
-        {
-            // perf_try_event_open was used here before
-            if (counter_leader_.get_fd() < 0 && errno == EACCES &&
-                !counter_collection_.leader.get_attr().exclude_kernel && perf_event_paranoid() > 1)
-            {
-                counter_collection_.leader.get_attr().exclude_kernel = 1;
-                perf_warn_paranoid();
+        Log::debug() << "counter::Reader: sample_freq: " << config().metric_frequency;
 
-                continue;
-            }
-
-            if (!counter_leader_.is_valid())
-            {
-                Log::error() << "perf_event_open for counter group leader failed";
-                throw_errno();
-            }
-        }
-    } while (!counter_leader_.is_valid());
-
-    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.get_name()
-                 << "'";
-
-    for (auto& counter_ev : counter_collection_.counters)
+        leader_attr.sample_freq = config().metric_frequency;
+    }
+    else
     {
-        if (counter_ev.is_available_in(scope))
+        Log::debug() << "counter::Reader: sample_period: " << config().metric_count;
+        leader_attr.sample_period = config().metric_count;
+    }
+
+    leader_attr.exclude_kernel = config().exclude_kernel;
+    leader_attr.read_format =
+        PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_GROUP;
+    leader_attr.enable_on_exec = enable_on_exec;
+
+    group_leader_fd_ = perf_try_event_open(&leader_attr, scope, -1, 0, config().cgroup_fd);
+    if (group_leader_fd_ < 0)
+    {
+        Log::error() << "perf_event_open for counter group leader failed";
+        throw_errno();
+    }
+
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader.name << "'";
+
+    counter_fds_.reserve(counter_collection_.counters.size());
+    for (auto& description : counter_collection_.counters)
+    {
+        if (description.is_supported_in(scope))
         {
-            PerfEventInstance counter;
-            do
+            try
             {
-                try
+                counter_fds_.emplace_back(
+                    perf_event_description_open(scope, description, group_leader_fd_));
+            }
+            catch (const std::system_error& e)
+            {
+                Log::error() << "failed to add counter '" << description.name
+                             << "': " << e.code().message();
+
+                if (e.code().value() == EINVAL)
                 {
-                    if (scope.is_cpu())
-                    {
-                        counter =
-                            std::move(counter_ev.open(scope.as_cpu(), counter_leader_.get_fd()));
-                    }
-                    else
-                    {
-                        counter =
-                            std::move(counter_ev.open(scope.as_thread(), counter_leader_.get_fd()));
-                    }
+                    Log::error()
+                        << "opening " << counter_collection_.counters.size()
+                        << " counters at once might exceed the hardware limit of simultaneously "
+                           "openable counters.";
                 }
-                catch (const std::system_error& e)
+
+                if (perf::counter::CounterProvider::instance().has_group_counters(
+                        ExecutionScope(scope)))
                 {
-                    // perf_try_event_open was used here before
-                    if (counter.get_fd() < 0 && errno == EACCES &&
-                        !counter_ev.get_attr().exclude_kernel && perf_event_paranoid() > 1)
-                    {
-                        counter_ev.get_attr().exclude_kernel = 1;
-                        perf_warn_paranoid();
-
-                        continue;
-                    }
-
-                    if (!counter.is_valid())
-                    {
-                        Log::error() << "failed to add counter '" << counter_ev.get_name()
-                                     << "': " << e.code().message();
-
-                        if (e.code().value() == EINVAL)
-                        {
-                            Log::error() << "opening " << counter_collection_.counters.size()
-                                         << " counters at once might exceed the hardware limit of "
-                                            "simultaneously "
-                                            "openable counters.";
-                        }
-                        throw e;
-                    }
-                    counters_.emplace_back(std::move(counter));
+                    Log::error() << "Try using --userspace-metric-event if the error persists.";
                 }
-            } while (!counter.is_valid());
+                throw e;
+            }
         }
     }
 
     if (!enable_on_exec)
     {
-        counter_leader_.enable();
+        auto ret = ::ioctl(group_leader_fd_, PERF_EVENT_IOC_ENABLE);
+        if (ret == -1)
+        {
+            Log::error() << "failed to enable perf counter group";
+            ::close(group_leader_fd_);
+            throw_errno();
+        }
     }
-    EventReader<T>::init_mmap(counter_leader_.get_fd());
+    EventReader<T>::init_mmap(group_leader_fd_);
 }
 template class Reader<Writer>;
 } // namespace group

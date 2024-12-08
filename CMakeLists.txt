@@ -185,7 +185,6 @@ set(SOURCE_FILES
     src/process_controller.cpp
 
     src/perf/event_provider.cpp
-    src/perf/reader.cpp
 
     src/perf/bio/block_device.cpp
     src/perf/counter/counter_provider.cpp

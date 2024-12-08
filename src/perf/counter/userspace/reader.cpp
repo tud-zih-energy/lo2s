@@ -22,7 +22,6 @@
 #include <lo2s/error.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/measurement_scope.hpp>
@@ -53,57 +52,19 @@ Reader<T>::Reader(ExecutionScope scope)
 {
     for (auto& event : counter_collection_.counters)
     {
-        PerfEventInstance counter;
-
-        try
-        {
-            if (scope.is_cpu())
-            {
-                counter = event.open(scope.as_cpu());
-            }
-            else
-            {
-                counter = event.open(scope.as_thread());
-            }
-        }
-        catch (const std::system_error& e)
-        {
-            // perf_try_event_open was used here before
-            if (counter.get_fd() < 0 && errno == EACCES && !event.get_attr().exclude_kernel &&
-                perf_event_paranoid() > 1)
-            {
-                event.get_attr().exclude_kernel = 1;
-                perf_warn_paranoid();
-
-                if (scope.is_cpu())
-                {
-                    counter = std::move(event.open(scope.as_cpu()));
-                }
-                else
-                {
-                    counter = std::move(event.open(scope.as_thread()));
-                }
-            }
-
-            if (!counter.is_valid())
-            {
-                Log::error() << "perf_event_open for counter failed";
-                throw_errno();
-            }
-            else
-            {
-                counters_.emplace_back(std::move(counter));
-            }
-        }
+        counter_fds_.emplace_back(perf_event_description_open(scope, event, -1));
     }
 }
 
 template <class T>
 void Reader<T>::read()
 {
-    for (std::size_t i = 0; i < counters_.size(); i++)
+    for (std::size_t i = 0; i < counter_fds_.size(); i++)
     {
-        data_[i] = counters_[i].read<UserspaceReadFormat>();
+        [[maybe_unused]] auto bytes_read =
+            ::read(counter_fds_[i], &(data_[i]), sizeof(UserspaceReadFormat));
+
+        assert(bytes_read == sizeof(UserspaceReadFormat));
     }
 
     static_cast<T*>(this)->handle(data_);

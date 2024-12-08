@@ -23,7 +23,6 @@
 
 #include <lo2s/perf/clock.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/reader.hpp>
 
 #include <lo2s/log.hpp>
 
@@ -45,6 +44,7 @@ class Reader : public EventReader<Reader>
 {
 public:
     Reader();
+    ~Reader();
 
 public:
     using EventReader<Reader>::handle;
@@ -67,7 +67,7 @@ public:
     perf::Clock::time_point perf_time;
 
 private:
-    PerfEventInstance ev_instance_;
+    int fd_;
 };
 } // namespace time
 } // namespace perf

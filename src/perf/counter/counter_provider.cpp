@@ -43,7 +43,6 @@ void CounterProvider::initialize_userspace_counters(const std::vector<std::strin
         try
         {
             userspace_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            userspace_events_.back().as_counter();
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -86,7 +85,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
     {
         try
         {
-            group_leader_ = perf::EventProvider::get_event_by_name(leader);
+            group_leader_ = EventProvider::get_event_by_name(leader);
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -97,14 +96,16 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
         }
     }
 
-    // DONT do group_leader_.as_group_leader() here, since it requires config() to be complete
-
     for (const auto& ev : counters)
     {
+
         try
         {
+
+            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+
             // skip event if it has already been declared as group leader
-            if (ev == group_leader_.get_name())
+            if (event_desc == group_leader_)
             {
                 Log::info() << "'" << ev
                             << "' has been requested as both the metric leader event and a regular "
@@ -112,8 +113,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
                 continue;
             }
 
-            group_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            group_events_.back().as_counter();
+            group_events_.emplace_back(std::move(event_desc));
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -131,14 +131,14 @@ CounterCollection CounterProvider::collection_for(MeasurementScope scope)
     CounterCollection res;
     if (scope.type == MeasurementScopeType::GROUP_METRIC)
     {
-        if (group_leader_.is_available_in(scope.scope))
+        if (group_leader_.is_supported_in(scope.scope))
         {
             res.leader = group_leader_;
             for (auto& ev : group_events_)
             {
-                if (ev.is_available_in(scope.scope))
+                if (ev.is_supported_in(scope.scope))
                 {
-                    res.counters.emplace_back(std::move(ev));
+                    res.counters.emplace_back(ev);
                 }
             }
         }
@@ -147,9 +147,9 @@ CounterCollection CounterProvider::collection_for(MeasurementScope scope)
     {
         for (auto& ev : userspace_events_)
         {
-            if (ev.is_available_in(scope.scope))
+            if (ev.is_supported_in(scope.scope))
             {
-                res.counters.emplace_back(std::move(ev));
+                res.counters.emplace_back(ev);
             }
         }
     }
@@ -164,9 +164,9 @@ bool CounterProvider::has_group_counters(ExecutionScope scope)
     }
     else
     {
-        return group_leader_.is_available_in(scope) &&
+        return group_leader_.is_supported_in(scope) &&
                std::any_of(group_events_.begin(), group_events_.end(),
-                           [scope](const auto& ev) { return ev.is_available_in(scope); });
+                           [scope](const auto& ev) { return ev.is_supported_in(scope); });
     }
     return false;
 }
@@ -180,7 +180,7 @@ bool CounterProvider::has_userspace_counters(ExecutionScope scope)
     else
     {
         return std::any_of(userspace_events_.begin(), userspace_events_.end(),
-                           [scope](const auto& ev) { return ev.is_available_in(scope); });
+                           [scope](const auto& ev) { return ev.is_supported_in(scope); });
     }
 
     return false;

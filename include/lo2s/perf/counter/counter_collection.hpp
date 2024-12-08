@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/reader.hpp>
+#include <lo2s/perf/event_description.hpp>
 
 #include <vector>
 
@@ -33,18 +33,18 @@ namespace counter
 {
 struct CounterCollection
 {
-    SysfsEvent leader;
-    std::vector<SysfsEvent> counters;
+    EventDescription leader;
+    std::vector<EventDescription> counters;
 
     double get_scale(int index) const
     {
         if (index == 0)
         {
-            return leader.get_scale();
+            return leader.scale;
         }
         else
         {
-            return counters[index - 1].get_scale();
+            return counters[index - 1].scale;
         }
     }
 

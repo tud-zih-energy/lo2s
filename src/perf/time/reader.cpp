@@ -19,7 +19,6 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/reader.hpp>
 #include <lo2s/perf/time/reader.hpp>
 
 #include <lo2s/log.hpp>
@@ -56,15 +55,39 @@ Reader::Reader()
 {
     static_assert(sizeof(local_time) == 8, "The local time object must not be a big fat "
                                            "object, or the hardware breakpoint won't work.");
+    struct perf_event_attr attr = common_perf_event_attrs();
 
-    TimeEvent event(0, (uint64_t)&local_time);
+    attr.sample_type = PERF_SAMPLE_TIME;
+    attr.exclude_kernel = 1;
+
+#ifndef USE_HW_BREAKPOINT_COMPAT
+    attr.type = PERF_TYPE_BREAKPOINT;
+    attr.bp_type = HW_BREAKPOINT_W;
+    attr.bp_addr = (uint64_t)(&local_time);
+    attr.bp_len = HW_BREAKPOINT_LEN_8;
+    attr.wakeup_events = 1;
+    attr.sample_period = 1;
+#else
+    attr.type = PERF_TYPE_HARDWARE;
+    attr.config = PERF_COUNT_HW_INSTRUCTIONS;
+    attr.sample_period = 100000000;
+    attr.task = 1;
+#endif
 
     try
     {
-        ev_instance_ = event.open(Thread(0));
+        fd_ = perf_event_open(&attr, ExecutionScope(Thread(0)), -1, 0);
+        if (fd_ == -1)
+        {
+            throw_errno();
+        }
 
-        init_mmap(ev_instance_.get_fd());
-        ev_instance_.enable();
+        init_mmap(fd_);
+
+        if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
+        {
+            throw_errno();
+        }
     }
     catch (...)
     {
@@ -75,6 +98,7 @@ Reader::Reader()
         Log::error()
             << "opening the perf event for HW_BREAKPOINT_COMPAT time synchronization failed";
 #endif
+        close(fd_);
         throw;
     }
 
@@ -86,6 +110,7 @@ Reader::Reader()
     }
     else if (pid == -1)
     {
+        close(fd_);
         throw_errno();
     }
     waitpid(pid, NULL, 0);
@@ -98,6 +123,11 @@ bool Reader::handle(const RecordSyncType* sync_event)
     Log::trace() << "time_reader::handle called";
     perf_time = convert_time_point(sync_event->time);
     return true;
+}
+
+Reader::~Reader()
+{
+    close(fd_);
 }
 
 } // namespace time
