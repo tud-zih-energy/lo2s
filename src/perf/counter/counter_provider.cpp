@@ -33,24 +33,6 @@ namespace perf
 {
 namespace counter
 {
-void CounterProvider::initialize_tracepoints(const std::vector<std::string>& tracepoints)
-{
-    assert(tracepoint_events_.empty());
-
-    for (const auto& ev_name : tracepoints)
-    {
-        try
-        {
-            tracepoint_events_.emplace_back(
-                EventProvider::instance().create_tracepoint_event(ev_name, false));
-        }
-        catch (const perf::EventProvider::InvalidEvent& e)
-        {
-            Log::warn() << "'" << ev_name
-                        << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
-        }
-    }
-}
 
 void CounterProvider::initialize_userspace_counters(const std::vector<std::string>& counters)
 {
@@ -61,7 +43,6 @@ void CounterProvider::initialize_userspace_counters(const std::vector<std::strin
         try
         {
             userspace_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            userspace_events_.back().sample_period(0);
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -104,7 +85,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
     {
         try
         {
-            group_leader_ = perf::EventProvider::get_event_by_name(leader);
+            group_leader_ = EventProvider::get_event_by_name(leader);
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -115,14 +96,16 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
         }
     }
 
-    // DONT do group_leader_.sample_freq() here, since it requires config() to be complete
-
     for (const auto& ev : counters)
     {
+
         try
         {
+
+            const auto event_desc = perf::EventProvider::get_event_by_name(ev);
+
             // skip event if it has already been declared as group leader
-            if (ev == group_leader_.value().name())
+            if (event_desc == group_leader_)
             {
                 Log::info() << "'" << ev
                             << "' has been requested as both the metric leader event and a regular "
@@ -130,8 +113,7 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
                 continue;
             }
 
-            group_events_.emplace_back(perf::EventProvider::get_event_by_name(ev));
-            group_events_.back().sample_period(0);
+            group_events_.emplace_back(std::move(event_desc));
         }
         catch (const perf::EventProvider::InvalidEvent& e)
         {
@@ -144,71 +126,34 @@ void CounterProvider::initialize_group_counters(const std::string& leader,
 CounterCollection CounterProvider::collection_for(MeasurementScope scope)
 {
     assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
-           scope.type == MeasurementScopeType::USERSPACE_METRIC ||
-           scope.type == MeasurementScopeType::TRACEPOINT);
+           scope.type == MeasurementScopeType::USERSPACE_METRIC);
 
     CounterCollection res;
     if (scope.type == MeasurementScopeType::GROUP_METRIC)
     {
-        if (group_leader_.value().is_available_in(scope.scope))
+        if (group_leader_.is_supported_in(scope.scope))
         {
-            res.leader() = group_leader_.value();
+            res.leader = group_leader_;
             for (auto& ev : group_events_)
             {
-                if (ev.is_available_in(scope.scope))
+                if (ev.is_supported_in(scope.scope))
                 {
-                    res.counters.emplace_back(std::move(ev));
+                    res.counters.emplace_back(ev);
                 }
-            }
-        }
-    }
-    else if (scope.type == MeasurementScopeType::USERSPACE_METRIC)
-    {
-        for (auto& ev : userspace_events_)
-        {
-            if (ev.is_available_in(scope.scope))
-            {
-                res.counters.emplace_back(std::move(ev));
             }
         }
     }
     else
     {
-        for (auto& ev : tracepoint_events_)
+        for (auto& ev : userspace_events_)
         {
-            if (ev.is_available_in(scope.scope))
+            if (ev.is_supported_in(scope.scope))
             {
-                res.counters.emplace_back(std::move(ev));
+                res.counters.emplace_back(ev);
             }
         }
     }
     return res;
-}
-
-std::vector<std::string> CounterProvider::get_tracepoint_event_names()
-{
-    try
-    {
-        std::ifstream ifs_available_events;
-        ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
-
-        ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
-        ifs_available_events.exceptions(std::ios::badbit);
-
-        std::vector<std::string> available;
-
-        for (std::string tracepoint; std::getline(ifs_available_events, tracepoint);)
-        {
-            available.emplace_back(std::move(tracepoint));
-        }
-
-        return available;
-    }
-    catch (const std::ios_base::failure& e)
-    {
-        Log::debug() << "Retrieving kernel tracepoint event names failed: " << e.what();
-        return {};
-    }
 }
 
 bool CounterProvider::has_group_counters(ExecutionScope scope)
@@ -219,9 +164,9 @@ bool CounterProvider::has_group_counters(ExecutionScope scope)
     }
     else
     {
-        return group_leader_.value().is_available_in(scope) &&
+        return group_leader_.is_supported_in(scope) &&
                std::any_of(group_events_.begin(), group_events_.end(),
-                           [scope](const auto& ev) { return ev.is_available_in(scope); });
+                           [scope](const auto& ev) { return ev.is_supported_in(scope); });
     }
     return false;
 }
@@ -235,7 +180,7 @@ bool CounterProvider::has_userspace_counters(ExecutionScope scope)
     else
     {
         return std::any_of(userspace_events_.begin(), userspace_events_.end(),
-                           [scope](const auto& ev) { return ev.is_available_in(scope); });
+                           [scope](const auto& ev) { return ev.is_supported_in(scope); });
     }
 
     return false;

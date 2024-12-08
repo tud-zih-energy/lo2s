@@ -21,9 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_description.hpp>
 
-#include <optional>
 #include <vector>
 
 namespace lo2s
@@ -34,29 +33,24 @@ namespace counter
 {
 struct CounterCollection
 {
-    std::optional<Event> leader_;
-    std::vector<Event> counters;
+    EventDescription leader;
+    std::vector<EventDescription> counters;
 
     double get_scale(int index) const
     {
         if (index == 0)
         {
-            return leader_.value().scale();
+            return leader.scale;
         }
         else
         {
-            return counters[index - 1].scale();
+            return counters[index - 1].scale;
         }
-    }
-
-    Event& leader() const
-    {
-        return const_cast<Event&>(leader_.value());
     }
 
     friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader_.value() == rhs.leader_.value())
+        if (lhs.leader == rhs.leader)
         {
             return lhs.counters == rhs.counters;
         }
@@ -65,11 +59,11 @@ struct CounterCollection
 
     friend bool operator<(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader_.value() == rhs.leader_.value())
+        if (lhs.leader == rhs.leader)
         {
             return lhs.counters < rhs.counters;
         }
-        return lhs.leader_.value() < rhs.leader_.value();
+        return lhs.leader < rhs.leader;
     }
 };
 

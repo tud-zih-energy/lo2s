@@ -22,9 +22,7 @@
 #pragma once
 
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -61,24 +59,18 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(std::string tracepoint_name, Cpu cpu) : cpu(cpu)
+    IoReaderIdentity(tracepoint::EventFormat tracepoint, Cpu cpu) : tracepoint(tracepoint), cpu(cpu)
     {
-        tracepoint_.value() = EventProvider::instance().create_tracepoint_event(tracepoint_name);
     }
 
-    std::optional<tracepoint::TracepointEvent> tracepoint_;
+    tracepoint::EventFormat tracepoint;
     Cpu cpu;
-
-    tracepoint::TracepointEvent tracepoint()
-    {
-        return tracepoint_.value();
-    }
 
     friend bool operator>(const IoReaderIdentity& lhs, const IoReaderIdentity& rhs)
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tracepoint_.value() > rhs.tracepoint_.value();
+            return lhs.tracepoint > rhs.tracepoint;
         }
 
         return lhs.cpu > rhs.cpu;
@@ -88,7 +80,7 @@ struct IoReaderIdentity
     {
         if (lhs.cpu == rhs.cpu)
         {
-            return lhs.tracepoint_.value() < rhs.tracepoint_.value();
+            return lhs.tracepoint < rhs.tracepoint;
         }
 
         return lhs.cpu < rhs.cpu;
@@ -98,13 +90,17 @@ struct IoReaderIdentity
 class IoReader : public PullReader
 {
 public:
-    IoReader(IoReaderIdentity identity) : identity_(identity), event_(std::nullopt)
+    IoReader(IoReaderIdentity identity) : identity_(identity)
     {
-        try
-        {
-            event_ = identity_.tracepoint().open(identity.cpu);
-        }
-        catch (const std::system_error& e)
+        struct perf_event_attr attr = common_perf_event_attrs();
+        attr.type = PERF_TYPE_TRACEPOINT;
+
+        attr.config = identity.tracepoint.id();
+
+        attr.sample_period = 1;
+        attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
+        fd_ = perf_event_open(&attr, identity.cpu.as_scope(), -1, 0);
+        if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
@@ -114,21 +110,45 @@ public:
 
         try
         {
-            init_mmap(event_.value().get_fd());
+            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
+            {
+                throw_errno();
+            }
+
+            init_mmap(fd_);
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            event_.value().enable();
+            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
         }
         catch (...)
         {
             Log::error() << "Couldn't initialize block:rq_insert reading";
+            close(fd_);
             throw;
+        }
+    }
+
+    ~IoReader()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
         }
     }
 
     void stop()
     {
-        event_.value().disable();
+        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        if (ret == -1)
+        {
+            throw_errno();
+        }
     }
 
     TracepointSampleType* top()
@@ -138,7 +158,7 @@ public:
 
     int fd() const
     {
-        return event_.value().get_fd();
+        return fd_;
     }
 
     IoReader& operator=(const IoReader&) = delete;
@@ -148,19 +168,19 @@ public:
     {
         PullReader::operator=(std::move(other));
         std::swap(identity_, other.identity_);
-        std::swap(event_, other.event_);
+        std::swap(fd_, other.fd_);
 
         return *this;
     }
 
     IoReader(IoReader&& other) : PullReader(std::move(other)), identity_(other.identity_)
     {
-        std::swap(event_, other.event_);
+        std::swap(fd_, other.fd_);
     }
 
 private:
     IoReaderIdentity identity_;
-    std::optional<EventGuard> event_;
+    int fd_ = -1;
 };
 } // namespace perf
 } // namespace lo2s

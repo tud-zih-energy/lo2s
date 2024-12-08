@@ -29,7 +29,6 @@
 #include <lo2s/mmap.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/counter_provider.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types.hpp>
@@ -176,12 +175,12 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::Event event)
+    otf2::definition::metric_member& get_event_metric_member(perf::EventDescription event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
-            BySamplingEvent(event), intern(event.name()), intern(event.name()),
+            ByEventDescription(event), intern(event.name), intern(event.name),
             otf2::common::metric_type::other, otf2::common::metric_mode::accumulated_start,
-            otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit()));
+            otf2::common::type::Double, otf2::common::base_type::decimal, 0, intern(event.unit));
     }
 
     otf2::definition::metric_class& perf_metric_class(MeasurementScope scope)
@@ -247,7 +246,7 @@ public:
 
         if (scope.type == MeasurementScopeType::GROUP_METRIC)
         {
-            metric_class.add_member(get_event_metric_member(counter_collection.leader()));
+            metric_class.add_member(get_event_metric_member(counter_collection.leader));
         }
 
         for (const auto& counter : counter_collection.counters)
@@ -274,8 +273,7 @@ public:
         return metric_class;
     }
 
-    otf2::definition::metric_class&
-    tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event);
+    otf2::definition::metric_class& tracepoint_metric_class(const std::string& event_name);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {

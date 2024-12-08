@@ -23,7 +23,6 @@
 
 #include <lo2s/perf/tracepoint/format.hpp>
 
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -32,7 +31,6 @@
 #include <lo2s/util.hpp>
 
 #include <filesystem>
-#include <optional>
 
 #include <ios>
 
@@ -109,37 +107,50 @@ public:
     {
         struct perf_event_header header;
         uint64_t time;
-        uint64_t id;
         // uint32_t size;
         // char data[size];
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, std::string name)
-    : event_(EventProvider::instance().create_tracepoint_event(name)), cpu_(cpu)
+    Reader(Cpu cpu, int event_id) : cpu_(cpu)
     {
-        try
-        {
-            ev_instance_ = event_.open(cpu_, config().cgroup_fd);
-        }
-        catch (const std::system_error& e)
+        struct perf_event_attr attr = common_perf_event_attrs();
+        attr.type = PERF_TYPE_TRACEPOINT;
+        attr.config = event_id;
+        attr.sample_period = 1;
+        attr.sample_type = PERF_SAMPLE_RAW | PERF_SAMPLE_TIME;
+
+        fd_ = perf_event_open(&attr, cpu.as_scope(), -1, 0, config().cgroup_fd);
+        if (fd_ < 0)
         {
             Log::error() << "perf_event_open for raw tracepoint failed.";
             throw_errno();
         }
-
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
-                     << event_.id();
+                     << event_id;
 
         try
         {
-            init_mmap(ev_instance_.value().get_fd());
+            // asynchronous delivery
+            // if (fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK))
+            if (fcntl(fd_, F_SETFL, O_NONBLOCK))
+            {
+                throw_errno();
+            }
+
+            init_mmap(fd_);
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            ev_instance_.value().enable();
+            auto ret = ioctl(fd_, PERF_EVENT_IOC_ENABLE);
+            Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_ENABLE) = " << ret;
+            if (ret == -1)
+            {
+                throw_errno();
+            }
         }
         catch (...)
         {
+            close(fd_);
             throw;
         }
     }
@@ -147,24 +158,40 @@ public:
     Reader(Reader&& other)
     : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
     {
-        std::swap(ev_instance_, other.ev_instance_);
+        std::swap(fd_, other.fd_);
+    }
+
+    ~Reader()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
     }
 
     void stop()
     {
-        ev_instance_.value().disable();
+        auto ret = ioctl(fd_, PERF_EVENT_IOC_DISABLE);
+        Log::debug() << "perf_tracepoint_reader ioctl(fd, PERF_EVENT_IOC_DISABLE) = " << ret;
+        if (ret == -1)
+        {
+            throw_errno();
+        }
         this->read();
     }
 
 protected:
     using EventReader<T>::init_mmap;
-    TracepointEvent event_;
 
 private:
     Cpu cpu_;
-    std::optional<EventGuard> ev_instance_;
+    int fd_ = -1;
+    const static std::filesystem::path base_path;
 };
 
+template <typename T>
+const std::filesystem::path Reader<T>::base_path =
+    std::filesystem::path("/sys/kernel/debug/tracing/events");
 } // namespace tracepoint
 } // namespace perf
 } // namespace lo2s

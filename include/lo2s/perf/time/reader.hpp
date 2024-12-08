@@ -22,14 +22,11 @@
 #pragma once
 
 #include <lo2s/perf/clock.hpp>
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
 #include <lo2s/log.hpp>
 
 #include <otf2xx/chrono/chrono.hpp>
-
-#include <optional>
 
 namespace lo2s
 {
@@ -47,6 +44,7 @@ class Reader : public EventReader<Reader>
 {
 public:
     Reader();
+    ~Reader();
 
 public:
     using EventReader<Reader>::handle;
@@ -69,7 +67,7 @@ public:
     perf::Clock::time_point perf_time;
 
 private:
-    std::optional<EventGuard> ev_instance_;
+    int fd_;
 };
 } // namespace time
 } // namespace perf
