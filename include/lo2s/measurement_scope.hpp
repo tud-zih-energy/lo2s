@@ -126,7 +126,7 @@ struct MeasurementScope
         case lo2s::MeasurementScopeType::CUDA:
             return fmt::format("cuda kernel events for {}", scope.name());
         case MeasurementScopeType::TRACEPOINT:
-            return fmt::format("tracepoint events for {}", scope.name());
+            return fmt::format("tracepoints for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }
