@@ -25,7 +25,6 @@
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/tracepoint/event.hpp>
 
-#include <optional>
 #include <vector>
 
 namespace lo2s
@@ -59,7 +58,7 @@ public:
     std::vector<std::string> get_tracepoint_event_names();
 
 private:
-    std::optional<Event> group_leader_;
+    Event group_leader_;
     std::vector<Event> group_events_;
     std::vector<Event> userspace_events_;
     std::vector<tracepoint::TracepointEvent> tracepoint_events_;

@@ -247,7 +247,7 @@ public:
 
         if (scope.type == MeasurementScopeType::GROUP_METRIC)
         {
-            metric_class.add_member(get_event_metric_member(counter_collection.leader()));
+            metric_class.add_member(get_event_metric_member(counter_collection.leader));
         }
 
         for (const auto& counter : counter_collection.counters)
