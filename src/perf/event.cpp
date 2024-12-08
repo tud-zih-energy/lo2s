@@ -326,16 +326,12 @@ bool Event::event_is_openable()
 
 void Event::update_availability()
 {
-    availability_ = Availability::UNAVAILABLE;
+    EventGuard proc_ev;
+    EventGuard sys_ev;
 
     try
     {
-        EventGuard proc_ev = open(Thread(0));
-
-        if (proc_ev.get_fd() != -1)
-        {
-            availability_ |= Availability::PROCESS_MODE;
-        }
+        proc_ev = open(Thread(0));
     }
     catch (const std::system_error& e)
     {
@@ -343,15 +339,25 @@ void Event::update_availability()
 
     try
     {
-        EventGuard sys_ev = open(*supported_cpus().begin());
-
-        if (sys_ev.get_fd() != -1)
-        {
-            availability_ |= Availability::SYSTEM_MODE;
-        }
+        sys_ev = open(*supported_cpus().begin());
     }
     catch (const std::system_error& e)
     {
+    }
+
+    if (proc_ev.get_fd() == -1)
+    {
+        if (sys_ev.get_fd() == -1)
+            availability_ = Availability::UNAVAILABLE;
+        else
+            availability_ = Availability::SYSTEM_MODE;
+    }
+    else
+    {
+        if (sys_ev.get_fd() == -1)
+            availability_ = Availability::PROCESS_MODE;
+        else
+            availability_ = Availability::UNIVERSAL;
     }
 }
 

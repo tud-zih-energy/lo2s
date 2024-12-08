@@ -57,11 +57,6 @@ enum class Availability
     UNIVERSAL
 };
 
-inline Availability& operator|=(Availability& a, Availability b) noexcept
-{
-    return a = static_cast<Availability>(static_cast<uint64_t>(a) | static_cast<uint64_t>(b));
-}
-
 class EventGuard;
 
 /**
