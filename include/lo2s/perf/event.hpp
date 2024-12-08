@@ -182,7 +182,7 @@ public:
 
     friend bool operator<(const Event& lhs, const Event& rhs)
     {
-        return memcmp(&rhs.attr_, &lhs.attr_, sizeof(struct perf_event_attr));
+        return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
     }
 
     friend bool operator>(const Event& lhs, const Event& rhs)
