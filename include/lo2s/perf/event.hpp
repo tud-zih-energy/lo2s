@@ -255,10 +255,7 @@ public:
     uint64_t get_id()
     {
         uint64_t id;
-        if (ioctl(fd_, PERF_EVENT_IOC_ID, &id) == -1)
-        {
-            throw_errno();
-        }
+        ioctl(fd_, PERF_EVENT_IOC_ID, &id);
 
         return id;
     }
