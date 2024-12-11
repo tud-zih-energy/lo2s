@@ -115,7 +115,7 @@ find_package(CUDAToolkit)
 
 if(PkgConfig_FOUND)
     pkg_check_modules(Audit audit)
-    pkg_check_modules(Radare IMPORTED_TARGET r_main>=5.8.0)
+    pkg_check_modules(Radare IMPORTED_TARGET r_asm>=5.8.0 r_anal>=5.8.0)
 endif()
 
 
