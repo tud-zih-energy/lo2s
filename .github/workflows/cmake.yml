@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install binutils-dev libiberty-dev libsensors-dev libpfm4-dev
+          sudo apt-get install binutils-dev libiberty-dev libsensors-dev libpfm4-dev libaudit-dev
           sudo pip install git-archive-all
       - name: Cache OTF2
         id: cache-otf2
