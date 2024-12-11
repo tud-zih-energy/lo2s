@@ -24,6 +24,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install binutils-dev libiberty-dev libsensors-dev libpfm4-dev libaudit-dev
           sudo pip install git-archive-all
+          wget https://github.com/radareorg/radare2/releases/download/5.9.8/radare2-dev_5.9.8_amd64.deb
+          wget https://github.com/radareorg/radare2/releases/download/5.9.8/radare2_5.9.8_amd64.deb
+          sudo dpkg -i radare2-dev_5.9.8_amd64.deb
+          sudo dpkg -i radare2_5.9.8_amd64.deb
       - name: Cache OTF2
         id: cache-otf2
         uses: actions/cache@v2
