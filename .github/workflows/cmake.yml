@@ -10,8 +10,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04]
-        compiler: [g++-9, g++-10, clang++-10, clang++-11, clang++-12]
+        os: [ubuntu-24.04]
+        compiler: [g++-12, g++-13, g++-14, clang++-16, clang++-17, clang++-18]
         build-type: [Debug, RelWithDebInfo]
         hw_breakpoint: [ON, OFF]
 
@@ -22,12 +22,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install binutils-dev libiberty-dev libsensors-dev libpfm4-dev libaudit-dev libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev
+          sudo apt-get install binutils-dev libiberty-dev libsensors-dev libpfm4-dev libaudit-dev libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev libradare2-dev
           sudo pip install git-archive-all
-          wget https://github.com/radareorg/radare2/releases/download/5.9.8/radare2-dev_5.9.8_amd64.deb
-          wget https://github.com/radareorg/radare2/releases/download/5.9.8/radare2_5.9.8_amd64.deb
-          sudo dpkg -i radare2-dev_5.9.8_amd64.deb
-          sudo dpkg -i radare2_5.9.8_amd64.deb
       - name: Cache OTF2
         id: cache-otf2
         uses: actions/cache@v2
@@ -49,10 +45,10 @@ jobs:
       - name: Build
         run: make -j 2
       - name: Create source tarball
-        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
+        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
         run: make dist
       - uses: actions/upload-artifact@v4
-        if: ${{ matrix.compiler == 'g++-10' && matrix.os == 'ubuntu-20.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
+        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
         with:
           overwrite: true
           path: lo2s*.tar.bz2
