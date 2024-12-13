@@ -21,8 +21,7 @@
 
 #pragma once
 
-#include "event_provider.hpp"
-#include <lo2s/perf/event_description.hpp>
+#include <lo2s/perf/event.hpp>
 
 #include <cstring>
 #include <optional>
@@ -57,7 +56,7 @@ public:
         pfm_terminate();
     }
 
-    std::optional<EventDescription> pfm4_read_event(const std::string& ev_desc) const
+    std::optional<Event> pfm4_read_event(const std::string& ev_desc) const
     {
         pfm_perf_encode_arg_t arg;
         struct perf_event_attr attr;
@@ -73,10 +72,9 @@ public:
             return std::nullopt;
         }
 
-        EventDescription ev =
-            EventDescription(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
+        Event ev = Event(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
 
-        if (!event_is_openable(ev))
+        if (!ev.event_is_openable())
         {
             return std::nullopt;
         }
@@ -84,9 +82,9 @@ public:
         return ev;
     }
 
-    std::vector<EventDescription> get_pfm4_events() const
+    std::vector<Event> get_pfm4_events() const
     {
-        std::vector<EventDescription> events;
+        std::vector<Event> events;
 
         pfm_pmu_info_t pinfo;
         pfm_event_info_t info;
