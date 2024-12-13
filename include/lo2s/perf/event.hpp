@@ -291,11 +291,14 @@ public:
 
     ~EventGuard()
     {
-        close(fd_);
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
     }
 
 protected:
-    int fd_;
+    int fd_ = -1;
 };
 
 } // namespace perf
