@@ -29,6 +29,7 @@
 #include <lo2s/execution_scope.hpp>
 
 #include <cstdint>
+#include <ostream>
 #include <set>
 #include <type_traits>
 #include <variant>
@@ -148,6 +149,8 @@ public:
         attr_.watermark = 1;
         attr_.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * sysconf(_SC_PAGESIZE));
     }
+
+    friend std::ostream& operator<<(std::ostream& stream, const Event& event);
 
     void exclude_kernel(bool exclude_kernel)
     {
