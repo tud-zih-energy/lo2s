@@ -58,50 +58,6 @@ namespace
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
-static lo2s::perf::Event HW_EVENT_TABLE[] = {
-    PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
-    PERF_EVENT_HW("instructions", INSTRUCTIONS),
-    PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
-    PERF_EVENT_HW("cache-misses", CACHE_MISSES),
-    PERF_EVENT_HW("branch-instructions", BRANCH_INSTRUCTIONS),
-    PERF_EVENT_HW("branch-misses", BRANCH_MISSES),
-    PERF_EVENT_HW("bus-cycles", BUS_CYCLES),
-#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
-    PERF_EVENT_HW("stalled-cycles-frontend", STALLED_CYCLES_FRONTEND),
-#endif
-#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_BACKEND
-    PERF_EVENT_HW("stalled-cycles-backend", STALLED_CYCLES_BACKEND),
-#endif
-#ifdef HAVE_PERF_EVENT_REF_CYCLES
-    PERF_EVENT_HW("ref-cycles", REF_CPU_CYCLES),
-#endif
-};
-
-static lo2s::perf::Event SW_EVENT_TABLE[] = {
-    PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
-    PERF_EVENT_SW("task-clock", TASK_CLOCK),
-    PERF_EVENT_SW("page-faults", PAGE_FAULTS),
-    PERF_EVENT_SW("context-switches", CONTEXT_SWITCHES),
-    PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
-    PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
-    PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
-#ifdef HAVE_PERF_EVENT_ALIGNMENT_FAULTS
-    PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
-#endif
-#ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
-    PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
-#endif
-#ifdef HAVE_PERF_EVENT_DUMMY
-    PERF_EVENT_SW("dummy", DUMMY),
-#endif
-#ifdef HAVE_PERF_EVENT_BPF_OUTPUT
-    PERF_EVENT_SW("bpf-output", BPF_OUTPUT),
-#endif
-#ifdef HAVE_PERF_EVENT_CGROUP_SWITCHES
-    PERF_EVENT_SW("cgroup-switches", CGROUP_SWITCHES),
-#endif
-};
-
 #define PERF_MAKE_CACHE_ID(id) (id)
 #define PERF_MAKE_CACHE_OP_ID(id) ((id) << 8)
 #define PERF_MAKE_CACHE_OP_RES_ID(id) ((id) << 16)
@@ -158,6 +114,49 @@ namespace perf
 static void populate_event_map(std::unordered_map<std::string, Event>& map)
 {
     Log::info() << "checking available events...";
+    lo2s::perf::Event HW_EVENT_TABLE[] = {
+        PERF_EVENT_HW("cpu-cycles", CPU_CYCLES),
+        PERF_EVENT_HW("instructions", INSTRUCTIONS),
+        PERF_EVENT_HW("cache-references", CACHE_REFERENCES),
+        PERF_EVENT_HW("cache-misses", CACHE_MISSES),
+        PERF_EVENT_HW("branch-instructions", BRANCH_INSTRUCTIONS),
+        PERF_EVENT_HW("branch-misses", BRANCH_MISSES),
+        PERF_EVENT_HW("bus-cycles", BUS_CYCLES),
+#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
+        PERF_EVENT_HW("stalled-cycles-frontend", STALLED_CYCLES_FRONTEND),
+#endif
+#ifdef HAVE_PERF_EVENT_STALLED_CYCLES_BACKEND
+        PERF_EVENT_HW("stalled-cycles-backend", STALLED_CYCLES_BACKEND),
+#endif
+#ifdef HAVE_PERF_EVENT_REF_CYCLES
+        PERF_EVENT_HW("ref-cycles", REF_CPU_CYCLES),
+#endif
+    };
+    lo2s::perf::Event SW_EVENT_TABLE[] = {
+        PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
+        PERF_EVENT_SW("task-clock", TASK_CLOCK),
+        PERF_EVENT_SW("page-faults", PAGE_FAULTS),
+        PERF_EVENT_SW("context-switches", CONTEXT_SWITCHES),
+        PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
+        PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
+        PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
+#ifdef HAVE_PERF_EVENT_ALIGNMENT_FAULTS
+        PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
+#endif
+#ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
+        PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
+#endif
+#ifdef HAVE_PERF_EVENT_DUMMY
+        PERF_EVENT_SW("dummy", DUMMY),
+#endif
+#ifdef HAVE_PERF_EVENT_BPF_OUTPUT
+        PERF_EVENT_SW("bpf-output", BPF_OUTPUT),
+#endif
+#ifdef HAVE_PERF_EVENT_CGROUP_SWITCHES
+        PERF_EVENT_SW("cgroup-switches", CGROUP_SWITCHES),
+#endif
+    };
+
     map.reserve(array_size(HW_EVENT_TABLE) + array_size(SW_EVENT_TABLE) +
                 array_size(CACHE_NAME_TABLE) * array_size(CACHE_OPERATION_TABLE));
     for (auto& ev : HW_EVENT_TABLE)
