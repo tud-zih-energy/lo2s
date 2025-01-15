@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/build_config.hpp>
 #include <lo2s/perf/event.hpp>
 #include <lo2s/perf/event_provider.hpp>
 
@@ -32,6 +33,7 @@
 extern "C"
 {
 #include <fcntl.h>
+#include <linux/hw_breakpoint.h>
 #include <sys/ioctl.h>
 }
 
@@ -348,6 +350,246 @@ bool Event::degrade_precision()
     }
 }
 
+static void print_bits(std::ostream& stream, const std::string& name,
+                       std::map<uint64_t, std::string> known_bits, uint64_t value)
+{
+    std::vector<std::string> active_bits;
+    for (auto elem : known_bits)
+    {
+        if (value & elem.first)
+        {
+            active_bits.push_back(elem.second);
+            value &= ~elem.first;
+        }
+    }
+
+    if (value != 0)
+    {
+        stream << "Unknown perf_event_attr." << name << " bits: " << std::hex << value << std::dec;
+    }
+
+    std::string active_bits_str;
+    if (!active_bits.empty())
+    {
+        auto it = active_bits.begin();
+        for (; it != --active_bits.end(); it++)
+        {
+            active_bits_str += *it;
+            active_bits_str += " | ";
+        }
+        active_bits_str += *it;
+    }
+    stream << "\t" << name << ": " << active_bits_str << "\n";
+}
+
+std::ostream& operator<<(std::ostream& stream, const Event& event)
+{
+    stream << "{\n";
+    switch (event.attr_.type)
+    {
+    case PERF_TYPE_HARDWARE:
+        stream << "\ttype: PERF_TYPE_HARDWARE\n";
+        break;
+    case PERF_TYPE_SOFTWARE:
+        stream << "\ttype: PERF_TYPE_SOFTWARE\n";
+        break;
+    case PERF_TYPE_TRACEPOINT:
+        stream << "\ttype: PERF_TYPE_TRACEPOINT\n";
+        break;
+    case PERF_TYPE_HW_CACHE:
+        stream << "\ttype: PERF_TYPE_HW_CACHE\n";
+        break;
+    case PERF_TYPE_RAW:
+        stream << "\ttype: PERF_TYPE_RAW\n";
+        break;
+    case PERF_TYPE_BREAKPOINT:
+        stream << "\ttype: PERF_TYPE_BREAKPOINT\n";
+        break;
+    default:
+        stream << "\ttype: " << std::hex << event.attr_.type << std::dec << "\n";
+    }
+    stream << "\tsize: " << event.attr_.size << "\n";
+    stream << std::hex << "\tconfig: 0x" << event.attr_.config << std::dec << "\n";
+    stream << std::hex << "\tconfig1: 0x" << event.attr_.config1 << std::dec << "\n";
+    stream << std::hex << "\tconfig2: 0x" << event.attr_.config2 << std::dec << "\n";
+    stream << "\tprecise_ip: " << event.attr_.precise_ip << "/3\n";
+
+    std::map<uint64_t, std::string> read_format = {
+        { PERF_FORMAT_TOTAL_TIME_ENABLED, "PERF_FORMAT_TOTAL_TIME_ENABLED" },
+        { PERF_FORMAT_TOTAL_TIME_RUNNING, "PERF_FORMAT_TOTAL_TIME_RUNNING" },
+        { PERF_FORMAT_ID, "PERF_FORMAT_ID" },
+        { PERF_FORMAT_GROUP, "PERF_FORMAT_GROUP" },
+        { PERF_FORMAT_LOST, "PERF_FORMAT_LOST" }
+    };
+
+    print_bits(stream, "read_format", read_format, event.attr_.read_format);
+
+#ifndef USE_HW_BREAKPOINT_COMPAT
+    if (event.attr_.type == PERF_TYPE_BREAKPOINT)
+    {
+        std::map<uint64_t, std::string> bp_types = { { HW_BREAKPOINT_EMPTY, "HW_BREAKPOINT_EMPTY" },
+                                                     { HW_BREAKPOINT_W, "HW_BREAKPOINT_W" },
+                                                     { HW_BREAKPOINT_R, "HW_BREAKPOINT_R" },
+                                                     { HW_BREAKPOINT_RW, "HW_BREAKPOINT_RW" },
+                                                     { HW_BREAKPOINT_X, "HW_BREAKPOINT_X" } };
+
+        print_bits(stream, "bp_type", bp_types, event.attr_.bp_type);
+        stream << "\tbp_addr: 0x" << std::hex << event.attr_.bp_addr << std::dec << "\n";
+        switch (event.attr_.bp_len)
+        {
+        case HW_BREAKPOINT_LEN_1:
+            stream << "\tbp_len: HW_BREAKPOINT_LEN_1\n";
+            break;
+        case HW_BREAKPOINT_LEN_2:
+            stream << "\tbp_len: HW_BREAKPOINT_LEN_2\n";
+            break;
+        case HW_BREAKPOINT_LEN_4:
+            stream << "\tbp_len: HW_BREAKPOINT_LEN_4\n";
+            break;
+        case HW_BREAKPOINT_LEN_8:
+            stream << "\tbp_len: HW_BREAKPOINT_LEN_8\n";
+            break;
+        }
+    }
+#endif
+    if (event.attr_.freq)
+    {
+        stream << "\tsample_freq: " << event.attr_.sample_freq << " Hz\n";
+    }
+    else
+    {
+        stream << "\tsample_period: " << event.attr_.sample_period << " event(s)\n";
+    }
+
+    std::map<uint64_t, std::string> sample_format = {
+        { PERF_SAMPLE_CALLCHAIN, "PERF_SAMPLE_CALLCHAIN" },
+        { PERF_SAMPLE_READ, "PERF_SAMPLE_READ" },
+        { PERF_SAMPLE_IP, "PERF_SAMPLE_IP" },
+        { PERF_SAMPLE_TID, "PERF_SAMPLE_TID" },
+        { PERF_SAMPLE_CPU, "PERF_SAMPLE_CPU" },
+        { PERF_SAMPLE_TIME, "PERF_SAMPLE_TIME" },
+        { PERF_SAMPLE_RAW, "PERF_SAMPLE_RAW" },
+        { PERF_SAMPLE_IDENTIFIER, "PERF_SAMPLE_IDENTIFIER" }
+    };
+
+    print_bits(stream, "sample_type", sample_format, event.attr_.sample_type);
+
+    stream << "\tFLAGS: \n";
+    if (event.attr_.disabled)
+    {
+        stream << "\t\t- disabled\n";
+    }
+    if (event.attr_.pinned)
+    {
+        stream << "\t\t- pinned\n";
+    }
+    if (event.attr_.exclusive)
+    {
+        stream << "\t\t- exclusive\n";
+    }
+    if (event.attr_.exclude_kernel)
+    {
+        stream << "\t\t- exclude_kernel\n";
+    }
+    if (event.attr_.exclude_user)
+    {
+        stream << "\t\t- exclude_user\n";
+    }
+    if (event.attr_.exclude_hv)
+    {
+        stream << "\t\t- exclude_hv\n";
+    }
+    if (event.attr_.exclude_idle)
+    {
+        stream << "\t\t- exclude_idle\n";
+    }
+    if (event.attr_.mmap)
+    {
+        stream << "\t\t- mmap\n";
+    }
+    if (event.attr_.inherit_stat)
+    {
+        stream << "\t\t- inherit_stat\n";
+    }
+    if (event.attr_.enable_on_exec)
+    {
+        stream << "\t\t- enable_on_exec\n";
+    }
+    if (event.attr_.task)
+    {
+        stream << "\t\t- task\n";
+    }
+    if (event.attr_.watermark)
+    {
+        stream << "\t\t- wakeup_watermark (" << event.attr_.wakeup_watermark << " bytes)"
+               << "\n";
+    }
+    else
+    {
+
+        stream << "\t\t- wakeup_events (" << event.attr_.wakeup_events << " events)\n";
+    }
+    if (event.attr_.mmap_data)
+    {
+        stream << "\t\t- mmap_data\n";
+    }
+    if (event.attr_.sample_id_all)
+    {
+        stream << "\t\t- sample_id_all\n";
+    }
+    if (event.attr_.mmap2)
+    {
+        stream << "\t\t- mmap2\n";
+    }
+    if (event.attr_.context_switch)
+    {
+        stream << "\t\t- context_switch\n";
+    }
+    if (event.attr_.comm_exec)
+    {
+        stream << "\t\t- comm_exec\n";
+    }
+    if (event.attr_.comm)
+    {
+        stream << "\t\t- comm\n";
+    }
+
+    if (event.attr_.comm_exec)
+    {
+        stream << "\t\t- comm_exec\n";
+    }
+    if (event.attr_.use_clockid)
+    {
+        std::string clock;
+        switch (event.attr_.clockid)
+        {
+        case CLOCK_MONOTONIC:
+            clock = "monotonic";
+            break;
+        case CLOCK_MONOTONIC_RAW:
+            clock = "monotonic-raw";
+            break;
+        case CLOCK_REALTIME:
+            clock = "realtime";
+            break;
+        case CLOCK_BOOTTIME:
+            clock = "boottime";
+            break;
+        case CLOCK_TAI:
+            clock = "tai";
+            break;
+        default:
+            stream << "Unknown clockid: " << event.attr_.clockid << "\n";
+            clock = "???";
+            break;
+        }
+        stream << "\t\t- clockid (" << clock << ")\n";
+    }
+
+    stream << "}\n";
+    return stream;
+}
+
 SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec)
 : Event(ev_name, static_cast<perf_type_id>(0), 0)
 {
@@ -557,22 +799,26 @@ EventGuard EventGuard::open_child(Event child, ExecutionScope location, int cgro
 EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd)
 : fd_(-1)
 {
-    // can be deleted when scope gets replaced
     ExecutionScope scope;
     std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
 
+    Log::trace() << "Opening perf event: " << ev.name() << "[" << scope.name()
+                 << ", group fd: " << group_fd << ", cgroup fd: " << cgroup_fd << "]";
+    Log::trace() << ev;
     fd_ = perf_event_open(&ev.mut_attr(), scope, group_fd, 0, cgroup_fd);
 
     if (fd_ < 0)
     {
+        Log::trace() << "Couldn't open event!: " << strerror(errno);
         throw_errno();
     }
 
     if (fcntl(fd_, F_SETFL, O_NONBLOCK))
     {
-        Log::error() << errno;
+        Log::trace() << "Couldn't set event nonblocking: " << strerror(errno);
         throw_errno();
     }
+    Log::trace() << "Succesfully opened perf event! fd: " << fd_;
 }
 
 void EventGuard::enable()
