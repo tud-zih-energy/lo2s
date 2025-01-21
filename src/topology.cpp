@@ -3,10 +3,10 @@
 
 namespace lo2s
 {
-const std::filesystem::path Topology::base_path = "/sys/devices/system/cpu";
 
 void Topology::read_proc()
 {
+    const std::filesystem::path base_path = "/sys/devices/system/cpu";
     auto online = parse_list_from_file(base_path / "online");
 
     for (auto cpu_id : online)

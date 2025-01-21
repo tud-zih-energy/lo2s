@@ -1,4 +1,4 @@
-// Predefined events which are only present in more modern kernels src/perf/event_provider.cpp
+// Predefined events which are only present in more modern kernels src/perf/event_resolver.cpp
 
 #cmakedefine HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
 

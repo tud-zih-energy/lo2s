@@ -180,11 +180,11 @@ set(SOURCE_FILES
     src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
 
-    src/perf/event_provider.cpp
-    src/perf/event.cpp
+    src/perf/event_resolver.cpp
+    src/perf/event_attr.cpp
 
     src/perf/bio/block_device.cpp
-    src/perf/counter/counter_provider.cpp
+    src/perf/event_composer.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
 
@@ -194,7 +194,7 @@ set(SOURCE_FILES
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/writer.cpp
-    src/perf/tracepoint/event.cpp
+    src/perf/tracepoint/event_attr.cpp
     src/perf/syscall/writer.cpp
 
     src/time/time.cpp

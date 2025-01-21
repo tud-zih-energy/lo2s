@@ -25,8 +25,9 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 
-#include <lo2s/perf/event.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <cstring>
@@ -50,84 +51,30 @@ namespace group
 template <class T>
 Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
 : counter_collection_(
-      CounterProvider::instance().collection_for(MeasurementScope::group_metric(scope))),
+      EventComposer::instance().counters_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
-    if (config().metric_use_frequency)
+    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader->name() << "'";
+
+    if (enable_on_exec)
     {
-        counter_collection_.leader().sample_freq(config().metric_frequency);
+        counter_collection_.leader->set_enable_on_exec();
     }
     else
     {
-        counter_collection_.leader().sample_period(config().metric_count);
+        counter_collection_.leader->set_disabled();
     }
 
-    do
-    {
-        try
-        {
-            counter_leader_ =
-                counter_collection_.leader().open_as_group_leader(scope, config().cgroup_fd);
-        }
-        catch (const std::system_error& e)
-        {
-            // perf_try_event_open was used here before
-            if (counter_leader_.value().get_fd() < 0 && errno == EACCES &&
-                !counter_collection_.leader().attr().exclude_kernel && perf_event_paranoid() > 1)
-            {
-                counter_collection_.leader().mut_attr().exclude_kernel = 1;
-                perf_warn_paranoid();
-
-                continue;
-            }
-
-            if (!counter_leader_.value().is_valid())
-            {
-                Log::error() << "perf_event_open for counter group leader failed";
-                throw_errno();
-            }
-        }
-    } while (!counter_leader_.value().is_valid());
-
-    Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader().name()
-                 << "'";
+    counter_leader_ = counter_collection_.leader->open(scope, config().cgroup_fd);
 
     for (auto& counter_ev : counter_collection_.counters)
     {
-        if (counter_ev.is_available_in(scope))
-        {
-            std::optional<EventGuard> counter = std::nullopt;
-            counter_ev.mut_attr().exclude_kernel =
-                counter_collection_.leader().attr().exclude_kernel;
-
-            try
-            {
-                counter.value() = counter_leader_.value().open_child(counter_ev, scope);
-                counters_.emplace_back(std::move(counter.value()));
-            }
-            catch (const std::system_error& e)
-            {
-                if (!counter.value().is_valid())
-                {
-                    Log::error() << "failed to add counter '" << counter_ev.name()
-                                 << "': " << e.code().message();
-
-                    if (e.code().value() == EINVAL)
-                    {
-                        Log::error() << "opening " << counter_collection_.counters.size()
-                                     << " counters at once might exceed the hardware limit of "
-                                        "simultaneously "
-                                        "openable counters.";
-                    }
-                    throw e;
-                }
-            }
-        }
+        counters_.emplace_back(counter_leader_->open_child(counter_ev, scope));
     }
 
     if (!enable_on_exec)
     {
-        counter_leader_.value().enable();
+        counter_leader_->enable();
     }
 
     EventReader<T>::init_mmap(counter_leader_.value().get_fd());

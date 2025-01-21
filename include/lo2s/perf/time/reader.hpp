@@ -22,8 +22,8 @@
 #pragma once
 
 #include <lo2s/perf/clock.hpp>
-#include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 
 #include <lo2s/log.hpp>
 

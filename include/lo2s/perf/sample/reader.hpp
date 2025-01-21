@@ -21,8 +21,9 @@
 
 #pragma once
 
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
@@ -84,40 +85,18 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        Event event = EventProvider::instance().create_sampling_event(enable_on_exec);
-
-        do
+        EventAttr event = EventComposer::instance().create_sampling_event();
+        if (enable_on_exec)
         {
-            try
-            {
-                event_ = event.open(scope, config().cgroup_fd);
-            }
-            catch (const std::system_error& e)
-            {
-                if (e.code().value() == EACCES && !event.attr().exclude_kernel &&
-                    perf_event_paranoid() > 1)
-                {
-                    event.mut_attr().exclude_kernel = 1;
-                    perf_warn_paranoid();
-                    continue;
-                }
+            event.set_enable_on_exec();
+        }
+        else
+        {
+            event.set_disabled();
+        }
 
-                if (!event.degrade_precision())
-                {
-                    Log::error() << "perf_event_open for sampling failed: " << e.what();
+        event_ = event.open(scope, config().cgroup_fd);
 
-                    if (event.attr().use_clockid)
-                    {
-                        Log::error() << "maybe the specified clock is unavailable?";
-                    }
-                    throw_errno();
-                }
-            }
-        } while (!event_.value().is_valid());
-
-        Log::debug() << "Using precise_ip level: " << event.attr().precise_ip;
-
-        // Exception safe, so much wow!
         try
         {
             init_mmap(event_.value().get_fd());

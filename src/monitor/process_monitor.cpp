@@ -21,7 +21,6 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
 
 namespace lo2s
@@ -51,15 +50,17 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         process_infos_.try_emplace(process, process, spawn);
     }
 
+    ExecutionScope scope = ExecutionScope(thread);
     if (config().sampling ||
-        perf::counter::CounterProvider::instance().has_group_counters(ExecutionScope(thread)) ||
-        perf::counter::CounterProvider::instance().has_userspace_counters(ExecutionScope(thread)))
+        !perf::EventComposer::instance().has_counters_for(MeasurementScope::group_metric(scope)) ||
+        !perf::EventComposer::instance().has_counters_for(
+            MeasurementScope::userspace_metric(scope)))
     {
         try
         {
-            auto inserted = threads_.emplace(
-                std::piecewise_construct, std::forward_as_tuple(thread),
-                std::forward_as_tuple(ExecutionScope(thread), *this, spawn, is_process));
+            auto inserted =
+                threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                 std::forward_as_tuple(scope, *this, spawn, is_process));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 
 #include <cstring>
 #include <optional>
@@ -56,7 +56,7 @@ public:
         pfm_terminate();
     }
 
-    std::optional<Event> pfm4_read_event(const std::string& ev_desc) const
+    EventAttr pfm4_read_event(const std::string& ev_desc) const
     {
         pfm_perf_encode_arg_t arg;
         struct perf_event_attr attr;
@@ -69,22 +69,18 @@ public:
 
         if (ret != PFM_SUCCESS)
         {
-            return std::nullopt;
+            throw EventAttr::InvalidEvent("Coudld not read PFM event encoding!");
         }
 
-        Event ev = Event(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
-
-        if (!ev.event_is_openable())
-        {
-            return std::nullopt;
-        }
+        EventAttr ev =
+            PredefinedEventAttr(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
 
         return ev;
     }
 
-    std::vector<Event> get_pfm4_events() const
+    std::vector<EventAttr> get_pfm4_events() const
     {
-        std::vector<Event> events;
+        std::vector<EventAttr> events;
 
         pfm_pmu_info_t pinfo;
         pfm_event_info_t info;
@@ -133,32 +129,40 @@ public:
                         else
                         {
                             has_umask = true;
-                            auto uevent = pfm4_read_event(
-                                fmt::format("{}:{}", full_event_name, attr_info.name));
-                            if (uevent)
+                            try
                             {
-                                events.emplace_back(std::move(*uevent));
+
+                                auto uevent = pfm4_read_event(
+                                    fmt::format("{}:{}", full_event_name, attr_info.name));
+                                events.emplace_back(uevent);
+                            }
+                            catch (EventAttr::InvalidEvent& e)
+                            {
                             }
                         }
                     }
 
                     if (!has_umask)
                     {
-                        auto event = pfm4_read_event(std::string(full_event_name));
-
-                        if (event)
+                        try
                         {
-                            events.emplace_back(std::move(*event));
+                            auto event = pfm4_read_event(std::string(full_event_name));
+                            events.emplace_back(event);
+                        }
+                        catch (EventAttr::InvalidEvent& e)
+                        {
                         }
                     }
                 }
                 else
                 {
-                    auto event = pfm4_read_event(std::string(full_event_name));
-
-                    if (event)
+                    try
                     {
-                        events.emplace_back(std::move(*event));
+                        auto event = pfm4_read_event(std::string(full_event_name));
+                        events.emplace_back(event);
+                    }
+                    catch (EventAttr::InvalidEvent& e)
+                    {
                     }
                 }
             }
