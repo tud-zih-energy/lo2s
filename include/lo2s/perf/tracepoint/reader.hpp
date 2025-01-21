@@ -115,8 +115,7 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, std::string name)
-    : event_(EventProvider::instance().create_tracepoint_event(name)), cpu_(cpu)
+    Reader(Cpu cpu, perf::tracepoint::TracepointEvent ev) : event_(ev), cpu_(cpu)
     {
         try
         {

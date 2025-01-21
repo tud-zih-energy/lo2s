@@ -46,7 +46,7 @@ public:
         ParseError(const std::string& what, int error_code);
     };
 
-    TracepointEvent(const std::string& name, bool enable_on_exec = false);
+    TracepointEvent(const std::string& name);
 
     void parse_format();
 
@@ -72,17 +72,11 @@ public:
         return id_;
     }
 
-    std::string name() const
-    {
-        return name_;
-    }
-
 private:
     void parse_format_line(const std::string& line);
 
     const static std::filesystem::path base_path_;
     int id_;
-    std::string name_;
     std::vector<tracepoint::EventField> fields_;
 };
 
