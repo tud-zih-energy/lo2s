@@ -29,16 +29,12 @@ namespace perf
 namespace tracepoint
 {
 
-TracepointEvent::TracepointEvent(const std::string& name, bool enable_on_exec)
-: Event(name, PERF_TYPE_TRACEPOINT, 0), name_(name)
+TracepointEvent::TracepointEvent(const std::string& name) : Event(name, PERF_TYPE_TRACEPOINT, 0)
 {
-    set_common_attrs(enable_on_exec);
     parse_format();
 
     // update to correct config (id_ set in parse_format())
     attr_.config = id_;
-    attr_.sample_type |= PERF_SAMPLE_RAW | PERF_SAMPLE_IDENTIFIER;
-
     update_availability();
 }
 
