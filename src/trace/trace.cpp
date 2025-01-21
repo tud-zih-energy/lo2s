@@ -580,7 +580,7 @@ Trace::metric_instance(const otf2::definition::metric_class& metric_class,
 }
 
 otf2::definition::metric_class&
-Trace::tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event)
+Trace::tracepoint_metric_class(const perf::tracepoint::TracepointEventAttr& event)
 {
     if (!registry_.has<otf2::definition::metric_class>(ByString(event.name())))
     {

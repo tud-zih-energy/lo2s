@@ -27,7 +27,6 @@
 
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
 
 #include <filesystem>
 

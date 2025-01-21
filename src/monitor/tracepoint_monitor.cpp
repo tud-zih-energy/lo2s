@@ -36,15 +36,14 @@ namespace monitor
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 : monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
 {
-    perf::counter::CounterCollection tracepoint_collection =
-        perf::counter::CounterProvider::instance().collection_for(
-            MeasurementScope::tracepoint(cpu_.as_scope()));
+    std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
+        perf::EventComposer::instance().emplace_tracepoints();
 
-    for (const auto& event : tracepoint_collection.counters)
+    for (const auto& event : tracepoint_events)
     {
-        auto& mc = trace.tracepoint_metric_class(event.name());
+        auto& mc = trace.tracepoint_metric_class(event);
         std::unique_ptr<perf::tracepoint::Writer> writer =
-            std::make_unique<perf::tracepoint::Writer>(cpu, event.name(), trace, mc);
+            std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 
         add_fd(writer->fd());
         perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),

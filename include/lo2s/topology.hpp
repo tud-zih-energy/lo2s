@@ -134,7 +134,5 @@ private:
     std::map<Cpu, Package> cpu_to_package_;
 
     bool hypervised_ = false;
-
-    const static std::filesystem::path base_path;
 };
 } // namespace lo2s

@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <regex>
 
 namespace lo2s
@@ -29,27 +29,24 @@ namespace perf
 namespace tracepoint
 {
 
-TracepointEvent::TracepointEvent(const std::string& name, bool enable_on_exec)
-: Event(name, PERF_TYPE_TRACEPOINT, 0), name_(name)
+TracepointEventAttr::TracepointEventAttr(const std::string& name)
+: EventAttr(name, PERF_TYPE_TRACEPOINT, 0)
 {
-    set_common_attrs(enable_on_exec);
     parse_format();
 
     // update to correct config (id_ set in parse_format())
     attr_.config = id_;
-    attr_.sample_type |= PERF_SAMPLE_RAW | PERF_SAMPLE_IDENTIFIER;
-
     update_availability();
 }
 
-const std::filesystem::path TracepointEvent::base_path_ = "/sys/kernel/debug/tracing/events";
+const std::filesystem::path TracepointEventAttr::base_path_ = "/sys/kernel/debug/tracing/events";
 
-TracepointEvent::ParseError::ParseError(const std::string& what, int error_code)
+TracepointEventAttr::ParseError::ParseError(const std::string& what, int error_code)
 : std::runtime_error{ what + ": " + std::strerror(error_code) }
 {
 }
 
-void TracepointEvent::parse_format()
+void TracepointEventAttr::parse_format()
 {
     using namespace std::string_literals;
 
@@ -89,7 +86,7 @@ void TracepointEvent::parse_format()
     }
 }
 
-void TracepointEvent::parse_format_line(const std::string& line)
+void TracepointEventAttr::parse_format_line(const std::string& line)
 {
     static std::regex field_regex(
         "^\\s+field:([^;]+);\\s+offset:(\\d+);\\s+size:(\\d+);\\s+signed:(\\d+);$");

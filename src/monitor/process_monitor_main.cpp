@@ -158,9 +158,9 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     {
         env.emplace("CUDA_INJECTION64_PATH", config().cuda_injectionlib_path);
 
-        if (config().use_clockid)
+        if (config().clockid)
         {
-            env.emplace("LO2S_CLOCKID", std::to_string(config().clockid));
+            env.emplace("LO2S_CLOCKID", std::to_string(config().clockid.value()));
         }
     }
 #endif

@@ -24,7 +24,7 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <cstdint>
