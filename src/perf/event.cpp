@@ -33,7 +33,6 @@
 extern "C"
 {
 #include <fcntl.h>
-#include <linux/hw_breakpoint.h>
 #include <sys/ioctl.h>
 }
 
@@ -149,7 +148,7 @@ SimpleEvent::SimpleEvent(const std::string name, perf_type_id type, std::uint64_
 
     cpus_ = test_cpus(*this);
 
-    update_availability();
+    event_is_openable();
 }
 
 void SysfsEvent::parse_pmu_path(const std::string& ev_name)
