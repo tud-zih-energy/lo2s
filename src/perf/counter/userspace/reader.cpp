@@ -46,42 +46,15 @@ namespace userspace
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
 : counter_collection_(
-      CounterProvider::instance().collection_for(MeasurementScope::userspace_metric(scope))),
+      EventConfig::instance().counters_for(MeasurementScope::userspace_metric(scope))),
   counter_buffer_(counter_collection_.counters.size()),
   timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
   data_(counter_collection_.counters.size())
 {
     for (auto& event : counter_collection_.counters)
     {
-        std::optional<EventGuard> counter = std::nullopt;
-
-        try
-        {
-            counter.value() = event.open(scope);
-            counters_.emplace_back(std::move(counter.value()));
-        }
-        catch (const std::system_error& e)
-        {
-            // perf_try_event_open was used here before
-            if (counter.value().get_fd() < 0 && errno == EACCES && !event.attr().exclude_kernel &&
-                perf_event_paranoid() > 1)
-            {
-                event.mut_attr().exclude_kernel = 1;
-                perf_warn_paranoid();
-
-                counter = event.open(scope);
-            }
-
-            if (!counter.value().is_valid())
-            {
-                Log::error() << "perf_event_open for counter failed";
-                throw_errno();
-            }
-            else
-            {
-                counters_.emplace_back(std::move(counter.value()));
-            }
-        }
+        std::optional<EventGuard> counter = event.open(scope);
+        counters_.emplace_back(std::move(counter.value()));
     }
 }
 

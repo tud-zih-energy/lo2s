@@ -302,6 +302,7 @@ public:
     static SimpleEvent raw(std::string name);
 };
 
+#ifndef USE_HW_BREAKPOINT_COMPAT
 class BreakpointEvent : public Event
 {
 public:
@@ -314,6 +315,7 @@ public:
         attr_.bp_len = HW_BREAKPOINT_LEN_8;
     }
 };
+#endif
 
 /**
  * Contains an event parsed from sysfs

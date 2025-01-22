@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/event_config.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/tracepoint/event.hpp>

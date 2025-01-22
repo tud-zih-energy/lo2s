@@ -34,14 +34,18 @@ namespace counter
 {
 struct CounterCollection
 {
-    std::optional<Event> leader_;
+    CounterCollection() : leader(std::nullopt)
+    {
+    }
+
+    std::optional<Event> leader = std::nullopt;
     std::vector<Event> counters;
 
     double get_scale(int index) const
     {
         if (index == 0)
         {
-            return leader_.value().scale();
+            return leader.value().scale();
         }
         else
         {
@@ -49,14 +53,9 @@ struct CounterCollection
         }
     }
 
-    Event& leader() const
-    {
-        return const_cast<Event&>(leader_.value());
-    }
-
     friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader_.value() == rhs.leader_.value())
+        if (lhs.leader.value() == rhs.leader.value())
         {
             return lhs.counters == rhs.counters;
         }
@@ -65,11 +64,11 @@ struct CounterCollection
 
     friend bool operator<(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader_.value() == rhs.leader_.value())
+        if (lhs.leader.value() == rhs.leader.value())
         {
             return lhs.counters < rhs.counters;
         }
-        return lhs.leader_.value() < rhs.leader_.value();
+        return lhs.leader.value() < rhs.leader.value();
     }
 };
 

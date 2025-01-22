@@ -23,6 +23,7 @@
 
 #include <lo2s/perf/tracepoint/format.hpp>
 
+#include <lo2s/perf/event_config.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
