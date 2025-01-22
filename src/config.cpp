@@ -91,13 +91,20 @@ static inline void print_availability(std::ostream& os, const std::string& descr
         else if (ev.availability() == perf::Availability::SYSTEM_MODE)
         {
             availability = " #";
-        }
-        if (ev.supported_cpus() != Topology::instance().cpus())
-        {
-            const auto& cpus = ev.supported_cpus();
-            cpu =
-                fmt::format(" [ CPUs {}-{} ]", std::min_element(cpus.begin(), cpus.end())->as_int(),
-                            std::max_element(cpus.begin(), cpus.end())->as_int());
+            if (ev.supported_cpus() != Topology::instance().cpus())
+            {
+                const auto& cpus = ev.supported_cpus();
+                if (cpus.size() == 1)
+                {
+                    cpu = fmt::format(" [ CPU {} ]", cpus.begin()->as_int());
+                }
+                else
+                {
+                    cpu = fmt::format(" [ CPUs {}-{} ]",
+                                      std::min_element(cpus.begin(), cpus.end())->as_int(),
+                                      std::max_element(cpus.begin(), cpus.end())->as_int());
+                }
+            }
         }
 
         event_names.push_back(ev.name() + availability + cpu);
@@ -423,6 +430,26 @@ void parse_program_options(int argc, const char** argv)
     {
         print_version(std::cout);
         std::exit(EXIT_SUCCESS);
+    }
+
+    if (!arguments.get_all("tracepoint").empty() || arguments.given("block-io") ||
+        !arguments.get_all("syscall").empty())
+    {
+        try
+        {
+            if (!std::filesystem::exists("/sys/kernel/debug/tracing"))
+            {
+                Log::error() << "syscall, block-io and tracepoint recording require access to "
+                                "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+                std::exit(EXIT_FAILURE);
+            }
+        }
+        catch (std::filesystem::filesystem_error&)
+        {
+            Log::error() << "syscall, block-io and tracepoint recording require access to "
+                            "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     if (arguments.given("quiet") && arguments.given("verbose"))
