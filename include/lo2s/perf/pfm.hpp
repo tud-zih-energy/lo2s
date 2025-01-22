@@ -72,12 +72,7 @@ public:
             return std::nullopt;
         }
 
-        Event ev = Event(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
-
-        if (!ev.event_is_openable())
-        {
-            return std::nullopt;
-        }
+        Event ev = SimpleEvent(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
 
         return ev;
     }
