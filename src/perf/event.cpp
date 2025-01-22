@@ -42,6 +42,23 @@ namespace lo2s
 namespace perf
 {
 
+std::set<Cpu> test_cpus(Event ev)
+{
+    std::set<Cpu> cpus = std::set<Cpu>();
+    for (const auto& cpu : Topology::instance().cpus())
+    {
+        try
+        {
+            EventGuard ev_instance = ev.open(cpu.as_scope(), -1);
+            cpus.emplace(cpu);
+        }
+        catch (const std::system_error& e)
+        {
+        }
+    }
+    return cpus;
+}
+
 template <typename T>
 std::optional<T> try_read_file(const std::string& filename)
 {
@@ -114,34 +131,28 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-Event::Event(const std::string& name, perf_type_id type, std::uint64_t config,
-             std::uint64_t config1)
+Event::Event(const std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1)
 : name_(name)
 {
     memset(&attr_, 0, sizeof(attr_));
     attr_.size = sizeof(attr_);
 
-    attr_.sample_type = PERF_SAMPLE_TIME;
     attr_.type = type;
     attr_.config = config;
     attr_.config1 = config1;
+}
 
-    // Needed when scaling multiplexed events, and recognize activation phases
-    attr_.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
+SimpleEvent::SimpleEvent(const std::string name, perf_type_id type, std::uint64_t config,
+                         std::uint64_t config1)
+: Event(name, type, config, config1)
+{
 
-    try
-    {
-        parse_pmu_path(name_);
-    }
-    catch (const EventProvider::InvalidEvent&) // ignore
-    {
-    }
+    cpus_ = test_cpus(*this);
 
-    parse_cpus();
     update_availability();
 }
 
-void Event::parse_pmu_path(const std::string& ev_name)
+void SysfsEvent::parse_pmu_path(const std::string& ev_name)
 {
     static const std::regex ev_name_regex(R"(([a-z0-9-_]+)[\/:]([a-z0-9-_]+)\/?)");
     std::smatch ev_name_match;
@@ -149,27 +160,11 @@ void Event::parse_pmu_path(const std::string& ev_name)
     if (!std::regex_match(ev_name, ev_name_match, ev_name_regex))
     {
         pmu_path_ = std::filesystem::path();
-        throw EventProvider::InvalidEvent("invalid event description format");
     }
 
     name_ = ev_name_match[2];
     pmu_name_ = ev_name_match[1];
     pmu_path_ = std::filesystem::path("/sys/bus/event_source/devices") / pmu_name_;
-}
-
-void Event::set_common_attrs(bool enable_on_exec)
-{
-    memset(&attr_, 0, sizeof(attr_));
-    attr_.size = sizeof(attr_);
-    attr_.type = -1;
-    attr_.disabled = 1;
-
-    attr_.sample_period = 1;
-    attr_.enable_on_exec = enable_on_exec;
-
-    // Needed when scaling multiplexed events, and recognize activation phases
-    attr_.read_format = PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING;
-    attr_.sample_type = PERF_SAMPLE_TIME;
 }
 
 void Event::event_attr_update(std::uint64_t value, const std::string& format)
@@ -203,67 +198,17 @@ void Event::event_attr_update(std::uint64_t value, const std::string& format)
     }
 }
 
-void Event::time_attrs([[maybe_unused]] uint64_t addr, bool enable_on_exec)
-{
-    set_common_attrs(enable_on_exec);
-
-#ifndef USE_HW_BREAKPOINT_COMPAT
-    attr_.type = PERF_TYPE_BREAKPOINT;
-    attr_.bp_type = HW_BREAKPOINT_W;
-    attr_.bp_addr = addr;
-    attr_.bp_len = HW_BREAKPOINT_LEN_8;
-    attr_.wakeup_events = 1;
-#else
-    attr_.type = PERF_TYPE_HARDWARE;
-    attr_.config = PERF_COUNT_HW_INSTRUCTIONS;
-    attr_.sample_period = 100000000;
-    attr_.task = 1;
-#endif
-}
-
-void Event::parse_cpus()
-{
-    if (pmu_path_.empty())
-    {
-        for (const auto& cpu : Topology::instance().cpus())
-        {
-            try
-            {
-                EventGuard ev_instance = open(cpu.as_scope(), -1);
-                cpus_.emplace(cpu);
-            }
-            catch (const std::system_error& e)
-            {
-            }
-        }
-
-        return;
-    }
-
-    // If the processor is heterogenous, "cpus" contains the cores that support this PMU. If the
-    // PMU is an uncore PMU "cpumask" contains the cores that are logically assigned to that
-    // PMU. Why there need to be two seperate files instead of one, nobody knows, but simply
-    // parse both.
-    auto cpuids = parse_list_from_file(pmu_path_ / "cpus");
-
-    if (cpuids.empty())
-    {
-        cpuids = parse_list_from_file(pmu_path_ / "cpumask");
-    }
-
-    std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus_, cpus_.end()),
-                   [](uint32_t cpuid) { return Cpu(cpuid); });
-}
-
 void Event::sample_period(const int& period)
 {
     Log::debug() << "counter::Reader: sample_period: " << period;
+    attr_.freq = false;
     attr_.sample_period = period;
 }
 
 void Event::sample_freq(const uint64_t& freq)
 {
     Log::debug() << "counter::Reader: sample_freq: " << freq;
+    attr_.freq = true;
     attr_.sample_freq = freq;
 }
 
@@ -281,13 +226,13 @@ bool Event::event_is_openable()
 {
     update_availability();
 
-    if (!is_valid())
+    if (availability_ == Availability::UNAVAILABLE)
     {
         Log::debug() << "perf event not openable, retrying with exclude_kernel=1";
         attr_.exclude_kernel = 1;
         update_availability();
 
-        if (!is_valid())
+        if (availability_ == Availability::UNAVAILABLE)
         {
             switch (errno)
             {
@@ -307,15 +252,15 @@ bool Event::event_is_openable()
 
 void Event::update_availability()
 {
-    availability_ = Availability::UNAVAILABLE;
-
+    bool proc = false;
+    bool system = false;
     try
     {
         EventGuard proc_ev = open(Thread(0));
 
         if (proc_ev.get_fd() != -1)
         {
-            availability_ |= Availability::PROCESS_MODE;
+            proc = true;
         }
     }
     catch (const std::system_error& e)
@@ -328,26 +273,37 @@ void Event::update_availability()
 
         if (sys_ev.get_fd() != -1)
         {
-            availability_ |= Availability::SYSTEM_MODE;
+            system = true;
         }
     }
     catch (const std::system_error& e)
     {
     }
-}
 
-bool Event::degrade_precision()
-{
-    /* reduce exactness of IP can help if the kernel does not support really exact events */
-    if (attr_.precise_ip == 0)
+    if (proc == false && system == false)
     {
-        return false;
+        availability_ = Availability::UNAVAILABLE;
+    }
+    else if (proc == true && system == false)
+    {
+        availability_ = Availability::PROCESS_MODE;
+    }
+    else if (proc == false && system == true)
+    {
+        availability_ = Availability::SYSTEM_MODE;
     }
     else
     {
-        attr_.precise_ip--;
-        return true;
+        availability_ = Availability::UNIVERSAL;
     }
+}
+
+SimpleEvent SimpleEvent::raw(std::string ev_name)
+{
+    // Do not check whether the event_is_openable because we don't know whether we are in
+    // system or process mode
+    SimpleEvent event(ev_name, PERF_TYPE_RAW, std::stoull(ev_name.substr(1), nullptr, 16), 0);
+    return event;
 }
 
 static void print_bits(std::ostream& stream, std::string name,
@@ -590,11 +546,8 @@ std::ostream& operator<<(std::ostream& stream, const Event& event)
     return stream;
 }
 
-SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec)
-: Event(ev_name, static_cast<perf_type_id>(0), 0)
+SysfsEvent::SysfsEvent(const std::string ev_name) : Event(ev_name, static_cast<perf_type_id>(0), 0)
 {
-    set_common_attrs(enable_on_exec);
-
     // Parse event description //
 
     /* Event description format:
@@ -670,6 +623,26 @@ SysfsEvent::SysfsEvent(const std::string& ev_name, bool enable_on_exec)
         EC_VALUE,
     };
 
+    // If the processor is heterogenous, "cpus" contains the cores that support this PMU. If the
+    // PMU is an uncore PMU "cpumask" contains the cores that are logically assigned to that
+    // PMU. Why there need to be two seperate files instead of one, nobody knows, but simply
+    // parse both.
+    auto cpuids = parse_list_from_file(pmu_path_ / "cpus");
+
+    if (cpuids.empty())
+    {
+        cpuids = parse_list_from_file(pmu_path_ / "cpumask");
+    }
+    if (cpuids.empty())
+    {
+        cpus_ = test_cpus(*this);
+    }
+    else
+    {
+        std::transform(cpuids.begin(), cpuids.end(), std::inserter(cpus_, cpus_.end()),
+                       [](uint32_t cpuid) { return Cpu(cpuid); });
+    }
+
     static const std::regex kv_regex(R"(([^=,]+)(?:=([^,]+))?)");
 
     Log::debug() << "parsing event configuration: " << ev_cfg.value();
@@ -718,47 +691,6 @@ void SysfsEvent::make_invalid()
     availability_ = Availability::UNAVAILABLE;
 }
 
-void SysfsEvent::use_sampling_options(const bool& use_pebs, const bool& sampling,
-                                      const bool& enable_cct)
-{
-    if (use_pebs)
-    {
-        attr_.use_clockid = 0;
-    }
-
-    if (sampling)
-    {
-        Log::debug() << "using sampling event \'" << name_ << "\', period: " << attr_.sample_period;
-
-        attr_.mmap = 1;
-    }
-    else
-    {
-        // Set up a dummy event for recording calling context enter/leaves only
-        attr_.type = PERF_TYPE_SOFTWARE;
-        attr_.config = PERF_COUNT_SW_DUMMY;
-    }
-
-    attr_.sample_id_all = 1;
-    // Generate PERF_RECORD_COMM events to trace changes to the command
-    // name of a task.  This is used to write a meaningful name for any
-    // traced thread to the archive.
-    attr_.comm = 1;
-    attr_.context_switch = 1;
-
-    // TODO see if we can remove remove tid
-    attr_.sample_type |= PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_CPU;
-    if (enable_cct)
-    {
-        attr_.sample_type |= PERF_SAMPLE_CALLCHAIN;
-    }
-
-    attr_.precise_ip = 3;
-
-    // make event available if possible
-    update_availability();
-}
-
 EventGuard Event::open(std::variant<Cpu, Thread> location, int cgroup_fd)
 {
     return EventGuard(*this, location, -1, cgroup_fd);
@@ -805,7 +737,7 @@ EventGuard::EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_
     Log::trace() << "Opening perf event: " << ev.name() << "[" << scope.name()
                  << ",group fd: " << group_fd << ", cgroup fd: " << cgroup_fd << "]";
     Log::trace() << ev;
-    fd_ = perf_event_open(&ev.mut_attr(), scope, group_fd, 0, cgroup_fd);
+    fd_ = perf_event_open(&ev.attr(), scope, group_fd, 0, cgroup_fd);
 
     if (fd_ < 0)
     {

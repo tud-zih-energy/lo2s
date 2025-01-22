@@ -29,6 +29,7 @@
 #include <lo2s/execution_scope.hpp>
 
 #include <cstdint>
+#include <optional>
 #include <ostream>
 #include <set>
 #include <type_traits>
@@ -59,10 +60,17 @@ enum class Availability
     UNIVERSAL
 };
 
-inline Availability& operator|=(Availability& a, Availability b) noexcept
+enum class EventFlag
 {
-    return a = static_cast<Availability>(static_cast<uint64_t>(a) | static_cast<uint64_t>(b));
-}
+    SAMPLE_ID_ALL,
+    COMM,
+    CONTEXT_SWITCH,
+    MMAP,
+    EXCLUDE_KERNEL,
+    TASK,
+    ENABLE_ON_EXEC,
+    DISABLED
+};
 
 class EventGuard;
 
@@ -70,10 +78,11 @@ class EventGuard;
  * Base class for all Event types
  * contains common attributes
  */
+
 class Event
 {
 public:
-    Event(const std::string& name, perf_type_id type, std::uint64_t config,
+    Event(const std::string name, perf_type_id type, std::uint64_t config,
           std::uint64_t config1 = 0);
 
     /**
@@ -107,12 +116,7 @@ public:
         return unit_;
     }
 
-    const perf_event_attr& attr() const
-    {
-        return attr_;
-    }
-
-    perf_event_attr& mut_attr()
+    perf_event_attr& attr()
     {
         return attr_;
     }
@@ -132,37 +136,114 @@ public:
         unit_ = unit;
     }
 
-    void clock_attrs([[maybe_unused]] bool use_clockid, [[maybe_unused]] clockid_t clockid)
+    void set_clockid(int64_t clockid)
     {
-#ifndef USE_HW_BREAKPOINT_COMPAT
-        attr_.use_clockid = use_clockid;
-        attr_.clockid = clockid;
-#endif
+        if (clockid == -1)
+        {
+            attr_.use_clockid = 0;
+        }
+        else
+        {
+            attr_.use_clockid = 1;
+            attr_.clockid = clockid;
+        }
     }
 
-    void time_attrs([[maybe_unused]] uint64_t addr, bool enable_on_exec);
-
-    // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
-    // Default behaviour is to wakeup on every event, which is horrible performance wise
-    void watermark(size_t mmap_pages)
+    void set_read_format(uint64_t read_format)
     {
-        attr_.watermark = 1;
-        attr_.wakeup_watermark = static_cast<uint32_t>(0.8 * mmap_pages * sysconf(_SC_PAGESIZE));
+        attr_.read_format = read_format;
+    }
+
+    void set_flags(const std::vector<EventFlag>& flags)
+    {
+        for (const auto& flag : flags)
+        {
+            switch (flag)
+            {
+            case EventFlag::SAMPLE_ID_ALL:
+                attr_.sample_id_all = 1;
+                break;
+            case EventFlag::COMM:
+                attr_.comm = 1;
+                break;
+            case EventFlag::CONTEXT_SWITCH:
+                attr_.context_switch = 1;
+                break;
+            case EventFlag::MMAP:
+                attr_.mmap = 1;
+                break;
+            case EventFlag::EXCLUDE_KERNEL:
+                attr_.exclude_kernel = 1;
+                break;
+            case EventFlag::TASK:
+                attr_.task = 1;
+                break;
+            case EventFlag::ENABLE_ON_EXEC:
+                attr_.enable_on_exec = 1;
+                break;
+            case EventFlag::DISABLED:
+                attr_.disabled = 1;
+                break;
+            }
+        }
+    }
+
+    bool get_flag(const EventFlag flag)
+    {
+        switch (flag)
+        {
+        case EventFlag::SAMPLE_ID_ALL:
+            return attr_.sample_id_all == 1;
+        case EventFlag::COMM:
+            return attr_.comm == 1;
+        case EventFlag::CONTEXT_SWITCH:
+            return attr_.context_switch == 1;
+        case EventFlag::MMAP:
+            return attr_.mmap == 1;
+        case EventFlag::EXCLUDE_KERNEL:
+            return attr_.exclude_kernel == 1;
+        case EventFlag::TASK:
+            return attr_.task == 1;
+        case EventFlag::ENABLE_ON_EXEC:
+            return attr_.enable_on_exec == 1;
+        case EventFlag::DISABLED:
+            return attr_.disabled == 1;
+        default:
+            return false;
+        }
+    }
+
+    uint64_t get_precise_ip()
+    {
+        return attr_.precise_ip;
+    }
+
+    void set_precise_ip(uint64_t precise_ip)
+    {
+        if (precise_ip > 3)
+        {
+            throw std::runtime_error("precise_ip set to > 3!");
+        }
+        attr_.precise_ip = precise_ip;
+    }
+
+    void set_sample_type(uint64_t format)
+    {
+        attr_.sample_type |= format;
     }
 
     friend std::ostream& operator<<(std::ostream& stream, const Event& event);
 
-    void exclude_kernel(bool exclude_kernel)
+    void set_watermark(uint64_t bytes)
     {
-        attr_.exclude_kernel = exclude_kernel;
+        attr_.watermark = 1;
+        attr_.wakeup_watermark = static_cast<uint32_t>(bytes);
     }
 
     void sample_period(const int& period);
     void sample_freq(const uint64_t& freq);
     void event_attr_update(std::uint64_t value, const std::string& format);
 
-    void parse_pmu_path(const std::string& ev_name);
-    void parse_cpus();
     const std::set<Cpu>& supported_cpus() const;
 
     bool is_valid() const;
@@ -170,42 +251,68 @@ public:
 
     bool is_available_in(ExecutionScope scope) const
     {
-        // per-process should always work. the counter will just not count if the process is
-        // scheduled on a core that is not supprted by that counter
-        return scope.is_thread() || cpus_.empty() || cpus_.count(scope.as_cpu());
+        if (availability_ == Availability::UNAVAILABLE)
+        {
+            return false;
+        }
+        if (scope.is_thread() || scope.is_process())
+        {
+            return availability_ != Availability::SYSTEM_MODE;
+        }
+        else
+        {
+            return availability_ != Availability::PROCESS_MODE &&
+                   (cpus_.empty() || cpus_.count(scope.as_cpu()));
+        }
     }
 
     bool degrade_precision();
 
     friend bool operator==(const Event& lhs, const Event& rhs)
     {
-        return !memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
+        return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr)) == 0;
     }
 
     friend bool operator<(const Event& lhs, const Event& rhs)
     {
-        return memcmp(&rhs.attr_, &lhs.attr_, sizeof(struct perf_event_attr));
+        return memcmp(&rhs.attr_, &lhs.attr_, sizeof(struct perf_event_attr)) < 0;
     }
 
     friend bool operator>(const Event& lhs, const Event& rhs)
     {
-        return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr));
+        return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr)) > 0;
     }
 
 protected:
     void update_availability();
-    void set_common_attrs(bool enable_on_exec);
-
     struct perf_event_attr attr_;
     double scale_ = 1;
     std::string unit_ = "#";
 
-    std::string name_ = "";
+    std::string name_;
     std::set<Cpu> cpus_;
     Availability availability_ = Availability::UNAVAILABLE;
+};
 
-    std::filesystem::path pmu_path_;
-    std::string pmu_name_;
+class SimpleEvent : public Event
+{
+public:
+    SimpleEvent(const std::string name, perf_type_id type, std::uint64_t config,
+                std::uint64_t config1 = 0);
+    static SimpleEvent raw(std::string name);
+};
+
+class BreakpointEvent : public Event
+{
+public:
+    BreakpointEvent(uint64_t addr, uint64_t bp_type)
+    : Event(std::to_string(addr), PERF_TYPE_BREAKPOINT, 0)
+    {
+
+        attr_.bp_type = bp_type;
+        attr_.bp_addr = addr;
+        attr_.bp_len = HW_BREAKPOINT_LEN_8;
+    }
 };
 
 /**
@@ -216,10 +323,14 @@ protected:
 class SysfsEvent : public Event
 {
 public:
-    SysfsEvent(const std::string& ev_name, bool enable_on_exec = false);
+    SysfsEvent(const std::string ev_name);
 
     void make_invalid();
-    void use_sampling_options(const bool& use_pebs, const bool& sampling, const bool& enable_cct);
+
+private:
+    void parse_pmu_path(const std::string& ev_name);
+    std::filesystem::path pmu_path_;
+    std::string pmu_name_;
 };
 
 /**
