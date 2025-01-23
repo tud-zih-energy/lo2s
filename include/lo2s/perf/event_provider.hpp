@@ -36,33 +36,16 @@ namespace perf
 class EventProvider
 {
 public:
-    EventProvider();
-    EventProvider(const EventProvider&) = delete;
-    void operator=(const EventProvider&) = delete;
+    Event get_event_by_name(const std::string& name);
 
-    static const EventProvider& instance()
-    {
-        return instance_mutable();
-    }
+    bool has_event(const std::string& name);
 
-    static Event get_event_by_name(const std::string& name);
+    std::vector<Event> get_predefined_events();
+    std::vector<SysfsEvent> get_pmu_events();
 
-    static bool has_event(const std::string& name);
+    Event get_metric_leader(std::string metric_leader);
 
-    static std::vector<Event> get_predefined_events();
-    static std::vector<SysfsEvent> get_pmu_events();
-
-    static Event fallback_metric_leader_event();
-
-    static Event create_time_event(std::uint64_t local_time, bool enable_on_exec = false);
-    static Event create_event(const std::string& name, perf_type_id type, std::uint64_t config,
-                              std::uint64_t config1 = 0);
-    static SysfsEvent create_sampling_event(bool enable_on_exec);
-    static SysfsEvent create_sysfs_event(const std::string& name, bool use_config = true);
-    static tracepoint::TracepointEvent create_tracepoint_event(const std::string& name,
-                                                               bool use_config = true,
-                                                               bool enable_on_exec = false);
-
+    std::vector<std::string> get_tracepoint_event_names();
     class InvalidEvent : public std::runtime_error
     {
     public:
@@ -72,15 +55,17 @@ public:
         }
     };
 
-private:
-    static EventProvider& instance_mutable()
+    static EventProvider& instance()
     {
         static EventProvider e;
         return e;
     }
 
-    static void apply_config_attrs(Event& event);
-    static void apply_default_attrs(Event& event);
+private:
+    Event fallback_metric_leader_event();
+    EventProvider();
+    EventProvider(const EventProvider&) = delete;
+    void operator=(const EventProvider&) = delete;
 
     Event cache_event(const std::string& name);
 

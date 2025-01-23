@@ -83,23 +83,26 @@ struct Config
     std::uint64_t metric_count;
     std::uint64_t metric_frequency;
 
+    std::string metric_leader;
+    std::vector<std::string> group_counters;
+    std::vector<std::string> userspace_counters;
     // time synchronization
     bool use_clockid;
     bool use_pebs;
     clockid_t clockid;
     // x86_energy
-    bool use_x86_energy;
+    bool use_x86_energy = false;
     // block I/O
-    bool use_block_io;
+    bool use_block_io = false;
     // syscalls
     bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;
     // NEC SX-Aurora Tsubasa
-    bool use_nec;
+    bool use_nec = false;
     std::chrono::microseconds nec_read_interval;
     std::chrono::milliseconds nec_check_interval;
     // Nvidia CUPTI
-    bool use_nvidia;
+    bool use_nvidia = false;
     std::string cuda_injectionlib_path;
     uint64_t nvidia_ringbuf_size;
 };

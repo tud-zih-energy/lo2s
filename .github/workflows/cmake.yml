@@ -38,3 +38,8 @@ jobs:
         with:
           overwrite: true
           path: lo2s*.tar.bz2
+      - name: Test
+        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
+        run: |
+          sudo sysctl kernel.perf_event_paranoid=-1
+          ctest --output-on-failure

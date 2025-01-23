@@ -33,6 +33,7 @@ namespace lo2s
 {
 namespace monitor
 {
+
 MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
     if (config().sampling)
