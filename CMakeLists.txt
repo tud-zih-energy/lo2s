@@ -18,6 +18,9 @@ include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
 
+enable_testing()
+include(cmake/Tests.cmake)
+
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
 git_submodule_update()
