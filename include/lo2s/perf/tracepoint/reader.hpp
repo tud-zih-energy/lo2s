@@ -110,7 +110,6 @@ public:
     {
         struct perf_event_header header;
         uint64_t time;
-        uint64_t id;
         // uint32_t size;
         // char data[size];
         RecordDynamicFormat raw_data;
