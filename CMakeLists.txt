@@ -470,6 +470,9 @@ target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 # build Debug with -Werror
 target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
 
+enable_testing()
+include(cmake/Tests.cmake)
+
 if (IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)
     if(NOT iwyu_path)
