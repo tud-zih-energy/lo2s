@@ -22,10 +22,19 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/dwarf_resolve.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/mmap.hpp>
+#include <lo2s/perf/types.hpp>
 
-#include <mutex>
+#include <nitro/lang/string.hpp>
+
+#include <fmt/core.h>
+
+#include <algorithm>
+#include <fstream>
+#include <shared_mutex>
 #include <thread>
 
 namespace lo2s
@@ -33,31 +42,56 @@ namespace lo2s
 class ProcessInfo
 {
 public:
-    ProcessInfo(Process p, bool enable_on_exec) : process_(p), maps_(p, !enable_on_exec)
-    {
-    }
-
+    ProcessInfo(Process p, bool read_initial);
     Process process() const
     {
         return process_;
     }
 
-    void mmap(const RawMemoryMapEntry& entry)
+    void mmap(const RecordMmap2Type& entry)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        maps_.mmap(entry);
+        mmap(entry.addr, entry.addr + entry.len, entry.pgoff, entry.filename);
     }
 
-    MemoryMap maps() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        // Yes, this is correct as per 6.6.3 The Return Statement
-        return maps_;
-    }
+    void mmap(Address addr, Address end, Address pgoff, std::string filename);
+
+    LineInfo lookup_line_info(Address ip);
+    std::string lookup_instruction(Address ip) const;
 
 private:
+    struct Mapping
+    {
+        Mapping(Address s, Address e, Address o, FunctionResolver& f, InstructionResolver& i)
+        : start(s), end(e), pgoff(o), fr(f), ir(i)
+        {
+        }
+
+        Address start;
+        Address end;
+        Address pgoff;
+        FunctionResolver& fr;
+        InstructionResolver& ir;
+    };
+
     const Process process_;
-    mutable std::mutex mutex_;
-    MemoryMap maps_;
+    mutable std::shared_mutex mutex_;
+    std::map<Range, Mapping> map_;
+};
+
+class ProcessMap
+{
+public:
+    ProcessMap()
+    {
+    }
+
+    bool has(Process p, uint64_t timepoint);
+
+    ProcessInfo& get(Process p, uint64_t timepoint);
+
+    ProcessInfo& insert(Process p, uint64_t timepoint, bool read_initial);
+
+private:
+    std::map<Process, std::map<uint64_t, ProcessInfo>> infos_;
 };
 } // namespace lo2s

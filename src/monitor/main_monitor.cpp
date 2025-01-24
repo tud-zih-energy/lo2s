@@ -128,20 +128,47 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
+static uint64_t mmap_get_time(const RecordMmap2Type* t)
 {
-    for (auto& event : cached_events)
+    struct sample_id* id =
+        (struct sample_id*)((char*)t + t->header.size - sizeof(struct sample_id));
+    return id->time;
+}
+
+static uint64_t comm_get_time(const RecordCommType* t)
+{
+    struct sample_id* id =
+        (struct sample_id*)((char*)t + t->header.size - sizeof(struct sample_id));
+    return id->time;
+}
+
+void MainMonitor::insert_cached_events(const RawMemoryMapCache& cached_mmaps,
+                                       const RawCommCache& cached_execs)
+{
+    for (auto& event : cached_execs)
     {
-        auto process_info =
-            process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(event.process),
-                                   std::forward_as_tuple(event.process, true));
-        process_info.first->second.mmap(event);
+        process_infos_.insert(Process(event.get()->pid), comm_get_time(event.get()), false);
+    }
+    for (auto& event : cached_mmaps)
+    {
+        const uint64_t timestamp = mmap_get_time(event.get());
+        Process p = Process(event.get()->pid);
+
+        if (!process_infos_.has(p, timestamp))
+        {
+            process_infos_.insert(p, timestamp, false);
+        }
+
+        ProcessInfo& pinfo = process_infos_.get(p, timestamp);
+
+        pinfo.mmap(*event.get());
     }
 }
 
 MainMonitor::~MainMonitor()
 {
     // Note: call stop() in reverse order than start() in constructor
+    //
 
 #ifdef HAVE_SENSORS
     if (config().use_sensors)
