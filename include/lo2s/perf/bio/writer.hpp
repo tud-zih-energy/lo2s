@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/perf/event_config.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -157,12 +158,10 @@ public:
 
     std::vector<perf::tracepoint::TracepointEvent> get_tracepoints()
     {
-        bio_queue_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_bio_queue");
-        bio_issue_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_rq_issue");
+        bio_queue_ = perf::EventConfig::instance().create_tracepoint_event("block:block_bio_queue");
+        bio_issue_ = perf::EventConfig::instance().create_tracepoint_event("block:block_rq_issue");
         bio_complete_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_rq_complete");
+            perf::EventConfig::instance().create_tracepoint_event("block:block_rq_complete");
 
         return { bio_queue_.value(), bio_issue_.value(), bio_complete_.value() };
     }

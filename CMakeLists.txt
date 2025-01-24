@@ -184,7 +184,7 @@ set(SOURCE_FILES
     src/perf/event.cpp
 
     src/perf/bio/block_device.cpp
-    src/perf/counter/counter_provider.cpp
+    src/perf/event_config.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
 

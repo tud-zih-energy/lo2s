@@ -23,6 +23,7 @@
 
 #include <lo2s/perf/tracepoint/format.hpp>
 
+#include <lo2s/perf/event_config.hpp>
 #include <lo2s/perf/event_provider.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/util.hpp>
@@ -115,8 +116,7 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, std::string name)
-    : event_(EventProvider::instance().create_tracepoint_event(name)), cpu_(cpu)
+    Reader(Cpu cpu, perf::tracepoint::TracepointEvent ev) : event_(ev), cpu_(cpu)
     {
         try
         {
