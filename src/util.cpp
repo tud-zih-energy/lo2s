@@ -419,6 +419,7 @@ int timerfd_from_ns(std::chrono::nanoseconds duration)
     struct itimerspec tspec;
     memset(&tspec, 0, sizeof(struct itimerspec));
 
+    tspec.it_value.tv_nsec = 1;
     tspec.it_interval.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
     tspec.it_interval.tv_nsec = (duration % std::chrono::seconds(1)).count();
 
