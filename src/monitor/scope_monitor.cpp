@@ -56,7 +56,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(syscall_writer_->fd());
     }
 
-    if (!perf::EventConfig::instance()
+    if (!perf::EventComposer::instance()
              .counters_for(MeasurementScope::group_metric(scope))
              .counters.empty())
     {
@@ -65,7 +65,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(group_counter_writer_->fd());
     }
 
-    if (!perf::EventConfig::instance()
+    if (!perf::EventComposer::instance()
              .counters_for(MeasurementScope::userspace_metric(scope))
              .counters.empty())
     {

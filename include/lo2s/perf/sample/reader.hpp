@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <lo2s/perf/event_config.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <lo2s/config.hpp>
@@ -85,7 +85,7 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        Event event = EventConfig::instance().create_sampling_event();
+        EventAttr event = EventComposer::instance().create_sampling_event();
         if (enable_on_exec)
         {
             event.set_flags({ EventFlag::ENABLE_ON_EXEC });

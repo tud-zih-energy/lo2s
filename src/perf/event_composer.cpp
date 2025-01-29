@@ -19,16 +19,16 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/perf/event_config.hpp>
+#include <lo2s/perf/event_composer.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
 
-EventConfig::EventConfig()
+EventComposer::EventComposer()
 {
-    auto test_event = EventProvider::instance().get_event_by_name("cpu-cycles");
+    auto test_event = EventResolver::instance().get_event_by_name("cpu-cycles");
 
     std::optional<EventGuard> guard;
     do
@@ -54,7 +54,7 @@ EventConfig::EventConfig()
     } while (!guard.has_value());
 }
 
-Event EventConfig::create_sampling_event()
+EventAttr EventComposer::create_sampling_event()
 {
     if (sampling_event_.has_value())
     {
@@ -63,7 +63,7 @@ Event EventConfig::create_sampling_event()
 
     if (config().sampling)
     {
-        sampling_event_ = EventProvider::instance().get_event_by_name(config().sampling_event);
+        sampling_event_ = EventResolver::instance().get_event_by_name(config().sampling_event);
         Log::debug() << "using sampling event \'" << sampling_event_->name()
                      << "\', period: " << config().sampling_period;
 
@@ -83,7 +83,7 @@ Event EventConfig::create_sampling_event()
     }
     else
     {
-        Event event = EventProvider::instance().get_event_by_name("dummy");
+        EventAttr event = EventResolver::instance().get_event_by_name("dummy");
     }
 
     sampling_event_->set_flags(
@@ -130,17 +130,17 @@ Event EventConfig::create_sampling_event()
     return sampling_event_.value();
 }
 
-Event EventConfig::create_time_event(uint64_t local_time [[maybe_unused]])
+EventAttr EventComposer::create_time_event(uint64_t local_time [[maybe_unused]])
 
 {
 #ifndef USE_HW_BREAKPOINT_COMPAT
-    BreakpointEvent ev(local_time, HW_BREAKPOINT_W);
+    BreakpointEventAttr ev(local_time, HW_BREAKPOINT_W);
     ev.sample_period(1);
     ev.set_watermark(1);
     ev.set_clockid(config().clockid);
     ev.set_sample_type(PERF_SAMPLE_TIME);
 #else
-    Event ev = EventProvider::instance().get_event_by_name("instructions");
+    EventAttr ev = EventResolver::instance().get_event_by_name("instructions");
     ev.sample_period(100000000);
     ev.set_flags({ EventFlag::TASK });
 #endif
@@ -150,14 +150,14 @@ Event EventConfig::create_time_event(uint64_t local_time [[maybe_unused]])
     return ev;
 }
 
-std::vector<perf::tracepoint::TracepointEvent> EventConfig::get_tracepoints()
+std::vector<perf::tracepoint::TracepointEventAttr> EventComposer::get_tracepoints()
 {
     if (tracepoint_events_.has_value())
     {
         return tracepoint_events_.value();
     }
 
-    tracepoint_events_ = std::vector<tracepoint::TracepointEvent>();
+    tracepoint_events_ = std::vector<tracepoint::TracepointEventAttr>();
     for (auto& ev_name : config().tracepoint_events)
     {
         tracepoint_events_->emplace_back(create_tracepoint_event(ev_name));
@@ -165,9 +165,9 @@ std::vector<perf::tracepoint::TracepointEvent> EventConfig::get_tracepoints()
     return tracepoint_events_.value();
 }
 
-perf::tracepoint::TracepointEvent EventConfig::create_tracepoint_event(std::string name)
+perf::tracepoint::TracepointEventAttr EventComposer::create_tracepoint_event(std::string name)
 {
-    auto ev = tracepoint::TracepointEvent(name);
+    auto ev = tracepoint::TracepointEventAttr(name);
     watermark(ev);
     ev.set_clockid(config().clockid);
     ev.sample_period(1);
@@ -176,7 +176,7 @@ perf::tracepoint::TracepointEvent EventConfig::create_tracepoint_event(std::stri
     return ev;
 }
 
-void EventConfig::read_userspace_counters()
+void EventComposer::read_userspace_counters()
 {
     if (userspace_counters_.has_value())
     {
@@ -188,9 +188,9 @@ void EventConfig::read_userspace_counters()
     {
         try
         {
-            res.counters.emplace_back(perf::EventProvider::instance().get_event_by_name(ev));
+            res.counters.emplace_back(perf::EventResolver::instance().get_event_by_name(ev));
         }
-        catch (const perf::EventProvider::InvalidEvent& e)
+        catch (const EventAttr::InvalidEvent& e)
         {
             Log::warn() << "'" << ev
                         << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
@@ -198,7 +198,7 @@ void EventConfig::read_userspace_counters()
     }
 }
 
-void EventConfig::read_group_counters()
+void EventComposer::read_group_counters()
 {
 
     if (group_counters_.has_value())
@@ -207,7 +207,7 @@ void EventConfig::read_group_counters()
     }
 
     counter::CounterCollection res;
-    res.leader = EventProvider::instance().get_metric_leader(config().metric_leader);
+    res.leader = EventResolver::instance().get_metric_leader(config().metric_leader);
 
     res.leader->set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_READ);
     if (config().metric_use_frequency)
@@ -240,16 +240,13 @@ void EventConfig::read_group_counters()
                 continue;
             }
 
-            Event ev = perf::EventProvider::instance().get_event_by_name(ev_name);
-            if (ev.is_valid())
-            {
-                res.counters.emplace_back(ev);
-                res.counters.back().set_clockid(config().clockid);
-                res.counters.back().set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED |
-                                                    PERF_FORMAT_TOTAL_TIME_RUNNING);
-            }
+            EventAttr ev = perf::EventResolver::instance().get_event_by_name(ev_name);
+            res.counters.emplace_back(ev);
+            res.counters.back().set_clockid(config().clockid);
+            res.counters.back().set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED |
+                                                PERF_FORMAT_TOTAL_TIME_RUNNING);
         }
-        catch (const perf::EventProvider::InvalidEvent& e)
+        catch (const EventAttr::InvalidEvent& e)
         {
             Log::warn() << "'" << ev_name
                         << "' does not name a known event, ignoring! (reason: " << e.what() << ")";
@@ -259,7 +256,7 @@ void EventConfig::read_group_counters()
     group_counters_ = res;
 }
 
-counter::CounterCollection EventConfig::counters_for(MeasurementScope scope)
+counter::CounterCollection EventComposer::counters_for(MeasurementScope scope)
 {
     assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
            scope.type == MeasurementScopeType::USERSPACE_METRIC);

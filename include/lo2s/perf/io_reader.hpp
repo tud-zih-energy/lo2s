@@ -22,10 +22,10 @@
 #pragma once
 
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/event_config.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -62,15 +62,15 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(perf::tracepoint::TracepointEvent event, Cpu cpu)
+    IoReaderIdentity(perf::tracepoint::TracepointEventAttr event, Cpu cpu)
     : tracepoint_(event), cpu(cpu)
     {
     }
 
-    tracepoint::TracepointEvent tracepoint_;
+    tracepoint::TracepointEventAttr tracepoint_;
     Cpu cpu;
 
-    tracepoint::TracepointEvent tracepoint() const
+    tracepoint::TracepointEventAttr tracepoint() const
     {
         return tracepoint_;
     }

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 
 #include <optional>
 #include <vector>
@@ -38,8 +38,8 @@ struct CounterCollection
     {
     }
 
-    std::optional<Event> leader = std::nullopt;
-    std::vector<Event> counters;
+    std::optional<EventAttr> leader = std::nullopt;
+    std::vector<EventAttr> counters;
 
     double get_scale(int index) const
     {

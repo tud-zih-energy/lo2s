@@ -36,8 +36,8 @@ namespace monitor
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 : monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
 {
-    std::vector<perf::tracepoint::TracepointEvent> tracepoint_events =
-        perf::EventConfig::instance().get_tracepoints();
+    std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
+        perf::EventComposer::instance().get_tracepoints();
 
     for (const auto& event : tracepoint_events)
     {

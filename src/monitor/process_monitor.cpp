@@ -52,10 +52,10 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
 
     ExecutionScope scope = ExecutionScope(thread);
     if (config().sampling ||
-        !perf::EventConfig::instance()
+        !perf::EventComposer::instance()
              .counters_for(MeasurementScope::group_metric(scope))
              .counters.empty() ||
-        !perf::EventConfig::instance()
+        !perf::EventComposer::instance()
              .counters_for(MeasurementScope::userspace_metric(scope))
              .counters.empty())
     {

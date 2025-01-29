@@ -79,11 +79,20 @@ class EventGuard;
  * contains common attributes
  */
 
-class Event
+class EventAttr
 {
 public:
-    Event(const std::string name, perf_type_id type, std::uint64_t config,
-          std::uint64_t config1 = 0);
+    EventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+              std::uint64_t config1 = 0);
+
+    class InvalidEvent : public std::runtime_error
+    {
+    public:
+        InvalidEvent(const std::string& event_description)
+        : std::runtime_error(std::string{ "Invalid event: " } + event_description)
+        {
+        }
+    };
 
     /**
      * returns an opened instance of any Event object
@@ -232,7 +241,7 @@ public:
         attr_.sample_type |= format;
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const Event& event);
+    friend std::ostream& operator<<(std::ostream& stream, const EventAttr& event);
 
     void set_watermark(uint64_t bytes)
     {
@@ -246,7 +255,6 @@ public:
 
     const std::set<Cpu>& supported_cpus() const;
 
-    bool is_valid() const;
     bool event_is_openable();
 
     bool is_available_in(ExecutionScope scope) const
@@ -268,17 +276,17 @@ public:
 
     bool degrade_precision();
 
-    friend bool operator==(const Event& lhs, const Event& rhs)
+    friend bool operator==(const EventAttr& lhs, const EventAttr& rhs)
     {
         return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr)) == 0;
     }
 
-    friend bool operator<(const Event& lhs, const Event& rhs)
+    friend bool operator<(const EventAttr& lhs, const EventAttr& rhs)
     {
         return memcmp(&rhs.attr_, &lhs.attr_, sizeof(struct perf_event_attr)) < 0;
     }
 
-    friend bool operator>(const Event& lhs, const Event& rhs)
+    friend bool operator>(const EventAttr& lhs, const EventAttr& rhs)
     {
         return memcmp(&lhs.attr_, &rhs.attr_, sizeof(struct perf_event_attr)) > 0;
     }
@@ -294,20 +302,20 @@ protected:
     Availability availability_ = Availability::UNAVAILABLE;
 };
 
-class SimpleEvent : public Event
+class SimpleEventAttr : public EventAttr
 {
 public:
-    SimpleEvent(const std::string name, perf_type_id type, std::uint64_t config,
-                std::uint64_t config1 = 0);
-    static SimpleEvent raw(std::string name);
+    SimpleEventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+                    std::uint64_t config1 = 0);
+    static SimpleEventAttr raw(std::string name);
 };
 
 #ifndef USE_HW_BREAKPOINT_COMPAT
-class BreakpointEvent : public Event
+class BreakpointEventAttr : public EventAttr
 {
 public:
-    BreakpointEvent(uint64_t addr, uint64_t bp_type)
-    : Event(std::to_string(addr), PERF_TYPE_BREAKPOINT, 0)
+    BreakpointEventAttr(uint64_t addr, uint64_t bp_type)
+    : EventAttr(std::to_string(addr), PERF_TYPE_BREAKPOINT, 0)
     {
 
         attr_.bp_type = bp_type;
@@ -322,17 +330,11 @@ public:
  * @note call on use_sampling_options() after creation to get a valid
  * event, otherwise the availability will be set to UNAVAILABLE
  */
-class SysfsEvent : public Event
+class SysfsEventAttr : public EventAttr
+
 {
 public:
-    SysfsEvent(const std::string ev_name);
-
-    void make_invalid();
-
-private:
-    void parse_pmu_path(const std::string& ev_name);
-    std::filesystem::path pmu_path_;
-    std::string pmu_name_;
+    SysfsEventAttr(const std::string ev_name);
 };
 
 /**
@@ -342,7 +344,7 @@ private:
 class EventGuard
 {
 public:
-    EventGuard(Event& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
+    EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
 
     EventGuard() = delete;
     EventGuard(const EventGuard& other) = delete;
@@ -362,7 +364,7 @@ public:
     /**
      * opens child as a counter of the calling (leader) event
      */
-    EventGuard open_child(Event child, ExecutionScope location, int cgroup_fd = -1);
+    EventGuard open_child(EventAttr child, ExecutionScope location, int cgroup_fd = -1);
 
     void enable();
     void disable();

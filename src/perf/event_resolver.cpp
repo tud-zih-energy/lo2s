@@ -26,7 +26,7 @@
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
@@ -103,9 +103,9 @@ namespace lo2s
 namespace perf
 {
 
-std::vector<SysfsEvent> EventProvider::get_pmu_events()
+std::vector<SysfsEventAttr> EventResolver::get_pmu_events()
 {
-    std::vector<SysfsEvent> events;
+    std::vector<SysfsEventAttr> events;
 
     const std::filesystem::path pmu_devices("/sys/bus/event_source/devices");
 
@@ -139,10 +139,10 @@ std::vector<SysfsEvent> EventProvider::get_pmu_events()
                        << '/';
             try
             {
-                SysfsEvent event(event_name.str());
+                SysfsEventAttr event(event_name.str());
                 events.emplace_back(event);
             }
-            catch (const EventProvider::InvalidEvent& e)
+            catch (const EventAttr::InvalidEvent& e)
             {
                 Log::debug() << "Can not open event " << event_name.str() << ":" << e.what();
             }
@@ -152,7 +152,7 @@ std::vector<SysfsEvent> EventProvider::get_pmu_events()
     return events;
 }
 
-std::vector<std::string> EventProvider::get_tracepoint_event_names()
+std::vector<std::string> EventResolver::get_tracepoint_event_names()
 {
     try
     {
@@ -178,7 +178,7 @@ std::vector<std::string> EventProvider::get_tracepoint_event_names()
     }
 }
 
-Event EventProvider::fallback_metric_leader_event()
+EventAttr EventResolver::fallback_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
     for (auto candidate : {
@@ -189,98 +189,103 @@ Event EventProvider::fallback_metric_leader_event()
     {
         try
         {
-            const Event ev = get_event_by_name(candidate);
+            const EventAttr ev = get_event_by_name(candidate);
             Log::debug() << "found suitable metric leader event: " << candidate;
             return ev;
         }
-        catch (const InvalidEvent& e)
+        catch (const EventAttr::InvalidEvent& e)
         {
             Log::debug() << "not a suitable metric leader event: " << candidate;
         }
     }
 
-    throw InvalidEvent{ "no suitable metric leader event found" };
+    throw EventAttr::InvalidEvent{ "no suitable metric leader event found" };
 }
 
-EventProvider::EventProvider()
+EventResolver::EventResolver()
 {
-    event_map_.emplace("cpu-cycles", perf::SimpleEvent("cpu-cycles", PERF_TYPE_HARDWARE,
-                                                       PERF_COUNT_HW_CPU_CYCLES));
-    event_map_.emplace("instructions", perf::SimpleEvent("instructions", PERF_TYPE_HARDWARE,
-                                                         PERF_COUNT_HW_INSTRUCTIONS));
-    event_map_.emplace("cache-references", perf::SimpleEvent("cache-references", PERF_TYPE_HARDWARE,
-                                                             PERF_COUNT_HW_CACHE_REFERENCES));
-    event_map_.emplace("cache-misses", perf::SimpleEvent("cache-misses", PERF_TYPE_HARDWARE,
-                                                         PERF_COUNT_HW_CACHE_MISSES));
-    event_map_.emplace("branch-instructions",
-                       perf::SimpleEvent("branch-instructions", PERF_TYPE_HARDWARE,
-                                         PERF_COUNT_HW_BRANCH_INSTRUCTIONS));
-    event_map_.emplace("branch-misses", perf::SimpleEvent("branch-misses", PERF_TYPE_HARDWARE,
-                                                          PERF_COUNT_HW_BRANCH_MISSES));
-    event_map_.emplace("bus-cycles", perf::SimpleEvent("bus-cycles", PERF_TYPE_HARDWARE,
-                                                       PERF_COUNT_HW_BUS_CYCLES));
+    struct predef_event
+    {
+        std::string name;
+        perf_type_id type;
+        uint64_t config;
+    };
+    std::vector<struct predef_event> predef_events = {
+        { "cpu-cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES },
+        { "instructions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS },
+        { "cache-references", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES },
+        { "cache-misses", PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES },
+        { "branch-instructions", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS },
+        { "branch-misses", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES },
+        { "bus-cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_BUS_CYCLES },
 #ifdef HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND
-    event_map_.emplace("stalled-cycles-frontend",
-                       perf::SimpleEvent("stalled-cycles-frontend", PERF_TYPE_HARDWARE,
-                                         PERF_COUNT_HW_STALLED_CYCLES_FRONTEND));
+        { "stalled-cycles-frontend", PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_FRONTEND },
 #endif
 #ifdef HAVE_PERF_EVENT_STALLED_CYCLES_BACKEND
-    event_map_.emplace("stalled-cycles-backend",
-                       perf::SimpleEvent("stalled-cycles-backend", PERF_TYPE_HARDWARE,
-                                         PERF_COUNT_HW_STALLED_CYCLES_BACKEND));
+        { "stalled-cycles-backend", PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_BACKEND },
 #endif
 #ifdef HAVE_PERF_EVENT_REF_CYCLES
-    event_map_.emplace("ref-cycles", perf::SimpleEvent("ref-cycles", PERF_TYPE_HARDWARE,
-                                                       PERF_COUNT_HW_REF_CPU_CYCLES));
-#endif
-    std::vector<perf::SimpleEvent> SW_EVENT_TABLE = {
-        PERF_EVENT_SW("cpu-clock", CPU_CLOCK),
-        PERF_EVENT_SW("task-clock", TASK_CLOCK),
-        PERF_EVENT_SW("page-faults", PAGE_FAULTS),
-        PERF_EVENT_SW("context-switches", CONTEXT_SWITCHES),
-        PERF_EVENT_SW("cpu-migrations", CPU_MIGRATIONS),
-        PERF_EVENT_SW("minor-faults", PAGE_FAULTS_MIN),
-        PERF_EVENT_SW("major-faults", PAGE_FAULTS_MAJ),
+        { "ref-cycles", PERF_TYPE_HARDWARE, PERF_COUNT_HW_REF_CPU_CYCLES },
+        { "cpu-clock", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_CLOCK },
+        { "task-clock", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_TASK_CLOCK },
+        { "page-faults", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS },
+        { "context-switches", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CONTEXT_SWITCHES },
+        { "cpu-migrations", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_MIGRATIONS },
+        { "minor-faults", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MIN },
+        { "major-faults", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MAJ },
 #ifdef HAVE_PERF_EVENT_ALIGNMENT_FAULTS
-        PERF_EVENT_SW("alignment-faults", ALIGNMENT_FAULTS),
+        { "alignment-faults", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_ALIGNMENT_FAULTS },
 #endif
 #ifdef HAVE_PERF_EVENT_EMULATION_FAULTS
-        PERF_EVENT_SW("emulation-faults", EMULATION_FAULTS),
+        { "emulation-faults", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_EMULATION_FAULTS },
 #endif
 #ifdef HAVE_PERF_EVENT_DUMMY
-        PERF_EVENT_SW("dummy", DUMMY),
+        { "dummy", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_DUMMY },
 #endif
 #ifdef HAVE_PERF_EVENT_BPF_OUTPUT
-        PERF_EVENT_SW("bpf-output", BPF_OUTPUT),
+        { "bpf-output", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_BPF_OUTPUT },
 #endif
 #ifdef HAVE_PERF_EVENT_CGROUP_SWITCHES
-        PERF_EVENT_SW("cgroup-switches", CGROUP_SWITCHES),
+        { "cgroup-switches", PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CGROUP_SWITCHES },
 #endif
     };
 
-    for (auto& ev : SW_EVENT_TABLE)
+    for (auto& predef_ev : predef_events)
     {
-        Event event(ev);
-        event_map_.emplace(event.name(), event);
+        try
+        {
+            SimpleEventAttr ev(predef_ev.name, predef_ev.type, predef_ev.config);
+            event_map_.emplace(predef_ev.name, ev);
+        }
+        catch (EventAttr::InvalidEvent& e)
+        {
+            continue;
+        }
     }
-
+#endif
     std::stringstream name_fmt;
     for (auto& cache : CACHE_NAME_TABLE)
     {
         for (auto& operation : CACHE_OPERATION_TABLE)
         {
-            name_fmt.str(std::string());
-            name_fmt << cache.name << '-' << operation.name;
+            try
+            {
+                name_fmt.str(std::string());
+                name_fmt << cache.name << '-' << operation.name;
 
-            event_map_.emplace(name_fmt.str(),
-                               SimpleEvent(name_fmt.str(), PERF_TYPE_HW_CACHE,
-                                           make_cache_config(cache.id, operation.id.op_id,
-                                                             operation.id.result_id)));
+                event_map_.emplace(name_fmt.str(),
+                                   SimpleEventAttr(name_fmt.str(), PERF_TYPE_HW_CACHE,
+                                                   make_cache_config(cache.id, operation.id.op_id,
+                                                                     operation.id.result_id)));
+            }
+            catch (EventAttr::InvalidEvent& e)
+            {
+            }
         }
     }
 }
 
-Event EventProvider::cache_event(const std::string& name)
+EventAttr EventResolver::cache_event(const std::string& name)
 {
     // Format for raw events is r followed by a hexadecimal number
     static const std::regex raw_regex("r[[:xdigit:]]{1,8}");
@@ -291,21 +296,18 @@ Event EventProvider::cache_event(const std::string& name)
     {
         if (regex_match(name, raw_regex))
         {
-            return event_map_.emplace(name, SimpleEvent::raw(name)).first->second;
+            std::optional<EventAttr> ev = SimpleEventAttr::raw(name);
+            return event_map_.emplace(name, ev).first->second.value();
         }
         else
         {
-            SysfsEvent event(name);
-            return event_map_.emplace(name, event).first->second;
+            std::optional<EventAttr> ev = SysfsEventAttr(name);
+            return event_map_.emplace(name, ev).first->second.value();
         }
     }
-    catch (const InvalidEvent& e)
+    catch (const EventAttr::InvalidEvent& e)
     {
-        // emplace unavailable Sampling Event
-        SysfsEvent event(name);
-        event.make_invalid();
-
-        event_map_.emplace(name, event);
+        event_map_.emplace(name, std::nullopt);
         throw e;
     }
 }
@@ -315,18 +317,18 @@ Event EventProvider::cache_event(const std::string& name)
  * @returns The corresponding PerfEvent if it is available
  * @throws InvalidEvent if the event is unavailable
  */
-Event EventProvider::get_event_by_name(const std::string& name)
+EventAttr EventResolver::get_event_by_name(const std::string& name)
 {
     auto event_it = event_map_.find(name);
     if (event_it != event_map_.end())
     {
-        if (event_it->second.is_valid())
+        if (event_it->second.has_value())
         {
-            return event_it->second;
+            return event_it->second.value();
         }
         else
         {
-            throw InvalidEvent("The event '" + name + "' is not available");
+            throw EventAttr::InvalidEvent("The event '" + name + "' is not available");
         }
     }
     else
@@ -335,25 +337,25 @@ Event EventProvider::get_event_by_name(const std::string& name)
     }
 }
 
-Event EventProvider::get_metric_leader(std::string metric_leader)
+EventAttr EventResolver::get_metric_leader(std::string metric_leader)
 {
-    std::optional<Event> leader;
+    std::optional<EventAttr> leader;
     Log::info() << "choosing default metric-leader";
     if (metric_leader == "")
     {
 
         try
         {
-            leader = EventProvider::instance().get_event_by_name("cpu-clock");
+            leader = EventResolver::instance().get_event_by_name("cpu-clock");
         }
-        catch (const EventProvider::InvalidEvent& e)
+        catch (const EventAttr::InvalidEvent& e)
         {
             Log::warn() << "cpu-clock isn't available, trying to use a fallback event";
             try
             {
-                leader = EventProvider::instance().fallback_metric_leader_event();
+                leader = EventResolver::instance().fallback_metric_leader_event();
             }
-            catch (const perf::EventProvider::InvalidEvent& e)
+            catch (const EventAttr::InvalidEvent& e)
             {
                 Log::error() << "Failed to determine a suitable metric leader event";
                 Log::error() << "Try manually specifying one with --metric-leader.";
@@ -364,9 +366,9 @@ Event EventProvider::get_metric_leader(std::string metric_leader)
     {
         try
         {
-            leader = perf::EventProvider::instance().get_event_by_name(metric_leader);
+            leader = perf::EventResolver::instance().get_event_by_name(metric_leader);
         }
-        catch (const perf::EventProvider::InvalidEvent& e)
+        catch (const EventAttr::InvalidEvent& e)
         {
             Log::error() << "Metric leader " << metric_leader << " not available.";
             Log::error() << "Please choose another metric leader.";
@@ -375,12 +377,12 @@ Event EventProvider::get_metric_leader(std::string metric_leader)
     return leader.value();
 }
 
-bool EventProvider::has_event(const std::string& name)
+bool EventResolver::has_event(const std::string& name)
 {
     const auto event_it = event_map_.find(name);
     if (event_it != event_map_.end())
     {
-        return (event_it->second.is_valid());
+        return (event_it->second.has_value());
     }
     else
     {
@@ -389,23 +391,23 @@ bool EventProvider::has_event(const std::string& name)
             cache_event(name);
             return true;
         }
-        catch (const InvalidEvent&)
+        catch (const EventAttr::InvalidEvent&)
         {
             return false;
         }
     }
 }
 
-std::vector<Event> EventProvider::get_predefined_events()
+std::vector<EventAttr> EventResolver::get_predefined_events()
 {
-    std::vector<Event> events;
+    std::vector<EventAttr> events;
     events.reserve(event_map_.size());
 
     for (const auto& event : event_map_)
     {
-        if (event.second.is_valid())
+        if (event.second.has_value())
         {
-            events.push_back(std::move(event.second));
+            events.push_back(std::move(event.second.value()));
         }
     }
 

@@ -27,8 +27,8 @@
 #include <lo2s/line_info.hpp>
 #include <lo2s/mmap.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event_config.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types.hpp>
@@ -175,7 +175,7 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::Event event)
+    otf2::definition::metric_member& get_event_metric_member(perf::EventAttr event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
             BySamplingEvent(event), intern(event.name()), intern(event.name()),
@@ -232,7 +232,7 @@ public:
         }
 
         const perf::counter::CounterCollection& counter_collection =
-            perf::EventConfig::instance().counters_for(scope);
+            perf::EventComposer::instance().counters_for(scope);
 
         if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
         {
@@ -274,7 +274,7 @@ public:
     }
 
     otf2::definition::metric_class&
-    tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event);
+    tracepoint_metric_class(const perf::tracepoint::TracepointEventAttr& event);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {

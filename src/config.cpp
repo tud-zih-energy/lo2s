@@ -25,7 +25,7 @@
 
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
@@ -71,16 +71,11 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::Event> events)
+                                      std::vector<perf::EventAttr> events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
     {
-        if (!ev.is_valid())
-        {
-            continue;
-        }
-
         std::string availability = "";
         std::string cpu = "";
         if (ev.availability() == perf::Availability::PROCESS_MODE)
@@ -513,11 +508,11 @@ void parse_program_options(int argc, const char** argv)
         if (arguments.given("list-events"))
         {
             print_availability(std::cout, "predefined events",
-                               perf::EventProvider::instance().get_predefined_events());
+                               perf::EventResolver::instance().get_predefined_events());
             // TODO: find a better solution ?
-            std::vector<perf::SysfsEvent> sys_events =
-                perf::EventProvider::instance().get_pmu_events();
-            std::vector<perf::Event> events(sys_events.begin(), sys_events.end());
+            std::vector<perf::SysfsEventAttr> sys_events =
+                perf::EventResolver::instance().get_pmu_events();
+            std::vector<perf::EventAttr> events(sys_events.begin(), sys_events.end());
             print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
@@ -534,7 +529,7 @@ void parse_program_options(int argc, const char** argv)
         if (arguments.given("list-tracepoints"))
         {
             std::vector<std::string> tracepoints =
-                perf::EventProvider::instance().get_tracepoint_event_names();
+                perf::EventResolver::instance().get_tracepoint_event_names();
 
             if (tracepoints.empty())
             {
@@ -693,7 +688,7 @@ void parse_program_options(int argc, const char** argv)
         perf::perf_check_disabled();
     }
 
-    if (config.sampling && !perf::EventProvider::instance().has_event(config.sampling_event))
+    if (config.sampling && !perf::EventResolver::instance().has_event(config.sampling_event))
     {
         lo2s::Log::fatal() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";
