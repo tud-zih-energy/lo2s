@@ -20,7 +20,7 @@
  */
 #pragma once
 
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <nitro/lang/string.hpp>
 
 namespace lo2s
@@ -33,7 +33,7 @@ namespace tracepoint
 /**
  * Contains an event that is addressable via name
  */
-class TracepointEvent : public Event
+class TracepointEventAttr : public EventAttr
 {
 public:
     class ParseError : public std::runtime_error
@@ -46,7 +46,7 @@ public:
         ParseError(const std::string& what, int error_code);
     };
 
-    TracepointEvent(const std::string& name);
+    TracepointEventAttr(const std::string& name);
 
     void parse_format();
 

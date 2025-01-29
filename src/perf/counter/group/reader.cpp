@@ -25,9 +25,9 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 
-#include <lo2s/perf/event.hpp>
-#include <lo2s/perf/event_config.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
 
 #include <cstring>
@@ -50,7 +50,8 @@ namespace group
 
 template <class T>
 Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
-: counter_collection_(EventConfig::instance().counters_for(MeasurementScope::group_metric(scope))),
+: counter_collection_(
+      EventComposer::instance().counters_for(MeasurementScope::group_metric(scope))),
   counter_buffer_(counter_collection_.counters.size() + 1)
 {
     Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader->name() << "'";

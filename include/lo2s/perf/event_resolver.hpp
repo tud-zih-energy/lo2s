@@ -26,51 +26,42 @@
 #include <unordered_map>
 #include <vector>
 
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
 
-class EventProvider
+class EventResolver
 {
 public:
-    Event get_event_by_name(const std::string& name);
+    EventAttr get_event_by_name(const std::string& name);
 
     bool has_event(const std::string& name);
 
-    std::vector<Event> get_predefined_events();
-    std::vector<SysfsEvent> get_pmu_events();
+    std::vector<EventAttr> get_predefined_events();
+    std::vector<SysfsEventAttr> get_pmu_events();
 
-    Event get_metric_leader(std::string metric_leader);
+    EventAttr get_metric_leader(std::string metric_leader);
 
     std::vector<std::string> get_tracepoint_event_names();
 
-    class InvalidEvent : public std::runtime_error
+    static EventResolver& instance()
     {
-    public:
-        InvalidEvent(const std::string& event_description)
-        : std::runtime_error(std::string{ "Invalid event: " } + event_description)
-        {
-        }
-    };
-
-    static EventProvider& instance()
-    {
-        static EventProvider e;
+        static EventResolver e;
         return e;
     }
 
 private:
-    Event fallback_metric_leader_event();
-    EventProvider();
-    EventProvider(const EventProvider&) = delete;
-    void operator=(const EventProvider&) = delete;
+    EventAttr fallback_metric_leader_event();
+    EventResolver();
+    EventResolver(const EventResolver&) = delete;
+    void operator=(const EventResolver&) = delete;
 
-    Event cache_event(const std::string& name);
+    EventAttr cache_event(const std::string& name);
 
-    std::unordered_map<std::string, Event> event_map_;
+    std::unordered_map<std::string, std::optional<EventAttr>> event_map_;
 };
 
 } // namespace perf

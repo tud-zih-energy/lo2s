@@ -24,35 +24,35 @@
 #include <lo2s/config.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-class EventConfig
+class EventComposer
 {
 
 public:
-    EventConfig();
+    EventComposer();
 
-    static EventConfig& instance()
+    static EventComposer& instance()
     {
-        static EventConfig e;
+        static EventComposer e;
         return e;
     }
 
     counter::CounterCollection counters_for(MeasurementScope scope);
 
-    Event create_time_event(uint64_t local_time);
-    Event create_sampling_event();
-    perf::tracepoint::TracepointEvent create_tracepoint_event(std::string name);
-    std::vector<perf::tracepoint::TracepointEvent> get_tracepoints();
+    EventAttr create_time_event(uint64_t local_time);
+    EventAttr create_sampling_event();
+    perf::tracepoint::TracepointEventAttr create_tracepoint_event(std::string name);
+    std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints();
 
 private:
     // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
     // Default behaviour is to wakeup on every event, which is horrible performance wise
-    void watermark(Event& ev)
+    void watermark(EventAttr& ev)
     {
         ev.set_watermark(0.8 * config().mmap_pages * sysconf(_SC_PAGESIZE));
     }
@@ -60,10 +60,10 @@ private:
     void read_userspace_counters();
     void read_group_counters();
 
-    std::optional<Event> sampling_event_;
+    std::optional<EventAttr> sampling_event_;
     std::optional<counter::CounterCollection> group_counters_;
     std::optional<counter::CounterCollection> userspace_counters_;
-    std::optional<std::vector<tracepoint::TracepointEvent>> tracepoint_events_;
+    std::optional<std::vector<tracepoint::TracepointEventAttr>> tracepoint_events_;
     bool exclude_kernel_;
 };
 } // namespace perf

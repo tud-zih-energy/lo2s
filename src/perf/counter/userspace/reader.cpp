@@ -22,7 +22,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/time/time.hpp>
 
 #include <lo2s/measurement_scope.hpp>
@@ -46,7 +46,7 @@ namespace userspace
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
 : counter_collection_(
-      EventConfig::instance().counters_for(MeasurementScope::userspace_metric(scope))),
+      EventComposer::instance().counters_for(MeasurementScope::userspace_metric(scope))),
   counter_buffer_(counter_collection_.counters.size()),
   timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
   data_(counter_collection_.counters.size())

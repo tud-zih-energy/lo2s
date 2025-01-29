@@ -23,9 +23,9 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_config.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/util.hpp>
@@ -70,10 +70,10 @@ public:
 
     Reader(Cpu cpu) : cpu_(cpu)
     {
-        tracepoint::TracepointEvent enter_event =
-            EventConfig::instance().create_tracepoint_event("raw_syscalls:sys_enter");
-        tracepoint::TracepointEvent exit_event =
-            EventConfig::instance().create_tracepoint_event("raw_syscalls:sys_exit");
+        tracepoint::TracepointEventAttr enter_event =
+            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_enter");
+        tracepoint::TracepointEventAttr exit_event =
+            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_exit");
 
         enter_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
         exit_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
