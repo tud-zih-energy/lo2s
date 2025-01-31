@@ -88,15 +88,27 @@ static inline void print_availability(std::ostream& os, const std::string& descr
             if (ev.supported_cpus() != Topology::instance().cpus())
             {
                 const auto& cpus = ev.supported_cpus();
-                if (cpus.size() == 1)
+                std::vector<int> cpus_int;
+                std::transform(cpus.begin(), cpus.end(), std::back_inserter(cpus_int),
+                               [](Cpu cpu) { return cpu.as_int(); });
+
+                if (cpus_int.size() == 1)
                 {
-                    cpu = fmt::format(" [ CPU {} ]", cpus.begin()->as_int());
+                    cpu = fmt::format(" [ CPU {} ]", *cpus_int.begin());
                 }
                 else
                 {
-                    cpu = fmt::format(" [ CPUs {}-{} ]",
-                                      std::min_element(cpus.begin(), cpus.end())->as_int(),
-                                      std::max_element(cpus.begin(), cpus.end())->as_int());
+                    int min_cpu = *std::min_element(cpus_int.begin(), cpus_int.end());
+                    int max_cpu = *std::max_element(cpus_int.begin(), cpus_int.end());
+
+                    if (max_cpu - min_cpu + 1 == static_cast<int>(cpus_int.size()))
+                    {
+                        cpu = fmt::format(" [ CPUs {}-{} ]", min_cpu, max_cpu);
+                    }
+                    else
+                    {
+                        cpu = fmt::format(" [ CPUs {}]", fmt::join(cpus_int, ", "));
+                    }
                 }
             }
         }
@@ -696,8 +708,9 @@ void parse_program_options(int argc, const char** argv)
     }
 
     // time synchronization
-    config.use_clockid = false;
     config.use_pebs = false;
+    config.clockid = std::nullopt;
+
     try
     {
         std::string requested_clock_name = arguments.get("clockid");
@@ -713,7 +726,6 @@ void parse_program_options(int argc, const char** argv)
 
         lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #ifndef USE_HW_BREAKPOINT_COMPAT
-        config.use_clockid = true;
         config.clockid = clock.id;
 #else
         if (requested_clock_name != "monotonic-raw")

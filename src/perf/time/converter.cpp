@@ -44,7 +44,7 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
     const auto time_diff =
         reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
 
-    if (lo2s::config().use_clockid)
+    if (lo2s::config().clockid.has_value())
     {
         if (time_diff < std::chrono::microseconds(-100) or time_diff > std::chrono::microseconds(0))
         {

@@ -130,7 +130,7 @@ static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mas
     return res;
 }
 
-EventAttr::EventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+EventAttr::EventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
                      std::uint64_t config1)
 
 : name_(name)
@@ -143,7 +143,7 @@ EventAttr::EventAttr(const std::string name, perf_type_id type, std::uint64_t co
     attr_.config1 = config1;
 }
 
-SimpleEventAttr::SimpleEventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+SimpleEventAttr::SimpleEventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
 
                                  std::uint64_t config1)
 : EventAttr(name, type, config, config1)
@@ -282,7 +282,7 @@ void EventAttr::update_availability()
     }
 }
 
-SimpleEventAttr SimpleEventAttr::raw(std::string ev_name)
+SimpleEventAttr SimpleEventAttr::raw(const std::string& ev_name)
 {
     // Do not check whether the event_is_openable because we don't know whether we are in
     // system or process mode

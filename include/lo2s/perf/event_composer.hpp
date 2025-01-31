@@ -46,7 +46,7 @@ public:
 
     EventAttr create_time_event(uint64_t local_time);
     EventAttr create_sampling_event();
-    perf::tracepoint::TracepointEventAttr create_tracepoint_event(std::string name);
+    perf::tracepoint::TracepointEventAttr create_tracepoint_event(const std::string& name);
     std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints();
 
 private:

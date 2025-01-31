@@ -43,7 +43,7 @@ public:
     std::vector<EventAttr> get_predefined_events();
     std::vector<SysfsEventAttr> get_pmu_events();
 
-    EventAttr get_metric_leader(std::string metric_leader);
+    EventAttr get_metric_leader(const std::string& metric_leader);
 
     std::vector<std::string> get_tracepoint_event_names();
 

@@ -336,7 +336,7 @@ EventAttr EventResolver::get_event_by_name(const std::string& name)
     }
 }
 
-EventAttr EventResolver::get_metric_leader(std::string metric_leader)
+EventAttr EventResolver::get_metric_leader(const std::string& metric_leader)
 {
     std::optional<EventAttr> leader;
     Log::info() << "choosing default metric-leader";
