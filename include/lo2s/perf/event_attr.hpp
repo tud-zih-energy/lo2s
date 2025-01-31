@@ -1,5 +1,5 @@
-/*
- * This file is part of the lo2s software.
+
+/* This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
  * Copyright (c) 2024,
@@ -82,7 +82,7 @@ class EventGuard;
 class EventAttr
 {
 public:
-    EventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+    EventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
               std::uint64_t config1 = 0);
 
     class InvalidEvent : public std::runtime_error
@@ -145,16 +145,16 @@ public:
         unit_ = unit;
     }
 
-    void set_clockid(int64_t clockid)
+    void set_clockid(std::optional<clockid_t> clockid)
     {
-        if (clockid == -1)
+        if (!clockid.has_value())
         {
             attr_.use_clockid = 0;
         }
         else
         {
             attr_.use_clockid = 1;
-            attr_.clockid = clockid;
+            attr_.clockid = clockid.value();
         }
     }
 
@@ -197,7 +197,7 @@ public:
         }
     }
 
-    bool get_flag(const EventFlag flag)
+    bool get_flag(EventFlag flag)
     {
         switch (flag)
         {
@@ -305,9 +305,9 @@ protected:
 class SimpleEventAttr : public EventAttr
 {
 public:
-    SimpleEventAttr(const std::string name, perf_type_id type, std::uint64_t config,
+    SimpleEventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
                     std::uint64_t config1 = 0);
-    static SimpleEventAttr raw(std::string name);
+    static SimpleEventAttr raw(const std::string& name);
 };
 
 #ifndef USE_HW_BREAKPOINT_COMPAT

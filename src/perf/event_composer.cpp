@@ -71,7 +71,7 @@ EventAttr EventComposer::create_sampling_event()
 
         if (config().use_pebs)
         {
-            sampling_event_->set_clockid(-1);
+            sampling_event_->set_clockid(std::nullopt);
         }
         else
         {
@@ -158,14 +158,15 @@ std::vector<perf::tracepoint::TracepointEventAttr> EventComposer::get_tracepoint
     }
 
     tracepoint_events_ = std::vector<tracepoint::TracepointEventAttr>();
-    for (auto& ev_name : config().tracepoint_events)
+    for (const auto& ev_name : config().tracepoint_events)
     {
         tracepoint_events_->emplace_back(create_tracepoint_event(ev_name));
     }
     return tracepoint_events_.value();
 }
 
-perf::tracepoint::TracepointEventAttr EventComposer::create_tracepoint_event(std::string name)
+perf::tracepoint::TracepointEventAttr
+EventComposer::create_tracepoint_event(const std::string& name)
 {
     auto ev = tracepoint::TracepointEventAttr(name);
     watermark(ev);
