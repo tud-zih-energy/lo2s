@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/mmap.hpp>
 #include <lo2s/perf/calling_context_manager.hpp>
 
 #include <lo2s/perf/sample/reader.hpp>
@@ -76,7 +75,7 @@ private:
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
 
-    void leave_current_thread(Thread thread, otf2::chrono::time_point tp);
+    void leave_current_thread(Process process, Thread thread, otf2::chrono::time_point tp);
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     ExecutionScope scope_;
@@ -89,8 +88,9 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    CallingContextManager cctx_manager_;
+    LocalCctxMap& local_cctx_map_;
     RawMemoryMapCache cached_mmap_events_;
+    RawCommCache cached_comm_events_;
     std::unordered_map<Thread, std::string> comms_;
 
     const time::Converter time_converter_;
@@ -98,6 +98,8 @@ private:
     bool first_event_ = true;
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_;
+    Process cur_process_ = Process::invalid();
+    Thread cur_thread_ = Thread::invalid();
 };
 } // namespace sample
 } // namespace perf

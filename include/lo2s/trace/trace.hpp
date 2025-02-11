@@ -19,17 +19,15 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
-#include "otf2xx/definition/calling_context.hpp"
 #include <chrono>
 #include <lo2s/address.hpp>
-#include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/mmap.hpp>
+#include <lo2s/perf/calling_context_manager.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
-#include <lo2s/perf/tracepoint/event.hpp>
+#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/process_info.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types.hpp>
@@ -49,57 +47,15 @@ namespace trace
 {
 class MainMonitor;
 
-template <typename RefMap>
-using IpMap = std::map<Address, RefMap>;
-
-struct IpRefEntry
+struct GlobalCctx
 {
-    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
-    {
-    }
-
-    otf2::definition::calling_context::reference_type ref;
-    IpMap<IpRefEntry> children;
-};
-
-struct ThreadCctxRefs
-{
-    ThreadCctxRefs(Process p, otf2::definition::calling_context::reference_type r)
-    : process(p), entry(r)
-    {
-    }
-
-    Process process;
-    IpRefEntry entry;
-};
-
-struct IpCctxEntry
-{
-    IpCctxEntry(otf2::definition::calling_context& c) : cctx(c)
+    GlobalCctx(otf2::definition::calling_context& c) : cctx(c)
     {
     }
 
     otf2::definition::calling_context& cctx;
-    IpMap<IpCctxEntry> children;
+    std::map<Address, GlobalCctx> children;
 };
-
-/*
- * Stores calling context information for each sample writer / monitoring thread.
- * While the `Trace` always owns this data, the `sample::Writer` should have exclusive access to
- * this data during its lifetime. Only afterwards, the `writer` and `refcount` are set by the
- * `sample::Writer`.
- */
-struct ThreadCctxRefMap
-{
-    std::map<Thread, ThreadCctxRefs> map;
-    std::atomic<otf2::writer::local*> writer = nullptr;
-    std::atomic<size_t> ref_count;
-
-    using value_type = std::map<Thread, ThreadCctxRefs>::value_type;
-};
-
-using IpRefMap = IpMap<IpRefEntry>;
-using IpCctxMap = IpMap<IpCctxEntry>;
 
 class Trace
 {
@@ -114,21 +70,17 @@ public:
     otf2::chrono::time_point record_from() const;
     otf2::chrono::time_point record_to() const;
 
-    void add_process(Process parent, Process process, const std::string& name = "");
+    void emplace_process(Process parent, Process process, const std::string& name = "");
 
-    void add_thread(Thread t, const std::string& name);
-    void add_threads(const std::unordered_map<Thread, std::string>& thread_map);
+    void emplace_thread(Thread t, const std::string& name = "");
+    void emplace_threads(const std::unordered_map<Thread, std::string>& thread_map);
 
     void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
 
-    void update_process_name(Process p, const std::string& name);
-    void update_thread_name(Thread t, const std::string& name);
-
-    ThreadCctxRefMap& create_cctx_refs();
-    otf2::definition::mapping_table
-    merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, size_t num_ip_refs,
-                           const std::map<Process, ProcessInfo>& infos);
-    void merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos);
+    LocalCctxMap& create_local_cctx_map(MeasurementScope scope);
+    otf2::definition::mapping_table merge_calling_contexts(const LocalCctxMap& local_cctxs,
+                                                           ProcessMap& infos);
+    void merge_calling_contexts(ProcessMap& process_infos);
 
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
@@ -176,7 +128,7 @@ public:
         return cpuid_metric_class_;
     }
 
-    otf2::definition::metric_member& get_event_metric_member(perf::Event event)
+    otf2::definition::metric_member& get_event_metric_member(perf::EventAttr event)
     {
         return registry_.emplace<otf2::definition::metric_member>(
             BySamplingEvent(event), intern(event.name()), intern(event.name()),
@@ -233,7 +185,7 @@ public:
         }
 
         const perf::counter::CounterCollection& counter_collection =
-            perf::counter::CounterProvider::instance().collection_for(scope);
+            perf::EventComposer::instance().counters_for(scope);
 
         if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
         {
@@ -247,7 +199,7 @@ public:
 
         if (scope.type == MeasurementScopeType::GROUP_METRIC)
         {
-            metric_class.add_member(get_event_metric_member(counter_collection.leader()));
+            metric_class.add_member(get_event_metric_member(counter_collection.leader.value()));
         }
 
         for (const auto& counter : counter_collection.counters)
@@ -275,7 +227,7 @@ public:
     }
 
     otf2::definition::metric_class&
-    tracepoint_metric_class(const perf::tracepoint::TracepointEvent& event);
+    tracepoint_metric_class(const perf::tracepoint::TracepointEventAttr& event);
 
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
@@ -341,12 +293,13 @@ private:
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #add_threads.
      **/
-    void add_thread_exclusive(Thread thread, const std::string& name,
-                              const std::lock_guard<std::recursive_mutex>&);
+    void emplace_thread_exclusive(Thread thread, const std::string& name,
+                                  const std::lock_guard<std::recursive_mutex>&);
 
-    void merge_ips(const IpRefMap& new_children, IpCctxMap& children,
-                   std::vector<uint32_t>& mapping_table, otf2::definition::calling_context& parent,
-                   const std::map<Process, ProcessInfo>& infos, Process p);
+    void merge_ips(const std::map<Address, LocalCctx>& new_children,
+                   std::map<Address, GlobalCctx>& children, std::vector<uint32_t>& mapping_table,
+                   otf2::definition::calling_context& parent, ProcessInfo& info,
+                   MeasurementScope scope);
 
     const otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
     {
@@ -362,13 +315,13 @@ private:
         return bio_system_tree_node_;
     }
 
+    void update_thread(Thread t, const std::string& name);
+    void update_process(Process parent, Process process, const std::string& name);
     const otf2::definition::string& intern_syscall_str(int64_t syscall_nr);
 
     const otf2::definition::source_code_location& intern_scl(const LineInfo&);
 
     const otf2::definition::region& intern_region(const LineInfo&);
-
-    const otf2::definition::system_tree_node& intern_process_node(Process process);
 
     const otf2::definition::string& intern(const std::string&);
 
@@ -394,7 +347,9 @@ private:
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 
     std::map<Thread, std::string> thread_names_;
-    std::map<Thread, IpCctxEntry> calling_context_tree_;
+
+    std::map<Thread, GlobalCctx> global_thread_cctxs_;
+    std::map<MeasurementScope, std::map<Address, GlobalCctx>> calling_context_tree_;
 
     otf2::definition::comm_locations_group& comm_locations_group_;
     otf2::definition::comm_locations_group& hardware_comm_locations_group_;
@@ -415,11 +370,11 @@ private:
 
     ExecutionScopeGroup& groups_;
 
-    std::deque<ThreadCctxRefMap> cctx_refs_;
+    std::deque<LocalCctxMap> local_cctx_maps_;
     // Mutex is only used for accessing the cctx_refs_
-    std::mutex cctx_refs_mutex_;
+    std::mutex local_cctx_maps_mutex_;
     // I wanted to use atomic_flag, but I need test and that's a C++20 exclusive.
-    std::atomic_bool cctx_refs_finalized_ = false;
+    std::atomic_bool local_cctx_maps_finalized_ = false;
 };
 } // namespace trace
 } // namespace lo2s

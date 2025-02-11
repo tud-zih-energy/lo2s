@@ -27,7 +27,7 @@
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/util.hpp>
 #include <otf2xx/otf2.hpp>
 
@@ -137,7 +137,7 @@ struct BySamplingEventName
 {
 };
 
-using BySamplingEvent = SimpleKeyType<perf::Event, BySamplingEventName>;
+using BySamplingEvent = SimpleKeyType<perf::EventAttr, BySamplingEventName>;
 
 struct ByCounterCollectionTag
 {
@@ -235,7 +235,7 @@ template <>
 struct Holder<otf2::definition::calling_context>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread,
-                                                ByLineInfo, BySyscall>;
+                                                ByProcess, ByLineInfo, BySyscall>;
 };
 
 template <>

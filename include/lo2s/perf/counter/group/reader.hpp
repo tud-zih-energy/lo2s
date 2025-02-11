@@ -23,7 +23,7 @@
 
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
-#include <lo2s/perf/event.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
 #include <optional>

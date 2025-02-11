@@ -33,6 +33,7 @@ namespace lo2s
 {
 namespace monitor
 {
+
 MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
     if (config().sampling)
@@ -128,20 +129,31 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
+void MainMonitor::insert_cached_events(const RawMemoryMapCache& cached_mmaps,
+                                       const RawCommCache& cached_execs)
 {
-    for (auto& event : cached_events)
+    for (auto& event : cached_execs)
     {
-        auto process_info =
-            process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(event.process),
-                                   std::forward_as_tuple(event.process, true));
-        process_info.first->second.mmap(event);
+        process_infos_.insert(Process(event.get()->pid), false);
+    }
+    for (auto& event : cached_mmaps)
+    {
+        Process p = Process(event.get()->pid);
+
+        if (!process_infos_.has(p))
+        {
+            process_infos_.insert(p, false);
+        }
+        ProcessInfo& pinfo = process_infos_.get(p);
+
+        pinfo.mmap(*event.get());
     }
 }
 
 MainMonitor::~MainMonitor()
 {
     // Note: call stop() in reverse order than start() in constructor
+    //
 
 #ifdef HAVE_SENSORS
     if (config().use_sensors)

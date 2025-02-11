@@ -61,23 +61,23 @@ struct MallocDelete
 } // namespace memory
 
 template <typename T>
-class StringCache
+class BinaryCache
 {
 public:
-    static StringCache& instance()
+    static BinaryCache& instance()
     {
-        static StringCache l;
+        static BinaryCache l;
         return l;
     }
 
-    T& operator[](const std::string& name)
+    std::shared_ptr<T> operator[](const std::string& name)
     {
         std::lock_guard<std::mutex> guard(mutex_);
-        return elements_.try_emplace(name, name).first->second;
+        return elements_.try_emplace(name, std::make_shared<T>(name)).first->second;
     }
 
 private:
-    std::unordered_map<std::string, T> elements_;
+    std::unordered_map<std::string, std::shared_ptr<T>> elements_;
     std::mutex mutex_;
 };
 

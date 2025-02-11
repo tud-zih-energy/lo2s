@@ -21,7 +21,6 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
 #include <lo2s/process_info.hpp>
 
 namespace lo2s
@@ -37,29 +36,37 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
 void ProcessMonitor::insert_process(Process parent, Process process, std::string proc_name,
                                     bool spawn)
 {
-    trace_.add_process(parent, process, proc_name);
-    insert_thread(process, process.as_thread(), proc_name, spawn, true);
+    trace_.emplace_process(parent, process, proc_name);
+    insert_thread(process, process.as_thread(), proc_name, spawn);
 }
 
 void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn,
                                    bool is_process)
 {
-    trace_.add_thread(thread, name);
+    trace_.emplace_thread(thread, name);
 
     if (config().sampling)
     {
-        process_infos_.try_emplace(process, process, spawn);
+        if (!process_infos_.has(process))
+        {
+            process_infos_.insert(process, !spawn);
+        }
     }
 
+    ExecutionScope scope = ExecutionScope(thread);
     if (config().sampling ||
-        perf::counter::CounterProvider::instance().has_group_counters(ExecutionScope(thread)) ||
-        perf::counter::CounterProvider::instance().has_userspace_counters(ExecutionScope(thread)))
+        !perf::EventComposer::instance()
+             .counters_for(MeasurementScope::group_metric(scope))
+             .counters.empty() ||
+        !perf::EventComposer::instance()
+             .counters_for(MeasurementScope::userspace_metric(scope))
+             .counters.empty())
     {
         try
         {
-            auto inserted = threads_.emplace(
-                std::piecewise_construct, std::forward_as_tuple(thread),
-                std::forward_as_tuple(ExecutionScope(thread), *this, spawn, is_process));
+            auto inserted =
+                threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
+                                 std::forward_as_tuple(scope, *this, spawn, is_process));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
@@ -70,12 +77,12 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         }
     }
 
-    trace_.update_thread_name(thread, name);
+    trace_.emplace_thread(thread, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.update_process_name(process, name);
+    trace_.emplace_process(trace::Trace::NO_PARENT_PROCESS, process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

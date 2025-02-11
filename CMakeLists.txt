@@ -28,7 +28,7 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
-    Binutils_USE_STATIC_LIBS
+    LibElf_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Libpfm_USE_STATIC_LIBS
@@ -38,11 +38,13 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Radare_USE_STATIC_LIBS
     Sensors_USE_STATIC_LIBS
     Veosinfo_USE_STATIC_LIBS
-    Audit_USE_STATIC_LIBS)
+    Audit_USE_STATIC_LIBS
+    Debuginfod_USE_STATIC_LIBS
+)
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
@@ -56,7 +58,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
 else()
     if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
         set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
     elseif(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
         set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
@@ -67,7 +68,8 @@ else()
         set(CMAKE_LINK_SEARCH_START_STATIC 1)
         set(CMAKE_LINK_SEARCH_END_STATIC 1)
     endif()
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -78,6 +80,8 @@ else()
     set(Veosinfo_USE_STATIC_LIBS ON CACHE BOOL "")
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
+    set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
 endif()
 
 # Check if we are running Linux
@@ -101,7 +105,6 @@ include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Binutils REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
@@ -113,6 +116,8 @@ find_package(Libpfm)
 find_package(CUDAToolkit)
 find_package(Radare)
 find_package(Audit)
+find_package(LibElf REQUIRED)
+find_package(Debuginfod)
 
 
 # configurable options
@@ -132,6 +137,8 @@ CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsu
 add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
 CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
 add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
+CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand." ON "Debuginfod_FOUND" OFF)
+add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -160,6 +167,7 @@ if(NOT HAVE_PERF_RECORD_SWITCH)
     message(FATAL_ERROR "lo2s requires support for perf context switch recording. Make sure that you are running on a kernel that support context_switch with perf_event_open")
 endif()
 
+
 # detect version of running kernel
 string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSION})
 
@@ -180,11 +188,11 @@ set(SOURCE_FILES
     src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
 
-    src/perf/event_provider.cpp
-    src/perf/event.cpp
+    src/perf/event_resolver.cpp
+    src/perf/event_attr.cpp
 
     src/perf/bio/block_device.cpp
-    src/perf/counter/counter_provider.cpp
+    src/perf/event_composer.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
 
@@ -194,7 +202,7 @@ set(SOURCE_FILES
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/writer.cpp
-    src/perf/tracepoint/event.cpp
+    src/perf/tracepoint/event_attr.cpp
     src/perf/syscall/writer.cpp
 
     src/time/time.cpp
@@ -203,8 +211,8 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
-    src/mmap.cpp
+    src/process_info.cpp
+    src/topology.cpp src/pipe.cpp src/dwarf_resolve.cpp
     src/util.cpp
     src/perf/util.cpp
     src/syscalls.cpp
@@ -223,10 +231,11 @@ target_link_libraries(lo2s
         Nitro::dl
         Nitro::options
         Threads::Threads
-        Binutils::Binutils
         fmt::fmt
         std::filesystem
-)
+        LibElf::LibElf
+        LibElf::LibDw
+    )
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
@@ -304,6 +313,15 @@ if (USE_VEOSINFO)
                                     src/monitor/nec_monitor_main.cpp)
     else()
         message(SEND_ERROR "Veosinfo not found but requested.")
+    endif()
+endif()
+
+if (USE_DEBUGINFOD)
+    if (Debuginfod_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
+        target_link_libraries(lo2s PRIVATE Debuginfod::Debuginfod)
+    else()
+        message(SEND_ERROR "Debuginfod not found but requested")
     endif()
 endif()
 

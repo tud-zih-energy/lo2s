@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2021,
+ * Copyright (c) 2017,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,49 +21,48 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
-#include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
-#include <lo2s/perf/event_resolver.hpp>
-#include <lo2s/trace/trace.hpp>
-
-#include <cstdint>
-
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
-#include <cstdlib>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 
 namespace lo2s
 {
 namespace perf
 {
-namespace counter
-{
-namespace userspace
-{
 
-template <class T>
-class Reader
+class EventResolver
 {
 public:
-    Reader(ExecutionScope scope);
+    EventAttr get_event_by_name(const std::string& name);
 
-    void read();
+    bool has_event(const std::string& name);
 
-    int fd()
+    std::vector<EventAttr> get_predefined_events();
+    std::vector<SysfsEventAttr> get_pmu_events();
+
+    EventAttr get_metric_leader(const std::string& metric_leader);
+
+    std::vector<std::string> get_tracepoint_event_names();
+
+    static EventResolver& instance()
     {
-        return timer_fd_;
+        static EventResolver e;
+        return e;
     }
 
-protected:
-    CounterCollection counter_collection_;
-    UserspaceCounterBuffer counter_buffer_;
-    int timer_fd_;
+private:
+    EventAttr fallback_metric_leader_event();
+    EventResolver();
+    EventResolver(const EventResolver&) = delete;
+    void operator=(const EventResolver&) = delete;
 
-    std::vector<EventGuard> counters_;
-    std::vector<UserspaceReadFormat> data_;
+    EventAttr cache_event(const std::string& name);
+
+    std::unordered_map<std::string, std::optional<EventAttr>> event_map_;
 };
-} // namespace userspace
-} // namespace counter
+
 } // namespace perf
 } // namespace lo2s

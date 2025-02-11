@@ -22,10 +22,20 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/dwarf_resolve.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/mmap.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/types.hpp>
 
-#include <mutex>
+#include <nitro/lang/string.hpp>
+
+#include <fmt/core.h>
+
+#include <algorithm>
+#include <fstream>
+#include <shared_mutex>
 #include <thread>
 
 namespace lo2s
@@ -33,31 +43,82 @@ namespace lo2s
 class ProcessInfo
 {
 public:
-    ProcessInfo(Process p, bool enable_on_exec) : process_(p), maps_(p, !enable_on_exec)
-    {
-    }
-
+    ProcessInfo(Process p, bool read_initial);
     Process process() const
     {
         return process_;
     }
 
-    void mmap(const RawMemoryMapEntry& entry)
+    void mmap(const RecordMmapType& entry)
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        maps_.mmap(entry);
+        mmap(entry.addr, entry.addr + entry.len, entry.pgoff, entry.filename);
     }
 
-    MemoryMap maps() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        // Yes, this is correct as per 6.6.3 The Return Statement
-        return maps_;
-    }
+    void mmap(Address addr, Address end, Address pgoff, std::string filename);
+
+    LineInfo lookup_line_info(MeasurementScope scope, Address ip);
+    std::string lookup_instruction(MeasurementScope scope, Address ip) const;
 
 private:
+    void emplace_fr(Address addr, Address end, Address pgoff, std::string filename);
+    void emplace_ir(Address addr, Address end, Address pgoff, std::string filename);
+
+    struct Mapping
+    {
+        Mapping(Address s, Address e, Address o) : range(s, e), pgoff(o)
+        {
+        }
+
+        Mapping(Address s) : range(s), pgoff(0)
+        {
+        }
+
+        Range range;
+        Address pgoff;
+
+        bool operator==(const Address& other) const
+        {
+            return other >= range.start && other < range.end;
+        }
+
+        bool operator<(const Mapping& other) const
+        {
+            return range < other.range;
+        }
+
+        bool operator<(const Address& other) const
+        {
+            return range < other;
+        }
+
+        static Mapping max()
+        {
+            return Mapping(0, (uint64_t)-1, 0);
+        }
+    };
+
     const Process process_;
-    mutable std::mutex mutex_;
-    MemoryMap maps_;
+    mutable std::shared_mutex mutex_;
+    std::map<MeasurementScope, std::map<Mapping, std::shared_ptr<FunctionResolver>>>
+        function_resolvers_;
+    std::map<MeasurementScope, std::map<Mapping, std::shared_ptr<InstructionResolver>>>
+        instruction_resolvers_;
+};
+
+class ProcessMap
+{
+public:
+    ProcessMap()
+    {
+    }
+
+    bool has(Process p);
+
+    ProcessInfo& get(Process p);
+
+    ProcessInfo& insert(Process p, bool read_initial);
+
+private:
+    std::map<Process, ProcessInfo> infos_;
 };
 } // namespace lo2s

@@ -25,7 +25,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/mmap.hpp>
+#include <lo2s/perf/types.hpp>
 #include <lo2s/platform.hpp>
 #include <lo2s/shared_memory.hpp>
 #include <lo2s/util.hpp>
@@ -66,32 +66,7 @@ public:
     using RecordUnknownType = perf_event_header;
 
     using RecordMmapType = lo2s::RecordMmapType;
-
-    struct RecordMmap2Type
-    {
-        // BAD things happen if you try this
-        RecordMmap2Type() = delete;
-        RecordMmap2Type(const RecordMmap2Type&) = delete;
-        RecordMmap2Type& operator=(const RecordMmap2Type&) = delete;
-        RecordMmap2Type(RecordMmap2Type&&) = delete;
-        RecordMmap2Type& operator=(RecordMmap2Type&&) = delete;
-
-        struct perf_event_header header;
-        uint32_t pid;
-        uint32_t tid;
-        uint64_t addr;
-        uint64_t len;
-        uint64_t pgoff;
-        uint32_t maj;
-        uint32_t min;
-        uint64_t ino;
-        uint64_t ino_generation;
-        uint32_t prot;
-        uint32_t flags;
-        // Note ISO C++ forbids zero-size array, but this struct is exclusively used as pointer
-        char filename[1];
-        // struct sample_id sample_id;
-    };
+    using RecordCommType = lo2s::RecordCommType;
 
     struct RecordLostType
     {
@@ -135,18 +110,6 @@ public:
         uint32_t next_prev_tid;
         uint32_t pid, tid;
         uint64_t time;
-        // struct sample_id sample_id;
-    };
-
-    /**
-     * \brief structure for PERF_RECORD_COMM events
-     **/
-    struct RecordCommType
-    {
-        struct perf_event_header header;
-        uint32_t pid;
-        uint32_t tid;
-        char comm[1]; // ISO C++ forbits zero-size array
         // struct sample_id sample_id;
     };
 
@@ -211,9 +174,6 @@ public:
             {
             case PERF_RECORD_MMAP:
                 stop = crtp_this->handle((const RecordMmapType*)event_header_p);
-                break;
-            case PERF_RECORD_MMAP2:
-                stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
                 break;
             case PERF_RECORD_SWITCH:
                 stop = crtp_this->handle((const RecordSwitchType*)event_header_p);

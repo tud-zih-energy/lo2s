@@ -25,8 +25,7 @@
 
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
-#include <lo2s/perf/event_provider.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
@@ -72,16 +71,11 @@ static inline void list_arguments_sorted(std::ostream& os, const std::string& de
 }
 
 static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::Event> events)
+                                      std::vector<perf::EventAttr> events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
     {
-        if (!ev.is_valid())
-        {
-            continue;
-        }
-
         std::string availability = "";
         std::string cpu = "";
         if (ev.availability() == perf::Availability::PROCESS_MODE)
@@ -91,13 +85,32 @@ static inline void print_availability(std::ostream& os, const std::string& descr
         else if (ev.availability() == perf::Availability::SYSTEM_MODE)
         {
             availability = " #";
-        }
-        if (ev.supported_cpus() != Topology::instance().cpus())
-        {
-            const auto& cpus = ev.supported_cpus();
-            cpu =
-                fmt::format(" [ CPUs {}-{} ]", std::min_element(cpus.begin(), cpus.end())->as_int(),
-                            std::max_element(cpus.begin(), cpus.end())->as_int());
+            if (ev.supported_cpus() != Topology::instance().cpus())
+            {
+                const auto& cpus = ev.supported_cpus();
+                std::vector<int> cpus_int;
+                std::transform(cpus.begin(), cpus.end(), std::back_inserter(cpus_int),
+                               [](Cpu cpu) { return cpu.as_int(); });
+
+                if (cpus_int.size() == 1)
+                {
+                    cpu = fmt::format(" [ CPU {} ]", *cpus_int.begin());
+                }
+                else
+                {
+                    int min_cpu = *std::min_element(cpus_int.begin(), cpus_int.end());
+                    int max_cpu = *std::max_element(cpus_int.begin(), cpus_int.end());
+
+                    if (max_cpu - min_cpu + 1 == static_cast<int>(cpus_int.size()))
+                    {
+                        cpu = fmt::format(" [ CPUs {}-{} ]", min_cpu, max_cpu);
+                    }
+                    else
+                    {
+                        cpu = fmt::format(" [ CPUs {}]", fmt::join(cpus_int, ", "));
+                    }
+                }
+            }
         }
 
         event_names.push_back(ev.name() + availability + cpu);
@@ -228,6 +241,17 @@ void parse_program_options(int argc, const char** argv)
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
+    general_options
+#ifdef HAVE_DEBUGINFOD
+        .option("dwarf",
+                "Set DWARF resolve mode. none disables DWARF, local uses only locally cached "
+                "debuginfo, full uses debuginfod to download debug information on demand")
+        .default_value("full")
+#else
+        .option("dwarf", "Set DWARF resolve mode. none disables DWARF, local enables DWARF support")
+        .default_value("local")
+#endif
+        .metavar("DWARFMODE");
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
                             "Monitor as long as COMMAND is running or until PID exits.")
@@ -407,7 +431,7 @@ void parse_program_options(int argc, const char** argv)
     config.use_x86_energy = arguments.given("x86-energy");
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
-
+    config.tracepoint_events = arguments.get_all("tracepoint");
 #ifdef HAVE_CUDA
     config.cuda_injectionlib_path = arguments.get("nvidia-injection-path");
 #endif
@@ -423,6 +447,26 @@ void parse_program_options(int argc, const char** argv)
     {
         print_version(std::cout);
         std::exit(EXIT_SUCCESS);
+    }
+
+    if (!arguments.get_all("tracepoint").empty() || arguments.given("block-io") ||
+        !arguments.get_all("syscall").empty())
+    {
+        try
+        {
+            if (!std::filesystem::exists("/sys/kernel/debug/tracing"))
+            {
+                Log::error() << "syscall, block-io and tracepoint recording require access to "
+                                "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+                std::exit(EXIT_FAILURE);
+            }
+        }
+        catch (std::filesystem::filesystem_error&)
+        {
+            Log::error() << "syscall, block-io and tracepoint recording require access to "
+                            "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+            std::exit(EXIT_FAILURE);
+        }
     }
 
     if (arguments.given("quiet") && arguments.given("verbose"))
@@ -487,11 +531,11 @@ void parse_program_options(int argc, const char** argv)
         if (arguments.given("list-events"))
         {
             print_availability(std::cout, "predefined events",
-                               perf::EventProvider::get_predefined_events());
-
+                               perf::EventResolver::instance().get_predefined_events());
             // TODO: find a better solution ?
-            std::vector<perf::SysfsEvent> sys_events = perf::EventProvider::get_pmu_events();
-            std::vector<perf::Event> events(sys_events.begin(), sys_events.end());
+            std::vector<perf::SysfsEventAttr> sys_events =
+                perf::EventResolver::instance().get_pmu_events();
+            std::vector<perf::EventAttr> events(sys_events.begin(), sys_events.end());
             print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
@@ -508,7 +552,7 @@ void parse_program_options(int argc, const char** argv)
         if (arguments.given("list-tracepoints"))
         {
             std::vector<std::string> tracepoints =
-                perf::counter::CounterProvider::instance().get_tracepoint_event_names();
+                perf::EventResolver::instance().get_tracepoint_event_names();
 
             if (tracepoints.empty())
             {
@@ -592,6 +636,30 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    std::string dwarf_mode = arguments.get("dwarf");
+
+    if (dwarf_mode == "full")
+    {
+#ifdef HAVE_DEBUGINFOD
+        config.dwarf = DwarfUsage::FULL;
+#else
+        Log::warn() << "No Debuginfod support available, downgrading to use only local files!";
+        config.dwarf = DwarfUsage::LOCAL;
+#endif
+    }
+    else if (dwarf_mode == "local")
+    {
+        config.dwarf = DwarfUsage::LOCAL;
+    }
+    else if (dwarf_mode == "none")
+    {
+        config.dwarf = DwarfUsage::NONE;
+    }
+    else
+    {
+        std::cerr << "Unknown DWARF mode: " << dwarf_mode << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
     if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
@@ -667,7 +735,7 @@ void parse_program_options(int argc, const char** argv)
         perf::perf_check_disabled();
     }
 
-    if (config.sampling && !perf::EventProvider::has_event(config.sampling_event))
+    if (config.sampling && !perf::EventResolver::instance().has_event(config.sampling_event))
     {
         lo2s::Log::fatal() << "requested sampling event \'" << config.sampling_event
                            << "\' is not available!";
@@ -675,8 +743,9 @@ void parse_program_options(int argc, const char** argv)
     }
 
     // time synchronization
-    config.use_clockid = false;
     config.use_pebs = false;
+    config.clockid = std::nullopt;
+
     try
     {
         std::string requested_clock_name = arguments.get("clockid");
@@ -692,7 +761,6 @@ void parse_program_options(int argc, const char** argv)
 
         lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
 #ifndef USE_HW_BREAKPOINT_COMPAT
-        config.use_clockid = true;
         config.clockid = clock.id;
 #else
         if (requested_clock_name != "monotonic-raw")
@@ -795,12 +863,9 @@ void parse_program_options(int argc, const char** argv)
         perf_group_events.emplace_back("cpu-cycles");
     }
 
-    perf::counter::CounterProvider::instance().initialize_tracepoints(
-        arguments.get_all("tracepoint"));
-    perf::counter::CounterProvider::instance().initialize_group_counters(
-        arguments.get("metric-leader"), perf_group_events);
-    perf::counter::CounterProvider::instance().initialize_userspace_counters(perf_userspace_events);
-
+    config.metric_leader = arguments.get("metric-leader");
+    config.group_counters = perf_group_events;
+    config.userspace_counters = perf_userspace_events;
     config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
 
     if (arguments.count("x86-adapt-knob"))

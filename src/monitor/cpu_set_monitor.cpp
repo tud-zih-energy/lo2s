@@ -27,7 +27,6 @@
 
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
-#include <lo2s/perf/counter/counter_provider.hpp>
 
 #include <filesystem>
 
@@ -58,13 +57,12 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
             {
                 pid = std::stol(pid_match[1]);
 
-                process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                                       std::forward_as_tuple(Process(pid), false));
+                process_infos_.insert(Process(pid), true);
             }
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
+    trace_.emplace_threads(get_comms_for_running_threads());
 
     try
     {
@@ -139,7 +137,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    trace_.add_threads(get_comms_for_running_threads());
+    trace_.emplace_threads(get_comms_for_running_threads());
 
     for (auto& monitor_elem : monitors_)
     {
