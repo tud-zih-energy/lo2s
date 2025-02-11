@@ -22,65 +22,47 @@
 
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
-
-#include <lo2s/perf/counter/group/writer.hpp>
-#include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/perf/syscall/writer.hpp>
-
-#include <array>
-#include <chrono>
-#include <memory>
-#include <thread>
-
-#include <cstddef>
-
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/ringbuf.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
 
-class ScopeMonitor : public PollMonitor
+class CUDAMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+    CUDAMonitor(trace::Trace& trace, int fd);
 
-    void initialize_thread() override;
     void finalize_thread() override;
     void monitor(int fd) override;
 
     std::string group() const override
     {
-        if (scope_.is_cpu())
-        {
-            return "lo2s::CpuMonitor";
-        }
-        else
-        {
-            return "lo2s::ThreadMonitor";
-        }
+        return "lo2s::CUDAMonitor";
     }
 
     void emplace_resolvers(Resolvers& resolvers)
     {
-        if (sample_writer_)
-        {
-            sample_writer_->emplace_resolvers(resolvers);
-        }
+        resolvers.cuda_function_resolvers[process_].emplace(
+            Mapping(Address(0), Address(highest_func_ + 1), 0),
+            std::make_shared<ManualFunctionResolver>("cuda kernels", functions_));
     }
 
 private:
-    ExecutionScope scope_;
-    std::unique_ptr<perf::syscall::Writer> syscall_writer_;
-    std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
-    std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
+    static constexpr int CCTX_LEVEL_PROCESS = 1;
+    static constexpr int CCTX_LEVEL_KERNEL = 2;
+
+    RingbufReader ringbuf_reader_;
+    Process process_;
+    perf::time::Converter& time_converter_;
+    otf2::chrono::time_point last_tp_;
+
+    LocalCctxTree& local_cctx_tree_;
+    std::map<Address, std::string> functions_;
+    uint64_t highest_func_ = 0;
 };
 } // namespace monitor
 } // namespace lo2s

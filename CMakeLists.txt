@@ -201,6 +201,8 @@ set(SOURCE_FILES
 
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
+    src/monitor/socket_monitor.cpp
+    src/monitor/cuda_monitor.cpp
 
     src/perf/bio/block_device.cpp
     src/perf/event_composer.cpp
@@ -218,6 +220,7 @@ set(SOURCE_FILES
 
     src/time/time.cpp
 
+    src/local_cctx_tree.cpp
     src/trace/trace.cpp
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
@@ -243,7 +246,7 @@ target_link_libraries(lo2s
         Nitro::dl
         Nitro::options
         Threads::Threads
-        fmt::fmt
+        fmt::fmt-header-only
         std::filesystem
         LibElf::LibElf
         LibDw::LibDw
@@ -356,10 +359,10 @@ if (USE_LIBAUDIT)
     endif()
 endif()
 
-set(LO2S_CUDA_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
+set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+        add_library(lo2s_injection SHARED src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
         target_include_directories(lo2s_injection PRIVATE include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -369,7 +372,7 @@ if(USE_CUPTI)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
         endif()
 
-	target_link_libraries(lo2s_injection PRIVATE fmt::fmt
+	target_link_libraries(lo2s_injection PRIVATE fmt::fmt-header-only
             Nitro::log
             Nitro::env
             Nitro::dl

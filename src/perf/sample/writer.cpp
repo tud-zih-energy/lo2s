@@ -54,11 +54,11 @@ namespace sample
 
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 : Reader(scope, enable_on_exec), scope_(scope), trace_(trace),
-  otf2_writer_(trace.sample_writer(scope)),
-  cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(), otf2_writer_.location(),
-                                               otf2_writer_.location())),
-  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
-  local_cctx_tree_(trace.create_local_cctx_tree()),
+  local_cctx_tree_(trace.create_local_cctx_tree(MeasurementScope::sample(scope))),
+  cpuid_metric_event_(otf2::chrono::genesis(),
+                      trace.metric_instance(trace.cpuid_metric_class(),
+                                            local_cctx_tree_.writer().location(),
+                                            local_cctx_tree_.writer().location())),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -66,13 +66,9 @@ Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 
 Writer::~Writer()
 {
-    if (local_cctx_tree_.cur_cctx().type == CallingContextType::THREAD)
-    {
-        otf2_writer_.write_calling_context_leave(adjust_timepoints(lo2s::time::now()),
-                                                 local_cctx_tree_.cctx_exit());
-    }
+    local_cctx_tree_.cctx_leave(last_time_point_, CCTX_LEVEL_PROCESS);
 
-    local_cctx_tree_.finalize(&otf2_writer_);
+    local_cctx_tree_.finalize();
 }
 
 void Writer::emplace_resolvers(Resolvers& resolvers)
@@ -112,36 +108,15 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
-    update_current_thread(Process(sample->pid), Thread(sample->tid), tp);
+    update_calling_context(Process(sample->pid), Thread(sample->tid), tp, false);
 
     if (!has_cct_)
     {
-        // For unwind distance definiton, see:
-        // http://scorepci.pages.jsc.fz-juelich.de/otf2-pipelines/docs/otf2-2.2/html/group__records__definition.
-        // html#CallingContext
-
-        // We always have a fake CallingContext for the process, which is scheduled.
-        // So if we don't record the calling context tree, all nodes in the calling context tree
-        // are: The fake node for the process and a second node for the current context of the
-        // sample. Therefore, we always have an unwind distance of 2. (Technically, it could also be
-        // 1, but we lack the information to distinguish those cases. Hence, we stick with 2.)
-        //
-        // However, in the case that we actually record the complete call stack, we get the number
-        // of nodes in the calling context tree from the number of elements in the call stack
-        // recorded from perf. Tough, we still have the fake calling context for the process, which
-        // adds 1 to that number. But we also remove the lowest entry from the call stack, because
-        // that is ALWAYS in the kernel, which can't be resolved and thus doesn't provide any useful
-        // information.
-        //
-        // Having these things in mind, look at this line and tell me, why it is still wrong:
-        otf2_writer_.write_calling_context_sample(tp, local_cctx_tree_.sample_ref(sample->ip), 2,
-                                                  trace_.interrupt_generator().ref());
+        local_cctx_tree_.cctx_sample(tp, sample->ip);
     }
     else
     {
-        otf2_writer_.write_calling_context_sample(
-            tp, local_cctx_tree_.sample_ref(sample->nr, sample->ips), sample->nr,
-            trace_.interrupt_generator().ref());
+        local_cctx_tree_.cctx_sample(tp, sample->nr, sample->ips);
     }
     return false;
 }
@@ -155,67 +130,13 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
                     << mmap_event->tid;
     }
 
-    Log::debug() << "encountered mmap event for " << scope_.name() << " "
+    Log::debug() << "encountered mmap event for " << mmap_event->pid << " "
                  << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
                  << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
 
     cached_mmap_events_.emplace_back(mmap_event);
 
     return false;
-}
-
-void Writer::update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp)
-{
-    if (first_event_ && !scope_.is_cpu())
-    {
-        otf2_writer_ << otf2::event::thread_begin(tp, trace_.process_comm(thread), -1);
-        first_event_ = false;
-    }
-
-    if (local_cctx_tree_.is_current(CallingContext::thread(thread)))
-    {
-        return;
-    }
-    else if (local_cctx_tree_.cur_cctx().type != CallingContextType::PROCESS)
-    {
-        leave_current_thread(tp);
-    }
-
-    update_current_process(process);
-
-    otf2_writer_.write_calling_context_enter(
-        tp, local_cctx_tree_.cctx_enter(CallingContext::thread(thread)), 2);
-}
-
-void Writer::leave_current_thread(otf2::chrono::time_point tp)
-{
-    if (local_cctx_tree_.cur_cctx().type == CallingContextType::THREAD)
-    {
-        otf2_writer_.write_calling_context_leave(tp, local_cctx_tree_.cctx_exit());
-    }
-}
-
-void Writer::update_current_process(Process process)
-{
-    if (local_cctx_tree_.is_current(CallingContext::process(process)))
-    {
-        return;
-    }
-
-    if (local_cctx_tree_.cur_cctx().type != CallingContextType::ROOT)
-    {
-        leave_current_process();
-    }
-
-    local_cctx_tree_.cctx_enter(CallingContext::process(process));
-}
-
-void Writer::leave_current_process()
-{
-    if (local_cctx_tree_.cur_cctx().type == CallingContextType::PROCESS)
-    {
-        local_cctx_tree_.cctx_exit();
-    }
 }
 
 otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
@@ -260,7 +181,7 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
     cpuid_metric_event_.raw_values()[0] =
         is_switch_out ? -1 : static_cast<std::int64_t>(context_switch->cpu);
 
-    otf2_writer_ << cpuid_metric_event_;
+    local_cctx_tree_.writer() << cpuid_metric_event_;
 
     return false;
 }
@@ -270,40 +191,37 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 {
     if (switch_out)
     {
-        if (local_cctx_tree_.cur_cctx().type == CallingContextType::ROOT)
-        {
-            Log::debug() << "Leave event but not in a thread!";
-            return;
-        }
-        leave_current_thread(tp);
+        local_cctx_tree_.cctx_leave(tp, CCTX_LEVEL_PROCESS);
     }
     else
     {
-        update_current_thread(process, thread, tp);
+        if (first_event_ && !scope_.is_cpu())
+        {
+            local_cctx_tree_.writer()
+                << otf2::event::thread_begin(tp, trace_.process_comm(thread), -1);
+            first_event_ = false;
+        }
+
+        local_cctx_tree_.cctx_enter(tp, CCTX_LEVEL_PROCESS, CallingContext::process(process),
+                                    CallingContext::thread(thread));
     }
 }
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
-    if (!scope_.is_cpu())
+    std::string new_command{ static_cast<const char*>(comm->comm) };
+
+    Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
+                 << new_command << "\"";
+
+    // only update name of process if the main thread changes its name
+    if (comm->pid == comm->tid)
     {
-        std::string new_command{ static_cast<const char*>(comm->comm) };
-
-        Log::debug() << "Thread " << comm->tid << " in process " << comm->pid
-                     << " changed name to \"" << new_command << "\"";
-
-        // update task name
-        trace_.update_thread_name(Thread(comm->tid), new_command);
-
-        // only update name of process if the main thread changes its name
-        if (comm->pid == comm->tid)
-        {
-            trace_.update_process_name(Process(comm->pid), new_command);
-        }
-        else
-        {
-            trace_.update_thread_name(Thread(comm->tid), new_command);
-        }
+        trace_.emplace_process(trace::NO_PARENT_PROCESS, Process(comm->pid), new_command);
+    }
+    else
+    {
+        trace_.emplace_thread(Process(comm->pid), Thread(comm->tid), new_command);
     }
     summary().register_process(Process(comm->pid));
 
@@ -324,16 +242,16 @@ void Writer::end()
             // time::now(), which is a monotone clock, therefore it is before
             // the call to time::now() from above.  If any samples were written,
             // the required check has occured in handle() above.
-            otf2_writer_ << otf2::event::thread_begin(first_time_point_,
-                                                      trace_.process_comm(scope_.as_thread()), -1);
+            local_cctx_tree_.writer() << otf2::event::thread_begin(
+                first_time_point_, trace_.process_comm(scope_.as_thread()), -1);
         }
 
         // At this point, transitivity and monotonicity (of lo2s::time::now())
         // ensure that first_time_point_ <= last_time_point_, therefore samples
         // on this scope span a non-negative amount of time between the
         // thread_begin and thread_end event.
-        otf2_writer_ << otf2::event::thread_end(last_time_point_,
-                                                trace_.process_comm(scope_.as_thread()), -1);
+        local_cctx_tree_.writer() << otf2::event::thread_end(
+            last_time_point_, trace_.process_comm(scope_.as_thread()), -1);
     }
 }
 } // namespace sample

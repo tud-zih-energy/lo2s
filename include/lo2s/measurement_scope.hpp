@@ -28,6 +28,7 @@ namespace lo2s
 enum class MeasurementScopeType
 {
     SAMPLE,
+    NEC_SAMPLE,
     GROUP_METRIC,
     USERSPACE_METRIC,
     NEC_METRIC,
@@ -97,6 +98,11 @@ struct MeasurementScope
         return { MeasurementScopeType::POSIX_IO, s };
     }
 
+    static MeasurementScope nec_sample(ExecutionScope s)
+    {
+        return { MeasurementScopeType::NEC_SAMPLE, s };
+    }
+
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
@@ -135,6 +141,8 @@ struct MeasurementScope
             return fmt::format("tracepoint events for {}", scope.name());
         case MeasurementScopeType::POSIX_IO:
             return fmt::format("POSIX I/O events for {}", scope.name());
+        case MeasurementScopeType::NEC_SAMPLE:
+            return fmt::format("samples for NEC process {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

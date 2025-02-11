@@ -33,6 +33,8 @@ struct Resolvers
     std::map<Process, ProcessFunctionMap> function_resolvers;
     std::map<Process, MemoryMap<InstructionResolver>> instruction_resolvers;
 
+    std::map<Process, MemoryMap<ManualFunctionResolver>> cuda_function_resolvers;
+
     void fork(Process parent, Process process)
     {
         if (function_resolvers.count(parent) != 0)

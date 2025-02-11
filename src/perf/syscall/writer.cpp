@@ -12,54 +12,34 @@ namespace syscall
 {
 
 Writer::Writer(ExecutionScope scope, trace::Trace& trace)
-: Reader(scope), trace_(trace), time_converter_(perf::time::Converter::instance()),
-  writer_(trace.syscall_writer(scope)), last_syscall_nr_(-1)
+: Reader(scope), local_cctx_tree_(trace.create_local_cctx_tree(MeasurementScope::syscall(scope))),
+  time_converter_(perf::time::Converter::instance())
 {
 }
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
+
     if (sample->id == sys_enter_id)
     {
-        if (last_syscall_nr_ != -1)
-        {
-            writer_.write_calling_context_leave(tp, sample->syscall_nr);
-        }
-
-        last_syscall_nr_ = sample->syscall_nr;
-        writer_.write_calling_context_enter(tp, sample->syscall_nr, 2);
-        used_syscalls_.emplace(sample->syscall_nr);
+        local_cctx_tree_.cctx_enter(tp, CCTX_LEVEL_SYSCALL,
+                                    CallingContext::syscall(sample->syscall_nr));
     }
     else
     {
-        if (last_syscall_nr_ == sample->syscall_nr)
-        {
-            writer_.write_calling_context_leave(tp, sample->syscall_nr);
-        }
-        else if (last_syscall_nr_ != -1)
-        {
-            writer_.write_calling_context_leave(tp, last_syscall_nr_);
-        }
-
-        last_syscall_nr_ = -1;
+        local_cctx_tree_.cctx_leave(tp, CCTX_LEVEL_SYSCALL);
     }
+
     last_tp_ = tp;
     return false;
 }
 
 Writer::~Writer()
 {
-    if (last_syscall_nr_ != -1)
-    {
-        writer_.write_calling_context_leave(last_tp_, last_syscall_nr_);
-    }
+    local_cctx_tree_.cctx_leave(last_tp_, 1);
 
-    if (!used_syscalls_.empty())
-    {
-        const auto& mapping = trace_.merge_syscall_contexts(used_syscalls_);
-        writer_ << mapping;
-    }
+    local_cctx_tree_.finalize();
 }
 } // namespace syscall
 } // namespace perf

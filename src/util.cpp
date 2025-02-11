@@ -172,10 +172,10 @@ const struct ::utsname& get_uname()
     return instance.uname;
 }
 
-std::unordered_map<Thread, std::string> get_comms_for_running_threads()
+std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
 {
-    ExecutionScopeGroup& scope_group = ExecutionScopeGroup::instance();
-    std::unordered_map<Thread, std::string> ret;
+
+    std::map<Process, std::map<Thread, std::string>> ret;
     std::filesystem::path proc("/proc");
     for (auto& entry : std::filesystem::directory_iterator(proc))
     {
@@ -188,12 +188,8 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads()
         {
             continue;
         }
-        std::string name = get_process_comm(process);
 
-        scope_group.add_process(process);
-
-        Log::trace() << "mapping from /proc/" << process.as_pid_t() << ": " << name;
-        ret.emplace(process.as_thread(), name);
+        auto& cur_process = ret[process];
         try
         {
             std::filesystem::path task(fmt::format("/proc/{}/task", process.as_pid_t()));
@@ -208,17 +204,11 @@ std::unordered_map<Thread, std::string> get_comms_for_running_threads()
                 {
                     continue;
                 }
-                if (thread == process.as_thread())
-                {
-                    continue;
-                }
 
-                scope_group.add_thread(thread, process);
-
-                name = get_task_comm(process, thread);
+                std::string name = get_task_comm(process, thread);
                 Log::trace() << "mapping from /proc/" << process.as_pid_t() << "/"
                              << thread.as_pid_t() << ": " << name;
-                ret.emplace(thread, name);
+                cur_process.emplace(thread, name);
             }
         }
         catch (...)

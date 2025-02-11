@@ -24,7 +24,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/perf/calling_context_manager.hpp>
+#include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
@@ -63,32 +63,23 @@ public:
     otf2::chrono::time_point record_to() const;
 
     void emplace_monitoring_thread(Thread t, const std::string& name, const std::string& group);
-    void emplace_thread(Thread t, const std::string& name);
-    void emplace_thread_exclusive(Thread thread, const std::string& name,
-                                  const std::lock_guard<std::recursive_mutex>&);
-    void emplace_threads(const std::unordered_map<Thread, std::string>& thread_map);
-    void update_process_name(Process p, const std::string& name);
-    void update_thread_name(Thread t, const std::string& name);
     void emplace_process(Process parent, Process process, const std::string& name = "");
+    void emplace_thread(Process p, Thread t, const std::string& name);
+    void emplace_threads(const std::map<Process, std::map<Thread, std::string>>& thread_map);
 
-    LocalCctxTree& create_local_cctx_tree();
+    LocalCctxTree& create_local_cctx_tree(const MeasurementScope& scope);
     otf2::definition::mapping_table merge_calling_contexts(const LocalCctxTree& local_cctxs,
                                                            Resolvers& resolvers);
     void finalize(Resolvers& resolvers);
 
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
-    otf2::writer::local& sample_writer(const ExecutionScope& scope);
-    otf2::writer::local& cuda_writer(const Thread& thread);
+    otf2::writer::local& sample_writer(const MeasurementScope& scope);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const ExecutionScope& scope);
     otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
-    otf2::writer::local& nec_writer(NecDevice device, const Thread& nec_thread);
     otf2::writer::local& posix_io_writer(Thread thread);
-
-    otf2::definition::calling_context& cuda_calling_context(std::string& exe,
-                                                            std::string& function);
 
     otf2::definition::io_handle& block_io_handle(BlockDevice dev);
     otf2::definition::io_handle& posix_io_handle(Thread thread, int fd, int instance,
@@ -262,45 +253,31 @@ public:
         return registry_.get<otf2::definition::comm>(ByProcess(groups_.get_process(thread)));
     }
 
-    const otf2::definition::location& location(const ExecutionScope& scope)
-    {
-        MeasurementScope sample_scope = MeasurementScope::sample(scope);
-
-        const auto& intern_location = registry_.emplace<otf2::definition::location>(
-            ByMeasurementScope(sample_scope), intern(sample_scope.name()),
-            registry_.get<otf2::definition::location_group>(
-                ByExecutionScope(groups_.get_parent(scope))),
-            otf2::definition::location::location_type::cpu_thread);
-
-        comm_locations_group_.add_member(intern_location);
-
-        if (groups_.get_parent(scope).is_process())
-        {
-            registry_
-                .get<otf2::definition::comm_group>(
-                    ByProcess(groups_.get_process(scope.as_thread())))
-                .add_member(intern_location);
-        }
-        return intern_location;
-    }
-
 private:
     /** Add a thread with the required lock (#mutex_) held.
      *
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #emplace_threads.
      **/
+    void emplace_thread_exclusive(Process process, Thread thread, const std::string& name,
+                                  const std::lock_guard<std::recursive_mutex>&);
+    void update_process(Process parent, Process p, const std::string& name);
+    void update_thread(Thread t, const std::string& name);
 
     struct MergeContext
     {
         Process p;
     };
 
+    otf2::definition::calling_context& cctx_for_cuda(uint64_t kernel_id, Resolvers& r,
+                                                     struct MergeContext& ctx,
+                                                     GlobalCctxMap::value_type* parent);
     otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
                                                         struct MergeContext& ctx,
                                                         GlobalCctxMap::value_type* parent);
-    otf2::definition::calling_context& cctx_for_thread(Thread thread);
+    otf2::definition::calling_context& cctx_for_thread(Thread thread, struct MergeContext& ctx);
     otf2::definition::calling_context& cctx_for_process(Process process);
+    otf2::definition::calling_context& cctx_for_syscall(uint64_t syscall_id);
 
     void merge_nodes(const LocalCctxMap::value_type& local_node,
                      GlobalCctxMap::value_type* global_node, std::vector<uint32_t>& mapping_table,
