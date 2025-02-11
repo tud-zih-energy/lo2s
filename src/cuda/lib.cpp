@@ -19,8 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/cupti/events.hpp>
-#include <lo2s/ringbuf.hpp>
+#include <lo2s/cuda/ringbuf.hpp>
 
 #include <iostream>
 #include <memory>
@@ -40,10 +39,9 @@ extern "C"
 // Allocate 8 MiB every time CUPTI asks for more event memory
 constexpr size_t CUPTI_BUFFER_SIZE = 8 * 1024 * 1024;
 
-std::unique_ptr<lo2s::RingBufWriter> rb_writer = nullptr;
-CUpti_SubscriberHandle subscriber = nullptr;
+std::unique_ptr<lo2s::cuda::RingbufWriter> rb_writer = nullptr;
 
-clockid_t clockid = CLOCK_MONOTONIC_RAW;
+CUpti_SubscriberHandle subscriber = nullptr;
 
 static void atExitHandler(void)
 {
@@ -85,25 +83,11 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         {
             CUpti_ActivityKernel6* kernel = reinterpret_cast<CUpti_ActivityKernel6*>(record);
 
-            uint64_t name_len = strlen(kernel->name);
+            std::string kernel_name = kernel->name;
+            uint64_t cctx = 0;
+            cctx = rb_writer->kernel_def(kernel_name);
 
-            struct lo2s::cupti::event_kernel* ev =
-                reinterpret_cast<struct lo2s::cupti::event_kernel*>(
-                    rb_writer->reserve(sizeof(struct lo2s::cupti::event_kernel) + name_len));
-
-            if (ev == nullptr)
-            {
-                ringbuf_full_dropped++;
-                continue;
-            }
-
-            ev->header.type = lo2s::cupti::EventType::CUPTI_KERNEL;
-            ev->header.size = sizeof(struct lo2s::cupti::event_kernel) + name_len;
-            ev->start = kernel->start;
-            ev->end = kernel->end;
-            memcpy(ev->name, kernel->name, name_len + 1);
-
-            rb_writer->commit();
+            rb_writer->kernel(kernel->start, kernel->end, cctx);
             break;
         }
         default:
@@ -177,23 +161,14 @@ void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti
 
 uint64_t timestampfunc()
 {
-    struct timespec ts;
-    clock_gettime(clockid, &ts);
-    uint64_t res = ts.tv_sec * 1000000000 + ts.tv_nsec;
-    return res;
+    return rb_writer->timestamp();
 }
 
 extern "C" int InitializeInjection(void)
 {
+    pid_t pid = getpid();
 
-    std::string rb_size_str;
-    rb_writer = std::make_unique<lo2s::RingBufWriter>("cupti", getpid(), false);
-    char* clockid_str = getenv("LO2S_CLOCKID");
-
-    if (clockid_str != nullptr)
-    {
-        clockid = std::stoi(clockid_str);
-    }
+    rb_writer = std::make_unique<lo2s::cuda::RingbufWriter>(lo2s::Process(pid));
 
     // Register an atexit() handler for clean-up
     atexit(&atExitHandler);

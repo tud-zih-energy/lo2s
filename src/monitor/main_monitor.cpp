@@ -126,6 +126,9 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         nec_monitors_.back()->start();
     }
 #endif
+
+    socket_monitor_ = std::make_unique<SocketMonitor>(trace_);
+    socket_monitor_->start();
 }
 
 MainMonitor::~MainMonitor()
@@ -137,6 +140,8 @@ MainMonitor::~MainMonitor()
     {
         sensors_recorder_->stop();
     }
+    socket_monitor_->stop();
+    socket_monitor_->emplace_resolvers(resolvers_);
 #endif
 
 #ifdef HAVE_X86_ENERGY

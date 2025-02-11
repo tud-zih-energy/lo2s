@@ -57,11 +57,8 @@ public:
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    trace::Trace& trace_;
+    LocalCctxTree& local_cctx_tree_;
     const time::Converter& time_converter_;
-    otf2::writer::local& writer_;
-
-    std::set<int64_t> used_syscalls_;
 
     int64_t last_syscall_nr_;
     otf2::chrono::time_point last_tp_;
