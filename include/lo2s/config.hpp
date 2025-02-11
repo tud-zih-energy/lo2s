@@ -86,6 +86,7 @@ struct Config
     std::chrono::nanoseconds read_interval;
     std::chrono::nanoseconds userspace_read_interval;
     std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
+    std::chrono::nanoseconds ringbuf_read_interval;
     // Metrics
     bool metric_use_frequency = true;
 
@@ -113,9 +114,12 @@ struct Config
     std::chrono::milliseconds nec_check_interval;
     // Nvidia CUPTI
     bool use_nvidia = false;
-    std::string cuda_injectionlib_path;
-    uint64_t nvidia_ringbuf_size;
+    // Function resolution
     DwarfUsage dwarf;
+    // Ringbuffer interface
+    std::string socket_path;
+    std::string injectionlib_path;
+    uint64_t ringbuf_size;
 };
 
 const Config& config();

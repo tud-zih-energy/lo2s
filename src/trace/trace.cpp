@@ -446,16 +446,15 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& scope)
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::cuda_writer(const Thread& thread)
+otf2::writer::local& Trace::cuda_writer(const Process& process)
 {
-    MeasurementScope scope = MeasurementScope::cuda(thread.as_scope());
+    emplace_process(NO_PARENT_PROCESS, process, "");
 
-    const auto& cuda_location_group = registry_.emplace<otf2::definition::location_group>(
-        ByMeasurementScope(scope), intern(scope.name()),
-        otf2::common::location_group_type::accelerator, system_tree_root_node_);
+    auto scope = MeasurementScope::cuda(process.as_scope());
 
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()), cuda_location_group,
+        ByMeasurementScope(scope), intern(scope.name()),
+        registry_.get<otf2::definition::location_group>(ByExecutionScope(scope.scope)),
         otf2::definition::location::location_type::accelerator_stream);
 
     return archive_(intern_location);
@@ -699,6 +698,24 @@ otf2::definition::metric_class& Trace::metric_class()
                                                             otf2::common::recorder_kind::abstract);
 }
 
+otf2::definition::calling_context& Trace::cctx_for_cuda(Address addr, Resolvers& r,
+                                                        struct MergeContext& ctx,
+                                                        GlobalCctxMap::value_type* global_node)
+{
+    LineInfo line_info = LineInfo::for_unknown_function();
+
+    auto it = r.cuda_function_resolvers[ctx.p].find(addr);
+    if (it != r.cuda_function_resolvers[ctx.p].end())
+    {
+        line_info = it->second->lookup_line_info(addr);
+    }
+
+    auto& new_cctx = registry_.create<otf2::definition::calling_context>(
+        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+
+    return new_cctx;
+}
+
 otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r,
                                                            struct MergeContext& ctx,
                                                            GlobalCctxMap::value_type* global_node)
@@ -826,6 +843,9 @@ void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_typ
             {
             case lo2s::CallingContextType::SAMPLE_ADDR:
                 new_cctx = &cctx_for_address(local_child.first.to_addr(), r, ctx, global_node);
+                break;
+            case lo2s::CallingContextType::CUDA:
+                new_cctx = &cctx_for_cuda(local_child.first.to_addr(), r, ctx, global_node);
                 break;
             case lo2s::CallingContextType::THREAD:
                 new_cctx = &cctx_for_thread(local_child.first.to_thread());

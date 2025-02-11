@@ -21,19 +21,11 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/resolvers.hpp>
 
-#include <lo2s/perf/counter/group/writer.hpp>
-#include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/perf/syscall/writer.hpp>
-
-#include <array>
-#include <chrono>
-#include <memory>
-#include <thread>
-
-#include <cstddef>
+#include <lo2s/monitor/ringbuf_monitor.hpp>
 
 extern "C"
 {
@@ -46,10 +38,10 @@ namespace lo2s
 namespace monitor
 {
 
-class ScopeMonitor : public PollMonitor
+class SocketMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+    SocketMonitor(trace::Trace& trace);
 
     void initialize_thread() override;
     void finalize_thread() override;
@@ -57,30 +49,21 @@ public:
 
     std::string group() const override
     {
-        if (scope_.is_cpu())
-        {
-            return "lo2s::CpuMonitor";
-        }
-        else
-        {
-            return "lo2s::ThreadMonitor";
-        }
+        return "lo2s::SocketMonitor";
     }
 
     void emplace_resolvers(Resolvers& resolvers)
     {
-        if (sample_writer_)
+        for (auto& monitor : cuda_monitors_)
         {
-            sample_writer_->emplace_resolvers(resolvers);
+            monitor.second.emplace_resolvers(resolvers);
         }
     }
 
 private:
-    ExecutionScope scope_;
-    std::unique_ptr<perf::syscall::Writer> syscall_writer_;
-    std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
-    std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
+    trace::Trace& trace_;
+    std::map<int, CUDAMonitor> cuda_monitors_;
+    int socket = -1;
 };
 } // namespace monitor
 } // namespace lo2s

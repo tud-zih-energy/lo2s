@@ -79,7 +79,7 @@ public:
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
-    otf2::writer::local& cuda_writer(const Thread& thread);
+    otf2::writer::local& cuda_writer(const Process& process);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const ExecutionScope& scope);
     otf2::writer::local& bio_writer(BlockDevice dev);
@@ -296,6 +296,9 @@ private:
         Process p;
     };
 
+    otf2::definition::calling_context& cctx_for_cuda(Address addr, Resolvers& r,
+                                                     struct MergeContext& ctx,
+                                                     GlobalCctxMap::value_type* parent);
     otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
                                                         struct MergeContext& ctx,
                                                         GlobalCctxMap::value_type* parent);

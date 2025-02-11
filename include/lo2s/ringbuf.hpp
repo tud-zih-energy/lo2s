@@ -22,12 +22,14 @@
 #pragma once
 
 #include <lo2s/error.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/shared_memory.hpp>
 
 #include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <system_error>
 
@@ -35,7 +37,9 @@ extern "C"
 {
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
 #include <unistd.h>
 }
 
@@ -43,7 +47,15 @@ namespace lo2s
 {
 
 // To resolve possible ringbuf format incompatibilities
-#define RINGBUF_VERSION 1
+// Increase everytime you:
+//  - change the ringbuf_header
+//  - add, delete or change events
+#define RINGBUF_VERSION 2
+
+enum class RingbufMeasurementType : uint64_t
+{
+    CUDA = 0,
+};
 
 struct ringbuf_header
 {
@@ -51,37 +63,64 @@ struct ringbuf_header
     uint64_t size;
     std::atomic_uint64_t head;
     std::atomic_uint64_t tail;
+    // set by the writer side (CUPTI, etc.)
+    pid_t pid;
+
+    // set by the reader size (lo2s)
+    std::atomic<uint64_t> lo2s_ready;
+    clockid_t clockid;
+};
+
+enum class EventType : uint64_t
+{
+    CCTX_ENTER = 1,
+    CCTX_LEAVE = 2,
+    CCTX_SAMPLE = 3,
+    CCTX_DEF = 4
+};
+
+struct __attribute__((packed)) event_header
+{
+    EventType type;
+    uint64_t size;
+};
+
+struct __attribute__((packed)) cctx_def
+{
+    struct event_header header;
+    uint64_t addr;
+    char function[1];
+};
+
+struct __attribute__((packed)) cctx_enter
+{
+    struct event_header header;
+    uint64_t tp;
+    uint64_t addr;
+};
+
+struct __attribute__((packed)) cctx_leave
+{
+    struct event_header header;
+    uint64_t tp;
+    uint64_t addr;
 };
 
 class ShmRingbuf
 {
 public:
-    ShmRingbuf(std::string component, pid_t pid, bool create, size_t pages)
+    ShmRingbuf(int fd) : fd_(fd)
     {
-        std::string filename = "/lo2s-" + component + "-" + std::to_string(pid);
+        auto header_map = SharedMemory(fd_, sizeof(struct ringbuf_header), 0);
 
-        fd_ = shm_open(filename.c_str(), create ? O_RDWR | O_CREAT | O_EXCL : O_RDWR, 0600);
-        if (fd_ == -1)
-        {
-            throw std::system_error(errno, std::system_category());
-        }
+        size_t size = header_map.as<struct ringbuf_header>()->size;
 
-        size_t pagesize = sysconf(_SC_PAGESIZE);
-        size_t size;
-
-        if (create)
+        uint64_t version = header_map.as<struct ringbuf_header>()->version;
+        if (version != RINGBUF_VERSION)
         {
-            size = pagesize * pages;
-            if (ftruncate(fd_, size + sysconf(_SC_PAGESIZE)) == -1)
-            {
-                close(fd_);
-                throw std::system_error(errno, std::system_category());
-            }
-        }
-        else
-        {
-            auto header_map = SharedMemory(fd_, sizeof(struct ringbuf_header), 0);
-            size = header_map.as<struct ringbuf_header>()->size;
+            throw new std::runtime_error("Incompatible Ringbuffer Version" +
+                                         std::to_string(RINGBUF_VERSION) +
+                                         " (us) != " + std::to_string(version) + " (other side)!");
         }
 
         // To handle events that wrap around the ringbuffer, map it twice into virtual memory
@@ -98,57 +137,87 @@ public:
         // another mapping of the ringbuffer using MMAP_FIXED. This way we only touch mappings we
         // control. Also, put the ringbuffer header on a separate page to make life easier.
 
+        size_t pagesize = sysconf(_SC_PAGESIZE);
+
         first_mapping_ = SharedMemory(fd_, size * 2 + pagesize, 0);
 
-        second_mapping_ = SharedMemory(fd_, size, pagesize, first_mapping_.as<std::byte>() + size);
+        second_mapping_ =
+            SharedMemory(fd_, size, pagesize, first_mapping_.as<std::byte>() + size + pagesize);
 
         header_ = first_mapping_.as<struct ringbuf_header>();
         start_ = first_mapping_.as<std::byte>() + pagesize;
+    }
 
-        if (create)
+    std::byte* head(size_t ev_size)
+    {
+
+        uint64_t head = header_->head.load();
+        uint64_t tail = header_->tail.load();
+
+        if (head >= tail)
         {
-            header_->version = RINGBUF_VERSION;
-            header_->size = size;
-            header_->tail.store(0);
-            header_->head.store(0);
+            if (head + ev_size > tail + header_->size)
+            {
+                return nullptr;
+            }
+        }
+
+        else
+        {
+            if (head + ev_size >= tail)
+            {
+                return nullptr;
+            }
+        }
+        return start_ + head;
+    }
+
+    std::byte* tail(uint64_t ev_size)
+    {
+        if (!can_be_loaded(ev_size))
+        {
+            return nullptr;
+        }
+        return start_ + header_->tail.load();
+    }
+
+    void advance_head(size_t ev_size)
+    {
+        header_->head.store((header_->head.load() + ev_size) % header_->size);
+    }
+
+    void advance_tail(size_t ev_size)
+    {
+        // Calling pop() without trying to get() data from the ringbuffer first is an error
+        assert(can_be_loaded(ev_size));
+
+        header_->tail.store((header_->tail.load() + ev_size) % header_->size);
+    }
+
+    bool can_be_loaded(size_t ev_size)
+    {
+        uint64_t head = header_->head.load();
+        uint64_t tail = header_->tail.load();
+        if (tail <= head)
+        {
+            return tail + ev_size <= head;
         }
         else
         {
-            if (header_->version != RINGBUF_VERSION)
-            {
-                throw new std::runtime_error("Incompatible RingBuffer Version " +
-                                             std::to_string(header_->version) +
-                                             " detected on other side!");
-            }
+            return tail + ev_size <= head + header_->size;
         }
     }
 
-    uint64_t head()
+    int fd()
     {
-        return header_->head.load();
+        return fd_;
     }
 
-    uint64_t tail()
+    struct ringbuf_header* header()
     {
-        return header_->tail.load();
+        return header_;
     }
 
-    void head(uint64_t new_head)
-    {
-        return header_->head.store(new_head);
-    }
-
-    void tail(uint64_t new_tail)
-    {
-        return header_->tail.store(new_tail);
-    }
-
-    uint64_t size()
-    {
-        return header_->size;
-    }
-
-protected:
     std::byte* start_;
 
 private:
@@ -157,93 +226,321 @@ private:
     SharedMemory first_mapping_, second_mapping_;
 };
 
-class RingBufWriter : public ShmRingbuf
+class RingbufWriter
 {
 public:
-    RingBufWriter(std::string component, pid_t pid, bool create, size_t pages = 0)
-    : ShmRingbuf(component, pid, create, pages)
+    RingbufWriter(Process process, RingbufMeasurementType type)
     {
+        int fd = memfd_create("lo2s", 0);
+
+        if (fd == -1)
+        {
+            throw ::std::system_error(errno, std::system_category());
+        }
+
+        size_t pagesize = sysconf(_SC_PAGESIZE);
+        size_t size;
+
+        size_t pages = 16;
+
+        char* lo2s_rb_size = getenv("LO2S_RB_SIZE");
+        if (lo2s_rb_size != nullptr)
+        {
+            pages = std::atoi(lo2s_rb_size);
+            if (pages < 1)
+            {
+                throw std::runtime_error("Invalid amount of ringbuffer pages: " +
+                                         std::to_string(pages));
+            }
+        }
+
+        size = pagesize * pages;
+
+        if (ftruncate(fd, size + sysconf(_SC_PAGESIZE)) == -1)
+        {
+            close(fd);
+            throw std::system_error(errno, std::system_category());
+        }
+
+        auto header_map = SharedMemory(fd, sizeof(struct ringbuf_header), 0);
+
+        struct ringbuf_header* first_header = header_map.as<struct ringbuf_header>();
+
+        memset((void*)first_header, 0, sizeof(struct ringbuf_header));
+
+        first_header->version = RINGBUF_VERSION;
+        first_header->size = size;
+        first_header->tail.store(0);
+        first_header->head.store(0);
+
+        first_header->pid = process.as_pid_t();
+
+        rb_ = std::make_unique<ShmRingbuf>(fd);
+        write_fd(type);
+
+        // Wait for other side to open connection
+        while (!rb_->header()->lo2s_ready.load())
+        {
+        };
     }
 
-    std::byte* reserve(size_t ev_size)
+    const struct ringbuf_header* header()
     {
-        if (ev_size == 0)
-        {
-            return nullptr;
-        }
-
-        // No other reservation can be active!
-        assert(reserved_size_ == 0);
-
-        if (head() >= tail() && ev_size >= tail() - head() + size())
-        {
-            return nullptr;
-        }
-        if (head() < tail() && ev_size >= tail() - head())
-        {
-            return nullptr;
-        }
-
-        reserved_size_ = ev_size;
-        return start_ + head();
+        return rb_->header();
     }
 
     void commit()
     {
         assert(reserved_size_ != 0);
-
-        head((head() + reserved_size_) % size());
+        rb_->advance_head(reserved_size_);
         reserved_size_ = 0;
     }
 
+    template <class T>
+    T* reserve(uint64_t payload = 0)
+    {
+        // No other reservation can be active!
+        assert(reserved_size_ == 0);
+
+        uint64_t ev_size = sizeof(T) + payload;
+
+        T* ev = reinterpret_cast<T*>(rb_->head(ev_size));
+        if (ev == nullptr)
+        {
+            return nullptr;
+        }
+
+        memset(ev, 0, ev_size);
+        ev->header.size = ev_size;
+
+        reserved_size_ = ev_size;
+        return ev;
+    }
+
+    // Creates new local cctx_ref. Returns result from local map if it already
+    // exists. Otherwise, generates a cctx_def event.
+    uint64_t cctx_def(std::string func)
+    {
+        if (cctxs_.count(func))
+        {
+            return cctxs_.at(func);
+        }
+
+        struct cctx_def* ev = reserve<struct cctx_def>(func.size());
+
+        if (ev == nullptr)
+        {
+            return 0;
+        }
+
+        auto cctx = cctxs_.emplace(func, next_cctx_ref_);
+
+        memcpy(ev->function, func.c_str(), func.size());
+
+        ev->header.type = EventType::CCTX_DEF;
+        ev->addr = cctx.first->second;
+
+        next_cctx_ref_++;
+
+        commit();
+        return cctx.second;
+    }
+
+    bool cctx_enter(uint64_t tp, uint64_t addr)
+    {
+        struct cctx_enter* ev = reserve<struct cctx_enter>();
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+        ev->header.type = EventType::CCTX_ENTER;
+
+        ev->tp = tp;
+        ev->addr = addr;
+        commit();
+        return true;
+    }
+
+    bool cctx_leave(uint64_t tp, uint64_t addr)
+    {
+        struct cctx_leave* ev = reserve<struct cctx_leave>();
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+
+        ev->header.type = EventType::CCTX_LEAVE;
+        ev->tp = tp;
+        ev->addr = addr;
+
+        commit();
+        return true;
+    }
+
+    bool cctx_sample(uint64_t tp, uint64_t addr)
+    {
+        struct cctx_enter* ev = reserve<struct cctx_enter>();
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+
+        ev->header.type = EventType::CCTX_SAMPLE;
+        ev->tp = tp;
+        ev->addr = addr;
+
+        commit();
+        return true;
+    }
+
+    uint64_t timestamp()
+    {
+        assert(rb_->header()->lo2s_ready.load());
+        struct timespec ts;
+        clock_gettime(rb_->header()->clockid, &ts);
+        uint64_t res = ts.tv_sec * 1000000000 + ts.tv_nsec;
+        return res;
+    }
+
 private:
+    // Writes the fd of the shared memory to the Unix Domain Socket
+    void write_fd(RingbufMeasurementType type)
+    {
+        char* socket_path = getenv("LO2S_SOCKET");
+        if (socket_path == nullptr)
+        {
+            throw std::runtime_error("LO2S_SOCKET is not set!");
+        }
+
+        int data_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+        if (data_socket == -1)
+        {
+            throw std::system_error(errno, std::system_category());
+        }
+
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+
+        addr.sun_family = AF_UNIX;
+
+        strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
+
+        int ret = connect(data_socket, (const struct sockaddr*)&addr, sizeof(addr));
+        if (ret < 0)
+        {
+            throw std::system_error(errno, std::system_category());
+        }
+
+        union
+        {
+            struct cmsghdr cm;
+            char control[CMSG_SPACE(sizeof(int))];
+        } control_un;
+
+        struct msghdr msg;
+        msg.msg_control = control_un.control;
+        msg.msg_controllen = sizeof(control_un.control);
+
+        struct cmsghdr* cmptr;
+        cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+
+        *((int*)CMSG_DATA(cmptr)) = rb_->fd();
+
+        msg.msg_name = NULL;
+        msg.msg_namelen = 0;
+
+        // We need to send some data with the fd anyways, so use that to send
+        // the type of the measurement that we are doing.
+        struct iovec iov[1];
+        iov[0].iov_base = &type;
+        iov[0].iov_len = 8;
+
+        msg.msg_iov = iov;
+        msg.msg_iovlen = 1;
+
+        sendmsg(data_socket, &msg, 0);
+
+        close(data_socket);
+    }
     size_t reserved_size_ = 0;
+    std::unique_ptr<ShmRingbuf> rb_;
+    std::map<std::string, uint64_t> cctxs_;
+    uint64_t next_cctx_ref_ = 0;
 };
 
-class RingBufReader : public ShmRingbuf
+class RingbufReader
 {
 public:
-    RingBufReader(std::string component, pid_t pid, bool create, size_t pages = 0)
-    : ShmRingbuf(component, pid, create, pages)
+    RingbufReader(int fd, clockid_t clockid) : rb_(std::make_unique<ShmRingbuf>(fd))
     {
+        rb_->header()->clockid = clockid;
+        rb_->header()->lo2s_ready.store(1);
     }
 
-    std::byte* get(size_t size)
+    const struct ringbuf_header* header()
     {
-        if (size == 0)
+        return rb_->header();
+    }
+
+    template <class T>
+    T* get()
+    {
+        struct event_header* header =
+            reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+
+        if (header == nullptr)
         {
             return nullptr;
         }
 
-        if (!can_be_loaded(size))
+        T* ev = reinterpret_cast<T*>(rb_->tail(header->size));
+        if (ev == nullptr)
         {
             return nullptr;
         }
-        return start_ + tail();
+
+        return ev;
     }
 
-    void pop(size_t ev_size)
+    EventType get_top_event_type()
     {
-        if (ev_size == 0)
+        struct event_header* header =
+            reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+
+        if (header == nullptr)
+        {
+            throw std::runtime_error("get_top_event_type called without checking empty first!");
+        }
+
+        return header->type;
+    }
+
+    // Check if we can atleast load an event header, if not, there are no new events
+    bool empty()
+    {
+        struct event_header* header =
+            reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+        return header == nullptr;
+    }
+
+    void pop()
+    {
+        struct event_header* header =
+            reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+        if (header == nullptr)
         {
             return;
         }
-
-        // Calling pop() without trying to get() data from the ringbuffer first is an error
-        assert(can_be_loaded(ev_size));
-
-        tail((tail() + ev_size) % size());
+        rb_->advance_tail(header->size);
     }
 
 private:
-    bool can_be_loaded(size_t ev_size)
-    {
-        if (tail() <= head())
-        {
-            return tail() + ev_size <= head();
-        }
-
-        return tail() + ev_size <= head() + size();
-    }
+    std::unique_ptr<ShmRingbuf> rb_;
 };
 } // namespace lo2s

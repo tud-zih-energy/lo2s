@@ -38,7 +38,8 @@ enum class CallingContextType
     ROOT,
     PROCESS,
     THREAD,
-    SAMPLE_ADDR
+    SAMPLE_ADDR,
+    CUDA
 };
 
 // Type that encodes all the different types of CallingContext we can have
@@ -69,6 +70,14 @@ public:
         return c;
     }
 
+    static CallingContext cuda(Address addr)
+    {
+        CallingContext c;
+        c.type = CallingContextType::CUDA;
+        c.addr = addr;
+        return c;
+    }
+
     static CallingContext root()
     {
         CallingContext c;
@@ -78,7 +87,7 @@ public:
 
     Address to_addr() const
     {
-        if (type == CallingContextType::SAMPLE_ADDR)
+        if (type == CallingContextType::SAMPLE_ADDR || type == CallingContextType::CUDA)
         {
             return addr;
         }
@@ -122,13 +131,13 @@ public:
                 return lhs.p < rhs.p;
             case CallingContextType::THREAD:
                 return lhs.t < rhs.t;
+            case CallingContextType::CUDA:
             case CallingContextType::SAMPLE_ADDR:
                 return lhs.addr < rhs.addr;
             case CallingContextType::ROOT:
                 throw std::runtime_error("Can not have two CallingContext Roots!");
-            default:
-                throw std::runtime_error("Unknown Cctx Type!");
             }
+            return false;
         }
     }
 
@@ -145,10 +154,10 @@ public:
             case CallingContextType::THREAD:
                 return lhs.t == rhs.t;
             case CallingContextType::SAMPLE_ADDR:
+            case CallingContextType::CUDA:
                 return lhs.addr == rhs.addr;
-            default:
-                return false;
             }
+            return false;
         }
         else
         {

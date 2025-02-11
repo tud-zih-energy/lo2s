@@ -35,6 +35,7 @@
 #ifdef HAVE_VEOSINFO
 #include <lo2s/monitor/nec_monitor_main.hpp>
 #endif
+#include <lo2s/monitor/socket_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/resolvers.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -61,6 +62,7 @@ protected:
     metric::plugin::Metrics metrics_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 
+    std::unique_ptr<SocketMonitor> socket_monitor_;
     std::unique_ptr<IoMonitor<perf::bio::Writer>> bio_monitor_;
 #ifdef HAVE_X86_ADAPT
     std::unique_ptr<metric::x86_adapt::Metrics> x86_adapt_metrics_;

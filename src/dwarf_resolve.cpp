@@ -201,7 +201,6 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     // Get the name of the current module (e.g. "libfoo.so")
     const char* module_name =
         dwfl_module_info(mod_, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-
     if (config().dwarf != DwarfUsage::NONE)
     {
         Dwarf_Die* cudie = nullptr;
@@ -260,7 +259,6 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
                 .first->second;
         }
     }
-
     return cache_.emplace(addr, LineInfo::for_binary(module_name)).first->second;
 }
 } // namespace lo2s

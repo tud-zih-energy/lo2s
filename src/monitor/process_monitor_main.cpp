@@ -153,17 +153,28 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
     std::map<std::string, std::string> env;
+    env.emplace("LO2S_SOCKET", config().socket_path);
+    env.emplace("LO2S_RB_SIZE", std::to_string(config().ringbuf_size));
+
+    char* ld_cstr = getenv("LD_LIBRARY_PATH");
+    if (ld_cstr == nullptr)
+    {
+        env.emplace("LD_LIBRARY_PATH", config().injectionlib_path);
+    }
+    else
+    {
+        std::string ld_lib = ld_cstr;
+        ld_lib += ":" + config().injectionlib_path;
+        env.emplace("LD_LIBRARY_PATH", ld_lib);
+    }
+
 #ifdef HAVE_CUDA
     if (config().use_nvidia)
     {
-        env.emplace("CUDA_INJECTION64_PATH", config().cuda_injectionlib_path);
-
-        if (config().clockid)
-        {
-            env.emplace("LO2S_CLOCKID", std::to_string(config().clockid.value()));
-        }
+        env.emplace("CUDA_INJECTION64_PATH", "liblo2s_injection.so");
     }
 #endif
+
     std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
 
     for (const auto& env_var : env)
