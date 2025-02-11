@@ -2,8 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
- *    Technische Universitaet Dresden, Germany
+ * Copyright (c) 2016-2018, Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,43 +17,45 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-#include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 
-#include <string>
+#include <lo2s/monitor/ringbuf_monitor.hpp>
 
 extern "C"
 {
-#include <sys/types.h>
+#include <sched.h>
+#include <unistd.h>
 }
 
 namespace lo2s
 {
-
 namespace monitor
 {
 
-class SystemProcessMonitor : public AbstractProcessMonitor
+class SocketMonitor : public PollMonitor
 {
 public:
-    SystemProcessMonitor(lo2s::trace::Trace& trace) : trace_(trace)
+    SocketMonitor(trace::Trace& trace, MainMonitor& main_monitor);
+
+    void initialize_thread() override;
+    void finalize_thread() override;
+    void monitor(int fd) override;
+
+    std::string group() const override
     {
+        return "lo2s::SocketMonitor";
     }
 
-    virtual void insert_process(Process parent, Process process, std::string proc_name,
-                                bool spawn) override;
-
-    virtual void insert_thread(Process process, Thread thread, std::string name,
-                               bool spawn) override;
-
-    virtual void exit_thread(Thread thread) override;
-
-    virtual void update_process_name(Process process, const std::string& name) override;
-
 private:
-    lo2s::trace::Trace& trace_;
+    trace::Trace& trace_;
+    MainMonitor& main_monitor_;
+    std::map<int, RingbufMonitor> monitors_;
+    int socket = -1;
 };
 } // namespace monitor
 } // namespace lo2s

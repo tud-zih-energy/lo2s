@@ -138,7 +138,8 @@ void ProcessInfo::emplace_fr(Address addr, Address end, Address pgoff, std::stri
     }
 }
 
-void ProcessInfo::emplace_ir(Address addr, Address end, Address pgoff, std::string filename)
+void ProcessInfo::emplace_ir(Address addr, Address end, Address pgoff,
+                             std::string filename [[maybe_unused]])
 {
     std::shared_ptr<InstructionResolver> ir = nullptr;
 #ifdef HAVE_RADARE
@@ -245,6 +246,28 @@ std::string ProcessInfo::lookup_instruction(MeasurementScope scope, Address ip) 
         return ir->second->lookup_instruction(ip - ir->first.range.start + ir->first.pgoff);
     }
     return "";
+}
+
+void ProcessInfo::insert_functions(MeasurementScope scope, std::map<Address, std::string> functions)
+{
+    auto fr_map = function_resolvers_.find(scope);
+    if (fr_map == function_resolvers_.end())
+    {
+        fr_map = function_resolvers_
+                     .emplace(scope, std::map<Mapping, std::shared_ptr<FunctionResolver>>())
+                     .first;
+    }
+
+    auto manual_resolver = fr_map->second.find(Mapping::max());
+
+    if (manual_resolver == fr_map->second.end())
+    {
+        manual_resolver =
+            fr_map->second.emplace(Mapping::max(), ManualFunctionResolver::cache(scope.name()))
+                .first;
+    }
+
+    manual_resolver->second->insert(functions);
 }
 
 bool ProcessMap::has(Process p)

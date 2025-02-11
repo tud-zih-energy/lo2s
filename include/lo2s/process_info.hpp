@@ -56,12 +56,15 @@ public:
 
     void mmap(Address addr, Address end, Address pgoff, std::string filename);
 
+    void insert_functions(MeasurementScope scope, std::map<Address, std::string> functions);
+
     LineInfo lookup_line_info(MeasurementScope scope, Address ip);
     std::string lookup_instruction(MeasurementScope scope, Address ip) const;
 
 private:
     void emplace_fr(Address addr, Address end, Address pgoff, std::string filename);
-    void emplace_ir(Address addr, Address end, Address pgoff, std::string filename);
+    void emplace_ir(Address addr, Address end, Address pgoff,
+                    std::string filename [[maybe_unused]]);
 
     struct Mapping
     {

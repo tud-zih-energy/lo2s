@@ -409,18 +409,13 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& writer_scope)
     return archive_(location(writer_scope));
 }
 
-otf2::writer::local& Trace::cuda_writer(const Thread& thread)
+otf2::writer::local& Trace::rb_writer(const MeasurementScope& scope)
 {
-    MeasurementScope scope = MeasurementScope::cuda(thread.as_scope());
-
-    const auto& cuda_location_group = registry_.emplace<otf2::definition::location_group>(
-        ByMeasurementScope(scope), intern(scope.name()),
-        otf2::common::location_group_type::accelerator, system_tree_root_node_);
-
+    emplace_process(NO_PARENT_PROCESS, scope.scope.as_process(), "");
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()), cuda_location_group,
+        ByMeasurementScope(scope), intern(scope.name()),
+        registry_.get<otf2::definition::location_group>(ByExecutionScope(scope.scope)),
         otf2::definition::location::location_type::accelerator_stream);
-
     return archive_(intern_location);
 }
 
@@ -656,7 +651,6 @@ void Trace::merge_ips(const std::map<Address, LocalCctx>& new_children,
         merge_ips(local_children, cctx_it->second.children, mapping_table, cctx, info, scope);
     }
 }
-
 otf2::definition::mapping_table Trace::merge_calling_contexts(const LocalCctxMap& local_cctxs,
                                                               ProcessMap& infos)
 {

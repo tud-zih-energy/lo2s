@@ -33,7 +33,7 @@ enum class MeasurementScopeType
     NEC_METRIC,
     BIO,
     SYSCALL,
-    CUDA,
+    RB,
     TRACEPOINT,
     UNKNOWN
 };
@@ -42,12 +42,14 @@ struct MeasurementScope
 {
     MeasurementScopeType type;
     ExecutionScope scope;
+    std::string rb_name = "";
 
     MeasurementScope() : type(MeasurementScopeType::UNKNOWN), scope()
     {
     }
 
-    MeasurementScope(MeasurementScopeType type, ExecutionScope s) : type(type), scope(s)
+    MeasurementScope(MeasurementScopeType type, ExecutionScope s, std::string name = "")
+    : type(type), scope(s), rb_name(name)
     {
     }
 
@@ -81,9 +83,9 @@ struct MeasurementScope
         return { MeasurementScopeType::SYSCALL, s };
     }
 
-    static MeasurementScope cuda(ExecutionScope s)
+    static MeasurementScope rb(ExecutionScope s, std::string name)
     {
-        return { MeasurementScopeType::CUDA, s };
+        return { MeasurementScopeType::RB, s, name };
     }
 
     static MeasurementScope tracepoint(ExecutionScope s)
@@ -93,23 +95,39 @@ struct MeasurementScope
 
     friend bool operator==(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
+        if (lhs.type == MeasurementScopeType::RB && rhs.type == MeasurementScopeType::RB)
+        {
+            return lhs.scope == rhs.scope && lhs.rb_name == rhs.rb_name;
+        }
+
         return (lhs.scope == rhs.scope) && lhs.type == rhs.type;
     }
 
     MeasurementScope from_ex_scope(ExecutionScope new_scope)
     {
-        return MeasurementScope(type, new_scope);
+        return MeasurementScope(type, new_scope, rb_name);
     }
 
     friend bool operator<(const MeasurementScope& lhs, const MeasurementScope& rhs)
     {
-        if (lhs.type != rhs.type)
+        if (lhs.type == MeasurementScopeType::RB && rhs.type == MeasurementScopeType::RB)
         {
-            return lhs.type < rhs.type;
+            if (lhs.scope == rhs.scope)
+            {
+                return lhs.rb_name < rhs.rb_name;
+            }
+            else
+            {
+                return lhs.scope < rhs.scope;
+            }
+        }
+        if (lhs.type == rhs.type)
+        {
+            return lhs.scope < rhs.scope;
         }
         else
         {
-            return lhs.scope < rhs.scope;
+            return lhs.type < rhs.type;
         }
     }
 
@@ -128,8 +146,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
-        case lo2s::MeasurementScopeType::CUDA:
-            return fmt::format("cuda kernel events for {}", scope.name());
+        case lo2s::MeasurementScopeType::RB:
+            return fmt::format("{} events for {}", rb_name, scope.name());
         case MeasurementScopeType::TRACEPOINT:
             return fmt::format("tracepoint events for {}", scope.name());
         default:

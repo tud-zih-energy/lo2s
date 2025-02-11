@@ -41,7 +41,7 @@ public:
     virtual void insert_process(Process parent, Process process, std::string proc_name,
                                 bool spawn = false) = 0;
     virtual void insert_thread(Process process, Thread thread, std::string name = "",
-                               bool spawn = false, bool is_process = false) = 0;
+                               bool spawn = false) = 0;
 
     virtual void exit_thread(Thread thread) = 0;
 

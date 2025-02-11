@@ -95,7 +95,6 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     }
     const char* module_name =
         dwfl_module_info(mod_, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-
     if (config().dwarf != DwarfUsage::NONE)
     {
         Dwarf_Die* cudie = nullptr;
@@ -104,6 +103,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
         {
             if (dwarf_haspc(cudie, addr.value()))
             {
+
                 Dwarf_Line* line = dwarf_getsrc_die(cudie, addr.value());
                 int lineno;
                 dwarf_lineno(line, &lineno);
@@ -134,7 +134,6 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
                      LineInfo::for_function(module_name, name, 1, module_name))
             .first->second;
     }
-
     return cache_.emplace(addr, LineInfo::for_binary(module_name)).first->second;
 }
 } // namespace lo2s

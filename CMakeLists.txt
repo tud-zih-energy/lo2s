@@ -95,6 +95,7 @@ add_subdirectory(lib/otf2xx)
 mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
 # configure fmtlib submodule
+set(BUILD_SHARED_LIBS ON)
 add_subdirectory(lib/fmt)
 
 # configure Nitro submodule
@@ -190,6 +191,9 @@ set(SOURCE_FILES
 
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
+    src/monitor/socket_monitor.cpp
+    src/monitor/ringbuf_monitor.cpp
+
 
     src/perf/bio/block_device.cpp
     src/perf/event_composer.cpp
@@ -343,10 +347,10 @@ if (USE_LIBAUDIT)
     endif()
 endif()
 
-set(LO2S_CUDA_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
+set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+        add_library(lo2s_injection SHARED src/cupti/lib.cpp src/types.cpp src/time/time.cpp)
         target_include_directories(lo2s_injection PRIVATE include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
 

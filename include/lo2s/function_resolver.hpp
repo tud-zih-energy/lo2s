@@ -64,6 +64,44 @@ protected:
     std::string name_;
 };
 
+class ManualFunctionResolver : public FunctionResolver
+{
+public:
+    ManualFunctionResolver(const std::string& name) : FunctionResolver(name)
+    {
+    }
+
+    static std::shared_ptr<ManualFunctionResolver> cache(const std::string& name)
+    {
+        return BinaryCache<ManualFunctionResolver>::instance()[name];
+    }
+
+    virtual LineInfo lookup_line_info(Address address) override
+    {
+        if (functions_.count(address))
+        {
+            return LineInfo::for_function("", functions_.at(address).c_str(), 1, "");
+        }
+        return LineInfo::for_unknown_function();
+    }
+
+    void insert(std::map<Address, std::string>& functions) override
+    {
+        for (auto& function : functions)
+        {
+            functions_.insert(function);
+        }
+    }
+
+    std::string name()
+    {
+        return name_;
+    }
+
+protected:
+    std::map<Address, std::string> functions_;
+    std::string name_;
+};
 class Kallsyms : public FunctionResolver
 {
 public:

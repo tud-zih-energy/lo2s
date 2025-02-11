@@ -40,8 +40,7 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
     insert_thread(process, process.as_thread(), proc_name, spawn);
 }
 
-void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn,
-                                   bool is_process)
+void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn)
 {
     trace_.emplace_thread(thread, name);
 
@@ -66,7 +65,8 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         {
             auto inserted =
                 threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                 std::forward_as_tuple(scope, *this, spawn, is_process));
+                                 std::forward_as_tuple(scope, *this, spawn));
+
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();

@@ -23,34 +23,17 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
-
-#include <lo2s/perf/counter/group/writer.hpp>
-#include <lo2s/perf/counter/userspace/writer.hpp>
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/perf/syscall/writer.hpp>
-
-#include <array>
-#include <chrono>
-#include <memory>
-#include <thread>
-
-#include <cstddef>
-
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
+#include <lo2s/ringbuf.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
 
-class ScopeMonitor : public PollMonitor
+class RingbufMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec);
+    RingbufMonitor(trace::Trace& trace, MainMonitor& main_monitor, int fd);
 
     void initialize_thread() override;
     void finalize_thread() override;
@@ -58,22 +41,20 @@ public:
 
     std::string group() const override
     {
-        if (scope_.is_cpu())
-        {
-            return "lo2s::CpuMonitor";
-        }
-        else
-        {
-            return "lo2s::ThreadMonitor";
-        }
+        return "lo2s::RingbufMonitor";
     }
 
 private:
-    ExecutionScope scope_;
-    std::unique_ptr<perf::syscall::Writer> syscall_writer_;
-    std::unique_ptr<perf::sample::Writer> sample_writer_;
-    std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
-    std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
+    perf::time::Converter& time_converter_;
+    RingbufReader ringbuf_reader_;
+    MeasurementScope scope_;
+    otf2::writer::local& rb_writer_;
+    std::optional<otf2::definition::calling_context> last_cctx_ref_;
+    MainMonitor& main_monitor_;
+    LocalCctxMap& local_cctx_map_;
+    std::map<MeasurementScope, std::map<Address, std::string>> functions_;
+    otf2::chrono::time_point last_;
+    bool entered_ = false;
 };
 } // namespace monitor
 } // namespace lo2s

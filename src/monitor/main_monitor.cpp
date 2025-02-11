@@ -127,6 +127,9 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
         nec_monitors_.back()->start();
     }
 #endif
+
+    socket_monitor_ = std::make_unique<SocketMonitor>(trace_, *this);
+    socket_monitor_->start();
 }
 
 void MainMonitor::insert_cached_events(const RawMemoryMapCache& cached_mmaps,
@@ -150,6 +153,20 @@ void MainMonitor::insert_cached_events(const RawMemoryMapCache& cached_mmaps,
     }
 }
 
+void MainMonitor::insert_cached_cctx(
+    std::map<MeasurementScope, std::map<Address, std::string>>& cached_cctx)
+{
+    for (auto& scope_map : cached_cctx)
+    {
+        if (!process_infos_.has(scope_map.first.scope.as_process()))
+        {
+            process_infos_.insert(scope_map.first.scope.as_process(), false);
+        }
+        ProcessInfo& pinfo = process_infos_.get(scope_map.first.scope.as_process());
+        pinfo.insert_functions(scope_map.first, scope_map.second);
+    }
+}
+
 MainMonitor::~MainMonitor()
 {
     // Note: call stop() in reverse order than start() in constructor
@@ -160,6 +177,7 @@ MainMonitor::~MainMonitor()
     {
         sensors_recorder_->stop();
     }
+    socket_monitor_->stop();
 #endif
 
 #ifdef HAVE_X86_ENERGY
