@@ -2,8 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
- *    Technische Universitaet Dresden, Germany
+ * Copyright (c) 2016-2018, Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,43 +17,52 @@
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #pragma once
 
-#include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/resolvers.hpp>
 
-#include <string>
+#include <lo2s/monitor/cuda_monitor.hpp>
 
 extern "C"
 {
-#include <sys/types.h>
+#include <sched.h>
+#include <unistd.h>
 }
 
 namespace lo2s
 {
-
 namespace monitor
 {
 
-class SystemProcessMonitor : public AbstractProcessMonitor
+class SocketMonitor : public PollMonitor
 {
 public:
-    SystemProcessMonitor(lo2s::trace::Trace& trace) : trace_(trace)
+    SocketMonitor(trace::Trace& trace);
+
+    void finalize_thread() override;
+    void monitor(int fd) override;
+
+    std::string group() const override
     {
+        return "lo2s::SocketMonitor";
     }
 
-    virtual void insert_process(Process parent, Process process, std::string proc_name,
-                                bool spawn) override;
-
-    virtual void insert_thread(Process process, Thread thread, std::string name,
-                               bool spawn) override;
-
-    virtual void exit_thread(Thread thread) override;
-
-    virtual void update_process_name(Process process, const std::string& name) override;
+    void emplace_resolvers(Resolvers& resolvers)
+    {
+        for (auto& monitor : cuda_monitors_)
+        {
+            monitor.second.emplace_resolvers(resolvers);
+        }
+    }
 
 private:
-    lo2s::trace::Trace& trace_;
+    trace::Trace& trace_;
+    std::map<int, CUDAMonitor> cuda_monitors_;
+    int socket = -1;
 };
 } // namespace monitor
 } // namespace lo2s

@@ -119,6 +119,7 @@ EventAttr EventComposer::create_sampling_event()
 
     sampling_event_->set_sample_id_all();
     sampling_event_->set_comm();
+    sampling_event_->set_task();
     sampling_event_->set_context_switch();
 
     if (exclude_kernel_)

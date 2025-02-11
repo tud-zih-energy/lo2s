@@ -43,4 +43,4 @@
 
 // The CUDA injection library installation path
 
-#cmakedefine LO2S_CUDA_INJECTIONLIB_PATH "@LO2S_CUDA_INJECTIONLIB_PATH@"
+#cmakedefine LO2S_INJECTIONLIB_PATH "@LO2S_INJECTIONLIB_PATH@"
