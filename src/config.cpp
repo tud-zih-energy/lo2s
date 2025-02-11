@@ -256,6 +256,10 @@ void parse_program_options(int argc, const char** argv)
         .allow_reverse()
         .default_value(true);
 
+    general_options.option("socket", "Path to socket used for ringbuffer communication.")
+        .default_value("/tmp/lo2s.socket")
+        .metavar("PATH");
+
     system_mode_options
         .toggle("all-cpus", "Start in system-monitoring mode for all CPUs. "
                             "Monitor as long as COMMAND is running or until PID exits.")
@@ -403,16 +407,20 @@ void parse_program_options(int argc, const char** argv)
         .optional()
         .metavar("MSEC")
         .default_value("100");
-
-    accel_options.option("nvidia-injection-path", "path to the lo2s cupti injection library")
+    accel_options.option("ringbuf-read-interval", "interval for readings of the ring buffer")
+        .optional()
+        .metavar("MSEC")
+        .default_value("100");
+    accel_options.option("ld-library-path", "path to the lo2s injection library")
         .optional()
         .metavar("PATH")
-        .default_value(LO2S_CUDA_INJECTIONLIB_PATH);
+        .default_value(LO2S_INJECTIONLIB_PATH);
 
-    accel_options.option("nvidia-ringbuf-size", "Size of the injection library ring-buffer")
+    accel_options.option("ringbuf-size", "Size of the injection library ring-buffer")
         .optional()
-        .metavar("BYTE")
-        .default_value("65536");
+        .metavar("PAGES")
+        .default_value("16");
+
     io_options.toggle("posix-io",
                       "Enable recording of POSIX I/o events (requires access to debugfs)");
 
@@ -442,10 +450,11 @@ void parse_program_options(int argc, const char** argv)
     config.use_sensors = arguments.given("sensors");
     config.use_block_io = arguments.given("block-io");
     config.tracepoint_events = arguments.get_all("tracepoint");
-#ifdef HAVE_CUDA
-    config.cuda_injectionlib_path = arguments.get("nvidia-injection-path");
-#endif
     config.use_python = arguments.given("python");
+
+    config.socket_path = arguments.get("socket");
+    config.injectionlib_path = arguments.get("ld-library-path");
+    config.ringbuf_size = arguments.as<uint64_t>("ringbuf-size");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))
@@ -616,7 +625,6 @@ void parse_program_options(int argc, const char** argv)
         {
 #ifdef HAVE_CUDA
             config.use_nvidia = true;
-            config.nvidia_ringbuf_size = arguments.as<uint64_t>("nvidia-ringbuf-size");
 #else
             std::cerr << "lo2s was built without support for CUDA kernel recording\n";
             std::exit(EXIT_FAILURE);
@@ -825,6 +833,9 @@ void parse_program_options(int argc, const char** argv)
         config.perf_read_interval =
             std::chrono::milliseconds(arguments.as<std::uint64_t>("perf-readout-interval"));
     }
+
+    config.ringbuf_read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("ringbuf-read-interval"));
 
     if (!arguments.given("disassemble"))
     {

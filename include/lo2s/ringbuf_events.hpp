@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2024,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,22 +21,15 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace lo2s
 {
-namespace monitor
+
+struct __attribute__((packed)) event_header
 {
-class ThreadedMonitor;
+    uint64_t size;
+    uint64_t type;
+};
 
-class PollMonitor;
-
-class ThreadMonitor;
-class CoreMonitor;
-class CpuSwitchMonitor;
-
-class MainMonitor;
-class ProcessMonitor;
-class CpuSetMonitor;
-class SocketMonitor;
-class CUDAMonitor;
-} // namespace monitor
 } // namespace lo2s

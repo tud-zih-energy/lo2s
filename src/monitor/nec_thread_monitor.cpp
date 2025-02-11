@@ -39,7 +39,8 @@ NecThreadMonitor::NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice
 : PollMonitor(trace, fmt::format("VE{} {}", device, thread.as_pid_t()),
               std::chrono::duration_cast<std::chrono::nanoseconds>(config().nec_read_interval)),
   perf::counter::MetricWriter(MeasurementScope::nec_metric(thread.as_scope()), trace),
-  nec_read_interval_(config().nec_read_interval), otf2_writer_(trace.nec_writer(device, thread)),
+  nec_read_interval_(config().nec_read_interval),
+  otf2_writer_(trace.sample_writer(MeasurementScope::nec_sample(ExecutionScope(thread)))),
   nec_thread_(thread), trace_(trace), device_(device), cctx_manager_(trace)
 {
     cctx_manager_.thread_enter(nec_thread_.as_process(), thread);
