@@ -152,20 +152,24 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     /* we need ptrace to get fork/clone/... */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
-    std::vector<std::string> env;
+    std::map<std::string, std::string> env;
 #ifdef HAVE_CUDA
     if (config().use_nvidia)
     {
-        env = { "CUDA_INJECTION64_PATH=" + config().cuda_injectionlib_path };
+        env.emplace("CUDA_INJECTION64_PATH", config().cuda_injectionlib_path);
 
         if (config().use_clockid)
         {
-            env.push_back("LO2S_CLOCKID=" + std::to_string(config().clockid));
+            env.emplace("LO2S_CLOCKID", std::to_string(config().clockid));
         }
     }
 #endif
-    std::vector<char*> c_env = to_vector_of_c_str(env);
     std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
+
+    for (const auto& env_var : env)
+    {
+        setenv(env_var.first.c_str(), env_var.second.c_str(), 1);
+    }
 
     Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
@@ -179,15 +183,10 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     }
 
     // run the application which should be sampled
-    execvpe(c_args[0], &c_args[0], &c_env[0]);
+    execvp(c_args[0], &c_args[0]);
 
     // should not be executed -> exec failed, let's clean up anyway.
     for (auto cp : c_args)
-    {
-        delete[] cp;
-    }
-
-    for (auto cp : c_env)
     {
         delete[] cp;
     }
