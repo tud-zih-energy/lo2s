@@ -51,10 +51,7 @@ extern "C"
 
 namespace
 {
-#define PERF_EVENT(name, type, id)                                                                 \
-    {                                                                                              \
-        (name), (type), (id)                                                                       \
-    }
+#define PERF_EVENT(name, type, id) { (name), (type), (id) }
 #define PERF_EVENT_HW(name, id) PERF_EVENT(name, PERF_TYPE_HARDWARE, PERF_COUNT_HW_##id)
 #define PERF_EVENT_SW(name, id) PERF_EVENT(name, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_##id)
 
