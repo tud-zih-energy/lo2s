@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
@@ -155,14 +156,14 @@ public:
         }
     }
 
-    std::vector<perf::tracepoint::TracepointEvent> get_tracepoints()
+    std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints()
     {
         bio_queue_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_bio_queue");
+            perf::EventComposer::instance().create_tracepoint_event("block:block_bio_queue");
         bio_issue_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_rq_issue");
+            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_issue");
         bio_complete_ =
-            perf::EventProvider::instance().create_tracepoint_event("block:block_rq_complete");
+            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_complete");
 
         return { bio_queue_.value(), bio_issue_.value(), bio_complete_.value() };
     }
@@ -185,9 +186,9 @@ private:
     time::Converter& time_converter_;
 
     // Unavailable until get_tracepoints() is called
-    std::optional<perf::tracepoint::TracepointEvent> bio_queue_;
-    std::optional<perf::tracepoint::TracepointEvent> bio_issue_;
-    std::optional<perf::tracepoint::TracepointEvent> bio_complete_;
+    std::optional<perf::tracepoint::TracepointEventAttr> bio_queue_;
+    std::optional<perf::tracepoint::TracepointEventAttr> bio_issue_;
+    std::optional<perf::tracepoint::TracepointEventAttr> bio_complete_;
 
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
     static constexpr int SECTOR_SIZE = 512;
