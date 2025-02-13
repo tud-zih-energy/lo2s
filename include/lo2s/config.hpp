@@ -111,6 +111,8 @@ struct Config
     std::chrono::milliseconds nec_check_interval;
     // Nvidia CUPTI
     bool use_nvidia = false;
+    // OpenMP
+    bool use_openmp = false;
     // Function resolution
     DwarfUsage dwarf;
     // Ringbuffer interface

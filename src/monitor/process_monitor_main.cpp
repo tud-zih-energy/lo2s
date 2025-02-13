@@ -157,6 +157,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     env.emplace("LO2S_RB_SIZE", std::to_string(config().ringbuf_size));
 
     char* ld_cstr = getenv("LD_LIBRARY_PATH");
+    Log::error() << ld_cstr;
     if (ld_cstr == nullptr)
     {
         env.emplace("LD_LIBRARY_PATH", config().injectionlib_path);
@@ -165,6 +166,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     {
         std::string ld_lib = ld_cstr;
         ld_lib += ":" + config().injectionlib_path;
+        Log::error() << "FOO: " << ld_lib;
         env.emplace("LD_LIBRARY_PATH", ld_lib);
     }
 
@@ -172,6 +174,13 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     if (config().use_nvidia)
     {
         env.emplace("CUDA_INJECTION64_PATH", "liblo2s_injection.so");
+    }
+#endif
+#ifdef HAVE_OPENMP
+    if (config().use_openmp)
+    {
+        env.emplace("OMP_TOOL", "enabled");
+        env.emplace("OMP_TOOL_LIBRARIES", "liblo2s_injection.so");
     }
 #endif
 
