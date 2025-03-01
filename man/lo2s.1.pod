@@ -326,8 +326,6 @@ Can be given multiple times to record multiple syscalls at once.
 Argument may either be a syscall name, like "read", or a syscall number.
 Note that due to the high event-rate of many syscalls it is advised to keep the number of recorded syscalls limited.
 
-This is only available in system-wide measurement mode
-
 =back
 
 =head2 B<x86_adapt> and B<x86_energy> options

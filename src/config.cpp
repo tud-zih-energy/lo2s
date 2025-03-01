@@ -630,6 +630,18 @@ void parse_program_options(int argc, const char** argv)
         }
     }
 
+    if (arguments.provided("syscall"))
+    {
+        std::vector<std::string> requested_syscalls = arguments.get_all("syscall");
+        config.use_syscalls = true;
+
+        if (std::find(requested_syscalls.begin(), requested_syscalls.end(), "all") ==
+            requested_syscalls.end())
+        {
+            config.syscall_filter = parse_syscall_names(requested_syscalls);
+        }
+    }
+
     if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
     {
         config.monitor_type = lo2s::MonitorType::CPU_SET;
@@ -656,18 +668,6 @@ void parse_program_options(int argc, const char** argv)
                 std::exit(EXIT_FAILURE);
             }
         }
-
-        if (arguments.provided("syscall"))
-        {
-            std::vector<std::string> requested_syscalls = arguments.get_all("syscall");
-            config.use_syscalls = true;
-
-            if (std::find(requested_syscalls.begin(), requested_syscalls.end(), "all") ==
-                requested_syscalls.end())
-            {
-                config.syscall_filter = parse_syscall_names(requested_syscalls);
-            }
-        }
     }
     else
     {
@@ -677,11 +677,6 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
         }
 
-        if (arguments.provided("syscall"))
-        {
-            Log::fatal() << "Syscall recording is only available in system-wide monitoring mode";
-            std::exit(EXIT_FAILURE);
-        }
         config.monitor_type = lo2s::MonitorType::PROCESS;
         config.sampling = true;
 
