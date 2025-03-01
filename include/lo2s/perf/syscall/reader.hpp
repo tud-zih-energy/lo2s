@@ -68,7 +68,7 @@ public:
         uint64_t args[6];
     };
 
-    Reader(Cpu cpu) : cpu_(cpu)
+    Reader(ExecutionScope scope) : scope_(scope)
     {
         tracepoint::TracepointEventAttr enter_event =
             EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_enter");
@@ -79,8 +79,8 @@ public:
         exit_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
         try
         {
-            enter_ev_ = enter_event.open(cpu_, config().cgroup_fd);
-            exit_ev_ = exit_event.open(cpu_, config().cgroup_fd);
+            enter_ev_ = enter_event.open(scope_, config().cgroup_fd);
+            exit_ev_ = exit_event.open(scope_, config().cgroup_fd);
         }
         catch (const std::system_error& e)
         {
@@ -104,7 +104,7 @@ public:
     }
 
     Reader(Reader&& other)
-    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
+    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), scope_(other.scope_)
     {
         std::swap(enter_ev_, other.enter_ev_);
     }
@@ -112,6 +112,9 @@ public:
     void stop()
     {
         enter_ev_.value().disable();
+        // This should not be necessary because exit is attached to enter, but it can not hurt.
+        exit_ev_.value().disable();
+
         this->read();
     }
 
@@ -121,7 +124,7 @@ protected:
     uint64_t sys_exit_id;
 
 private:
-    Cpu cpu_;
+    ExecutionScope scope_;
     std::optional<EventGuard> enter_ev_;
     std::optional<EventGuard> exit_ev_;
 };

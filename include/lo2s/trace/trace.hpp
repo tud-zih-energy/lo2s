@@ -134,7 +134,7 @@ public:
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& cuda_writer(const Thread& thread);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
-    otf2::writer::local& syscall_writer(const Cpu& cpu);
+    otf2::writer::local& syscall_writer(const ExecutionScope& scope);
     otf2::writer::local& bio_writer(BlockDevice dev);
     otf2::writer::local& create_metric_writer(const std::string& name);
     otf2::writer::local& nec_writer(NecDevice device, const Thread& nec_thread);

@@ -50,6 +50,11 @@
 #include <stdexcept>
 #include <tuple>
 
+extern "C"
+{
+#include <asm-generic/unistd.h>
+}
+
 namespace lo2s
 {
 namespace trace
@@ -458,17 +463,16 @@ otf2::writer::local& Trace::nec_writer(NecDevice device, const Thread& nec_threa
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::syscall_writer(const Cpu& cpu)
+otf2::writer::local& Trace::syscall_writer(const ExecutionScope& scope)
 {
-    MeasurementScope scope = MeasurementScope::syscall(cpu.as_scope());
-
-    const auto& syscall_location_group = registry_.emplace<otf2::definition::location_group>(
-        ByMeasurementScope(scope), intern(scope.name()), otf2::common::location_group_type::process,
-        registry_.get<otf2::definition::system_tree_node>(ByCpu(cpu)));
+    MeasurementScope meas_scope = MeasurementScope::syscall(scope);
 
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()), syscall_location_group,
+        ByMeasurementScope(meas_scope), intern(meas_scope.name()),
+        registry_.get<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_parent(scope))),
         otf2::definition::location::location_type::cpu_thread);
+
     return archive_(intern_location);
 }
 
@@ -804,8 +808,16 @@ Trace::merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, s
 otf2::definition::mapping_table
 Trace::merge_syscall_contexts(const std::set<int64_t>& used_syscalls)
 {
-    std::vector<uint32_t> mappings(
-        *std::max_element(config().syscall_filter.begin(), config().syscall_filter.end()) + 1);
+    std::vector<uint32_t> mappings;
+    if (!config().syscall_filter.empty())
+    {
+        mappings.resize(
+            *std::max_element(config().syscall_filter.begin(), config().syscall_filter.end()) + 1);
+    }
+    else
+    {
+        mappings.resize(__NR_syscalls);
+    }
 
     for (const auto& syscall_nr : used_syscalls)
     {

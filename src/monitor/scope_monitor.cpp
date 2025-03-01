@@ -50,9 +50,9 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
         add_fd(sample_writer_->fd());
     }
 
-    if (scope.is_cpu() && config().use_syscalls)
+    if (config().use_syscalls)
     {
-        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope.as_cpu(), parent.trace());
+        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope, parent.trace());
         add_fd(syscall_writer_->fd());
     }
 
@@ -94,6 +94,11 @@ void ScopeMonitor::finalize_thread()
     if (sample_writer_)
     {
         sample_writer_->end();
+    }
+
+    if (syscall_writer_)
+    {
+        syscall_writer_->stop();
     }
 }
 

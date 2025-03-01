@@ -43,7 +43,7 @@ namespace syscall
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(Cpu cpu, trace::Trace& trace);
+    Writer(ExecutionScope scope, trace::Trace& trace);
 
     Writer(const Writer& other) = delete;
 
@@ -60,8 +60,11 @@ private:
     trace::Trace& trace_;
     const time::Converter& time_converter_;
     otf2::writer::local& writer_;
-    int64_t last_syscall_nr_;
+
     std::set<int64_t> used_syscalls_;
+
+    int64_t last_syscall_nr_;
+    otf2::chrono::time_point last_tp_;
 };
 } // namespace syscall
 } // namespace perf
