@@ -361,8 +361,7 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
         { PERF_FORMAT_TOTAL_TIME_ENABLED, "PERF_FORMAT_TOTAL_TIME_ENABLED" },
         { PERF_FORMAT_TOTAL_TIME_RUNNING, "PERF_FORMAT_TOTAL_TIME_RUNNING" },
         { PERF_FORMAT_ID, "PERF_FORMAT_ID" },
-        { PERF_FORMAT_GROUP, "PERF_FORMAT_GROUP" },
-        { PERF_FORMAT_LOST, "PERF_FORMAT_LOST" }
+        { PERF_FORMAT_GROUP, "PERF_FORMAT_GROUP" }
     };
 
     print_bits(stream, "read_format", read_format, event.attr_.read_format);
