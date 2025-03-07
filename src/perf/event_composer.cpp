@@ -193,7 +193,7 @@ EventComposer::create_tracepoint_event(const std::string& name)
     ev.sample_period(1);
 
     ev.set_clockid(config().clockid);
-    ev.set_sample_type(PERF_SAMPLE_RAW | PERF_SAMPLE_TIME |  PERF_SAMPLE_ID);
+    ev.set_sample_type(PERF_SAMPLE_RAW | PERF_SAMPLE_TIME | PERF_SAMPLE_ID);
     ev.set_disabled();
 
     return ev;
