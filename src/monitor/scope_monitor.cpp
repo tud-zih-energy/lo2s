@@ -39,20 +39,19 @@ namespace lo2s
 namespace monitor
 {
 
-ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec,
+ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec,
                            bool is_process)
-: PollMonitor(parent.trace(), scope.name(), config().perf_read_interval), scope_(scope)
+: PollMonitor(trace, scope.name(), config().perf_read_interval), scope_(scope)
 {
     if (config().sampling || config().process_recording)
     {
-        sample_writer_ =
-            std::make_unique<perf::sample::Writer>(scope, parent, parent.trace(), enable_on_exec);
+        sample_writer_ = std::make_unique<perf::sample::Writer>(scope, trace, enable_on_exec);
         add_fd(sample_writer_->fd());
     }
 
     if (config().use_syscalls)
     {
-        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope, parent.trace());
+        syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope, trace);
         add_fd(syscall_writer_->fd());
     }
 
@@ -61,7 +60,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
              .counters.empty())
     {
         group_counter_writer_ =
-            std::make_unique<perf::counter::group::Writer>(scope, parent.trace(), enable_on_exec);
+            std::make_unique<perf::counter::group::Writer>(scope, trace, enable_on_exec);
         add_fd(group_counter_writer_->fd());
     }
 
@@ -70,14 +69,13 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enabl
              .counters.empty())
     {
         userspace_counter_writer_ =
-            std::make_unique<perf::counter::userspace::Writer>(scope, parent.trace());
+            std::make_unique<perf::counter::userspace::Writer>(scope, trace);
         add_fd(userspace_counter_writer_->fd());
     }
 
     if (config().use_nvidia && is_process)
     {
-        cupti_reader_ =
-            std::make_unique<cupti::Reader>(parent.trace(), scope.as_thread().as_process());
+        cupti_reader_ = std::make_unique<cupti::Reader>(trace, scope.as_thread().as_process());
         add_fd(cupti_reader_->fd());
     }
 

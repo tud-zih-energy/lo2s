@@ -21,12 +21,12 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/types.hpp>
 
-#include <filesystem>
-
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <mutex>
@@ -61,23 +61,23 @@ struct MallocDelete
 } // namespace memory
 
 template <typename T>
-class StringCache
+class BinaryCache
 {
 public:
-    static StringCache& instance()
+    static BinaryCache& instance()
     {
-        static StringCache l;
+        static BinaryCache l;
         return l;
     }
 
-    T& operator[](const std::string& name)
+    std::shared_ptr<T> operator[](const std::string& name)
     {
         std::lock_guard<std::mutex> guard(mutex_);
-        return elements_.try_emplace(name, name).first->second;
+        return elements_.try_emplace(name, std::make_shared<T>(name)).first->second;
     }
 
 private:
-    std::unordered_map<std::string, T> elements_;
+    std::unordered_map<std::string, std::shared_ptr<T>> elements_;
     std::mutex mutex_;
 };
 
@@ -124,4 +124,8 @@ std::set<std::uint32_t> parse_list(std::string list);
 std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);
 
 int timerfd_from_ns(std::chrono::nanoseconds duration);
+
+bool known_non_executable(const std::string& filename);
+
+std::map<Mapping, std::string> read_maps(Process p);
 } // namespace lo2s

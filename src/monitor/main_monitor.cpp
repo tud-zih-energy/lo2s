@@ -128,17 +128,6 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 #endif
 }
 
-void MainMonitor::insert_cached_mmap_events(const RawMemoryMapCache& cached_events)
-{
-    for (auto& event : cached_events)
-    {
-        auto process_info =
-            process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(event.process),
-                                   std::forward_as_tuple(event.process, true));
-        process_info.first->second.mmap(event);
-    }
-}
-
 MainMonitor::~MainMonitor()
 {
     // Note: call stop() in reverse order than start() in constructor
@@ -190,7 +179,7 @@ MainMonitor::~MainMonitor()
 
     metrics_.stop();
 
-    trace_.merge_calling_contexts(get_process_infos());
+    trace_.finalize(resolvers_);
 }
 } // namespace monitor
 } // namespace lo2s

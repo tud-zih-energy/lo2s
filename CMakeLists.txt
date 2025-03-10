@@ -28,7 +28,7 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
-    Binutils_USE_STATIC_LIBS
+    LibElf_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Libpfm_USE_STATIC_LIBS
@@ -39,11 +39,12 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Sensors_USE_STATIC_LIBS
     Veosinfo_USE_STATIC_LIBS
     Audit_USE_STATIC_LIBS
+    Debuginfod_USE_STATIC_LIBS
     LibBpf_USE_STATIC_LIBS)
 
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-    set(Binutils_USE_STATIC_LIBS OFF CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
@@ -69,7 +70,8 @@ else()
         set(CMAKE_LINK_SEARCH_START_STATIC 1)
         set(CMAKE_LINK_SEARCH_END_STATIC 1)
     endif()
-    set(Binutils_USE_STATIC_LIBS ON CACHE BOOL "")
+    set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+    set(LibElf_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -81,6 +83,7 @@ else()
     set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   ON CACHE BOOL "")
+    set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
 endif()
 
 # Check if we are running Linux
@@ -99,12 +102,13 @@ add_subdirectory(lib/fmt)
 # configure Nitro submodule
 add_subdirectory(lib/nitro)
 
+add_subdirectory(lib/indicators)
+
 # configure x64_adapt_cxx library
 include(lib/x86_adapt/x86_adapt.cmake)
 
 # find external dependencies
 find_package(Git)
-find_package(Binutils REQUIRED)
 set(THREADS_PREFER_PTHREAD_FLAG true)
 find_package(Threads REQUIRED)
 find_package(Doxygen COMPONENTS dot)
@@ -117,6 +121,8 @@ find_package(CUDAToolkit)
 find_package(Radare)
 find_package(Audit)
 find_package(BpfObject)
+find_package(LibElf REQUIRED)
+find_package(Debuginfod)
 
 
 # configurable options
@@ -138,6 +144,8 @@ CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDATo
 add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
 CMAKE_DEPENDENT_OPTION(USE_BPF "Use BPF to record POSIX I/O activity" ON BpfObject_FOUND OFF)
 add_feature_info("USE_BPF" USE_BPF "Use BPF to record POSIX I/O activity")
+CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand." ON "Debuginfod_FOUND" OFF)
+add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -210,8 +218,9 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/bfd_resolve.cpp src/pipe.cpp
-    src/mmap.cpp
+    src/topology.cpp src/pipe.cpp src/dwarf_resolve.cpp
+    src/function_resolver.cpp
+    src/instruction_resolver.cpp
     src/util.cpp
     src/perf/util.cpp
     src/syscalls.cpp
@@ -230,10 +239,12 @@ target_link_libraries(lo2s
         Nitro::dl
         Nitro::options
         Threads::Threads
-        Binutils::Binutils
         fmt::fmt
         std::filesystem
-)
+        LibElf::LibElf
+        LibElf::LibDw
+        indicators::indicators
+    )
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
@@ -311,6 +322,15 @@ if (USE_VEOSINFO)
                                     src/monitor/nec_monitor_main.cpp)
     else()
         message(SEND_ERROR "Veosinfo not found but requested.")
+    endif()
+endif()
+
+if (USE_DEBUGINFOD)
+    if (Debuginfod_FOUND)
+        target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
+        target_link_libraries(lo2s PRIVATE Debuginfod::Debuginfod)
+    else()
+        message(SEND_ERROR "Debuginfod not found but requested")
     endif()
 endif()
 

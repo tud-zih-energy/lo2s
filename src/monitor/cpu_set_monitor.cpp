@@ -40,7 +40,7 @@ namespace monitor
 {
 CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 {
-    trace_.add_monitoring_thread(gettid(), "CpuSetMonitor", "CpuSetMonitor");
+    trace_.emplace_monitoring_thread(gettid(), "CpuSetMonitor", "CpuSetMonitor");
 
     // Prefill Memory maps
     std::regex proc_regex("/proc/([0-9]+)");
@@ -57,15 +57,28 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
             {
                 pid = std::stol(pid_match[1]);
 
-                process_infos_.emplace(std::piecewise_construct, std::forward_as_tuple(pid),
-                                       std::forward_as_tuple(Process(pid), false));
+                auto maps = read_maps(Process(pid));
+                Process p(pid);
+                resolvers_.function_resolvers.emplace(
+                    std::piecewise_construct, std::forward_as_tuple(p), std::forward_as_tuple());
+                for (auto& map : maps)
+                {
+                    auto fr = function_resolver_for(map.second);
+                    resolvers_.function_resolvers[p].emplace(map.first, fr);
+                    auto ir = instruction_resolver_for(map.second);
+
+                    if (ir != nullptr)
+                    {
+                        resolvers_.instruction_resolvers[p].emplace(map.first, ir);
+                    }
+                }
             }
         }
     }
 
     if (config().sampling || config().process_recording)
     {
-        trace_.add_threads(get_comms_for_running_threads());
+        trace_.emplace_threads(get_comms_for_running_threads());
     }
 
     try
@@ -76,7 +89,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
 
             auto inserted =
                 monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
-                                  std::forward_as_tuple(ExecutionScope(cpu), *this, false));
+                                  std::forward_as_tuple(ExecutionScope(cpu), trace_, false));
             assert(inserted.second);
             // directly start the measurement thread
             inserted.first->second.start();
@@ -143,11 +156,13 @@ void CpuSetMonitor::run()
 
     if (config().sampling || config().process_recording)
     {
-        trace_.add_threads(get_comms_for_running_threads());
+        trace_.emplace_threads(get_comms_for_running_threads());
     }
+
     for (auto& monitor_elem : monitors_)
     {
         monitor_elem.second.stop();
+        monitor_elem.second.emplace_resolvers(resolvers_);
     }
 
     throw std::system_error(0, std::system_category());

@@ -26,7 +26,6 @@
 #include <lo2s/monitor/posix_monitor.hpp>
 #endif
 #include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/process_info.hpp>
 
 #include <map>
 #include <string>

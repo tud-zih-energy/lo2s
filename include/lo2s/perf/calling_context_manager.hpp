@@ -20,136 +20,297 @@
  */
 #pragma once
 
-#include <lo2s/config.hpp>
-#include <lo2s/trace/trace.hpp>
-
+#include <lo2s/address.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <otf2xx/otf2.hpp>
+
+extern "C"
+{
+#include <linux/perf_event.h>
+}
 
 namespace lo2s
 {
-namespace perf
-{
 
-class CallingContextManager
+enum class CallingContextType
+{
+    ROOT,
+    PROCESS,
+    THREAD,
+    SAMPLE_ADDR
+};
+
+// Type that encodes all the different types of CallingContext we can have
+struct CallingContext
 {
 public:
-    CallingContextManager(trace::Trace& trace) : local_cctx_refs_(trace.create_cctx_refs())
+    static CallingContext process(Process p)
+    {
+        CallingContext c;
+        c.type = CallingContextType::PROCESS;
+        c.p = p;
+        return c;
+    }
+
+    static CallingContext thread(Thread t)
+    {
+        CallingContext c;
+        c.type = CallingContextType::THREAD;
+        c.t = t;
+        return c;
+    }
+
+    static CallingContext sample(Address addr)
+    {
+        CallingContext c;
+        c.type = CallingContextType::SAMPLE_ADDR;
+        c.addr = addr;
+        return c;
+    }
+
+    static CallingContext root()
+    {
+        CallingContext c;
+        c.type = CallingContextType::ROOT;
+        return c;
+    }
+
+    Address to_addr() const
+    {
+        if (type == CallingContextType::SAMPLE_ADDR)
+        {
+            return addr;
+        }
+
+        throw std::runtime_error("Not an Address!");
+    }
+
+    Process to_process() const
+    {
+        if (type == CallingContextType::PROCESS)
+        {
+            return p;
+        }
+
+        throw std::runtime_error("Not a Process!");
+    }
+
+    Thread to_thread() const
+    {
+        if (type == CallingContextType::THREAD)
+        {
+            return t;
+        }
+
+        throw std::runtime_error("Not a Process!");
+    }
+
+    CallingContextType type;
+
+    friend bool operator<(const CallingContext& lhs, const CallingContext& rhs)
+    {
+        if (lhs.type != rhs.type)
+        {
+            return lhs.type < rhs.type;
+        }
+        else
+        {
+            switch (lhs.type)
+            {
+            case CallingContextType::PROCESS:
+                return lhs.p < rhs.p;
+            case CallingContextType::THREAD:
+                return lhs.t < rhs.t;
+            case CallingContextType::SAMPLE_ADDR:
+                return lhs.addr < rhs.addr;
+            case CallingContextType::ROOT:
+                throw std::runtime_error("Can not have two CallingContext Roots!");
+            default:
+                throw std::runtime_error("Unknown Cctx Type!");
+            }
+        }
+    }
+
+    friend bool operator==(const CallingContext& lhs, const CallingContext& rhs)
+    {
+        if (lhs.type == rhs.type)
+        {
+            switch (lhs.type)
+            {
+            case CallingContextType::ROOT:
+                return true;
+            case CallingContextType::PROCESS:
+                return lhs.p == rhs.p;
+            case CallingContextType::THREAD:
+                return lhs.t == rhs.t;
+            case CallingContextType::SAMPLE_ADDR:
+                return lhs.addr == rhs.addr;
+            default:
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+private:
+    CallingContext() : addr(0)
     {
     }
 
-    void thread_enter(Process process, Thread thread)
-    {
-        auto ret =
-            local_cctx_refs_.map.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                         std::forward_as_tuple(process, next_cctx_ref_));
-        if (ret.second)
-        {
-            next_cctx_ref_++;
-        }
+    Process p;
+    Thread t;
+    Address addr;
+};
 
-        current_thread_cctx_refs_ = &(*ret.first);
+// Node type of the tree containing the CallingContext -> local cctx reference number mappings.
+struct LocalCctxNode
+{
+    LocalCctxNode(otf2::definition::calling_context::reference_type r,
+                  std::map<CallingContext, LocalCctxNode>::value_type* parent)
+    : ref(r), parent(parent)
+    {
+    }
+
+    otf2::definition::calling_context::reference_type ref;
+    std::map<CallingContext, LocalCctxNode> children;
+    std::map<CallingContext, LocalCctxNode>::value_type* parent;
+};
+
+// Node type of the global cctx tree, containing CallingContext -> otf2::cctx mappings.
+struct GlobalCctxNode
+{
+    GlobalCctxNode(otf2::definition::calling_context* cctx) : cctx(cctx)
+    {
+    }
+
+    otf2::definition::calling_context* cctx;
+    std::map<CallingContext, GlobalCctxNode> children;
+};
+
+typedef std::map<CallingContext, LocalCctxNode> LocalCctxMap;
+typedef std::map<CallingContext, GlobalCctxNode> GlobalCctxMap;
+
+class LocalCctxTree
+{
+public:
+    LocalCctxTree() : tree(CallingContext::root(), LocalCctxNode(0, nullptr)), cur(&tree)
+    {
     }
 
     void finalize(otf2::writer::local* otf2_writer)
     {
-        local_cctx_refs_.ref_count = next_cctx_ref_;
+        ref_count_ = next_cctx_ref_;
         // set writer last, because it is used as sentry to confirm that the cctx refs are properly
         // finalized.
-        local_cctx_refs_.writer = otf2_writer;
-    }
-
-    bool thread_changed(Thread thread)
-    {
-        return !current_thread_cctx_refs_ || current_thread_cctx_refs_->first != thread;
-    }
-
-    otf2::definition::calling_context::reference_type current()
-    {
-        if (current_thread_cctx_refs_)
-        {
-            return current_thread_cctx_refs_->second.entry.ref;
-        }
-        else
-        {
-            return otf2::definition::calling_context::reference_type::undefined();
-        }
+        writer_ = otf2_writer;
     }
 
     otf2::definition::calling_context::reference_type sample_ref(uint64_t num_ips,
                                                                  const uint64_t ips[])
     {
-        // For unwind distance definiton, see:
-        // http://scorepci.pages.jsc.fz-juelich.de/otf2-pipelines/docs/otf2-2.2/html/group__records__definition.
-        // html#CallingContext
+        auto* node = cur;
 
-        // We always have a fake CallingContext for the process, which is scheduled.
-        // So if we don't record the calling context tree, all nodes in the calling context tree
-        // are: The fake node for the process and a second node for the current context of the
-        // sample. Therefore, we always have an unwind distance of 2. (Technically, it could also be
-        // 1, but we lack the information to distinguish those cases. Hence, we stick with 2.)
-        //
-        // However, in the case that we actually record the complete call stack, we get the number
-        // of nodes in the calling context tree from the number of elements in the call stack
-        // recorded from perf. Tough, we still have the fake calling context for the process, which
-        // adds 1 to that number. But we also remove the lowest entry from the call stack, because
-        // that is ALWAYS in the kernel, which can't be resolved and thus doesn't provide any useful
-        // information.
-        //
-        // Having these things in mind, look at this line and tell me, why it is still wrong:
-        auto children = &current_thread_cctx_refs_->second.entry.children;
-        for (uint64_t i = num_ips - 1;; i--)
+        for (uint64_t i = num_ips - 1; i != 0; i--)
         {
-            auto it = find_ip_child(ips[i], *children);
-            // We intentionally discard the last sample as it is somewhere in the kernel
-            if (i == 1)
+            if (ips[i] == PERF_CONTEXT_KERNEL)
             {
-                return it->second.ref;
+                if (i <= 1)
+                {
+                    return node->second.ref;
+                }
+                continue;
             }
-
-            children = &it->second.children;
+            else if (ips[i] == PERF_CONTEXT_USER)
+            {
+                if (i <= 1)
+                {
+                    return node->second.ref;
+                }
+                continue;
+            }
+            node = create_cctx_node(CallingContext::sample(ips[i]), node);
         }
+
+        return node->second.ref;
     }
 
     otf2::definition::calling_context::reference_type sample_ref(uint64_t ip)
     {
-        auto it = find_ip_child(ip, current_thread_cctx_refs_->second.entry.children);
-
-        return it->second.ref;
+        return create_cctx_node(CallingContext::sample(ip), cur)->second.ref;
     }
 
-    void thread_leave(Thread thread)
+    otf2::definition::calling_context::reference_type cctx_enter(CallingContext cctx)
     {
-        assert(current_thread_cctx_refs_);
-        if (current_thread_cctx_refs_->first != thread)
+        cur = create_cctx_node(cctx, cur);
+        return cur->second.ref;
+    }
+
+    otf2::definition::calling_context::reference_type cctx_exit()
+    {
+        if (cur->first.type == CallingContextType::ROOT)
         {
-            Log::debug() << "inconsistent leave thread"; // will probably set to trace sooner or
-                                                         // later
+            throw std::runtime_error("Trying to exit root calling context!");
         }
-        current_thread_cctx_refs_ = nullptr;
+
+        auto ref = cur->second.ref;
+        cur = cur->second.parent;
+        return ref;
+    }
+
+    bool is_current(const CallingContext cctx) const
+    {
+        return cur->first == cctx;
+    }
+
+    const CallingContext& cur_cctx() const
+    {
+        return cur->first;
+    }
+
+    size_t num_cctx() const
+    {
+        return ref_count_;
+    }
+
+    const LocalCctxMap::value_type& get_tree() const
+    {
+        return tree;
+    }
+
+    otf2::writer::local* writer()
+    {
+        return writer_;
     }
 
 private:
-    trace::IpRefMap::iterator find_ip_child(Address addr, trace::IpRefMap& children)
+    LocalCctxMap::value_type* create_cctx_node(CallingContext cctx, LocalCctxMap::value_type* node)
     {
-        // -1 can't be inserted into the ip map, as it imples a 1-byte region from -1 to 0.
-        if (addr == -1)
-        {
-            Log::debug() << "Got invalid ip (-1) from call stack. Replacing with -2.";
-            addr = -2;
-        }
-        auto ret = children.emplace(std::piecewise_construct, std::forward_as_tuple(addr),
-                                    std::forward_as_tuple(next_cctx_ref_));
+        auto ret =
+            node->second.children.emplace(std::piecewise_construct, std::forward_as_tuple(cctx),
+                                          std::forward_as_tuple(next_cctx_ref_, cur));
+
         if (ret.second)
         {
             next_cctx_ref_++;
         }
-        return ret.first;
+        return &(*ret.first);
     }
 
-private:
-    trace::ThreadCctxRefMap& local_cctx_refs_;
+    LocalCctxMap::value_type tree;
+    LocalCctxMap::value_type* cur;
+
+    /*
+     * Records the local calling contexts encountered in a Writer.
+     * While the `Trace` always owns this data, the `Writer` should have exclusive access to
+     * this data during its lifetime. Only afterwards, the `writer` and `refcount` are set by the
+     * `Writer`, and control of this data is handed over to the Trace.
+     */
+    std::atomic<otf2::writer::local*> writer_ = nullptr;
+    std::atomic<size_t> ref_count_;
     size_t next_cctx_ref_ = 0;
-    trace::ThreadCctxRefMap::value_type* current_thread_cctx_refs_ = nullptr;
 };
-} // namespace perf
 } // namespace lo2s

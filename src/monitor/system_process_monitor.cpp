@@ -39,7 +39,7 @@ void SystemProcessMonitor::insert_thread([[maybe_unused]] Process process, Threa
 {
     // in system monitoring, we only need to track the threads spawned from the process lo2s spawned
     // itself. Without this, these threads end up as "<unknown thread>". Sad times.
-    trace_.add_thread(thread, name);
+    trace_.emplace_thread(thread, name);
 }
 
 void SystemProcessMonitor::update_process_name([[maybe_unused]] Process process,

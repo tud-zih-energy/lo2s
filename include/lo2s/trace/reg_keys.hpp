@@ -236,15 +236,15 @@ struct Holder<otf2::definition::location>
 template <>
 struct Holder<otf2::definition::region>
 {
-    using type =
-        otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo, BySyscall>;
+    using type = otf2::lookup_definition_holder<otf2::definition::region, ByProcess, ByThread,
+                                                ByLineInfo, BySyscall>;
 };
 
 template <>
 struct Holder<otf2::definition::calling_context>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread,
-                                                ByLineInfo, BySyscall>;
+    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByProcess,
+                                                ByThread, ByLineInfo, BySyscall>;
 };
 
 template <>

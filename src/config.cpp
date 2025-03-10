@@ -244,6 +244,13 @@ void parse_program_options(int argc, const char** argv)
 
     general_options.toggle("list-knobs", "List available x86_adapt CPU knobs.");
 
+    general_options
+        .option("dwarf",
+                "Set DWARF resolve mode. 'none' disables DWARF, 'local' uses only locally cached "
+                "debuginfo files, 'full' uses debuginfod to download debug information on demand")
+        .default_value("local")
+        .metavar("DWARFMODE");
+
     system_mode_options
         .toggle("process-recording", "Record process activity. In system monitoring: "
                                      "(default: enabled)")
@@ -646,6 +653,43 @@ void parse_program_options(int argc, const char** argv)
         {
             config.syscall_filter = parse_syscall_names(requested_syscalls);
         }
+    }
+
+    std::string dwarf_mode = arguments.get("dwarf");
+    if (dwarf_mode == "full")
+    {
+#ifdef HAVE_DEBUGINFOD
+        config.dwarf = DwarfUsage::FULL;
+
+        char* debuginfod_urls = getenv("DEBUGINFOD_URLS");
+
+        if (debuginfod_urls == nullptr)
+        {
+            Log::warn()
+                << "DEBUGINFOD_URLS not set! Will not be able to lookup debug info via debuginfod!";
+        }
+#else
+        Log::warn() << "No Debuginfod support available, downgrading to use only local files!";
+        config.dwarf = DwarfUsage::LOCAL;
+
+        // If we unset DEBUGINFOD_URLS, it will only use locally cached debug info files
+        setenv("DEBUGINFOD_URLS", "", 1);
+#endif
+    }
+    else if (dwarf_mode == "local")
+    {
+        config.dwarf = DwarfUsage::LOCAL;
+
+        setenv("DEBUGINFOD_URLS", "", 1);
+    }
+    else if (dwarf_mode == "none")
+    {
+        config.dwarf = DwarfUsage::NONE;
+    }
+    else
+    {
+        std::cerr << "Unknown DWARF mode: " << dwarf_mode << std::endl;
+        std::exit(EXIT_FAILURE);
     }
 
     if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
