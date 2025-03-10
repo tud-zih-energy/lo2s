@@ -31,13 +31,12 @@
 #ifdef HAVE_SENSORS
 #include <lo2s/metric/sensors/recorder.hpp>
 #endif
-#include <lo2s/mmap.hpp>
 #include <lo2s/monitor/io_monitor.hpp>
 #ifdef HAVE_VEOSINFO
 #include <lo2s/monitor/nec_monitor_main.hpp>
 #endif
 #include <lo2s/monitor/tracepoint_monitor.hpp>
-#include <lo2s/process_info.hpp>
+#include <lo2s/resolvers.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/types.hpp>
 
@@ -56,21 +55,9 @@ public:
 
     virtual ~MainMonitor();
 
-    trace::Trace& trace()
-    {
-        return trace_;
-    }
-
-    void insert_cached_mmap_events(const RawMemoryMapCache& cached_events);
-
-    std::map<Process, ProcessInfo>& get_process_infos()
-    {
-        return process_infos_;
-    }
-
 protected:
     trace::Trace trace_;
-    std::map<Process, ProcessInfo> process_infos_;
+    Resolvers resolvers_;
     metric::plugin::Metrics metrics_;
     std::vector<std::unique_ptr<TracepointMonitor>> tracepoint_monitors_;
 

@@ -19,6 +19,8 @@
 #include <cstdint>
 #include <ctime>
 
+#include <nitro/lang/string.hpp>
+
 extern "C"
 {
 #include <fcntl.h>
@@ -435,5 +437,61 @@ int timerfd_from_ns(std::chrono::nanoseconds duration)
         throw_errno();
     }
     return timerfd;
+}
+
+bool known_non_executable(const std::string& filename)
+{
+    if (filename.empty() || std::string("//anon") == filename ||
+        std::string("/dev/zero") == filename || std::string("/anon_hugepage") == filename ||
+        nitro::lang::starts_with(filename, "/memfd") ||
+        nitro::lang::starts_with(filename, "/SYSV") || nitro::lang::starts_with(filename, "[") ||
+        nitro::lang::starts_with(filename, "/dev"))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+std::map<Mapping, std::string> read_maps(Process p)
+{
+    // Supposedly this one is faster than /proc/%d/maps for processes with many threads
+    auto filename = fmt::format("/proc/{}/task/{}/maps", p.as_pid_t(), p.as_pid_t());
+
+    std::map<Mapping, std::string> mappings;
+    std::ifstream mapstream(filename);
+    if (mapstream.fail())
+    {
+        std::ifstream commstream(fmt::format("/proc/{}/comm", p.as_pid_t()));
+        std::string comm;
+        commstream >> comm;
+        Log::error() << "could not open maps file " << filename << " (" << comm << ")";
+        // Gracefully return an initially empty map that always fails.
+        return mappings;
+    }
+
+    std::string line;
+
+    //                 start       -    end          prot           offset
+    //                 device  inode   fr
+    // NOTE: we only look at executable entries       here ↓
+    std::regex regex("([0-9a-f]+)\\-([0-9a-f]+)\\s+[r-][w-][x-].?\\s+([0-9a-z]+)"
+                     "\\s+\\S+\\s+\\d+\\s+(.*)");
+    Log::debug() << "opening " << filename;
+    while (getline(mapstream, line))
+    {
+        Log::trace() << "map entry: " << line;
+        std::smatch match;
+        if (std::regex_match(line, match, regex))
+        {
+            mappings.emplace(
+                std::piecewise_construct,
+                std::forward_as_tuple(
+                    Mapping(Address(match.str(1)), Address(match.str(2)), Address(match.str(3)))),
+                std::forward_as_tuple(match.str(4)));
+        }
+    }
+
+    return mappings;
 }
 } // namespace lo2s

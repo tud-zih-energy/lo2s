@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2024,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,45 +19,34 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <lo2s/dwarf_resolve.hpp>
+#include <lo2s/function_resolver.hpp>
 
-#include <lo2s/address.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/mmap.hpp>
-
-#include <mutex>
-#include <thread>
+#include <nitro/lang/string.hpp>
 
 namespace lo2s
 {
-class ProcessInfo
+
+std::shared_ptr<FunctionResolver> function_resolver_for(const std::string& filename)
 {
-public:
-    ProcessInfo(Process p, bool enable_on_exec) : process_(p), maps_(p, !enable_on_exec)
+    std::shared_ptr<FunctionResolver> fr;
+    if (known_non_executable(filename))
     {
+        fr = FunctionResolver::cache(filename);
+    }
+    else
+    {
+        try
+        {
+            fr = DwarfFunctionResolver::cache(filename);
+        }
+        catch (std::exception& e)
+        {
+            Log::trace() << "Could not open DWARF resolver for (" << filename << ") " << e.what();
+            fr = FunctionResolver::cache(filename);
+        }
     }
 
-    Process process() const
-    {
-        return process_;
-    }
-
-    void mmap(const RawMemoryMapEntry& entry)
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        maps_.mmap(entry);
-    }
-
-    MemoryMap maps() const
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        // Yes, this is correct as per 6.6.3 The Return Statement
-        return maps_;
-    }
-
-private:
-    const Process process_;
-    mutable std::mutex mutex_;
-    MemoryMap maps_;
-};
+    return fr;
+}
 } // namespace lo2s

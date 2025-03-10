@@ -21,7 +21,6 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 
 #include <lo2s/cupti/reader.hpp>
@@ -51,7 +50,7 @@ namespace monitor
 class ScopeMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, MainMonitor& parent, bool enable_on_exec,
+    ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec,
                  bool is_process = false);
 
     void initialize_thread() override;
@@ -67,6 +66,14 @@ public:
         else
         {
             return "lo2s::ThreadMonitor";
+        }
+    }
+
+    void emplace_resolvers(Resolvers& resolvers)
+    {
+        if (sample_writer_)
+        {
+            sample_writer_->emplace_resolvers(resolvers);
         }
     }
 

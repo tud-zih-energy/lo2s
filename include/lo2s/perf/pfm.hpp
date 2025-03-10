@@ -69,7 +69,7 @@ public:
 
         if (ret != PFM_SUCCESS)
         {
-            throw EventAttr::InvalidEvent("Coudld not read PFM event encoding!");
+            throw EventAttr::InvalidEvent("Could not read PFM event encoding");
         }
 
         EventAttr ev =

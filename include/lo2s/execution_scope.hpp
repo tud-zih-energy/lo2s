@@ -72,7 +72,7 @@ public:
         case ExecutionScopeType::THREAD:
             return fmt::format("thread {}", id);
         case ExecutionScopeType::PROCESS:
-            return fmt::format("process {}");
+            return fmt::format("process {}", id);
         case ExecutionScopeType::CPU:
             return fmt::format("cpu {}", id);
         default:

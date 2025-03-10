@@ -21,7 +21,6 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/process_info.hpp>
 
 namespace lo2s
 {
@@ -37,31 +36,31 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
         posix_monitor_->start();
     }
 #endif
-    trace_.add_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
+    trace_.emplace_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
 void ProcessMonitor::insert_process(Process parent, Process process, std::string proc_name,
                                     bool spawn)
 {
-    trace_.add_process(parent, process, proc_name);
-    insert_thread(process, process.as_thread(), proc_name, spawn, true);
+    trace_.emplace_process(parent, process, proc_name);
+    insert_thread(process, process.as_thread(), proc_name, spawn);
+
+    resolvers_.fork(parent, process);
 }
 
-void ProcessMonitor::insert_thread(Process process, Thread thread, std::string name, bool spawn,
-                                   bool is_process)
+void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thread,
+                                   std::string name, bool spawn, bool is_process)
 {
-
 #ifdef HAVE_BPF
     if (posix_monitor_)
     {
         posix_monitor_->insert_thread(thread);
     }
 #endif
-    trace_.add_thread(thread, name);
+    trace_.emplace_thread(thread, name);
 
     if (config().sampling)
     {
-        process_infos_.try_emplace(process, process, spawn);
     }
 
     ExecutionScope scope = ExecutionScope(thread);
@@ -74,7 +73,7 @@ void ProcessMonitor::insert_thread(Process process, Thread thread, std::string n
         {
             auto inserted =
                 threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                 std::forward_as_tuple(scope, *this, spawn, is_process));
+                                 std::forward_as_tuple(scope, trace_, spawn, is_process));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
@@ -104,6 +103,7 @@ void ProcessMonitor::exit_thread(Thread thread)
     if (threads_.count(thread) != 0)
     {
         threads_.at(thread).stop();
+        threads_.at(thread).emplace_resolvers(resolvers_);
     }
     threads_.erase(thread);
 }
@@ -113,6 +113,7 @@ ProcessMonitor::~ProcessMonitor()
     for (auto& thread : threads_)
     {
         thread.second.stop();
+        thread.second.emplace_resolvers(resolvers_);
     }
 #ifdef HAVE_BPF
     if (posix_monitor_)

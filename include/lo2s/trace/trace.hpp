@@ -21,15 +21,15 @@
 #pragma once
 #include <chrono>
 #include <lo2s/address.hpp>
-#include <lo2s/bfd_resolve.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/mmap.hpp>
+#include <lo2s/perf/calling_context_manager.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
-#include <lo2s/process_info.hpp>
+#include <lo2s/resolvers.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types.hpp>
 
@@ -46,65 +46,14 @@ namespace lo2s
 {
 namespace trace
 {
-class MainMonitor;
 
-template <typename RefMap>
-using IpMap = std::map<Address, RefMap>;
-
-struct IpRefEntry
-{
-    IpRefEntry(otf2::definition::calling_context::reference_type r) : ref(r)
-    {
-    }
-
-    otf2::definition::calling_context::reference_type ref;
-    IpMap<IpRefEntry> children;
-};
-
-struct ThreadCctxRefs
-{
-    ThreadCctxRefs(Process p, otf2::definition::calling_context::reference_type r)
-    : process(p), entry(r)
-    {
-    }
-
-    Process process;
-    IpRefEntry entry;
-};
-
-struct IpCctxEntry
-{
-    IpCctxEntry(otf2::definition::calling_context& c) : cctx(c)
-    {
-    }
-
-    otf2::definition::calling_context& cctx;
-    IpMap<IpCctxEntry> children;
-};
-
-/*
- * Stores calling context information for each sample writer / monitoring thread.
- * While the `Trace` always owns this data, the `sample::Writer` should have exclusive access to
- * this data during its lifetime. Only afterwards, the `writer` and `refcount` are set by the
- * `sample::Writer`.
- */
-struct ThreadCctxRefMap
-{
-    std::map<Thread, ThreadCctxRefs> map;
-    std::atomic<otf2::writer::local*> writer = nullptr;
-    std::atomic<size_t> ref_count;
-
-    using value_type = std::map<Thread, ThreadCctxRefs>::value_type;
-};
-
-using IpRefMap = IpMap<IpRefEntry>;
-using IpCctxMap = IpMap<IpCctxEntry>;
+// sentinel value for an inserted process that has no known
+static Process NO_PARENT_PROCESS = Process(0);
 
 class Trace
 {
 public:
-    static Process NO_PARENT_PROCESS; //<! sentinel value for an inserted process that has no known
-                                      // parent
+    // parent
     Trace();
     ~Trace();
     void begin_record();
@@ -113,21 +62,19 @@ public:
     otf2::chrono::time_point record_from() const;
     otf2::chrono::time_point record_to() const;
 
-    void add_process(Process parent, Process process, const std::string& name = "");
-
-    void add_thread(Thread t, const std::string& name);
-    void add_threads(const std::unordered_map<Thread, std::string>& thread_map);
-
-    void add_monitoring_thread(Thread t, const std::string& name, const std::string& group);
-
+    void emplace_monitoring_thread(Thread t, const std::string& name, const std::string& group);
+    void emplace_thread(Thread t, const std::string& name);
+    void emplace_thread_exclusive(Thread thread, const std::string& name,
+                                  const std::lock_guard<std::recursive_mutex>&);
+    void emplace_threads(const std::unordered_map<Thread, std::string>& thread_map);
     void update_process_name(Process p, const std::string& name);
     void update_thread_name(Thread t, const std::string& name);
+    void emplace_process(Process parent, Process process, const std::string& name = "");
 
-    ThreadCctxRefMap& create_cctx_refs();
-    otf2::definition::mapping_table
-    merge_calling_contexts(const std::map<Thread, ThreadCctxRefs>& new_ips, size_t num_ip_refs,
-                           const std::map<Process, ProcessInfo>& infos);
-    void merge_calling_contexts(const std::map<Process, ProcessInfo>& process_infos);
+    LocalCctxTree& create_local_cctx_tree();
+    otf2::definition::mapping_table merge_calling_contexts(const LocalCctxTree& local_cctxs,
+                                                           Resolvers& resolvers);
+    void finalize(Resolvers& resolvers);
 
     otf2::definition::mapping_table merge_syscall_contexts(const std::set<int64_t>& used_syscalls);
 
@@ -341,14 +288,23 @@ private:
     /** Add a thread with the required lock (#mutex_) held.
      *
      *  This is a helper needed to avoid constant re-locking when adding
-     *  multiple threads via #add_threads.
+     *  multiple threads via #emplace_threads.
      **/
-    void add_thread_exclusive(Thread thread, const std::string& name,
-                              const std::lock_guard<std::recursive_mutex>&);
 
-    void merge_ips(const IpRefMap& new_children, IpCctxMap& children,
-                   std::vector<uint32_t>& mapping_table, otf2::definition::calling_context& parent,
-                   const std::map<Process, ProcessInfo>& infos, Process p);
+    struct MergeContext
+    {
+        Process p;
+    };
+
+    otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
+                                                        struct MergeContext& ctx,
+                                                        GlobalCctxMap::value_type* parent);
+    otf2::definition::calling_context& cctx_for_thread(Thread thread);
+    otf2::definition::calling_context& cctx_for_process(Process process);
+
+    void merge_nodes(const LocalCctxMap::value_type& local_node,
+                     GlobalCctxMap::value_type* global_node, std::vector<uint32_t>& mapping_table,
+                     Resolvers& resolvers, struct MergeContext& ctx);
 
     const otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
     {
@@ -383,6 +339,8 @@ private:
     otf2::writer::Archive<otf2::lookup_registry<Holder>> archive_;
     otf2::lookup_registry<Holder>& registry_;
 
+    GlobalCctxMap::value_type calling_context_tree_;
+
     std::recursive_mutex mutex_;
 
     otf2::chrono::time_point starting_time_;
@@ -396,7 +354,6 @@ private:
     // TODO add location groups (processes), read path from /proc/self/exe symlink
 
     std::map<Thread, std::string> thread_names_;
-    std::map<Thread, IpCctxEntry> calling_context_tree_;
 
     otf2::definition::comm_locations_group& comm_locations_group_;
     otf2::definition::comm_locations_group& hardware_comm_locations_group_;
@@ -420,11 +377,11 @@ private:
 
     ExecutionScopeGroup& groups_;
 
-    std::deque<ThreadCctxRefMap> cctx_refs_;
+    std::deque<LocalCctxTree> local_cctx_trees_;
     // Mutex is only used for accessing the cctx_refs_
-    std::mutex cctx_refs_mutex_;
+    std::mutex local_cctx_trees_mutex_;
     // I wanted to use atomic_flag, but I need test and that's a C++20 exclusive.
-    std::atomic_bool cctx_refs_finalized_ = false;
+    std::atomic_bool local_cctx_trees_finalized_ = false;
 };
 } // namespace trace
 } // namespace lo2s

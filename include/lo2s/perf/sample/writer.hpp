@@ -22,9 +22,9 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/mmap.hpp>
 #include <lo2s/perf/calling_context_manager.hpp>
 
+#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -43,11 +43,6 @@ extern "C"
 
 namespace lo2s
 {
-namespace monitor
-{
-class MainMonitor;
-}
-
 namespace perf
 {
 namespace sample
@@ -57,8 +52,7 @@ namespace sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(ExecutionScope scope, monitor::MainMonitor& monitor, trace::Trace& trace,
-           bool enable_on_exec);
+    Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
     ~Writer();
 
 public:
@@ -69,19 +63,21 @@ public:
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
     bool handle(const Reader::RecordSwitchType* context_switch);
 
+    void emplace_resolvers(Resolvers& resolvers);
     void end();
 
 private:
+    void update_current_process(Process process);
     void update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp);
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
 
-    void leave_current_thread(Thread thread, otf2::chrono::time_point tp);
+    void leave_current_process();
+    void leave_current_thread(otf2::chrono::time_point tp);
+
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
     ExecutionScope scope_;
-
-    monitor::MainMonitor& monitor_;
 
     trace::Trace& trace_;
     otf2::writer::local& otf2_writer_;
@@ -89,9 +85,9 @@ private:
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
-    CallingContextManager cctx_manager_;
+    LocalCctxTree& local_cctx_tree_;
+
     RawMemoryMapCache cached_mmap_events_;
-    std::unordered_map<Thread, std::string> comms_;
 
     const time::Converter time_converter_;
 

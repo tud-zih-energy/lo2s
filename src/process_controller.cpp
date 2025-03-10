@@ -124,7 +124,7 @@ ProcessController::ProcessController(Process child, const std::string& name, boo
 
     groups_.add_process(child);
 
-    monitor_.insert_process(trace::Trace::NO_PARENT_PROCESS, child, name, spawn);
+    monitor_.insert_process(trace::NO_PARENT_PROCESS, child, name, spawn);
 
     summary().add_thread();
 }

@@ -233,6 +233,28 @@ Listed events can be used as I<TRACEPOINT>-arguments.
 List available L<x86_adapt.h(3)> CPU configuration items.
 Use where I<KNOB> is required.
 
+=item B<--dwarf> I<DWARFMODE>
+
+Configures the usage of DWARF and debuginfod for the resolution of function names. Possible values are:
+
+=over
+
+=item  I<full>
+
+Use DWARF debug information for the resolution of function names. Debuginfod is used look up debug files for the recorded binaries, downloading them from a debuginfo server if required.
+
+=item  I<local>
+
+(default) Same as I<full>, but do not attempt to download missing debuginfo files from the internet.
+
+=item I<none>
+
+Completely disables DWARF usage, falling back completely to the ELF symbol table for function name resolution.
+
+=back
+
+I<full> requires I<DEBUGINFOD_URLS> to be set to lookup remote debug infos.
+
 =back
 
 =head2 Mode-selection options
