@@ -43,8 +43,7 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
  * Linux (>= 4.3)<sup>1</sup>
  * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 3.0)
- * libbfd
- * libiberty
+ * elfutils
  * CMake (>= 3.11)
  * A C++ Compiler with C++17 support and the std::filesystem library (GCC > 7, Clang > 5)
 
