@@ -49,7 +49,7 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
 }
 
 void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thread,
-                                   std::string name, bool spawn, bool is_process)
+                                   std::string name, bool spawn)
 {
 #ifdef HAVE_BPF
     if (posix_monitor_)
@@ -73,7 +73,7 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         {
             auto inserted =
                 threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                 std::forward_as_tuple(scope, trace_, spawn, is_process));
+                                 std::forward_as_tuple(scope, trace_, spawn));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
