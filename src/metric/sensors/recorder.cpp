@@ -67,6 +67,24 @@ static const char* get_unit(const sensors_feature* feature)
     }
 }
 
+static std::string chip_name_to_str(const sensors_chip_name* chip)
+{
+    std::string chip_name;
+    int chip_name_size = sensors_snprintf_chip_name(nullptr, 0, chip);
+    assert(chip_name_size > 0);
+
+    chip_name.resize(chip_name_size);
+    int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size() + 1, chip);
+
+    if (res < 0)
+    {
+        throw std::runtime_error(
+            fmt::format("Failed to get chip name for: {}. Skipping.", chip->path));
+    }
+
+    return chip_name;
+}
+
 Recorder::Recorder(trace::Trace& trace)
 : PollMonitor(trace, "Sensors recorder", config().read_interval),
   otf2_writer_(trace.create_metric_writer(name())),
@@ -82,19 +100,7 @@ Recorder::Recorder(trace::Trace& trace)
     for (auto chip = sensors_get_detected_chips(nullptr, &chip_id); chip != nullptr;
          chip = sensors_get_detected_chips(nullptr, &chip_id))
     {
-        int chip_name_size = sensors_snprintf_chip_name(nullptr, 0, chip);
-        assert(chip_name_size > 0);
-
-        std::string chip_name;
-        chip_name.resize(chip_name_size);
-        int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size() + 1, chip);
-
-        if (res < 0)
-        {
-            Log::error() << "Failed to get chip name for: " << chip->path << ". Skipping.";
-            continue;
-        }
-
+        std::string chip_name = chip_name_to_str(chip);
         int feature_id = 0;
         for (auto feature = sensors_get_features(chip, &feature_id); feature != nullptr;
              feature = sensors_get_features(chip, &feature_id))
@@ -125,13 +131,19 @@ Recorder::Recorder(trace::Trace& trace)
                 sensor_name << chip_name << "/" << feature->name << " (" << label.get() << ")";
                 Log::debug() << "Found sensor: " << sensor_name.str();
 
-                items_.emplace_back(
-                    std::make_pair<const void*, int>(chip, int(sub_feature->number)));
-                auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
+                // Sometimes, this wonderful API gives us sensors which fail every time
+                // you try to read them. So check if we really can read them
+                double tmp;
+                if (sensors_get_value(chip, sub_feature->number, &tmp) == 0)
+                {
+                    items_.emplace_back(
+                        std::make_pair<const void*, int>(chip, int(sub_feature->number)));
+                    auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 
-                mc->add_member(trace.metric_member(sensor_name.str(), label.get(),
-                                                   otf2::common::metric_mode::absolute_point,
-                                                   otf2::common::type::Double, get_unit(feature)));
+                    mc->add_member(trace.metric_member(
+                        sensor_name.str(), label.get(), otf2::common::metric_mode::absolute_point,
+                        otf2::common::type::Double, get_unit(feature)));
+                }
             }
         }
     }

@@ -18,6 +18,7 @@ include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
 
+
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
 git_submodule_update()
@@ -469,6 +470,9 @@ target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
 # build Debug with -Werror
 target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
+
+enable_testing()
+include(cmake/Tests.cmake)
 
 if (IWYU)
     find_program(iwyu_path NAMES include-what-you-use iwyu)
