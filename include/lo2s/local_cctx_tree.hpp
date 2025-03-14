@@ -52,76 +52,62 @@ public:
     void cctx_sample(otf2::chrono::time_point tp, uint64_t ip);
 
     template <typename... Cctxs>
-    void cctx_enter(const otf2::chrono::time_point& tp, const CallingContext& ctx,
-                    const Cctxs&... ctxs)
+    uint64_t cctx_enter(const otf2::chrono::time_point& tp, const CallingContext& ctx,
+                        const Cctxs&... ctxs)
     {
-        cctx_enter(tp, 1, 0, ctx, ctxs...);
+        uint64_t level = cur_level();
+        cctx_enter(tp, level + 1, 0, ctx, ctxs...);
+        return level + 1;
     }
 
-    // Enters the nodes ctx...ctxs.
-    //
-    // - `level` records the level at which `ctx is inserted into the call stack.
-    //   "0" is reserved for the CCTX::root node, so the `level` start with 1
-    // - `unwind_distance`, which is set by handle_enter_cctx_node, records the
-    //   number of newly entered nodes on the call stack
     template <typename... Cctxs>
-    void cctx_enter(const otf2::chrono::time_point& tp, uint64_t level, uint64_t unwind_distance,
-                    const CallingContext& ctx, const Cctxs&... ctxs)
+    uint64_t cctx_enter(const otf2::chrono::time_point& tp, uint64_t level,
+                        const CallingContext& ctx, const Cctxs&... ctxs)
     {
-
-        handle_enter_cctx_node(tp, level, unwind_distance, ctx);
-
-        level++;
-
-        cctx_enter(tp, level, unwind_distance, ctxs...);
+        cctx_enter(tp, level, 0, ctx, ctxs...);
+        return level;
     }
 
-    void cctx_enter(const otf2::chrono::time_point& tp, uint64_t level, uint64_t unwind_distance,
-                    const CallingContext& cctx)
+    uint64_t cctx_enter(const otf2::chrono::time_point& tp, uint64_t level,
+                        const CallingContext& ctx)
     {
-        handle_enter_cctx_node(tp, level, unwind_distance, cctx);
+        cctx_enter(tp, level, 0, ctx);
+        return level;
+    }
 
-        writer_.write_calling_context_enter(tp, cur.back()->second.ref, unwind_distance);
+    // if cur_ = [ ROOT, PROCESS(42)]
+    // then cur_.size() == 2
+    // then level(cur_) == 1;
+    uint64_t cur_level()
+    {
+        // There is always the root node!
+        assert(cur_.size() > 0);
+        return cur_.size() - 1;
+    }
+
+    uint64_t cctx_leave(otf2::chrono::time_point tp)
+    {
+        return cctx_leave(tp, cur_level());
     }
 
     // Leaves all the nodes on the callstack that at an equal or lower level than cctx.
-    void cctx_leave(otf2::chrono::time_point tp, uint64_t level, const CallingContext& cctx)
+    uint64_t cctx_leave(otf2::chrono::time_point tp, uint64_t level)
     {
-        if (cur.size() <= level)
+        // Do not remove root node
+        if (level == 0)
         {
-            if (cur.size() <= 1)
-            {
-                if (cctx != CallingContext::process(Process(0)))
-                {
-                    Log::debug() << "Trying to leave " << cctx.name() << " but call stack empty!";
-                }
-            }
-            else
-            {
-                Log::debug() << "Trying to leave" << cctx.name() << " on level " << level
-                             << " of the callstack, but there are only " << cur.size()
-                             << " elements on it!";
-
-                if (cur.back()->first != CallingContext::root())
-                {
-                    writer_.write_calling_context_leave(tp, cur.back()->second.ref);
-                }
-            }
-            return;
+            return 1;
         }
 
-        if (cur[level]->first != cctx)
+        if (cur_level() < level)
         {
-            Log::debug() << "Trying to exit " << cctx.name() << " but " << cur[level]->first.name()
-                         << " is on the callstack at level " << level << "!";
-            writer_.write_calling_context_leave(tp, cur.back()->second.ref);
-            cur.erase(++cur.begin(), cur.end());
+            return cur_.size();
         }
-        else
-        {
-            writer_.write_calling_context_leave(tp, cur.back()->second.ref);
-            cur.erase(cur.begin() + level, cur.end());
-        }
+
+        writer_.write_calling_context_leave(tp, cur_.back()->second.ref);
+
+        cur_.erase(cur_.end() - (cur_level() - level + 1), cur_.end());
+        return cur_level();
     }
 
     size_t num_cctx() const
@@ -140,6 +126,32 @@ public:
     }
 
 private:
+    // Enters the nodes ctx...ctxs.
+    //
+    // - `level` records the level at which `ctx is inserted into the call stack.
+    //   "0" is reserved for the CCTX::root node, so the `level` start with 1
+    // - `unwind_distance`, which is set by handle_enter_cctx_node, records the
+    //   number of newly entered nodes on the call stack
+    template <typename... Cctxs>
+    void cctx_enter(const otf2::chrono::time_point& tp, uint64_t level, uint64_t unwind_distance,
+                    const CallingContext& ctx, const Cctxs&... ctxs)
+    {
+
+        handle_enter_cctx_node(tp, level, unwind_distance, ctx);
+
+        level++;
+
+        return cctx_enter(tp, level, unwind_distance, ctxs...);
+    }
+
+    void cctx_enter(const otf2::chrono::time_point& tp, uint64_t level, uint64_t unwind_distance,
+                    const CallingContext& cctx)
+    {
+        handle_enter_cctx_node(tp, level, unwind_distance, cctx);
+
+        writer_.write_calling_context_enter(tp, cur_.back()->second.ref, unwind_distance);
+    }
+
     // Main code for handling the entering of `cctx` on a specific level.
     // The OTF-2 events are generally produced elsewhere, this is just the
     // logic for manipulating the different lo2s data structures.
@@ -155,9 +167,9 @@ private:
 
         // If we want to enter a cctx at level x, then the previous 0..x-1
         // calling contexts (recorded in the vector cur) have to be defined
-        assert(level <= cur.size());
+        assert(level <= cur_.size());
 
-        if (unwind_distance != 0 || cur.size() == level)
+        if (unwind_distance != 0 || cur_level() + 1 == level)
         {
             // If the unwind_distance is already =! 0 or we have reached the end
             // of the current call stack, we are on a definitively on new
@@ -165,16 +177,16 @@ private:
             //
             // in this case, increase the unwind distance, as we are definitively on a new node.
             unwind_distance++;
-            cur.emplace_back(create_cctx_node(cctx, cur.back()));
+            cur_.emplace_back(create_cctx_node(cctx, cur_.back()));
         }
         else
         {
-            if (cur.size() > level && cur[level]->first != cctx)
+            if (cur_level() >= level && cur_[level]->first != cctx)
             {
                 // If the current callstack (recorded in cur) contains conflicting cctx, first
                 // generates a leave event. before entering the new nodes.
-                cctx_leave(tp, level, cctx);
-                cur.emplace_back(create_cctx_node(cctx, cur.back()));
+                cctx_leave(tp, level);
+                cur_.emplace_back(create_cctx_node(cctx, cur_.back()));
                 unwind_distance = 1;
             }
         }
@@ -198,7 +210,7 @@ private:
 
     trace::Trace& trace_;
     otf2::writer::local& writer_;
-    std::vector<LocalCctxMap::value_type*> cur;
+    std::vector<LocalCctxMap::value_type*> cur_;
     std::atomic<size_t> ref_count_;
     size_t next_cctx_ref_ = 0;
 };

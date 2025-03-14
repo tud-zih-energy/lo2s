@@ -26,6 +26,7 @@
 #include <lo2s/resolvers.hpp>
 
 #include <lo2s/monitor/cuda_monitor.hpp>
+#include <lo2s/monitor/openmp_monitor.hpp>
 
 extern "C"
 {
@@ -63,6 +64,8 @@ public:
 private:
     trace::Trace& trace_;
     std::map<int, CUDAMonitor> cuda_monitors_;
+    std::map<int, OpenMPMonitor> openmp_monitors_;
+
     int socket = -1;
 };
 } // namespace monitor

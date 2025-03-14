@@ -109,7 +109,7 @@ T get_sysctl(const std::string& group, const std::string& name)
 
 int32_t get_task_last_cpu_id(std::istream& proc_stat);
 
-std::unordered_map<Thread, std::string> get_comms_for_running_threads();
+std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads();
 
 void try_pin_to_scope(ExecutionScope scope);
 

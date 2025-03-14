@@ -67,12 +67,10 @@ public:
     void end();
 
 private:
-    void enter_calling_context(Process process, Thread thread, otf2::chrono::time_point tp);
+    static constexpr int CCTX_LEVEL_PROCESS = 1;
+
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
-
-    void leave_current_process();
-    void leave_current_thread(otf2::chrono::time_point tp);
 
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
@@ -81,7 +79,6 @@ private:
     trace::Trace& trace_;
     LocalCctxTree& local_cctx_tree_;
 
-    otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;
 
     RawMemoryMapCache cached_mmap_events_;

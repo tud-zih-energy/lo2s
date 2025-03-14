@@ -50,12 +50,12 @@ CUDAMonitor::CUDAMonitor(trace::Trace& trace, int fd)
 
 void CUDAMonitor::initialize_thread()
 {
-    local_cctx_tree_.cctx_enter(last_tp_, CallingContext::process(process_));
+    local_cctx_tree_.cctx_enter(last_tp_, CCTX_LEVEL_PROCESS, CallingContext::process(process_));
 }
 
 void CUDAMonitor::finalize_thread()
 {
-    local_cctx_tree_.cctx_leave(last_tp_, 0, CallingContext::root());
+    local_cctx_tree_.cctx_leave(last_tp_, CCTX_LEVEL_PROCESS);
 
     local_cctx_tree_.finalize();
 }
@@ -72,15 +72,16 @@ void CUDAMonitor::monitor(int fd [[maybe_unused]])
 
             auto start_tp = time_converter_(kernel->start_tp);
             auto end_tp = time_converter_(kernel->end_tp);
-            last_tp_ = end_tp;
 
-            local_cctx_tree_.cctx_enter(start_tp, CallingContext::cuda(kernel->kernel_id));
-            local_cctx_tree_.cctx_leave(end_tp, 2, CallingContext::cuda(kernel->kernel_id));
+            local_cctx_tree_.cctx_enter(start_tp, CCTX_LEVEL_KERNEL,
+                                        CallingContext::cuda(kernel->kernel_id));
+            local_cctx_tree_.cctx_leave(end_tp, CCTX_LEVEL_KERNEL);
+
+            last_tp_ = end_tp;
         }
         else if (event_type == (uint64_t)cuda::EventType::KERNEL_DEF)
         {
             struct cuda::kernel_def* kernel = ringbuf_reader_.get<struct cuda::kernel_def>();
-
             functions_.emplace(Address(kernel->kernel_id), std::string(kernel->function));
 
             if (kernel->kernel_id > highest_func_)

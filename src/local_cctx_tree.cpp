@@ -26,14 +26,14 @@ namespace lo2s
 {
 LocalCctxTree::LocalCctxTree(trace::Trace& trace, MeasurementScope scope)
 : tree(CallingContext::root(), LocalCctxNode(0)), trace_(trace),
-  writer_(trace_.sample_writer(scope)), cur({ &tree })
+  writer_(trace_.sample_writer(scope)), cur_({ &tree })
 {
 }
 
 void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
                                 const uint64_t ips[])
 {
-    auto* node = cur.back();
+    auto* node = cur_.back();
 
     for (uint64_t i = num_ips - 1; i != 0; i--)
     {
@@ -62,7 +62,7 @@ void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
 
 void LocalCctxTree::cctx_sample(otf2::chrono::time_point tp, uint64_t ip)
 {
-    auto* node = create_cctx_node(CallingContext::sample(ip), cur.back());
+    auto* node = create_cctx_node(CallingContext::sample(ip), cur_.back());
     writer_.write_calling_context_sample(tp, node->second.ref, 2,
                                          trace_.interrupt_generator().ref());
 }

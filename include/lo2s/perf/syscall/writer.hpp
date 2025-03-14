@@ -51,12 +51,13 @@ public:
 
     ~Writer();
 
-public:
     using Reader<Writer>::handle;
 
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
+    static constexpr int CCTX_LEVEL_SYSCALL = 1;
+
     LocalCctxTree& local_cctx_tree_;
     const time::Converter& time_converter_;
 

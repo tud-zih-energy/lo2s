@@ -55,10 +55,10 @@ namespace sample
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 : Reader(scope, enable_on_exec), scope_(scope), trace_(trace),
   local_cctx_tree_(trace.create_local_cctx_tree(MeasurementScope::sample(scope))),
-  cpuid_metric_instance_(trace.metric_instance(trace.cpuid_metric_class(),
-                                               local_cctx_tree_.writer().location(),
-                                               local_cctx_tree_.writer().location())),
-  cpuid_metric_event_(otf2::chrono::genesis(), cpuid_metric_instance_),
+  cpuid_metric_event_(otf2::chrono::genesis(),
+                      trace.metric_instance(trace.cpuid_metric_class(),
+                                            local_cctx_tree_.writer().location(),
+                                            local_cctx_tree_.writer().location())),
   time_converter_(perf::time::Converter::instance()), first_time_point_(lo2s::time::now()),
   last_time_point_(first_time_point_)
 {
@@ -66,7 +66,7 @@ Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 
 Writer::~Writer()
 {
-    local_cctx_tree_.cctx_leave(last_time_point_, 0, CallingContext::root());
+    local_cctx_tree_.cctx_leave(last_time_point_, CCTX_LEVEL_PROCESS);
 
     local_cctx_tree_.finalize();
 }
@@ -108,7 +108,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 
-    enter_calling_context(Process(sample->pid), Thread(sample->tid), tp);
+    update_calling_context(Process(sample->pid), Thread(sample->tid), tp, false);
 
     if (!has_cct_)
     {
@@ -137,18 +137,6 @@ bool Writer::handle(const Reader::RecordMmapType* mmap_event)
     cached_mmap_events_.emplace_back(mmap_event);
 
     return false;
-}
-
-void Writer::enter_calling_context(Process process, Thread thread, otf2::chrono::time_point tp)
-{
-    if (first_event_ && !scope_.is_cpu())
-    {
-        local_cctx_tree_.writer() << otf2::event::thread_begin(tp, trace_.process_comm(thread), -1);
-        first_event_ = false;
-    }
-
-    local_cctx_tree_.cctx_enter(tp, CallingContext::process(process),
-                                CallingContext::thread(thread));
 }
 
 otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
@@ -203,35 +191,37 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 {
     if (switch_out)
     {
-        local_cctx_tree_.cctx_leave(tp, 1, CallingContext::process(process));
+        local_cctx_tree_.cctx_leave(tp, CCTX_LEVEL_PROCESS);
     }
     else
     {
-        enter_calling_context(process, thread, tp);
+        if (first_event_ && !scope_.is_cpu())
+        {
+            local_cctx_tree_.writer()
+                << otf2::event::thread_begin(tp, trace_.process_comm(thread), -1);
+            first_event_ = false;
+        }
+
+        local_cctx_tree_.cctx_enter(tp, CCTX_LEVEL_PROCESS, CallingContext::process(process),
+                                    CallingContext::thread(thread));
     }
 }
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
-    if (!scope_.is_cpu())
+    std::string new_command{ static_cast<const char*>(comm->comm) };
+
+    Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
+                 << new_command << "\"";
+
+    // only update name of process if the main thread changes its name
+    if (comm->pid == comm->tid)
     {
-        std::string new_command{ static_cast<const char*>(comm->comm) };
-
-        Log::debug() << "Thread " << comm->tid << " in process " << comm->pid
-                     << " changed name to \"" << new_command << "\"";
-
-        // update task name
-        trace_.update_thread_name(Thread(comm->tid), new_command);
-
-        // only update name of process if the main thread changes its name
-        if (comm->pid == comm->tid)
-        {
-            trace_.update_process_name(Process(comm->pid), new_command);
-        }
-        else
-        {
-            trace_.update_thread_name(Thread(comm->tid), new_command);
-        }
+        trace_.emplace_process(trace::NO_PARENT_PROCESS, Process(comm->pid), new_command);
+    }
+    else
+    {
+        trace_.emplace_thread(Process(comm->pid), Thread(comm->tid), new_command);
     }
     summary().register_process(Process(comm->pid));
 

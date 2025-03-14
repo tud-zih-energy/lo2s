@@ -20,21 +20,24 @@ Writer::Writer(ExecutionScope scope, trace::Trace& trace)
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
     auto tp = time_converter_(sample->time);
+
     if (sample->id == sys_enter_id)
     {
-        local_cctx_tree_.cctx_enter(tp, CallingContext::syscall(sample->syscall_nr));
+        local_cctx_tree_.cctx_enter(tp, CCTX_LEVEL_SYSCALL,
+                                    CallingContext::syscall(sample->syscall_nr));
     }
     else
     {
-        local_cctx_tree_.cctx_leave(tp, 1, CallingContext::syscall(sample->syscall_nr));
+        local_cctx_tree_.cctx_leave(tp, CCTX_LEVEL_SYSCALL);
     }
+
     last_tp_ = tp;
     return false;
 }
 
 Writer::~Writer()
 {
-    local_cctx_tree_.cctx_leave(last_tp_, 0, CallingContext::root());
+    local_cctx_tree_.cctx_leave(last_tp_, 1);
 
     local_cctx_tree_.finalize();
 }
