@@ -82,10 +82,13 @@ static void ptrace_checked_call(enum __ptrace_request request, Thread thread, vo
     long retval = ptrace(request, thread.as_pid_t(), addr, data);
     if (retval == -1)
     {
-        auto ex = make_system_error();
-        Log::info() << "Failed ptrace call: " << request << ", " << thread << ", " << addr << ", "
-                    << data << ": " << ex.what();
-        throw ex;
+        if (errno != ESRCH)
+        {
+            auto ex = make_system_error();
+            Log::info() << "Failed ptrace call: " << request << ", " << thread << ", " << addr
+                        << ", " << data << ": " << ex.what();
+            throw ex;
+        }
     }
 }
 

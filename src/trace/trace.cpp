@@ -327,11 +327,13 @@ void Trace::emplace_process(Process parent, Process process, const std::string& 
 
     if (registry_.has<otf2::definition::system_tree_node>(ByProcess(process)))
     {
-        update_process_name(process, name);
+        update_process(parent, process, name);
         return;
     }
     else
     {
+        groups_.add_process(process);
+
         thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(process.as_thread()),
                               std::forward_as_tuple(name));
 
@@ -356,27 +358,39 @@ void Trace::emplace_process(Process parent, Process process, const std::string& 
     }
 }
 
-void Trace::update_process_name(Process process, const std::string& name)
+void Trace::update_process(Process parent, Process process, const std::string& name)
 {
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-    const auto& iname = intern(name);
-    try
-    {
-        registry_.get<otf2::definition::system_tree_node>(ByProcess(process)).name(iname);
-        registry_.get<otf2::definition::location_group>(ByExecutionScope(process.as_scope()))
-            .name(iname);
-        registry_.get<otf2::definition::comm_group>(ByProcess(process)).name(iname);
-        registry_.get<otf2::definition::comm>(ByProcess(process)).name(iname);
 
-        update_thread_name(process.as_thread(), name);
-    }
-    catch (const std::out_of_range&)
+    if (name != "")
     {
-        Log::warn() << "Attempting to update name of unknown " << process << " (" << name << ")";
+        const auto& iname = intern(name);
+        try
+        {
+            registry_.get<otf2::definition::system_tree_node>(ByProcess(process)).name(iname);
+            registry_.get<otf2::definition::location_group>(ByExecutionScope(process.as_scope()))
+                .name(iname);
+            registry_.get<otf2::definition::comm_group>(ByProcess(process)).name(iname);
+            registry_.get<otf2::definition::comm>(ByProcess(process)).name(iname);
+
+            update_thread(process.as_thread(), name);
+        }
+        catch (const std::out_of_range&)
+        {
+            Log::warn() << "Attempting to update name of unknown " << process << " (" << name
+                        << ")";
+        }
+    }
+
+    if (parent != NO_PARENT_PROCESS)
+    {
+        emplace_process(NO_PARENT_PROCESS, parent, "");
+        registry_.get<otf2::definition::system_tree_node>(ByProcess(process))
+            .parent(registry_.get<otf2::definition::system_tree_node>(ByProcess(parent)));
     }
 }
 
-void Trace::update_thread_name(Thread thread, const std::string& name)
+void Trace::update_thread(Thread thread, const std::string& name)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
@@ -428,23 +442,24 @@ void Trace::add_lo2s_property(const std::string& name, const std::string& value)
 
 otf2::writer::local& Trace::sample_writer(const MeasurementScope& scope)
 {
+    if (scope.scope.is_thread())
+    {
+        emplace_thread(trace::NO_PARENT_PROCESS, scope.scope.as_thread(), "");
+    }
+
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-
-    MeasurementScope sample_scope = MeasurementScope::sample(scope);
 
     // If no process can be found for the thread, emplace it as its own process, this probably
     // breaks some other lo2s assumptions, but at least it results in lo2s not crashing
     if (!registry_.has<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(scope))))
+            ByExecutionScope(groups_.get_parent(scope.scope))))
     {
-        emplace_process(Process(scope.as_thread().as_process()), NO_PARENT_PROCESS,
-                        thread_names_[scope.as_thread()]);
+        emplace_process(Process(scope.scope.as_thread().as_process()), NO_PARENT_PROCESS,
+                        thread_names_[scope.scope.as_thread()]);
     }
 
     auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(sample_scope), intern(sample_scope.name()),
-    const auto& intern_location = registry_.emplace<otf2::definition::location>(
         ByMeasurementScope(scope), intern(scope.name()),
         registry_.get<otf2::definition::location_group>(
             ByExecutionScope(groups_.get_parent(scope.scope))),
@@ -691,6 +706,49 @@ otf2::definition::calling_context& Trace::cctx_for_cuda(uint64_t kernel_id, Reso
     return new_cctx;
 }
 
+otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& context,
+                                                          Resolvers& r, struct MergeContext& ctx,
+                                                          GlobalCctxMap::value_type* global_node)
+{
+    LineInfo line_info = LineInfo::for_unknown_function();
+
+    omp::OMPTCctx cctx = context.to_omp_cctx();
+    auto addr = Address(cctx.addr);
+    auto it = r.function_resolvers[ctx.p].find(addr);
+
+    if (it != r.function_resolvers[ctx.p].end())
+    {
+        line_info = it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
+    }
+
+    switch (cctx.type)
+    {
+    case omp::OMPType::PARALLEL:
+        line_info.function =
+            fmt::format("omp::parallel({}) {}", cctx.num_threads, line_info.function);
+        break;
+    case omp::OMPType::MASTER:
+        line_info.function = fmt::format("omp::master {}", line_info.function);
+        break;
+    case omp::OMPType::SYNC:
+        line_info.function = fmt::format("omp::sync {}", line_info.function);
+        break;
+    case omp::OMPType::LOOP:
+        line_info.function = fmt::format("omp::loop {}", line_info.function);
+        break;
+    case omp::OMPType::WORKSHARE:
+        line_info.function = fmt::format("omp::workshare {}", line_info.function);
+        break;
+    case omp::OMPType::OTHER:
+        line_info.function = fmt::format("omp::other {}", line_info.function);
+        break;
+    }
+    auto& new_cctx = registry_.create<otf2::definition::calling_context>(
+        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+
+    return new_cctx;
+}
+
 otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r,
                                                            struct MergeContext& ctx,
                                                            GlobalCctxMap::value_type* global_node)
@@ -730,10 +788,10 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     return new_cctx;
 }
 
-otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread)
+otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeContext& ctx)
 {
 
-    emplace_thread(thread, "");
+    emplace_thread(ctx.p, thread, "");
 
     if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
     {
@@ -822,8 +880,11 @@ void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_typ
             case lo2s::CallingContextType::CUDA:
                 new_cctx = &cctx_for_cuda(local_child.first.to_kernel_id(), r, ctx, global_node);
                 break;
+            case lo2s::CallingContextType::OPENMP:
+                new_cctx = &cctx_for_openmp(local_child.first, r, ctx, global_node);
+                break;
             case lo2s::CallingContextType::THREAD:
-                new_cctx = &cctx_for_thread(local_child.first.to_thread());
+                new_cctx = &cctx_for_thread(local_child.first.to_thread(), ctx);
                 break;
             case lo2s::CallingContextType::PROCESS:
                 new_cctx = &cctx_for_process(local_child.first.to_process());
@@ -901,9 +962,12 @@ otf2::definition::calling_context& Trace::cctx_for_syscall(uint64_t syscall_id)
     return ctx;
 }
 
-void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
+void Trace::emplace_thread_exclusive(Process process, Thread thread, const std::string& name,
                                      const std::lock_guard<std::recursive_mutex>&)
 {
+
+    emplace_process(NO_PARENT_PROCESS, process, "");
+    groups_.add_thread(thread, process);
 
     std::string thread_name = name;
     if (thread == Thread(0))
@@ -913,7 +977,7 @@ void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
 
     if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
     {
-        update_thread_name(thread, name);
+        update_thread(thread, name);
         return;
     }
 
@@ -936,11 +1000,11 @@ void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
                                                         otf2::definition::source_code_location());
 }
 
-void Trace::emplace_thread(Thread thread, const std::string& name)
+void Trace::emplace_thread(Process process, Thread thread, const std::string& name)
 {
     // Lock this to avoid conflict on regions_thread_ with emplace_monitoring_thread
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-    emplace_thread_exclusive(thread, name, guard);
+    emplace_thread_exclusive(process, thread, name, guard);
 }
 
 void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
@@ -967,15 +1031,19 @@ void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
     }
 }
 
-void Trace::emplace_threads(const std::unordered_map<Thread, std::string>& thread_map)
+void Trace::emplace_threads(const std::map<Process, std::map<Thread, std::string>>& thread_map)
 {
-    Log::debug() << "Adding " << thread_map.size() << " monitored thread(s) to the trace";
-
     // Lock here to avoid conflicts when writing to regions_thread_
     std::lock_guard<std::recursive_mutex> guard(mutex_);
-    for (const auto& elem : thread_map)
+    for (const auto& process : thread_map)
     {
-        emplace_thread_exclusive(elem.first, elem.second, guard);
+
+        emplace_process(NO_PARENT_PROCESS, process.first,
+                        process.second.at(process.first.as_thread()));
+        for (const auto& thread : process.second)
+        {
+            emplace_thread_exclusive(process.first, thread.first, thread.second, guard);
+        }
     }
 }
 

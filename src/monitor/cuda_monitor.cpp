@@ -50,7 +50,7 @@ CUDAMonitor::CUDAMonitor(trace::Trace& trace, int fd)
 
 void CUDAMonitor::initialize_thread()
 {
-    local_cctx_tree_.cctx_enter(last_tp_, CallingContext::process(process_));
+    local_cctx_tree_.cctx_enter(last_tp_, 1, CallingContext::process(process_));
 }
 
 void CUDAMonitor::finalize_thread()
@@ -74,7 +74,7 @@ void CUDAMonitor::monitor(int fd [[maybe_unused]])
             auto end_tp = time_converter_(kernel->end_tp);
             last_tp_ = end_tp;
 
-            local_cctx_tree_.cctx_enter(start_tp, CallingContext::cuda(kernel->kernel_id));
+            local_cctx_tree_.cctx_enter(start_tp, 2, CallingContext::cuda(kernel->kernel_id));
             local_cctx_tree_.cctx_leave(end_tp, 2, CallingContext::cuda(kernel->kernel_id));
         }
         else if (event_type == (uint64_t)cuda::EventType::KERNEL_DEF)

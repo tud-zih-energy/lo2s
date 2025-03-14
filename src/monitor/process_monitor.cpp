@@ -57,7 +57,7 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         posix_monitor_->insert_thread(thread);
     }
 #endif
-    trace_.emplace_thread(thread, name);
+    trace_.emplace_thread(process, thread, name);
 
     if (config().sampling)
     {
@@ -84,12 +84,12 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         }
     }
 
-    trace_.update_thread_name(thread, name);
+    trace_.emplace_thread(process, thread, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.update_process_name(process, name);
+    trace_.emplace_process(trace::NO_PARENT_PROCESS, process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

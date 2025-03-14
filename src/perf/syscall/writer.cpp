@@ -22,7 +22,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     auto tp = time_converter_(sample->time);
     if (sample->id == sys_enter_id)
     {
-        local_cctx_tree_.cctx_enter(tp, CallingContext::syscall(sample->syscall_nr));
+        local_cctx_tree_.cctx_enter(tp, 1, CallingContext::syscall(sample->syscall_nr));
     }
     else
     {

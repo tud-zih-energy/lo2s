@@ -63,13 +63,9 @@ public:
     otf2::chrono::time_point record_to() const;
 
     void emplace_monitoring_thread(Thread t, const std::string& name, const std::string& group);
-    void emplace_thread(Thread t, const std::string& name);
-    void emplace_thread_exclusive(Thread thread, const std::string& name,
-                                  const std::lock_guard<std::recursive_mutex>&);
-    void emplace_threads(const std::unordered_map<Thread, std::string>& thread_map);
-    void update_process_name(Process p, const std::string& name);
-    void update_thread_name(Thread t, const std::string& name);
     void emplace_process(Process parent, Process process, const std::string& name = "");
+    void emplace_thread(Process p, Thread t, const std::string& name);
+    void emplace_threads(const std::map<Process, std::map<Thread, std::string>>& thread_map);
 
     LocalCctxTree& create_local_cctx_tree(const MeasurementScope& scope);
     otf2::definition::mapping_table merge_calling_contexts(const LocalCctxTree& local_cctxs,
@@ -263,6 +259,10 @@ private:
      *  This is a helper needed to avoid constant re-locking when adding
      *  multiple threads via #emplace_threads.
      **/
+    void emplace_thread_exclusive(Process process, Thread thread, const std::string& name,
+                                  const std::lock_guard<std::recursive_mutex>&);
+    void update_process(Process parent, Process p, const std::string& name);
+    void update_thread(Thread t, const std::string& name);
 
     struct MergeContext
     {
@@ -272,10 +272,13 @@ private:
     otf2::definition::calling_context& cctx_for_cuda(uint64_t kernel_id, Resolvers& r,
                                                      struct MergeContext& ctx,
                                                      GlobalCctxMap::value_type* parent);
+    otf2::definition::calling_context& cctx_for_openmp(const CallingContext& addr, Resolvers& r,
+                                                       struct MergeContext& ctx,
+                                                       GlobalCctxMap::value_type* parent);
     otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
                                                         struct MergeContext& ctx,
                                                         GlobalCctxMap::value_type* parent);
-    otf2::definition::calling_context& cctx_for_thread(Thread thread);
+    otf2::definition::calling_context& cctx_for_thread(Thread thread, struct MergeContext& ctx);
     otf2::definition::calling_context& cctx_for_process(Process process);
     otf2::definition::calling_context& cctx_for_syscall(uint64_t syscall_id);
 

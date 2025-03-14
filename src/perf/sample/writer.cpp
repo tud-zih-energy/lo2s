@@ -142,7 +142,7 @@ void Writer::enter_calling_context(Process process, Thread thread, otf2::chrono:
         first_event_ = false;
     }
 
-    local_cctx_tree_.cctx_enter(tp, CallingContext::process(process),
+    local_cctx_tree_.cctx_enter(tp, 1, CallingContext::process(process),
                                 CallingContext::thread(thread));
 }
 
@@ -208,25 +208,19 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
-    if (!scope_.is_cpu())
+    std::string new_command{ static_cast<const char*>(comm->comm) };
+
+    Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
+                 << new_command << "\"";
+
+    // only update name of process if the main thread changes its name
+    if (comm->pid == comm->tid)
     {
-        std::string new_command{ static_cast<const char*>(comm->comm) };
-
-        Log::debug() << "Thread " << comm->tid << " in process " << comm->pid
-                     << " changed name to \"" << new_command << "\"";
-
-        // update task name
-        trace_.update_thread_name(Thread(comm->tid), new_command);
-
-        // only update name of process if the main thread changes its name
-        if (comm->pid == comm->tid)
-        {
-            trace_.update_process_name(Process(comm->pid), new_command);
-        }
-        else
-        {
-            trace_.update_thread_name(Thread(comm->tid), new_command);
-        }
+        trace_.emplace_process(trace::NO_PARENT_PROCESS, Process(comm->pid), new_command);
+    }
+    else
+    {
+        trace_.emplace_thread(Process(comm->pid), Thread(comm->tid), new_command);
     }
     summary().register_process(Process(comm->pid));
 
