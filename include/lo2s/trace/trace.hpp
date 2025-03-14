@@ -80,6 +80,7 @@ public:
 
     otf2::writer::local& sample_writer(const ExecutionScope& scope);
     otf2::writer::local& cuda_writer(const Process& process);
+    otf2::writer::local& openmp_writer(const Process& process);
     otf2::writer::local& metric_writer(const MeasurementScope& scope);
     otf2::writer::local& syscall_writer(const ExecutionScope& scope);
     otf2::writer::local& bio_writer(BlockDevice dev);
@@ -297,6 +298,9 @@ private:
     };
 
     otf2::definition::calling_context& cctx_for_cuda(Address addr, Resolvers& r,
+                                                     struct MergeContext& ctx,
+                                                     GlobalCctxMap::value_type* parent);
+    otf2::definition::calling_context& cctx_for_openmp(const CallingContext& addr, Resolvers& r,
                                                      struct MergeContext& ctx,
                                                      GlobalCctxMap::value_type* parent);
     otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,

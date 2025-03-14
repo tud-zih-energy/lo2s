@@ -36,6 +36,7 @@ enum class MeasurementScopeType
     CUDA,
     TRACEPOINT,
     POSIX_IO,
+    OPENMP,
     UNKNOWN
 };
 
@@ -87,6 +88,11 @@ struct MeasurementScope
         return { MeasurementScopeType::CUDA, s };
     }
 
+    static MeasurementScope openmp(ExecutionScope s)
+    {
+        return { MeasurementScopeType::OPENMP, s };
+    }
+
     static MeasurementScope tracepoint(ExecutionScope s)
     {
         return { MeasurementScopeType::TRACEPOINT, s };
@@ -135,6 +141,8 @@ struct MeasurementScope
             return fmt::format("tracepoint events for {}", scope.name());
         case MeasurementScopeType::POSIX_IO:
             return fmt::format("POSIX I/O events for {}", scope.name());
+        case MeasurementScopeType::OPENMP:
+            return fmt::format("OpenMP events for {}", scope.name());
         default:
             throw new std::runtime_error("Unknown ExecutionScopeType!");
         }

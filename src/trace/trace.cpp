@@ -460,6 +460,20 @@ otf2::writer::local& Trace::cuda_writer(const Process& process)
     return archive_(intern_location);
 }
 
+otf2::writer::local& Trace::openmp_writer(const Process& process)
+{
+    emplace_process(NO_PARENT_PROCESS, process, "");
+
+    auto scope = MeasurementScope::openmp(process.as_scope());
+
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+        ByMeasurementScope(scope), intern(scope.name()),
+        registry_.get<otf2::definition::location_group>(ByExecutionScope(scope.scope)),
+        otf2::definition::location::location_type::accelerator_stream);
+
+    return archive_(intern_location);
+}
+
 otf2::writer::local& Trace::nec_writer(NecDevice device, const Thread& nec_thread)
 {
 
@@ -715,6 +729,31 @@ otf2::definition::calling_context& Trace::cctx_for_cuda(Address addr, Resolvers&
 
     return new_cctx;
 }
+otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& context, Resolvers& r,
+                                                        struct MergeContext& ctx,
+                                                        GlobalCctxMap::value_type* global_node)
+{
+    LineInfo line_info = LineInfo::for_unknown_function();
+
+    auto addr = context.to_addr();
+    auto it = r.cuda_function_resolvers[ctx.p].find(context.to_addr());
+    if (it != r.cuda_function_resolvers[ctx.p].end())
+    {
+        line_info = it->second->lookup_line_info(context.to_addr());
+        line_info = it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
+    }
+
+    if(context.to_omp_type() == OMPTType::PARALLEL)
+    {
+        line_info.function = fmt::format("omp::parallel {}", line_info.function);
+    }
+
+    auto& new_cctx = registry_.create<otf2::definition::calling_context>(
+        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+
+    return new_cctx;
+}
+
 
 otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r,
                                                            struct MergeContext& ctx,
@@ -846,6 +885,9 @@ void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_typ
                 break;
             case lo2s::CallingContextType::CUDA:
                 new_cctx = &cctx_for_cuda(local_child.first.to_addr(), r, ctx, global_node);
+                break;
+            case lo2s::CallingContextType::OPENMP:
+                new_cctx = &cctx_for_openmp(local_child.first, r, ctx, global_node);
                 break;
             case lo2s::CallingContextType::THREAD:
                 new_cctx = &cctx_for_thread(local_child.first.to_thread());

@@ -23,6 +23,8 @@
 #include <lo2s/address.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/ompt/events.hpp>
+
 #include <otf2xx/otf2.hpp>
 
 extern "C"
@@ -39,7 +41,8 @@ enum class CallingContextType
     PROCESS,
     THREAD,
     SAMPLE_ADDR,
-    CUDA
+    CUDA,
+    OPENMP
 };
 
 // Type that encodes all the different types of CallingContext we can have
@@ -78,6 +81,15 @@ public:
         return c;
     }
 
+    static CallingContext openmp(OMPTType type, Address addr)
+    {
+        CallingContext c;
+        c.type = CallingContextType::OPENMP;
+        c.addr = addr;
+        c.omp_type = type;
+        return c;
+    }
+
     static CallingContext root()
     {
         CallingContext c;
@@ -85,14 +97,24 @@ public:
         return c;
     }
 
+
     Address to_addr() const
     {
-        if (type == CallingContextType::SAMPLE_ADDR || type == CallingContextType::CUDA)
+        if (type == CallingContextType::SAMPLE_ADDR || type == CallingContextType::CUDA || type == CallingContextType::OPENMP)
         {
             return addr;
         }
 
         throw std::runtime_error("Not an Address!");
+    }
+
+    OMPTType to_omp_type() const
+    {
+        if(type == CallingContextType::OPENMP)
+        {
+            return omp_type;
+        }
+        throw std::runtime_error("Not a OpenMP cctx!");
     }
 
     Process to_process() const
@@ -134,6 +156,12 @@ public:
             case CallingContextType::CUDA:
             case CallingContextType::SAMPLE_ADDR:
                 return lhs.addr < rhs.addr;
+            case CallingContextType::OPENMP:
+                if(lhs.omp_type == rhs.omp_type)
+                {
+                    return lhs.addr < rhs.addr;
+                }
+                return lhs.omp_type < rhs.omp_type;
             case CallingContextType::ROOT:
                 throw std::runtime_error("Can not have two CallingContext Roots!");
             }
@@ -156,6 +184,8 @@ public:
             case CallingContextType::SAMPLE_ADDR:
             case CallingContextType::CUDA:
                 return lhs.addr == rhs.addr;
+            case CallingContextType::OPENMP:
+                return lhs.omp_type == rhs.omp_type;
             }
             return false;
         }
@@ -173,6 +203,8 @@ private:
     Process p;
     Thread t;
     Address addr;
+    OMPTType omp_type;
+
 };
 
 // Node type of the tree containing the CallingContext -> local cctx reference number mappings.

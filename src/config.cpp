@@ -387,6 +387,9 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_VEOSINFO
     accelerators.push_back("nec");
 #endif
+#ifdef HAVE_OPENMP
+    accelerators.push_back("openmp");
+#endif
 
     accel_options
         .multi_option(
@@ -623,6 +626,15 @@ void parse_program_options(int argc, const char** argv)
             config.use_nvidia = true;
 #else
             std::cerr << "lo2s was built without support for CUDA kernel recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
+        else if (accel == "openmp")
+        {
+#ifdef HAVE_OPENMP
+            config.use_openmp = true;
+#else
+            std::cerr << "lo2s was built without support for OpenMP recording\n";
             std::exit(EXIT_FAILURE);
 #endif
         }

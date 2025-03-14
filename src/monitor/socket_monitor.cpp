@@ -122,6 +122,11 @@ void SocketMonitor::finalize_thread()
     {
         monitor.second.stop();
     }
+    for (auto& monitor : openmp_monitors_)
+    {
+        Log::error() << "CLOSING OPENMP!";
+        monitor.second.stop();
+    }
     close(socket);
     unlink(config().socket_path.c_str());
 }
@@ -147,6 +152,14 @@ void SocketMonitor::monitor(int fd)
         {
             auto res =
                 cuda_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
+                                       std::forward_as_tuple(trace_, type_fd.value().second));
+            res.first->second.start();
+        }
+        else if (type_fd.value().first == RingbufMeasurementType::OPENMP)
+
+        {
+                        auto res =
+                openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
                                        std::forward_as_tuple(trace_, type_fd.value().second));
             res.first->second.start();
         }

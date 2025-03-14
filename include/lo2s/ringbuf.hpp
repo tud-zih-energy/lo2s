@@ -24,6 +24,8 @@
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/shared_memory.hpp>
+#include <lo2s/ringbuf_events.hpp>
+#include <lo2s/ompt/events.hpp>
 
 #include <atomic>
 #include <cassert>
@@ -55,6 +57,7 @@ namespace lo2s
 enum class RingbufMeasurementType : uint64_t
 {
     CUDA = 0,
+    OPENMP = 1,
 };
 
 struct ringbuf_header
@@ -71,40 +74,6 @@ struct ringbuf_header
     clockid_t clockid;
 };
 
-enum class EventType : uint64_t
-{
-    CCTX_ENTER = 1,
-    CCTX_LEAVE = 2,
-    CCTX_SAMPLE = 3,
-    CCTX_DEF = 4
-};
-
-struct __attribute__((packed)) event_header
-{
-    EventType type;
-    uint64_t size;
-};
-
-struct __attribute__((packed)) cctx_def
-{
-    struct event_header header;
-    uint64_t addr;
-    char function[1];
-};
-
-struct __attribute__((packed)) cctx_enter
-{
-    struct event_header header;
-    uint64_t tp;
-    uint64_t addr;
-};
-
-struct __attribute__((packed)) cctx_leave
-{
-    struct event_header header;
-    uint64_t tp;
-    uint64_t addr;
-};
 
 class ShmRingbuf
 {
@@ -379,6 +348,40 @@ public:
         return true;
     }
 
+    bool ompt_enter(uint64_t tp, OMPTType type, int64_t addr)
+    {
+        struct ompt_enter* ev = reserve<struct ompt_enter>();
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+
+        ev->header.type = EventType::OMPT_ENTER;
+        ev->tp = tp;
+        ev->type = type;
+        ev->addr = addr;
+
+        commit();
+        return true;
+
+    }
+    bool ompt_leave(uint64_t tp)
+    {
+        struct ompt_exit* ev = reserve<struct ompt_exit>();
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+
+        ev->header.type = EventType::OMPT_EXIT;
+        ev->tp = tp;
+
+        commit();
+        return true;
+
+    }
     bool cctx_sample(uint64_t tp, uint64_t addr)
     {
         struct cctx_enter* ev = reserve<struct cctx_enter>();
