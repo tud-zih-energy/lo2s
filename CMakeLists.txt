@@ -29,6 +29,7 @@ set_property(CACHE lo2s_USE_STATIC_LIBS PROPERTY STRINGS "MOSTLY" "OFF" "ALL")
 IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     Dl_USE_STATIC_LIBS
     LibElf_USE_STATIC_LIBS
+    LibDw_USE_STATIC_LIBS
     OTF2_USE_STATIC_LIBS
     OTF2XX_USE_STATIC_LIBS
     Libpfm_USE_STATIC_LIBS
@@ -45,6 +46,7 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
 if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
     set(LibElf_USE_STATIC_LIBS   OFF CACHE BOOL "")
+    set(LibDw_USE_STATIC_LIBS    OFF CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(X86Adapt_STATIC          OFF CACHE BOOL "")
@@ -72,6 +74,7 @@ else()
     endif()
     set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
     set(LibElf_USE_STATIC_LIBS   ON CACHE BOOL "")
+    set(LibDw_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(OTF2_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(OTF2XX_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(X86Adapt_STATIC          ON CACHE BOOL "")
@@ -122,6 +125,7 @@ find_package(Radare)
 find_package(Audit)
 find_package(BpfObject)
 find_package(LibElf REQUIRED)
+find_package(LibDw REQUIRED)
 find_package(Debuginfod)
 
 
@@ -242,7 +246,7 @@ target_link_libraries(lo2s
         fmt::fmt
         std::filesystem
         LibElf::LibElf
-        LibElf::LibDw
+        LibDw::LibDw
         indicators::indicators
     )
 
