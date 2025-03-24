@@ -252,6 +252,11 @@ Trace::~Trace()
     }
     for (auto& thread : thread_names_)
     {
+        if (!registry_.has<otf2::definition::region>(ByThread(thread.first)))
+        {
+            continue;
+        }
+
         auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread.first));
 
         try
@@ -428,7 +433,16 @@ otf2::writer::local& Trace::sample_writer(const ExecutionScope& scope)
 
     MeasurementScope sample_scope = MeasurementScope::sample(scope);
 
-    const auto& intern_location = registry_.emplace<otf2::definition::location>(
+    // If no process can be found for the thread, emplace it as its own process, this probably
+    // breaks some other lo2s assumptions, but at least it results in lo2s not crashing
+    if (!registry_.has<otf2::definition::location_group>(
+            ByExecutionScope(groups_.get_parent(scope))))
+    {
+        emplace_process(Process(scope.as_thread().as_process()), NO_PARENT_PROCESS,
+                        thread_names_[scope.as_thread()]);
+    }
+
+    auto& intern_location = registry_.emplace<otf2::definition::location>(
         ByMeasurementScope(sample_scope), intern(sample_scope.name()),
         registry_.get<otf2::definition::location_group>(
             ByExecutionScope(groups_.get_parent(scope))),
