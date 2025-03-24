@@ -25,32 +25,32 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/UnsetIfUpdated.cmake)
 
-# Linking libelf statically isn't a great default because it produces warnings
-option(LibElf_USE_STATIC_LIBS "Link libelf statically." OFF)
+# Linking libdw statically isn't a great default because it produces warnings
+option(LibDw_USE_STATIC_LIBS "Link libelf statically." OFF)
 
-UnsetIfUpdated(LibElf_LIBRARIES LibElf_USE_STATIC_LIBS)
+UnsetIfUpdated(LibDw_LIBRARIES LibDw_USE_STATIC_LIBS)
 
-find_path(LibElf_INCLUDE_DIRS libelf.h
+find_path(LibDw_INCLUDE_DIRS elfutils/libdw.h
     PATHS ENV C_INCLUDE_PATH ENV CPATH
     PATH_SUFFIXES include)
 
-if(LibElf_USE_STATIC_LIBS)
-    find_library(LibElf_LIBRARY NAMES libelf.a
+if(LibDw_USE_STATIC_LIBS)
+    find_library(LibDw_LIBRARY NAMES libdw.a
             HINTS ENV LIBRARY_PATH)
 else()
-    find_library(LibElf_LIBRARY NAMES libelf.so
+    find_library(LibDw_LIBRARY NAMES libdw.so
             HINTS ENV LIBRARY_PATH LD_LIBRARY_PATH)
 endif()
 
 include (FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibElf DEFAULT_MSG
-        LibElf_LIBRARY
-        LibElf_INCLUDE_DIRS)
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibDw DEFAULT_MSG
+        LibDw_LIBRARY
+        LibDw_INCLUDE_DIRS)
 
-if(LibElf_FOUND)
-    add_library(LibElf::LibElf UNKNOWN IMPORTED)
-    set_property(TARGET LibElf::LibElf PROPERTY IMPORTED_LOCATION ${LibElf_LIBRARY})
-    target_include_directories(LibElf::LibElf INTERFACE ${LibElf_INCLUDE_DIRS})
+if(LibDw_FOUND)
+    add_library(LibDw::LibDw UNKNOWN IMPORTED)
+    set_property(TARGET LibDw::LibDw PROPERTY IMPORTED_LOCATION ${LibDw_LIBRARY})
+    target_include_directories(LibDw::LibDw INTERFACE ${LibDw_INCLUDE_DIRS})
 endif()
 
-mark_as_advanced(LibElf_LIBRARY LibElf_INCLUDE_DIRS)
+mark_as_advanced(LibDw_LIBRARY LibDw_INCLUDE_DIRS)
