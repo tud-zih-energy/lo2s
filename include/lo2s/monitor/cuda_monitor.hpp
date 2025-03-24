@@ -21,9 +21,10 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/ringbuf.hpp>
+#include <lo2s/trace/trace.hpp>
 
 namespace lo2s
 {
@@ -54,7 +55,6 @@ public:
 private:
     RingbufReader ringbuf_reader_;
     Process process_;
-    otf2::writer::local& rb_writer_;
     perf::time::Converter& time_converter_;
 
     otf2::chrono::time_point last_tp_;

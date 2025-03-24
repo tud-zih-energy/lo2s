@@ -23,6 +23,7 @@
 
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/ringbuf_events.hpp>
 #include <lo2s/shared_memory.hpp>
 
 #include <atomic>
@@ -55,6 +56,7 @@ namespace lo2s
 enum class RingbufMeasurementType : uint64_t
 {
     CUDA = 0,
+    OPENMP = 1,
 };
 
 struct ringbuf_header
@@ -69,41 +71,6 @@ struct ringbuf_header
     // set by the reader size (lo2s)
     std::atomic<uint64_t> lo2s_ready;
     clockid_t clockid;
-};
-
-enum class EventType : uint64_t
-{
-    CCTX_ENTER = 1,
-    CCTX_LEAVE = 2,
-    CCTX_SAMPLE = 3,
-    CCTX_DEF = 4
-};
-
-struct __attribute__((packed)) event_header
-{
-    EventType type;
-    uint64_t size;
-};
-
-struct __attribute__((packed)) cctx_def
-{
-    struct event_header header;
-    uint64_t addr;
-    char function[1];
-};
-
-struct __attribute__((packed)) cctx_enter
-{
-    struct event_header header;
-    uint64_t tp;
-    uint64_t addr;
-};
-
-struct __attribute__((packed)) cctx_leave
-{
-    struct event_header header;
-    uint64_t tp;
-    uint64_t addr;
 };
 
 class ShmRingbuf
@@ -317,85 +284,6 @@ public:
         return ev;
     }
 
-    // Creates new local cctx_ref. Returns result from local map if it already
-    // exists. Otherwise, generates a cctx_def event.
-    uint64_t cctx_def(std::string func)
-    {
-        if (cctxs_.count(func))
-        {
-            return cctxs_.at(func);
-        }
-
-        struct cctx_def* ev = reserve<struct cctx_def>(func.size());
-
-        if (ev == nullptr)
-        {
-            return 0;
-        }
-
-        auto cctx = cctxs_.emplace(func, next_cctx_ref_);
-
-        memcpy(ev->function, func.c_str(), func.size());
-
-        ev->header.type = EventType::CCTX_DEF;
-        ev->addr = cctx.first->second;
-
-        next_cctx_ref_++;
-
-        commit();
-        return cctx.second;
-    }
-
-    bool cctx_enter(uint64_t tp, uint64_t addr)
-    {
-        struct cctx_enter* ev = reserve<struct cctx_enter>();
-
-        if (ev == nullptr)
-        {
-            return false;
-        }
-        ev->header.type = EventType::CCTX_ENTER;
-
-        ev->tp = tp;
-        ev->addr = addr;
-        commit();
-        return true;
-    }
-
-    bool cctx_leave(uint64_t tp, uint64_t addr)
-    {
-        struct cctx_leave* ev = reserve<struct cctx_leave>();
-
-        if (ev == nullptr)
-        {
-            return false;
-        }
-
-        ev->header.type = EventType::CCTX_LEAVE;
-        ev->tp = tp;
-        ev->addr = addr;
-
-        commit();
-        return true;
-    }
-
-    bool cctx_sample(uint64_t tp, uint64_t addr)
-    {
-        struct cctx_enter* ev = reserve<struct cctx_enter>();
-
-        if (ev == nullptr)
-        {
-            return false;
-        }
-
-        ev->header.type = EventType::CCTX_SAMPLE;
-        ev->tp = tp;
-        ev->addr = addr;
-
-        commit();
-        return true;
-    }
-
     uint64_t timestamp()
     {
         assert(rb_->header()->lo2s_ready.load());
@@ -470,8 +358,6 @@ private:
     }
     size_t reserved_size_ = 0;
     std::unique_ptr<ShmRingbuf> rb_;
-    std::map<std::string, uint64_t> cctxs_;
-    uint64_t next_cctx_ref_ = 0;
 };
 
 class RingbufReader
@@ -508,7 +394,7 @@ public:
         return ev;
     }
 
-    EventType get_top_event_type()
+    uint64_t get_top_event_type()
     {
         struct event_header* header =
             reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));

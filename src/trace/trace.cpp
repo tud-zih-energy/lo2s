@@ -758,6 +758,7 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
 otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread)
 {
 
+    Log::error() << thread;
     emplace_thread(thread, "");
 
     if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
@@ -944,6 +945,13 @@ Trace::merge_syscall_contexts(const std::set<int64_t>& used_syscalls)
 void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
                                      const std::lock_guard<std::recursive_mutex>&)
 {
+
+    std::string thread_name = name;
+    if (thread == Thread(0))
+    {
+        thread_name = "<idle>";
+    }
+
     if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
     {
         update_thread_name(thread, name);
@@ -951,9 +959,14 @@ void Trace::emplace_thread_exclusive(Thread thread, const std::string& name,
     }
 
     thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                          std::forward_as_tuple(name));
+                          std::forward_as_tuple(thread_name));
 
-    auto& iname = intern(fmt::format("{} ({})", name, thread.as_pid_t()));
+    if (thread != Thread(0))
+    {
+        thread_name = fmt::format("{} ({})", name, thread.as_pid_t());
+    }
+
+    auto& iname = intern(thread_name);
 
     auto& thread_region = registry_.emplace<otf2::definition::region>(
         ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
@@ -1046,24 +1059,23 @@ const otf2::definition::string& Trace::intern(const std::string& name)
     return registry_.emplace<otf2::definition::string>(ByString(name), name);
 }
 
-LocalCctxTree& Trace::create_local_cctx_tree()
+LocalCctxTree& Trace::create_local_cctx_tree(otf2::writer::local& writer)
 {
     std::lock_guard<std::mutex> guard(local_cctx_trees_mutex_);
 
     assert(!local_cctx_trees_finalized_);
 
-    return local_cctx_trees_.emplace_back();
+    return local_cctx_trees_.emplace_back(*this, writer);
 }
 
 void Trace::finalize(Resolvers& resolvers)
 {
     for (auto& local_cctx : local_cctx_trees_)
     {
-        assert(local_cctx.writer() != nullptr);
         if (local_cctx.num_cctx() > 0)
         {
             const auto& mapping = merge_calling_contexts(local_cctx, resolvers);
-            (*local_cctx.writer()) << mapping;
+            local_cctx.writer() << mapping;
         }
     }
     local_cctx_trees_.clear();

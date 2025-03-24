@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/perf/calling_context_manager.hpp>
+#include <lo2s/local_cctx_tree.hpp>
 
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
@@ -67,8 +67,7 @@ public:
     void end();
 
 private:
-    void update_current_process(Process process);
-    void update_current_thread(Process process, Thread thread, otf2::chrono::time_point tp);
+    void enter_calling_context(Process process, Thread thread, otf2::chrono::time_point tp);
     void update_calling_context(Process process, Thread thread, otf2::chrono::time_point tp,
                                 bool switch_out);
 
@@ -80,7 +79,6 @@ private:
     ExecutionScope scope_;
 
     trace::Trace& trace_;
-    otf2::writer::local& otf2_writer_;
 
     otf2::definition::metric_instance cpuid_metric_instance_;
     otf2::event::metric cpuid_metric_event_;

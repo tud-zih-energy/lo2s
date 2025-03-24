@@ -203,7 +203,7 @@ set(SOURCE_FILES
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
     src/monitor/socket_monitor.cpp
-    src/monitor/ringbuf_monitor.cpp
+    src/monitor/cuda_monitor.cpp
 
 
     src/perf/bio/block_device.cpp
@@ -222,6 +222,7 @@ set(SOURCE_FILES
 
     src/time/time.cpp
 
+    src/local_cctx_tree.cpp
     src/trace/trace.cpp
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
@@ -363,7 +364,7 @@ endif()
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        add_library(lo2s_injection SHARED src/cupti/lib.cpp src/types.cpp src/time/time.cpp)
+        add_library(lo2s_injection SHARED src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
         target_include_directories(lo2s_injection PRIVATE include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
 
@@ -476,7 +477,8 @@ target_compile_features(lo2s PRIVATE cxx_std_17)
 target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
 # build Debug with -Werror
-target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
+# Disable overlength strings warning, as the BPF code is put into lo2s as one big string.
+target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wno-overlength-strings  -Wall -pedantic -Wextra)
 
 enable_testing()
 include(cmake/Tests.cmake)

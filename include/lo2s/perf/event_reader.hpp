@@ -287,7 +287,6 @@ public:
         auto cur_tail = data_tail();
 
         assert(cur_tail <= cur_head);
-        Log::trace() << "head: " << cur_head << ", tail: " << cur_tail;
 
         // Unless there is a serious kernel bug, the kernel will
         // always throw away

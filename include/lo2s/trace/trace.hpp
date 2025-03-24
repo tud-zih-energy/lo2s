@@ -24,7 +24,7 @@
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/perf/calling_context_manager.hpp>
+#include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
@@ -44,6 +44,7 @@
 
 namespace lo2s
 {
+class LocalCctxTree;
 namespace trace
 {
 
@@ -71,7 +72,7 @@ public:
     void update_thread_name(Thread t, const std::string& name);
     void emplace_process(Process parent, Process process, const std::string& name = "");
 
-    LocalCctxTree& create_local_cctx_tree();
+    LocalCctxTree& create_local_cctx_tree(otf2::writer::local& writer);
     otf2::definition::mapping_table merge_calling_contexts(const LocalCctxTree& local_cctxs,
                                                            Resolvers& resolvers);
     void finalize(Resolvers& resolvers);

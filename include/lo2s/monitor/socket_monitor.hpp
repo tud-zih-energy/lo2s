@@ -25,7 +25,7 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/resolvers.hpp>
 
-#include <lo2s/monitor/ringbuf_monitor.hpp>
+#include <lo2s/monitor/cuda_monitor.hpp>
 
 extern "C"
 {

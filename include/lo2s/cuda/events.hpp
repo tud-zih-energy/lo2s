@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2016,
+ * Copyright (c) 2024,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,39 +21,32 @@
 
 #pragma once
 
-#include <chrono>
-
-#include <lo2s/local_cctx_tree.hpp>
-#include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/perf/counter/metric_writer.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/ringbuf_events.hpp>
 
 namespace lo2s
 {
-namespace nec
+namespace cuda
 {
-class NecThreadMonitor : public monitor::PollMonitor, perf::counter::MetricWriter
+enum class EventType : uint64_t
 {
-public:
-    NecThreadMonitor(Thread thread, trace::Trace& trace, NecDevice device);
+    KERNEL = 0,
+    KERNEL_DEF = 1,
 
-protected:
-    std::string group() const override
-    {
-        return "nec::ThreadMonitor";
-    }
-
-    void finalize_thread() override;
-
-    void monitor(int fd) override;
-
-private:
-    std::chrono::microseconds nec_read_interval_;
-    otf2::writer::local& otf2_writer_;
-    Thread nec_thread_;
-    trace::Trace& trace_;
-    NecDevice device_;
-    perf::CallingContextManager cctx_manager_;
 };
-} // namespace nec
+
+struct __attribute__((packed)) kernel_def
+{
+    struct event_header header;
+    uint64_t kernel_id;
+    char function[1];
+};
+
+struct __attribute__((packed)) kernel
+{
+    struct event_header header;
+    uint64_t start_tp;
+    uint64_t end_tp;
+    uint64_t kernel_id;
+};
+} // namespace cuda
 } // namespace lo2s
