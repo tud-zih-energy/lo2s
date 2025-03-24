@@ -467,8 +467,10 @@ target_compile_features(lo2s PRIVATE cxx_std_17)
 # define feature test macro
 target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
-# build Debug with -Werror
-target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wall -pedantic -Wextra)
+# build Debug with -Werror. Disable overlength string detection, though, as this
+# gives us false positives from the compiled BPF code, which is included in lo2s
+# as one big string.
+target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wno-overlength-strings -Wall -pedantic -Wextra)
 
 enable_testing()
 include(cmake/Tests.cmake)
