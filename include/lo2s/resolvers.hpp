@@ -35,7 +35,10 @@ struct Resolvers
 
     void fork(Process parent, Process process)
     {
-        function_resolvers[process] = function_resolvers[parent];
+        if (function_resolvers.count(parent) != 0)
+        {
+            function_resolvers.emplace(process, function_resolvers.at(parent));
+        }
         instruction_resolvers[process] = instruction_resolvers[parent];
     }
 };

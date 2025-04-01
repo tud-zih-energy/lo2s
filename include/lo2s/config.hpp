@@ -116,6 +116,8 @@ struct Config
     std::string cuda_injectionlib_path;
     uint64_t nvidia_ringbuf_size;
     DwarfUsage dwarf;
+    // Python
+    bool use_python = true;
 };
 
 const Config& config();

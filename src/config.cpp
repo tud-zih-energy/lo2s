@@ -252,8 +252,7 @@ void parse_program_options(int argc, const char** argv)
         .metavar("DWARFMODE");
 
     system_mode_options
-        .toggle("process-recording", "Record process activity. In system monitoring: "
-                                     "(default: enabled)")
+        .toggle("process-recording", "Record process activity. In system monitoring: ")
         .allow_reverse()
         .default_value(true);
 
@@ -305,6 +304,10 @@ void parse_program_options(int argc, const char** argv)
         .allow_reverse();
 
     sampling_options.toggle("kernel", "Include events happening in kernel space.")
+        .allow_reverse()
+        .default_value(true);
+
+    sampling_options.toggle("python", "Control Python perf recording support")
         .allow_reverse()
         .default_value(true);
 
@@ -442,6 +445,7 @@ void parse_program_options(int argc, const char** argv)
 #ifdef HAVE_CUDA
     config.cuda_injectionlib_path = arguments.get("nvidia-injection-path");
 #endif
+    config.use_python = arguments.given("python");
     config.command = arguments.positionals();
 
     if (arguments.given("help"))

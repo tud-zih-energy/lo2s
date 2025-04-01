@@ -60,11 +60,14 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
                 auto maps = read_maps(Process(pid));
                 Process p(pid);
                 resolvers_.function_resolvers.emplace(
-                    std::piecewise_construct, std::forward_as_tuple(p), std::forward_as_tuple());
+                    std::piecewise_construct, std::forward_as_tuple(p), std::forward_as_tuple(p));
                 for (auto& map : maps)
                 {
                     auto fr = function_resolver_for(map.second);
-                    resolvers_.function_resolvers[p].emplace(map.first, fr);
+                    if (fr != nullptr)
+                    {
+                        resolvers_.function_resolvers.at(p).emplace(map.first, fr);
+                    }
                     auto ir = instruction_resolver_for(map.second);
 
                     if (ir != nullptr)

@@ -87,7 +87,12 @@ void Writer::emplace_resolvers(Resolvers& resolvers)
             Process p(mmap_event.get()->pid);
 
             auto fr = function_resolver_for(mmap_event.get()->filename);
-            resolvers.function_resolvers[p].emplace(m, fr);
+
+            resolvers.function_resolvers.emplace(p, p);
+            if (fr != nullptr)
+            {
+                resolvers.function_resolvers.at(p).emplace(m, fr);
+            }
             auto ir = instruction_resolver_for(mmap_event.get()->filename);
             if (ir != nullptr)
             {
