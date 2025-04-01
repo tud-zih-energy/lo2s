@@ -32,7 +32,7 @@ std::shared_ptr<FunctionResolver> function_resolver_for(const std::string& filen
     std::shared_ptr<FunctionResolver> fr;
     if (known_non_executable(filename))
     {
-        fr = FunctionResolver::cache(filename);
+        return nullptr;
     }
     else
     {

@@ -200,10 +200,12 @@ private:
 class ProcessFunctionMap : public MemoryMap<FunctionResolver>
 {
 public:
-    ProcessFunctionMap()
+    ProcessFunctionMap(Process process)
     {
         auto kall = Kallsyms::cache();
         emplace(Mapping(Kallsyms::cache()->start(), (uint64_t)-1, 0), kall);
+        auto perf_map = PerfMap::cache(process);
+        emplace(perf_map->mapping(), perf_map);
     }
 };
 

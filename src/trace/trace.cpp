@@ -722,8 +722,9 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
 {
     LineInfo line_info = LineInfo::for_unknown_function();
 
-    auto it = r.function_resolvers[ctx.p].find(addr);
-    if (it != r.function_resolvers[ctx.p].end())
+    auto& fr = r.function_resolvers.emplace(ctx.p, ctx.p).first->second;
+    auto it = fr.find(addr);
+    if (it != fr.end())
     {
         line_info = it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
     }

@@ -153,6 +153,12 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
     std::map<std::string, std::string> env;
+
+    if (config().use_python)
+    {
+        env.emplace("PYTHONPERFSUPPORT", "1");
+    }
+
 #ifdef HAVE_CUDA
     if (config().use_nvidia)
     {
