@@ -58,13 +58,18 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    OFF CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   OFF CACHE BOOL "")
+    # Instructs fmtlib to create fPIC code, important for
+    # liblo2s_injection.so
+    set(BUILD_SHARED_LIBS ON)
 else()
     if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
         set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
+        set(BUILD_SHARED_LIBS ON)
 
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
     elseif(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
         set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
+        set(BUILD_SHARED_LIBS OFF)
 
         # Doesn't seem to work with clang, even though it should,
         # but at least it doesn't complain about it either
@@ -201,6 +206,9 @@ set(SOURCE_FILES
 
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
+    src/monitor/socket_monitor.cpp
+    src/monitor/cuda_monitor.cpp
+
 
     src/perf/bio/block_device.cpp
     src/perf/event_composer.cpp
@@ -218,6 +226,7 @@ set(SOURCE_FILES
 
     src/time/time.cpp
 
+    src/local_cctx_tree.cpp
     src/trace/trace.cpp
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
@@ -356,10 +365,10 @@ if (USE_LIBAUDIT)
     endif()
 endif()
 
-set(LO2S_CUDA_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/liblo2s_injection.so")
+set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        add_library(lo2s_injection SHARED src/cupti/lib.cpp)
+        add_library(lo2s_injection SHARED src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
         target_include_directories(lo2s_injection PRIVATE include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
 

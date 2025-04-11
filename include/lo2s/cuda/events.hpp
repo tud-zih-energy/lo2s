@@ -21,30 +21,34 @@
 
 #pragma once
 
-#include <cstdint>
+#include <lo2s/ringbuf_events.hpp>
 
 namespace lo2s
 {
-namespace cupti
+namespace cuda
 {
+
 enum class EventType : uint64_t
 {
-    CUPTI_KERNEL = 1,
+    KERNEL = 0,
+    KERNEL_DEF = 1,
+
 };
 
-struct event_header
-{
-    EventType type;
-    uint64_t size;
-};
-
-struct event_kernel
+struct __attribute__((packed)) kernel_def
 {
     struct event_header header;
-    uint64_t start;
-    uint64_t end;
-    char name[1];
+    uint64_t kernel_id;
+    char function[1];
 };
 
-} // namespace cupti
+struct __attribute__((packed)) kernel
+{
+    struct event_header header;
+    uint64_t start_tp;
+    uint64_t end_tp;
+    uint64_t kernel_id;
+};
+
+} // namespace cuda
 } // namespace lo2s

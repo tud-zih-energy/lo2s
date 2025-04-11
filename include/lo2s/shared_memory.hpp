@@ -31,6 +31,7 @@ extern "C"
 {
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 }
 
 namespace lo2s
@@ -66,7 +67,7 @@ public:
 
     SharedMemory(int fd, size_t size, size_t offset = 0, void* location = nullptr) : size_(size)
     {
-        assert(offset % get_page_size() == 0);
+        assert((offset % sysconf(_SC_PAGESIZE)) == 0);
 
         if (location == nullptr)
         {

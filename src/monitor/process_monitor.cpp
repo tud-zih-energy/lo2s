@@ -49,7 +49,7 @@ void ProcessMonitor::insert_process(Process parent, Process process, std::string
 }
 
 void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thread,
-                                   std::string name, bool spawn, bool is_process)
+                                   std::string name, bool spawn)
 {
 #ifdef HAVE_BPF
     if (posix_monitor_)
@@ -57,7 +57,7 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         posix_monitor_->insert_thread(thread);
     }
 #endif
-    trace_.emplace_thread(thread, name);
+    trace_.emplace_thread(process, thread, name);
 
     if (config().sampling)
     {
@@ -73,7 +73,7 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         {
             auto inserted =
                 threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                 std::forward_as_tuple(scope, trace_, spawn, is_process));
+                                 std::forward_as_tuple(scope, trace_, spawn));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
@@ -84,12 +84,12 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
         }
     }
 
-    trace_.update_thread_name(thread, name);
+    trace_.emplace_thread(process, thread, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.update_process_name(process, name);
+    trace_.emplace_process(trace::NO_PARENT_PROCESS, process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

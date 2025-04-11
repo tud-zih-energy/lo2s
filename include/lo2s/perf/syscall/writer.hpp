@@ -51,19 +51,16 @@ public:
 
     ~Writer();
 
-public:
     using Reader<Writer>::handle;
 
     bool handle(const Reader::RecordSampleType* sample);
 
 private:
-    trace::Trace& trace_;
+    static constexpr int CCTX_LEVEL_SYSCALL = 1;
+
+    LocalCctxTree& local_cctx_tree_;
     const time::Converter& time_converter_;
-    otf2::writer::local& writer_;
 
-    std::set<int64_t> used_syscalls_;
-
-    int64_t last_syscall_nr_;
     otf2::chrono::time_point last_tp_;
 };
 } // namespace syscall
