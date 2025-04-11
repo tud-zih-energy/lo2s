@@ -127,7 +127,13 @@ find_package(BpfObject)
 find_package(LibElf REQUIRED)
 find_package(LibDw REQUIRED)
 find_package(Debuginfod)
+find_package(OpenMP)
 
+include(CheckIncludeFileCXX)
+
+if(OpenMP_CXX_FOUND)
+    check_include_file_cxx("omp-tools.h" OMPT_FOUND CMAKE_REQUIRED_LIBRARIES OpenMP::OpenMP_CXX)
+endif()
 
 # configurable options
 CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON Radare_FOUND OFF)
@@ -150,6 +156,8 @@ CMAKE_DEPENDENT_OPTION(USE_BPF "Use BPF to record POSIX I/O activity" ON BpfObje
 add_feature_info("USE_BPF" USE_BPF "Use BPF to record POSIX I/O activity")
 CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand." ON "Debuginfod_FOUND" OFF)
 add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
+CMAKE_DEPENDENT_OPTION(USE_OPENMP "Use OMPT to record OpenMP activity" ON "OMPT_FOUND" OFF)
+add_feature_info("USE_OPENMP" USE_OPENMP "Use OMPT to record OpenMP activity")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -203,6 +211,7 @@ set(SOURCE_FILES
     src/perf/event_attr.cpp
     src/monitor/socket_monitor.cpp
     src/monitor/cuda_monitor.cpp
+    src/monitor/openmp_monitor.cpp
 
     src/perf/bio/block_device.cpp
     src/perf/event_composer.cpp
@@ -360,36 +369,54 @@ if (USE_LIBAUDIT)
 endif()
 
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+
+if(USE_CUPTI OR USE_OPENMP)
+    add_library(lo2s_injection SHARED)
+
+    target_include_directories(lo2s_injection PRIVATE include
+            ${CMAKE_CURRENT_BINARY_DIR}/include)
+    target_link_libraries(lo2s_injection PRIVATE fmt::fmt-header-only
+            Nitro::log
+            Nitro::env
+            Nitro::dl
+            Nitro::options
+            otf2xx::Writer)
+
+    if(SHM_OPEN_FOUND_WITH_RT)
+        target_link_libraries(lo2s_injection PRIVATE rt)
+    endif()
+
+    install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
+
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        add_library(lo2s_injection SHARED src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
-        target_include_directories(lo2s_injection PRIVATE include
-            ${CMAKE_CURRENT_BINARY_DIR}/include)
-
+        target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
         if (CUDA_USE_STATIC_LIBS)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
         else()
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti)
         endif()
 
-	target_link_libraries(lo2s_injection PRIVATE fmt::fmt-header-only
-            Nitro::log
-            Nitro::env
-            Nitro::dl
-            Nitro::options
-	    otf2xx::Writer)
-
         if(SHM_OPEN_FOUND_WITH_RT)
             target_link_libraries(lo2s_injection PRIVATE rt)
         endif()
 
         target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
-        install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
     else()
         message(SEND_ERROR "Cupti not found but requested.")
     endif()
 endif()
 
+if(USE_OPENMP)
+    if(OMPT_FOUND)
+        target_sources(lo2s_injection PRIVATE src/ompt/lib.cpp)
+        target_link_libraries(lo2s_injection PRIVATE OpenMP::OpenMP_CXX)
+        target_compile_definitions(lo2s PUBLIC HAVE_OPENMP)
+    else()
+        message(SEND_ERROR "OpenMP not supported but requested.")
+    endif()
+endif()
 
 
 # generate version string used in lo2s

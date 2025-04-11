@@ -181,6 +181,14 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     }
 #endif
 
+#ifdef HAVE_OPENMP
+    if (config().use_openmp)
+    {
+        env.emplace("OMP_TOOL", "enabled");
+        env.emplace("OMP_TOOL_LIBRARIES", "liblo2s_injection.so");
+    }
+#endif
+
     std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
 
     for (const auto& env_var : env)

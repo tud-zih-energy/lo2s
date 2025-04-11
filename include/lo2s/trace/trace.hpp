@@ -272,6 +272,9 @@ private:
     otf2::definition::calling_context& cctx_for_cuda(uint64_t kernel_id, Resolvers& r,
                                                      struct MergeContext& ctx,
                                                      GlobalCctxMap::value_type* parent);
+    otf2::definition::calling_context& cctx_for_openmp(const CallingContext& addr, Resolvers& r,
+                                                       struct MergeContext& ctx,
+                                                       GlobalCctxMap::value_type* parent);
     otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
                                                         struct MergeContext& ctx,
                                                         GlobalCctxMap::value_type* parent);

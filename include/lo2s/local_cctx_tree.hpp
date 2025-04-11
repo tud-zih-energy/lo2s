@@ -65,7 +65,7 @@ public:
                         const Cctxs&... ctxs)
     {
         uint64_t level = cur_level() + 1;
-        cctx_enter(tp, level, 0, ctx, ctxs...);
+        cctx_enter(tp, level, ctx, ctxs...);
         return level;
     }
 
