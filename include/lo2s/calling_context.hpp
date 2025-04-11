@@ -21,7 +21,12 @@
 #pragma once
 
 #include <lo2s/address.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/ompt/events.hpp>
 #include <lo2s/types.hpp>
+
+#include <otf2xx/otf2.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -35,7 +40,8 @@ enum class CallingContextType
     THREAD,
     SAMPLE_ADDR,
     CUDA,
-    SYSCALL
+    SYSCALL,
+    OPENMP
 };
 
 // Type that encodes all the different types of CallingContext we can have
@@ -82,6 +88,14 @@ public:
         return c;
     }
 
+    static CallingContext openmp(omp::OMPTCctx cctx)
+    {
+        CallingContext c;
+        c.type = CallingContextType::OPENMP;
+        c.omp_cctx = cctx;
+        return c;
+    }
+
     static CallingContext root()
     {
         CallingContext c;
@@ -117,6 +131,15 @@ public:
         }
 
         throw std::runtime_error("Not a CUDA kernel!");
+    }
+
+    omp::OMPTCctx to_omp_cctx() const
+    {
+        if (type == CallingContextType::OPENMP)
+        {
+            return omp_cctx;
+        }
+        throw std::runtime_error("Not a OpenMP cctx!");
     }
 
     Process to_process() const
@@ -161,6 +184,8 @@ public:
                 return lhs.addr < rhs.addr;
             case CallingContextType::SYSCALL:
                 return lhs.syscall_id < rhs.syscall_id;
+            case CallingContextType::OPENMP:
+                return lhs.omp_cctx < rhs.omp_cctx;
             case CallingContextType::ROOT:
                 throw std::runtime_error("Can not have two CallingContext Roots!");
             }
@@ -186,6 +211,8 @@ public:
                 return lhs.kernel_id == rhs.kernel_id;
             case CallingContextType::SYSCALL:
                 return lhs.syscall_id == rhs.syscall_id;
+            case CallingContextType::OPENMP:
+                return lhs.omp_cctx == rhs.omp_cctx;
             }
             return false;
         }
@@ -213,6 +240,8 @@ public:
                 return lhs.addr != rhs.addr;
             case CallingContextType::SYSCALL:
                 return lhs.syscall_id != rhs.syscall_id;
+            case CallingContextType::OPENMP:
+                return lhs.omp_cctx != rhs.omp_cctx;
             }
             return false;
         }
@@ -238,6 +267,8 @@ public:
             return fmt::format("cuda kernel {}", kernel_id);
         case CallingContextType::SYSCALL:
             return fmt::format("syscall {}", syscall_id);
+        case CallingContextType::OPENMP:
+            return fmt::format("openmp {}", omp_cctx.name());
         }
         return "";
     }
@@ -254,6 +285,7 @@ private:
         Address addr;
         uint64_t kernel_id;
         uint64_t syscall_id;
+        omp::OMPTCctx omp_cctx;
     };
 };
 

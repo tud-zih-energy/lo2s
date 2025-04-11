@@ -714,6 +714,73 @@ otf2::definition::calling_context& Trace::cctx_for_cuda(uint64_t kernel_id, Reso
     return new_cctx;
 }
 
+otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& context,
+                                                          Resolvers& r, struct MergeContext& ctx,
+                                                          GlobalCctxMap::value_type* global_node)
+{
+    LineInfo line_info = LineInfo::for_unknown_function();
+
+    omp::OMPTCctx cctx = context.to_omp_cctx();
+    auto addr = Address(cctx.addr);
+
+    auto fr = r.function_resolvers.find(ctx.p);
+    if (fr != r.function_resolvers.end())
+    {
+        auto it = fr->second.find(addr);
+
+        if (it != fr->second.end())
+        {
+            line_info =
+                it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
+        }
+    }
+
+    if (line_info == LineInfo::for_unknown_function())
+    {
+        if (thread_names_.count(ctx.p.as_thread()))
+        {
+            line_info.dso = thread_names_.at(ctx.p.as_thread());
+        }
+    }
+
+    std::string omp_name;
+    switch (cctx.type)
+    {
+    case omp::OMPType::PARALLEL:
+        omp_name = fmt::format("omp::parallel({})", cctx.num_threads);
+        break;
+    case omp::OMPType::MASTER:
+        omp_name = "omp::master";
+        break;
+    case omp::OMPType::SYNC:
+        omp_name = "omp::sync";
+        break;
+    case omp::OMPType::LOOP:
+        omp_name = "omp::loop";
+        break;
+    case omp::OMPType::WORKSHARE:
+        omp_name = "omp::workshare";
+        break;
+    case omp::OMPType::OTHER:
+        omp_name = "omp::other";
+        break;
+    }
+
+    if (line_info == LineInfo::for_unknown_function())
+    {
+        line_info.function = omp_name;
+    }
+    else
+    {
+        line_info.function = fmt::format("{} {}", omp_name, line_info.function);
+    }
+
+    auto& new_cctx = registry_.create<otf2::definition::calling_context>(
+        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+
+    return new_cctx;
+}
+
 otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r,
                                                            struct MergeContext& ctx,
                                                            GlobalCctxMap::value_type* global_node)
@@ -845,6 +912,9 @@ void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_typ
                 break;
             case lo2s::CallingContextType::CUDA:
                 new_cctx = &cctx_for_cuda(local_child.first.to_kernel_id(), r, ctx, global_node);
+                break;
+            case lo2s::CallingContextType::OPENMP:
+                new_cctx = &cctx_for_openmp(local_child.first, r, ctx, global_node);
                 break;
             case lo2s::CallingContextType::THREAD:
                 new_cctx = &cctx_for_thread(local_child.first.to_thread(), ctx);

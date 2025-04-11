@@ -301,7 +301,21 @@ ProcessController::SignalHandlingState ProcessController::handle_signal(Thread c
 
         default:
             Log::debug() << "Forwarding signal for " << child << ": " << WSTOPSIG(status);
-            ptrace_cont(child, WSTOPSIG(status));
+            try
+            {
+                ptrace_cont(child, WSTOPSIG(status));
+            }
+            catch (const std::system_error& e)
+            {
+                if (e.code().value() == ESRCH)
+                {
+                    Log::info() << "Received ESRCH for PTRACE_CONT on " << child;
+                }
+                else
+                {
+                    throw e;
+                }
+            }
             return SignalHandlingState::KeepRunning;
         }
     }

@@ -20,52 +20,43 @@
 
 #pragma once
 
+#include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/monitor/fwd.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/resolvers.hpp>
-
-#include <lo2s/monitor/cuda_monitor.hpp>
-#include <lo2s/monitor/openmp_monitor.hpp>
-
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/ringbuf.hpp>
 
 namespace lo2s
 {
 namespace monitor
 {
 
-class SocketMonitor : public PollMonitor
+class OpenMPMonitor : public PollMonitor
 {
 public:
-    SocketMonitor(trace::Trace& trace);
+    OpenMPMonitor(trace::Trace& trace, int fd);
 
     void finalize_thread() override;
+
     void monitor(int fd) override;
 
     std::string group() const override
     {
-        return "lo2s::SocketMonitor";
-    }
-
-    void emplace_resolvers(Resolvers& resolvers)
-    {
-        for (auto& monitor : cuda_monitors_)
-        {
-            monitor.second.emplace_resolvers(resolvers);
-        }
+        return "lo2s::OpenMPMonitor";
     }
 
 private:
+    void create_thread_writer(otf2::chrono::time_point tp, uint64_t thread);
+    RingbufReader ringbuf_reader_;
+    Process process_;
     trace::Trace& trace_;
-    std::map<int, CUDAMonitor> cuda_monitors_;
-    std::map<int, OpenMPMonitor> openmp_monitors_;
+    perf::time::Converter& time_converter_;
 
-    int socket = -1;
+    std::map<uint64_t, otf2::chrono::time_point> last_tp_;
+
+    std::map<uint64_t, LocalCctxTree*> local_cctx_trees_;
+
+    static constexpr int CCTX_LEVEL_PROCESS = 1;
 };
 } // namespace monitor
 } // namespace lo2s
