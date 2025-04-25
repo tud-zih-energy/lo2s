@@ -127,8 +127,15 @@ MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
     }
 #endif
 
-    socket_monitor_ = std::make_unique<SocketMonitor>(trace_);
-    socket_monitor_->start();
+    try
+    {
+        socket_monitor_ = std::make_unique<SocketMonitor>(trace_);
+        socket_monitor_->start();
+    }
+    catch (std::exception& e)
+    {
+        Log::warn() << "Could not create lo2s event submission socket " << e.what();
+    }
 }
 
 MainMonitor::~MainMonitor()
@@ -140,9 +147,13 @@ MainMonitor::~MainMonitor()
     {
         sensors_recorder_->stop();
     }
-    socket_monitor_->stop();
-    socket_monitor_->emplace_resolvers(resolvers_);
 #endif
+
+    if (socket_monitor_)
+    {
+        socket_monitor_->stop();
+        socket_monitor_->emplace_resolvers(resolvers_);
+    }
 
 #ifdef HAVE_X86_ENERGY
     if (x86_energy_metrics_)
