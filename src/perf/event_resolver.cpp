@@ -302,6 +302,17 @@ EventAttr EventResolver::cache_event(const std::string& name)
         }
         else
         {
+#ifdef HAVE_LIBPFM
+            try
+            {
+                EventAttr ev = PFM4::instance().pfm4_read_event(name);
+                return event_map_.emplace(name, ev).first->second.value();
+            }
+            catch (EventAttr::InvalidEvent& e)
+            {
+            }
+#endif
+
             std::optional<EventAttr> ev = SysfsEventAttr(name);
             return event_map_.emplace(name, ev).first->second.value();
         }
