@@ -19,10 +19,12 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/dwarf_resolve.hpp>
+
+#include <lo2s/config.hpp>
+
 #include <indicators/cursor_control.hpp>
 #include <indicators/progress_bar.hpp>
-#include <lo2s/config.hpp>
-#include <lo2s/dwarf_resolve.hpp>
 
 #ifdef HAVE_DEBUGINFOD
 extern "C"

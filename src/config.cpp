@@ -22,7 +22,6 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/build_config.hpp>
-
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_resolver.hpp>
@@ -48,12 +47,13 @@
 
 #include <algorithm>
 #include <charconv>
-#include <cstdlib>
-#include <cstring>
-#include <ctime> // for CLOCK_* macros
 #include <filesystem>
 #include <iomanip> // for std::setw
 #include <iterator>
+
+#include <cstdlib>
+#include <cstring>
+#include <ctime> // for CLOCK_* macros
 
 extern "C"
 {

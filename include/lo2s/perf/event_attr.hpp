@@ -20,19 +20,19 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
-
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/util.hpp>
 
-#include <cstdint>
 #include <optional>
 #include <ostream>
 #include <set>
 #include <type_traits>
 #include <variant>
+
+#include <cstdint>
 
 extern "C"
 {

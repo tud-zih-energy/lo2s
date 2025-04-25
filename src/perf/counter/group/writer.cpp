@@ -19,8 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/log.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
+
+#include <lo2s/log.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s

@@ -19,11 +19,11 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/metric/plugin/channel.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
-#include <lo2s/metric/plugin/wrapper.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/metric/plugin/channel.hpp>
+#include <lo2s/metric/plugin/wrapper.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/util.hpp>

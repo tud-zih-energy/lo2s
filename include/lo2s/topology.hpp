@@ -21,7 +21,12 @@
 
 #pragma once
 
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/types.hpp>
+
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <map>
@@ -33,12 +38,6 @@
 #include <utility>
 
 #include <cstdint>
-
-#include <filesystem>
-
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
 
 #ifdef HAVE_VEOSINFO
 extern "C"

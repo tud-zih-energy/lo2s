@@ -19,22 +19,20 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <filesystem>
 #include <lo2s/monitor/process_monitor_main.hpp>
-
-#include <lo2s/monitor/abstract_process_monitor.hpp>
-
-#include <lo2s/process_controller.hpp>
-#include <lo2s/util.hpp>
 
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/process_controller.hpp>
+#include <lo2s/util.hpp>
 
 #include <nitro/lang/string.hpp>
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -46,10 +44,9 @@ extern "C"
 #include <grp.h>
 #include <pwd.h>
 #include <signal.h>
-#include <unistd.h>
-
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
+#include <unistd.h>
 }
 
 namespace lo2s

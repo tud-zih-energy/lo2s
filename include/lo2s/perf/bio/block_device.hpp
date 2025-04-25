@@ -23,10 +23,10 @@
 
 #include <lo2s/util.hpp>
 
-#include <fmt/core.h>
-
 #include <string>
 #include <vector>
+
+#include <fmt/core.h>
 
 extern "C"
 {

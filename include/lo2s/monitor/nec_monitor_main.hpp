@@ -31,9 +31,8 @@
 
 extern "C"
 {
-#include <veosinfo/veosinfo.h>
-
 #include <libved.h>
+#include <veosinfo/veosinfo.h>
 }
 
 namespace lo2s

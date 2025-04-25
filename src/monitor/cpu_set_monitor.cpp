@@ -22,14 +22,12 @@
 #include <lo2s/monitor/cpu_set_monitor.hpp>
 
 #include <lo2s/error.hpp>
+#include <lo2s/monitor/process_monitor_main.hpp>
+#include <lo2s/monitor/system_process_monitor.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
-#include <lo2s/monitor/process_monitor_main.hpp>
-#include <lo2s/monitor/system_process_monitor.hpp>
-
 #include <filesystem>
-
 #include <regex>
 
 #include <csignal>

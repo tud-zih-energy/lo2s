@@ -20,8 +20,8 @@
  */
 
 #include <lo2s/metric/plugin/metrics.hpp>
-#include <lo2s/metric/plugin/plugin.hpp>
 
+#include <lo2s/metric/plugin/plugin.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <nitro/dl/dl.hpp>

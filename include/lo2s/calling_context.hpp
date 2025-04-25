@@ -28,8 +28,6 @@
 
 #include <otf2xx/otf2.hpp>
 
-#include <otf2xx/otf2.hpp>
-
 namespace lo2s
 {
 

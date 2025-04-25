@@ -19,26 +19,24 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/summary.hpp>
-
 #include <lo2s/perf/sample/writer.hpp>
-
-#include <lo2s/perf/sample/reader.hpp>
-
-#include <lo2s/perf/time/converter.hpp>
 
 #include <lo2s/address.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/perf/sample/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/otf2.hpp>
 
+#include <map>
+
 #include <cassert>
 #include <cstring>
-#include <map>
 
 extern "C"
 {

@@ -30,6 +30,7 @@
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/thread_fd_instance.hpp>
 #include <lo2s/util.hpp>
+
 #include <otf2xx/otf2.hpp>
 
 #include <string>

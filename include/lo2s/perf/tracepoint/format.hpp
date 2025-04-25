@@ -21,12 +21,11 @@
 
 #pragma once
 
+#include <filesystem>
 #include <stdexcept>
 #include <vector>
 
 #include <cstddef>
-
-#include <filesystem>
 
 namespace lo2s
 {

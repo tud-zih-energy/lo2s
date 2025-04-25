@@ -5,7 +5,6 @@
 #endif
 
 #include <lo2s/metric/x86_energy/monitor.hpp>
-
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/fwd.hpp>
 

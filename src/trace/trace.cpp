@@ -38,15 +38,15 @@
 #include <nitro/env/hostname.hpp>
 #include <nitro/lang/string.hpp>
 
-#include <fmt/chrono.h>
-#include <fmt/core.h>
-
 #include <filesystem>
 #include <map>
 #include <mutex>
 #include <regex>
 #include <stdexcept>
 #include <tuple>
+
+#include <fmt/chrono.h>
+#include <fmt/core.h>
 
 extern "C"
 {

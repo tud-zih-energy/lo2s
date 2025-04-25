@@ -19,7 +19,6 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
-#include <chrono>
 #include <lo2s/address.hpp>
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
@@ -36,6 +35,7 @@
 #include <otf2xx/otf2.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <deque>
 #include <map>
 #include <mutex>

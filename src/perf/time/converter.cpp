@@ -19,8 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
+
+#include <lo2s/log.hpp>
 
 namespace lo2s
 {

@@ -19,8 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/function_resolver.hpp>
+
+#include <lo2s/dwarf_resolve.hpp>
 
 #include <nitro/lang/string.hpp>
 

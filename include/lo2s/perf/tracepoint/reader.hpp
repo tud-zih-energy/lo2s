@@ -21,21 +21,18 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/format.hpp>
-
+#include <lo2s/config.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
-
-#include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>
-#include <optional>
-
 #include <ios>
+#include <optional>
 
 #include <cstddef>
 

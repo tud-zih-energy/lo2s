@@ -19,9 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/monitor/openmp_monitor.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/openmp_monitor.hpp>
 #include <lo2s/ompt/events.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>

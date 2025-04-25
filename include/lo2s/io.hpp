@@ -30,14 +30,15 @@
 
 #pragma once
 
+#include <lo2s/time/time.hpp>
+
+#include <nitro/lang/string.hpp>
+
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <map>
 #include <string>
-
-#include <lo2s/time/time.hpp>
-#include <nitro/lang/string.hpp>
 
 namespace lo2s
 {

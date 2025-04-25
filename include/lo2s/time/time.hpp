@@ -26,12 +26,11 @@
 #include <otf2xx/chrono/convert.hpp>
 
 #include <chrono>
-#include <ctime>
-
-#include <cstdint>
-
 #include <stdexcept> // for use by ClockProvider::InvalidClock
 #include <string>    // for use by ClockProvider::get_clock_by_name
+
+#include <cstdint>
+#include <ctime>
 
 extern "C"
 {

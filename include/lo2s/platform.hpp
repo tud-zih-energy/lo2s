@@ -27,12 +27,12 @@
 
 #pragma once
 
+#include <lo2s/perf/event_attr.hpp>
+
 #include <string>
 #include <vector>
 
 #include <cstdint>
-
-#include <lo2s/perf/event_attr.hpp>
 
 /* gracefully copied from https://github.com/deater/perf_event_tests/blob/master/ */
 

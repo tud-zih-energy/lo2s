@@ -19,9 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/monitor/poll_monitor.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
-#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/util.hpp>
 
 #include <cmath>

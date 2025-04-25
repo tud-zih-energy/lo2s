@@ -19,8 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/types.hpp>
+
+#include <lo2s/execution_scope.hpp>
 
 namespace lo2s
 {

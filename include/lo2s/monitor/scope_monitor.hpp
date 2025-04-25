@@ -22,7 +22,6 @@
 
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
-
 #include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>

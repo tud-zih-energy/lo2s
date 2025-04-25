@@ -22,7 +22,6 @@
 #include <lo2s/ringbuf_events.hpp>
 
 #include <fmt/core.h>
-
 #include <string.h>
 
 namespace lo2s

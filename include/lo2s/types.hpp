@@ -26,11 +26,11 @@ extern "C"
 #include <sys/types.h>
 }
 
-#include <fmt/format.h>
-
 #include <vector>
 
 #include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {

@@ -4,11 +4,9 @@
 #error "Trying to build x86 adapt stuff without x86 adapt support"
 #endif
 
+#include <lo2s/metric/guess_mode.hpp>
 #include <lo2s/metric/x86_adapt/monitor.hpp>
 #include <lo2s/metric/x86_adapt/node_monitor.hpp>
-
-#include <lo2s/metric/guess_mode.hpp>
-
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/fwd.hpp>
 

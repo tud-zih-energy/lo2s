@@ -19,10 +19,11 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/monitor/cuda_monitor.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/cuda/events.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/cuda_monitor.hpp>
 #include <lo2s/monitor/process_monitor.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>

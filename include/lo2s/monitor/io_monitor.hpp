@@ -21,11 +21,10 @@
 
 #pragma once
 
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
-
-#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <map>

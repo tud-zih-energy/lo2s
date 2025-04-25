@@ -27,12 +27,13 @@
 #include <lo2s/shared_memory.hpp>
 
 #include <atomic>
-#include <cassert>
-#include <cstddef>
-#include <cstring>
 #include <memory>
 #include <string>
 #include <system_error>
+
+#include <cassert>
+#include <cstddef>
+#include <cstring>
 
 extern "C"
 {

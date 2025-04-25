@@ -23,6 +23,7 @@
 #include <lo2s/calling_context.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
+
 #include <otf2xx/otf2.hpp>
 
 extern "C"

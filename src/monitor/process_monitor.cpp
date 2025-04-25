@@ -20,6 +20,7 @@
  */
 
 #include <lo2s/monitor/process_monitor.hpp>
+
 #include <lo2s/monitor/scope_monitor.hpp>
 
 namespace lo2s
