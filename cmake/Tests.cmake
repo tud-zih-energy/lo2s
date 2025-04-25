@@ -44,3 +44,7 @@ if(USE_SENSORS)
     add_test(NAME sensors_recording COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/sensors_recording/sensors_recording.sh)
 endif()
 
+if(USE_LIBPFM)
+    add_test(NAME pfm_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/pfm_counters/pfm_counters.sh)
+    set_tests_properties(pfm_counters PROPERTIES FIXTURES_REQUIRED PARANOID0)
+endif()
