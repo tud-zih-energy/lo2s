@@ -116,6 +116,8 @@ struct Config
     bool use_nvidia = false;
     // OpenMP
     bool use_openmp = false;
+    // AMD HIP
+    bool use_hip = false;
     // Function resolution
     DwarfUsage dwarf;
     // Python

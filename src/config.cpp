@@ -642,6 +642,15 @@ void parse_program_options(int argc, const char** argv)
             std::exit(EXIT_FAILURE);
 #endif
         }
+        else if (accel == "amd")
+        {
+#ifdef HAVE_HIP
+            config.use_hip = true;
+#else
+            std::cerr << "lo2s was built without support for AMD HIP recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
         else
         {
             std::cerr << "Unknown Accelerator " << accel << "!";

@@ -39,7 +39,7 @@ enum class CallingContextType
     PROCESS,
     THREAD,
     SAMPLE_ADDR,
-    CUDA,
+    GPU_KERNEL,
     SYSCALL,
     OPENMP
 };
@@ -72,10 +72,10 @@ public:
         return c;
     }
 
-    static CallingContext cuda(uint64_t kernel_id)
+    static CallingContext gpu_kernel(uint64_t kernel_id)
     {
         CallingContext c;
-        c.type = CallingContextType::CUDA;
+        c.type = CallingContextType::GPU_KERNEL;
         c.kernel_id = kernel_id;
         return c;
     }
@@ -125,12 +125,12 @@ public:
 
     uint64_t to_kernel_id() const
     {
-        if (type == CallingContextType::CUDA)
+        if (type == CallingContextType::GPU_KERNEL)
         {
             return kernel_id;
         }
 
-        throw std::runtime_error("Not a CUDA kernel!");
+        throw std::runtime_error("Not a GPU kernel!");
     }
 
     omp::OMPTCctx to_omp_cctx() const
@@ -178,7 +178,7 @@ public:
                 return lhs.p < rhs.p;
             case CallingContextType::THREAD:
                 return lhs.t < rhs.t;
-            case CallingContextType::CUDA:
+            case CallingContextType::GPU_KERNEL:
                 return lhs.kernel_id < rhs.kernel_id;
             case CallingContextType::SAMPLE_ADDR:
                 return lhs.addr < rhs.addr;
@@ -207,7 +207,7 @@ public:
                 return lhs.t == rhs.t;
             case CallingContextType::SAMPLE_ADDR:
                 return lhs.addr == rhs.addr;
-            case CallingContextType::CUDA:
+            case CallingContextType::GPU_KERNEL:
                 return lhs.kernel_id == rhs.kernel_id;
             case CallingContextType::SYSCALL:
                 return lhs.syscall_id == rhs.syscall_id;
@@ -234,7 +234,7 @@ public:
                 return lhs.p != rhs.p;
             case CallingContextType::THREAD:
                 return lhs.t != rhs.t;
-            case CallingContextType::CUDA:
+            case CallingContextType::GPU_KERNEL:
                 return lhs.kernel_id != rhs.kernel_id;
             case CallingContextType::SAMPLE_ADDR:
                 return lhs.addr != rhs.addr;
@@ -263,8 +263,8 @@ public:
             return fmt::format("thread {}", t.as_pid_t());
         case CallingContextType::SAMPLE_ADDR:
             return fmt::format("sample addr {}", addr);
-        case CallingContextType::CUDA:
-            return fmt::format("cuda kernel {}", kernel_id);
+        case CallingContextType::GPU_KERNEL:
+            return fmt::format("gpu kernel {}", kernel_id);
         case CallingContextType::SYSCALL:
             return fmt::format("syscall {}", syscall_id);
         case CallingContextType::OPENMP:

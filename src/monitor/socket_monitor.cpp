@@ -23,7 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/cuda_monitor.hpp>
+#include <lo2s/monitor/gpu_monitor.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
@@ -114,7 +114,7 @@ std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
 
 void SocketMonitor::finalize_thread()
 {
-    for (auto& monitor : cuda_monitors_)
+    for (auto& monitor : gpu_monitors_)
     {
         monitor.second.stop();
     }
@@ -145,11 +145,11 @@ void SocketMonitor::monitor(int fd)
 
     if (type_fd.has_value())
     {
-        if (type_fd.value().first == RingbufMeasurementType::CUDA)
+        if (type_fd.value().first == RingbufMeasurementType::GPU)
         {
             auto res =
-                cuda_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
-                                       std::forward_as_tuple(trace_, type_fd.value().second));
+                gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
+                                      std::forward_as_tuple(trace_, type_fd.value().second));
             res.first->second.start();
         }
         else if (type_fd.value().first == RingbufMeasurementType::OPENMP)

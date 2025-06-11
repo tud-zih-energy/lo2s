@@ -55,7 +55,7 @@ namespace lo2s
 
 enum class RingbufMeasurementType : uint64_t
 {
-    CUDA = 0,
+    GPU = 0,
     OPENMP = 1,
 };
 
