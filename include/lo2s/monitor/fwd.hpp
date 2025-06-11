@@ -37,6 +37,6 @@ class MainMonitor;
 class ProcessMonitor;
 class CpuSetMonitor;
 class SocketMonitor;
-class CUDAMonitor;
+class GPUMonitor;
 } // namespace monitor
 } // namespace lo2s

@@ -136,8 +136,7 @@ static void on_ompt_callback_sync_region(ompt_sync_region_t kind, ompt_scope_end
 
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num, ompt_data_t* tool_data)
 {
-    pid_t pid = getpid();
-    ompt_rb_writer = std::make_unique<lo2s::omp::RingbufWriter>(lo2s::Process(pid));
+    ompt_rb_writer = std::make_unique<lo2s::omp::RingbufWriter>(lo2s::Process::me());
     ompt_set_callback = (ompt_set_callback_t)lookup("ompt_set_callback");
     register_callback(ompt_callback_parallel_begin);
     register_callback(ompt_callback_parallel_end);

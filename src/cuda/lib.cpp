@@ -19,7 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/cuda/ringbuf.hpp>
+#include <lo2s/gpu/ringbuf.hpp>
 
 #include <iostream>
 #include <memory>
@@ -39,7 +39,7 @@ extern "C"
 // Allocate 8 MiB every time CUPTI asks for more event memory
 constexpr size_t CUPTI_BUFFER_SIZE = 8 * 1024 * 1024;
 
-std::unique_ptr<lo2s::cuda::RingbufWriter> rb_writer = nullptr;
+std::unique_ptr<lo2s::gpu::RingbufWriter> rb_writer = nullptr;
 
 CUpti_SubscriberHandle subscriber = nullptr;
 
@@ -166,9 +166,7 @@ uint64_t timestampfunc()
 
 extern "C" int InitializeInjection(void)
 {
-    pid_t pid = getpid();
-
-    rb_writer = std::make_unique<lo2s::cuda::RingbufWriter>(lo2s::Process(pid));
+    rb_writer = std::make_unique<lo2s::gpu::RingbufWriter>(lo2s::Process::me());
 
     // Register an atexit() handler for clean-up
     atexit(&atExitHandler);

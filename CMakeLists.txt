@@ -128,6 +128,7 @@ find_package(LibElf REQUIRED)
 find_package(LibDw REQUIRED)
 find_package(Debuginfod)
 find_package(OpenMP)
+find_package(rocprofiler-sdk)
 
 include(CheckIncludeFileCXX)
 
@@ -158,6 +159,8 @@ CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug informat
 add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
 CMAKE_DEPENDENT_OPTION(USE_OPENMP "Use OMPT to record OpenMP activity" ON "OMPT_FOUND" OFF)
 add_feature_info("USE_OPENMP" USE_OPENMP "Use OMPT to record OpenMP activity")
+CMAKE_DEPENDENT_OPTION(USE_HIP "Use rocprofiler-sdk to record AMD HIP activity" ON "rocprofiler-sdk_FOUND" OFF)
+add_feature_info("USE_HIP" USE_HIP "Use rocprofiler-sdk to record AMD HIP activity")
 
 # system configuration checks
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -210,7 +213,7 @@ set(SOURCE_FILES
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
     src/monitor/socket_monitor.cpp
-    src/monitor/cuda_monitor.cpp
+    src/monitor/gpu_monitor.cpp
     src/monitor/openmp_monitor.cpp
 
     src/perf/bio/block_device.cpp
@@ -370,7 +373,7 @@ endif()
 
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-if(USE_CUPTI OR USE_OPENMP)
+if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
     add_library(lo2s_injection SHARED)
 
     target_include_directories(lo2s_injection PRIVATE include
@@ -415,6 +418,16 @@ if(USE_OPENMP)
         target_compile_definitions(lo2s PUBLIC HAVE_OPENMP)
     else()
         message(SEND_ERROR "OpenMP not supported but requested.")
+    endif()
+endif()
+
+if(USE_HIP)
+    if(rocprofiler-sdk_FOUND)
+        target_sources(lo2s_injection PRIVATE src/hip/lib.cpp)
+        target_link_libraries(lo2s_injection PRIVATE rocprofiler-sdk::rocprofiler-sdk)
+        target_compile_definitions(lo2s PUBLIC HAVE_HIP)
+    else()
+        message(SEND_ERROR "HIP activity recording not supported but requested.")
     endif()
 endif()
 

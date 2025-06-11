@@ -1,17 +1,17 @@
 #pragma once
 
-#include <lo2s/cuda/events.hpp>
+#include <lo2s/gpu/events.hpp>
 #include <lo2s/ringbuf.hpp>
 
 namespace lo2s
 {
-namespace cuda
+namespace gpu
 {
 
 class RingbufWriter : public lo2s::RingbufWriter
 {
 public:
-    RingbufWriter(Process process) : lo2s::RingbufWriter(process, RingbufMeasurementType::CUDA)
+    RingbufWriter(Process process) : lo2s::RingbufWriter(process, RingbufMeasurementType::GPU)
     {
     }
 
@@ -44,6 +44,24 @@ public:
         return cctx.second;
     }
 
+    bool kernel_def(std::string func, uint64_t kernel_id)
+    {
+        struct kernel_def* ev = reserve<struct kernel_def>(func.size());
+
+        if (ev == nullptr)
+        {
+            return false;
+        }
+
+        memcpy(ev->function, func.c_str(), func.size());
+
+        ev->header.type = (uint64_t)EventType::KERNEL_DEF;
+        ev->kernel_id = kernel_id;
+
+        commit();
+        return true;
+    }
+
     bool kernel(uint64_t start_tp, uint64_t end_tp, uint64_t kernel_id)
     {
         struct kernel* ev = reserve<struct kernel>();
@@ -67,5 +85,5 @@ private:
     uint64_t next_cctx_ref_ = 0;
 };
 
-} // namespace cuda
+} // namespace gpu
 } // namespace lo2s

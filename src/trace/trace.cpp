@@ -692,15 +692,15 @@ otf2::definition::metric_class& Trace::metric_class()
                                                             otf2::common::recorder_kind::abstract);
 }
 
-otf2::definition::calling_context& Trace::cctx_for_cuda(uint64_t kernel_id, Resolvers& r,
-                                                        struct MergeContext& ctx,
-                                                        GlobalCctxMap::value_type* global_node)
+otf2::definition::calling_context&
+Trace::cctx_for_gpu_kernel(uint64_t kernel_id, Resolvers& r, struct MergeContext& ctx,
+                           GlobalCctxMap::value_type* global_node)
 {
     LineInfo line_info = LineInfo::for_unknown_function();
 
-    auto fr = r.cuda_function_resolvers.find(ctx.p);
+    auto fr = r.gpu_function_resolvers.find(ctx.p);
 
-    if (fr != r.cuda_function_resolvers.end())
+    if (fr != r.gpu_function_resolvers.end())
     {
         auto it = fr->second.find(kernel_id);
         if (it != fr->second.end())
@@ -910,8 +910,9 @@ void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_typ
             case lo2s::CallingContextType::SAMPLE_ADDR:
                 new_cctx = &cctx_for_address(local_child.first.to_addr(), r, ctx, global_node);
                 break;
-            case lo2s::CallingContextType::CUDA:
-                new_cctx = &cctx_for_cuda(local_child.first.to_kernel_id(), r, ctx, global_node);
+            case lo2s::CallingContextType::GPU_KERNEL:
+                new_cctx =
+                    &cctx_for_gpu_kernel(local_child.first.to_kernel_id(), r, ctx, global_node);
                 break;
             case lo2s::CallingContextType::OPENMP:
                 new_cctx = &cctx_for_openmp(local_child.first, r, ctx, global_node);

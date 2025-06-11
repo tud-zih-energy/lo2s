@@ -31,24 +31,24 @@ namespace lo2s
 namespace monitor
 {
 
-class CUDAMonitor : public PollMonitor
+class GPUMonitor : public PollMonitor
 {
 public:
-    CUDAMonitor(trace::Trace& trace, int fd);
+    GPUMonitor(trace::Trace& trace, int fd);
 
     void finalize_thread() override;
     void monitor(int fd) override;
 
     std::string group() const override
     {
-        return "lo2s::CUDAMonitor";
+        return "lo2s::GPUMonitor";
     }
 
     void emplace_resolvers(Resolvers& resolvers)
     {
-        resolvers.cuda_function_resolvers[process_].emplace(
+        resolvers.gpu_function_resolvers[process_].emplace(
             Mapping(Address(0), Address(highest_func_ + 1), 0),
-            std::make_shared<ManualFunctionResolver>("cuda kernels", functions_));
+            std::make_shared<ManualFunctionResolver>("gpu kernels", functions_));
     }
 
 private:

@@ -34,7 +34,7 @@ enum class MeasurementScopeType
     NEC_METRIC,
     BIO,
     SYSCALL,
-    CUDA,
+    GPU,
     TRACEPOINT,
     POSIX_IO,
     OPENMP,
@@ -84,9 +84,9 @@ struct MeasurementScope
         return { MeasurementScopeType::SYSCALL, s };
     }
 
-    static MeasurementScope cuda(ExecutionScope s)
+    static MeasurementScope gpu(ExecutionScope s)
     {
-        return { MeasurementScopeType::CUDA, s };
+        return { MeasurementScopeType::GPU, s };
     }
 
     static MeasurementScope openmp(ExecutionScope s)
@@ -141,8 +141,8 @@ struct MeasurementScope
             return fmt::format("block layer I/O events for {}", scope.name());
         case MeasurementScopeType::SYSCALL:
             return fmt::format("syscall events for {}", scope.name());
-        case lo2s::MeasurementScopeType::CUDA:
-            return fmt::format("cuda kernel events for {}", scope.name());
+        case lo2s::MeasurementScopeType::GPU:
+            return fmt::format("gpu kernel events for {}", scope.name());
         case MeasurementScopeType::TRACEPOINT:
             return fmt::format("tracepoint events for {}", scope.name());
         case MeasurementScopeType::POSIX_IO:

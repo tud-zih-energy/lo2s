@@ -189,6 +189,13 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     }
 #endif
 
+#ifdef HAVE_HIP
+    if (config().use_hip)
+    {
+        env.emplace("LD_PRELOAD", "liblo2s_injection.so");
+    }
+#endif
+
     std::vector<char*> c_args = to_vector_of_c_str(command_and_args);
 
     for (const auto& env_var : env)

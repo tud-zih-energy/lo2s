@@ -25,7 +25,7 @@
 
 namespace lo2s
 {
-namespace cuda
+namespace gpu
 {
 
 enum class EventType : uint64_t
@@ -50,5 +50,5 @@ struct __attribute__((packed)) kernel
     uint64_t kernel_id;
 };
 
-} // namespace cuda
+} // namespace gpu
 } // namespace lo2s

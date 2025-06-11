@@ -24,6 +24,7 @@
 extern "C"
 {
 #include <sys/types.h>
+#include <unistd.h>
 }
 
 #include <fmt/format.h>
@@ -135,6 +136,11 @@ public:
     static Process idle()
     {
         return Process(0);
+    }
+
+    static Process me()
+    {
+        return Process(getpid());
     }
 
     pid_t as_pid_t() const
