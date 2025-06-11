@@ -3,7 +3,7 @@ name: Build
 on: [push, pull_request]
 
 env:
-  OTF2_VERSION: "3.0"
+  OTF2_VERSION: "3.1"
 
 jobs:
   build:
@@ -22,8 +22,22 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev libradare2-dev libotf2-trace-dev otf2-tools
+          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev libradare2-dev
           sudo pip install git-archive-all
+      - name: Cache OTF2
+        id: cache-otf2
+        uses: actions/cache@v4
+        with:
+          path: /opt/otf2/
+          key: ${{ matrix.os }}-otf2-${OTF2_VERSION}
+      - name: Install OTF2
+        if: steps.cache-otf2.outputs.cache-hit != 'true'
+        run: |
+          wget https://perftools.pages.jsc.fz-juelich.de/cicd/otf2/tags/otf2-${OTF2_VERSION}/otf2-${OTF2_VERSION}.tar.gz
+          tar -xf otf2-${OTF2_VERSION}.tar.gz
+          cd otf2-${OTF2_VERSION}
+          ./configure --prefix=/opt/otf2
+          make -j2 install
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
