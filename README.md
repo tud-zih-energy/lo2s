@@ -21,13 +21,18 @@ The traces can contain any of the following information:
    * The framepointer-based call-path for each calling context sample
    * Per-thread performance counter readings
    * Which thread was scheduled on which CPU at what time
+   * Information about executed OpenMP constructs
+   * Accelerator activity events from NVidia and AMD GPUs as well as NEC SX-Aurora Vector Engines
+   * Application level I/O activity
  * From the system
    * Metrics from tracepoints (e.g. the selected C-state or P-state)
    * The node-level system tree (cpus (HW-threads), cores, packages)
    * CPU power measurements (x86_energy)
    * Microarchitecture specific metrics (x86_adapt, per package or per core)
+   * Hardware sensors using lm_sensors
    * Arbitrary metrics through plugins (Score-P compatible)
    * Syscall activity
+   * Block layer I/O activity
 
 In general `lo2s` operates either in **process monitoring** or **system monitoring** mode.
 
@@ -42,8 +47,8 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 # Build Requirements
 
  * Linux (>= 4.3)<sup>1</sup>
- * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 3.0)
- * elfutils
+ * [OTF2](http://www.vi-hps.org/projects/score-p/index.html) (>= 3.1)
+ * elfutils (specifically libelf and libdw)
  * CMake (>= 3.11)
  * A C++ Compiler with C++17 support and the std::filesystem library (GCC > 7, Clang > 5)
 
@@ -53,12 +58,18 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
- * libradare (>= 5.8.0) for disassembled instruction strings
- * libsensors for sensor readings
- * libaudit to resolve syscall names, otherwise only syscall nrs can be used in syscall tracing
+ * [radare2](https://rada.re/n/radare2.html) (>= 5.8.0) for disassembled instruction strings
+ * [lm-sensors](https://github.com/lm-sensors/lm-sensors) for sensor readings
+ * [libaudit](https://github.com/linux-audit/audit-userspace/) to resolve syscall names, otherwise only syscall nrs can be used in syscall tracing
  * [pod2man](https://www.eyrie.org/~eagle/software/podlators/) to generate the man pages (typically distributed as part of `perl`)
  * `gzip` to compress the man pages
- * libbpf and bpftool to enable POSIX I/O recording
+ * [libbpf](https://github.com/libbpf/libbpf) and bpftool to enable POSIX I/O recording
+ * [libpfm](https://perfmon2.sourceforge.net/manv3/libpfm.html) to support the event name resolution through it
+ * CUDA to record NVidia GPU Activity
+ * [rocprofiler-sdk](https://github.com/ROCm/rocprofiler-sdk) to record AMD GPU activity
+ * libveosinfo to record NEC SX-Aurora activity
+ * libdebuginfod to download DWARF debug information for recorded applications on-the-fly
+ * OpenMP to record OpenMP activity
 
 # Runtime Requirements
 
