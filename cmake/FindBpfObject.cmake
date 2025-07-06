@@ -130,8 +130,7 @@ find_package_handle_standard_args(BpfObject
     REQUIRED_VARS
         BPFOBJECT_BPFTOOL_EXE
         BPFOBJECT_CLANG_EXE
-        LIBBPF_INCLUDE_DIRS
-        LIBBPF_LIBRARIES
+        LibBpf_FOUND
         GENERATED_VMLINUX_DIR)
 
 if(NOT BpfObject_FOUND)

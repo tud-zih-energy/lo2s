@@ -30,26 +30,54 @@ option(LibDw_USE_STATIC_LIBS "Link libelf statically." OFF)
 
 UnsetIfUpdated(LibDw_LIBRARIES LibDw_USE_STATIC_LIBS)
 
+find_package(PkgConfig)
+pkg_check_modules(LIBDW_PKG_CONFIG REQUIRED libdw)
+
+# pkg-config has the fatal flaw that it just prints out whatever would
+# be correct to link your application, regardless of whether those libraries
+# are _actually_ installed
+
+# So for every library you have to link for libdw check using find_library if its
+# _actually_ there. Initialize ${LIBRARY_NAME}_LIBRARY with the full path to the library
+# (dw_LIBRARY, zstd_LIBRARY, ...) and put all the *_LIBRARY's into LIBDW_LIBRARIES
+if(LIBDW_PKG_CONFIG_FOUND)
+    if(LibDw_USE_STATIC_LIBS)
+        foreach(LIBRARY IN LISTS LIBDW_PKG_CONFIG_STATIC_LIBRARIES)
+            find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.a"
+                HINTS ENV LIBRARY_PATH)
+            list(APPEND LIBDW_LIBRARIES "${LIBRARY}_LIBRARY")
+        endforeach()
+    else()
+        foreach(LIBRARY IN LISTS LIBDW_PKG_CONFIG_LIBRARIES)
+            find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.so"
+                HINTS ENV LIBRARY_PATH)
+            list(APPEND LIBDW_LIBRARIES "${LIBRARY}_LIBRARY")
+        endforeach()
+    endif()
+endif()
+
+
 find_path(LibDw_INCLUDE_DIRS elfutils/libdw.h
     PATHS ENV C_INCLUDE_PATH ENV CPATH
     PATH_SUFFIXES include)
 
-if(LibDw_USE_STATIC_LIBS)
-    find_library(LibDw_LIBRARY NAMES libdw.a
-            HINTS ENV LIBRARY_PATH)
-else()
-    find_library(LibDw_LIBRARY NAMES libdw.so
-            HINTS ENV LIBRARY_PATH LD_LIBRARY_PATH)
-endif()
 
 include (FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibDw DEFAULT_MSG
-        LibDw_LIBRARY
-        LibDw_INCLUDE_DIRS)
+        LibDw_INCLUDE_DIRS ${LIBDW_LIBRARIES})
 
 if(LibDw_FOUND)
     add_library(LibDw::LibDw UNKNOWN IMPORTED)
-    set_property(TARGET LibDw::LibDw PROPERTY IMPORTED_LOCATION ${LibDw_LIBRARY})
+    foreach(LIBRARY IN LISTS LIBDW_LIBRARIES)
+        # CMake becomes very unhappy if you just target_link_libraries everything
+        # so check for libdw and use that for set_property so that there is a
+        # single specialest library
+        if(${LIBRARY} STREQUAL dw_LIBRARY)
+            set_property(TARGET LibDw::LibDw PROPERTY IMPORTED_LOCATION ${dw_LIBRARY})
+        else()
+            target_link_libraries(LibDw::LibDw INTERFACE ${${LIBRARY}})
+        endif()
+    endforeach()
     target_include_directories(LibDw::LibDw INTERFACE ${LibDw_INCLUDE_DIRS})
 endif()
 
