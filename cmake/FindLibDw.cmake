@@ -30,6 +30,10 @@ option(LibDw_USE_STATIC_LIBS "Link libelf statically." OFF)
 
 UnsetIfUpdated(LibDw_LIBRARIES LibDw_USE_STATIC_LIBS)
 
+if(TARGET LibDw::LibDw)
+    return()
+endif()
+
 find_package(PkgConfig)
 pkg_check_modules(LIBDW_PKG_CONFIG REQUIRED libdw)
 
@@ -44,13 +48,13 @@ if(LIBDW_PKG_CONFIG_FOUND)
     if(LibDw_USE_STATIC_LIBS)
         foreach(LIBRARY IN LISTS LIBDW_PKG_CONFIG_STATIC_LIBRARIES)
             find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.a"
-                HINTS ENV LIBRARY_PATH)
+                HINTS ${LIBDW_PKG_CONFIG_STATIC_LIBRARY_DIRS} ENV LIBRARY_PATH)
             list(APPEND LIBDW_LIBRARIES "${LIBRARY}_LIBRARY")
         endforeach()
     else()
         foreach(LIBRARY IN LISTS LIBDW_PKG_CONFIG_LIBRARIES)
             find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.so"
-                HINTS ENV LIBRARY_PATH)
+                HINTS ${LIBDW_PKG_CONFIG_LIBRARY_DIRS} ENV LIBRARY_PATH)
             list(APPEND LIBDW_LIBRARIES "${LIBRARY}_LIBRARY")
         endforeach()
     endif()
