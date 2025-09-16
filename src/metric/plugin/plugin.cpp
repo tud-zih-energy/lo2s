@@ -91,6 +91,13 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
     auto plugin_entry = lib_.load<wrapper::PluginInfo()>(entry_name(plugin_name_));
     plugin_ = plugin_entry();
 
+    if (plugin_.plugin_version != 1)
+    {
+        Log::error() << "Plugin '" << plugin_name_ << "' is of plugin interface version "
+                     << plugin_.plugin_version << " while we currently only support version 1";
+        throw std::runtime_error("Only interface version 1 plugins supported for now.");
+    }
+
     if (plugin_.sync != wrapper::Synchronicity::ASYNC)
     {
         Log::error() << "Plugin '" << plugin_name_ << "' is incompatible.";
