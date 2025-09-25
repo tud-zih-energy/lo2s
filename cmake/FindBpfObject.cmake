@@ -41,162 +41,150 @@ as the associated dependencies.
 
 .. code-block:: cmake
 
-  bpf_object(<name> <source>)
+  bpf_object(<name> <source> [<header> ...])
 
 Given an abstract ``<name>`` for a BPF object and the associated ``<source>``
 file, generates an interface library target, ``<name>_skel``, that may be
-linked against by other cmake targets.
+linked against by other cmake targets. Additional headers may be provided to 
+the macro to ensure that the generated skeleton is up-to-date.
 
 Example Usage:
 
 ::
 
   find_package(BpfObject REQUIRED)
-  bpf_object(myobject myobject.bpf.c)
+  bpf_object(myobject myobject.bpf.c myobject.h)
   add_executable(myapp myapp.c)
   target_link_libraries(myapp myobject_skel)
 
 #]=======================================================================]
 
 if(NOT BPFOBJECT_BPFTOOL_EXE)
-    find_program(BPFOBJECT_BPFTOOL_EXE NAMES bpftool DOC "Path to bpftool executable")
+  find_program(BPFOBJECT_BPFTOOL_EXE NAMES bpftool DOC "Path to bpftool executable")
 endif()
 
 if(NOT BPFOBJECT_CLANG_EXE)
-    find_program(BPFOBJECT_CLANG_EXE NAMES clang DOC "Path to clang executable")
+  find_program(BPFOBJECT_CLANG_EXE NAMES clang DOC "Path to clang executable")
 
-    if(BPFOBJECT_CLANG_EXE)
-        execute_process(COMMAND ${BPFOBJECT_CLANG_EXE} --version
-            OUTPUT_VARIABLE CLANG_version_output
-            ERROR_VARIABLE CLANG_version_error
-            RESULT_VARIABLE CLANG_version_result
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND ${BPFOBJECT_CLANG_EXE} --version
+    OUTPUT_VARIABLE CLANG_version_output
+    ERROR_VARIABLE CLANG_version_error
+    RESULT_VARIABLE CLANG_version_result
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-            # Check that clang is new enough
-            if(${CLANG_version_result} EQUAL 0)
-                if("${CLANG_version_output}" MATCHES "clang version ([^\n]+)\n")
-                    # Transform X.Y.Z into X;Y;Z which can then be interpreted as a list
-                    set(CLANG_VERSION "${CMAKE_MATCH_1}")
-                    string(REPLACE "." ";" CLANG_VERSION_LIST ${CLANG_VERSION})
-                    list(GET CLANG_VERSION_LIST 0 CLANG_VERSION_MAJOR)
+  # Check that clang is new enough
+  if(${CLANG_version_result} EQUAL 0)
+    if("${CLANG_version_output}" MATCHES "clang version ([^\n]+)\n")
+      # Transform X.Y.Z into X;Y;Z which can then be interpreted as a list
+      set(CLANG_VERSION "${CMAKE_MATCH_1}")
+      string(REPLACE "." ";" CLANG_VERSION_LIST ${CLANG_VERSION})
+      list(GET CLANG_VERSION_LIST 0 CLANG_VERSION_MAJOR)
 
-                    # Anything older than clang 10 doesn't really work
-                    string(COMPARE LESS ${CLANG_VERSION_MAJOR} 10 CLANG_VERSION_MAJOR_LT10)
-                    if(${CLANG_VERSION_MAJOR_LT10})
-                        message(WARNING "clang ${CLANG_VERSION} is too old for BPF CO-RE")
-                         set(BPFOBJECT_CLANG_EXE OFF)
-                    endif()
+      # Anything older than clang 10 doesn't really work
+      string(COMPARE LESS ${CLANG_VERSION_MAJOR} 10 CLANG_VERSION_MAJOR_LT10)
+      if(${CLANG_VERSION_MAJOR_LT10})
+        message(FATAL_ERROR "clang ${CLANG_VERSION} is too old for BPF CO-RE")
+      endif()
 
-                message(STATUS "Found clang version: ${CLANG_VERSION}")
-                else()
-                    message(WARNING "Failed to parse clang version string: ${CLANG_version_output}")
-                    set(BPFOBJECT_CLANG_EXE OFF)
-                endif()
-            else()
-                message(WARNING "Command \"${BPFOBJECT_CLANG_EXE} --version\" failed with output:\n${CLANG_version_error}")
-                set(BPFOBJECT_CLANG_EXE OFF)
-            endif()
+      message(STATUS "Found clang version: ${CLANG_VERSION}")
     else()
-      message(WARNING "Could not find clang, not building bpf targets")
-      set(BPFOBJECT_CLANG_EXE OFF)
+      message(FATAL_ERROR "Failed to parse clang version string: ${CLANG_version_output}")
     endif()
+  else()
+    message(FATAL_ERROR "Command \"${BPFOBJECT_CLANG_EXE} --version\" failed with output:\n${CLANG_version_error}")
+  endif()
 endif()
 
-find_package(LibBpf)
+if(NOT LIBBPF_INCLUDE_DIRS OR NOT LIBBPF_LIBRARIES)
+  find_package(LibBpf)
+endif()
 
 if(BPFOBJECT_VMLINUX_H)
-    get_filename_component(GENERATED_VMLINUX_DIR ${BPFOBJECT_VMLINUX_H} DIRECTORY)
+  get_filename_component(GENERATED_VMLINUX_DIR ${BPFOBJECT_VMLINUX_H} DIRECTORY)
 elseif(BPFOBJECT_BPFTOOL_EXE)
-    # Generate vmlinux.h
-    set(GENERATED_VMLINUX_DIR ${CMAKE_CURRENT_BINARY_DIR}/include/lo2s)
-    set(BPFOBJECT_VMLINUX_H "${GENERATED_VMLINUX_DIR}/vmlinux.h")
-
-    file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/lo2s")
-    execute_process(COMMAND ${BPFOBJECT_BPFTOOL_EXE} btf dump file /sys/kernel/btf/vmlinux format c
-    OUTPUT_FILE ${BPFOBJECT_VMLINUX_H}
-    ERROR_VARIABLE VMLINUX_error
-    RESULT_VARIABLE VMLINUX_result)
-    if(${VMLINUX_result} EQUAL 0)
-        set(VMLINUX ${BPFOBJECT_VMLINUX_H})
-    else()
-        message(WARNING "Failed to dump vmlinux.h from BTF: ${VMLINUX_error}")
-        set(BPFOBJECT_VMLINUX_H OFF)
-    endif()
+  # Generate vmlinux.h
+  set(GENERATED_VMLINUX_DIR ${CMAKE_CURRENT_BINARY_DIR})
+  set(BPFOBJECT_VMLINUX_H ${GENERATED_VMLINUX_DIR}/vmlinux.h)
+  add_custom_command(OUTPUT ${BPFOBJECT_VMLINUX_H}
+    COMMAND ${BPFOBJECT_BPFTOOL_EXE} btf dump file /sys/kernel/btf/vmlinux format c > ${BPFOBJECT_VMLINUX_H}
+    DEPENDS ${BPFOBJECT_BPFTOOL_EXE}
+    VERBATIM
+    COMMENT "[vmlinux] Generating header: ${BPFOBJECT_VMLINUX_H}"
+  )
 endif()
 
 include(FindPackageHandleStandardArgs)
-
 find_package_handle_standard_args(BpfObject
-    REQUIRED_VARS
-        BPFOBJECT_BPFTOOL_EXE
-        BPFOBJECT_CLANG_EXE
-        LibBpf_FOUND
-        GENERATED_VMLINUX_DIR)
+  REQUIRED_VARS
+    BPFOBJECT_BPFTOOL_EXE
+    BPFOBJECT_CLANG_EXE
+    LibBpf_FOUND
+    BPFOBJECT_VMLINUX_H
+    GENERATED_VMLINUX_DIR)
 
-if(NOT BpfObject_FOUND)
-    return()
-endif()
 # Get clang bpf system includes
 execute_process(
-    COMMAND bash -c "${BPFOBJECT_CLANG_EXE} -v -E - < /dev/null 2>&1 |
+  COMMAND bash -c "${BPFOBJECT_CLANG_EXE} -v -E - < /dev/null 2>&1 |
           sed -n '/<...> search starts here:/,/End of search list./{ s| \\(/.*\\)|-idirafter \\1|p }'"
-    OUTPUT_VARIABLE CLANG_SYSTEM_INCLUDES_output
-    ERROR_VARIABLE CLANG_SYSTEM_INCLUDES_error
-    RESULT_VARIABLE CLANG_SYSTEM_INCLUDES_result
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-
+  OUTPUT_VARIABLE CLANG_SYSTEM_INCLUDES_output
+  ERROR_VARIABLE CLANG_SYSTEM_INCLUDES_error
+  RESULT_VARIABLE CLANG_SYSTEM_INCLUDES_result
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 if(${CLANG_SYSTEM_INCLUDES_result} EQUAL 0)
-    separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
-    message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
+  separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
+  message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
 else()
-    message(WARNING "Failed to determine BPF system includes: ${CLANG_SYSTEM_INCLUDES_error}")
-    set(BpfObject_FOUND OFF)
+  message(FATAL_ERROR "Failed to determine BPF system includes: ${CLANG_SYSTEM_INCLUDES_error}")
 endif()
 
-# Get architecture for the BPF code
+# Get target arch
 execute_process(COMMAND uname -m
-    COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/"
-    OUTPUT_VARIABLE ARCH_output
-    ERROR_VARIABLE ARCH_error
-    RESULT_VARIABLE ARCH_result
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
+  OUTPUT_VARIABLE ARCH_output
+  ERROR_VARIABLE ARCH_error
+  RESULT_VARIABLE ARCH_result
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
 if(${ARCH_result} EQUAL 0)
-    set(ARCH ${ARCH_output})
-    message(STATUS "BPF target arch: ${ARCH}")
+  set(ARCH ${ARCH_output})
+  message(STATUS "BPF target arch: ${ARCH}")
 else()
-    message(WARNING "Failed to determine target architecture for BPF code: ${ARCH_error}")
-    return()
+  message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
 endif()
 
 # Public macro
 macro(bpf_object name input)
-    set(BPF_C_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${input})
-    set(BPF_O_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.bpf.o)
-    set(BPF_SKEL_FILE ${CMAKE_CURRENT_BINARY_DIR}/include/lo2s/${name}.skel.h)
-    message(STATUS ${CMAKE_CURRENT_BINARY_DIR})
-     set(OUTPUT_TARGET ${name}_skel)
+  set(BPF_C_FILE ${CMAKE_CURRENT_SOURCE_DIR}/${input})
+  foreach(arg ${ARGN})
+    list(APPEND BPF_H_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${arg})
+  endforeach()
+  set(BPF_O_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.bpf.o)
+  set(BPF_SKEL_FILE ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
+  set(OUTPUT_TARGET ${name}_skel)
 
-     # Build BPF object file
-    add_custom_command(OUTPUT ${BPF_O_FILE}
-        COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf -D__TARGET_ARCH_${ARCH}
-        ${CLANG_SYSTEM_INCLUDES} -I${GENERATED_VMLINUX_DIR}
-        -I${CMAKE_SOURCE_DIR}/include
-            -isystem ${LIBBPF_INCLUDE_DIRS} -c ${BPF_C_FILE} -o ${BPF_O_FILE}
-        COMMAND_EXPAND_LISTS
-        VERBATIM
-        DEPENDS ${BPF_C_FILE}
-        COMMENT "[clang] Building BPF object: ${name}")
+  foreach(LibBpf_INCLUDE IN LISTS LibBpf_PKG_CONFIG_INCLUDE_DIRS)
+    list(APPEND ISYSTEM_STRING "-isystem ${LibBpf_INCLUDE}")
+  endforeach()
+  
+  # Build BPF object file
+  add_custom_command(OUTPUT ${BPF_O_FILE}
+    COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf -D__TARGET_ARCH_${ARCH}
+    ${CLANG_SYSTEM_INCLUDES} -I${GENERATED_VMLINUX_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/include
+    "${ISYSTEM_STRING}" -c ${BPF_C_FILE} -o ${BPF_O_FILE}
+    COMMAND_EXPAND_LISTS
+    VERBATIM
+    DEPENDS ${BPF_C_FILE} ${BPF_H_FILES} ${BPFOBJECT_VMLINUX_H}
+    COMMENT "[clang] Building BPF object: ${name}")
 
-    # Build BPF skeleton header
-    add_custom_command(OUTPUT ${BPF_SKEL_FILE}
-        COMMAND bash -c "${BPFOBJECT_BPFTOOL_EXE} gen skeleton ${BPF_O_FILE} > ${BPF_SKEL_FILE}"
-        VERBATIM
-        DEPENDS ${BPF_O_FILE}
-        COMMENT "[skel]  Building BPF skeleton: ${name}")
+  # Build BPF skeleton header
+  add_custom_command(OUTPUT ${BPF_SKEL_FILE}
+    COMMAND bash -c "${BPFOBJECT_BPFTOOL_EXE} gen skeleton ${BPF_O_FILE} > ${BPF_SKEL_FILE}"
+    VERBATIM
+    DEPENDS ${BPF_O_FILE}
+    COMMENT "[skel]  Building BPF skeleton: ${name}")
 
-    add_library(${OUTPUT_TARGET} INTERFACE)
-    target_sources(${OUTPUT_TARGET} INTERFACE ${BPF_SKEL_FILE})
-    target_include_directories(${OUTPUT_TARGET} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
-    target_include_directories(${OUTPUT_TARGET} SYSTEM INTERFACE ${LIBBPF_INCLUDE_DIRS})
-    target_link_libraries(${OUTPUT_TARGET} INTERFACE LibBpf::LibBpf)
+  add_library(${OUTPUT_TARGET} INTERFACE)
+  target_sources(${OUTPUT_TARGET} INTERFACE ${BPF_SKEL_FILE})
+  target_include_directories(${OUTPUT_TARGET} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(${OUTPUT_TARGET} SYSTEM INTERFACE ${LIBBPF_INCLUDE_DIRS})
+  target_link_libraries(${OUTPUT_TARGET} INTERFACE LibBpf::LibBpf)
 endmacro()

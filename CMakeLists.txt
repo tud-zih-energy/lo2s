@@ -17,6 +17,7 @@ include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
+include(cmake/PkgConfigWrapper.cmake)
 
 # Intialize git submodules if not done already
 include(cmake/GitSubmoduleUpdate.cmake)
@@ -117,27 +118,46 @@ find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
 find_package(Veosinfo)
 find_package(Libpfm)
-find_package(CUDAToolkit)
-find_package(Radare)
 find_package(Audit)
 find_package(BpfObject)
 find_package(LibDw REQUIRED)
 find_package(Debuginfod)
-find_package(OpenMP)
-find_package(rocprofiler-sdk)
 
-include(CheckIncludeFileCXX)
+# These libraries are used in the lo2s injection shared library
+# so don't search for them in a pure static build, because that would
+# be pretty pointless
+if(NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
+    find_package(CUDAToolkit)
+    find_package(rocprofiler-sdk)
+    find_package(OpenMP)
 
-if(OpenMP_CXX_FOUND)
-    check_include_file_cxx("omp-tools.h" OMPT_FOUND CMAKE_REQUIRED_LIBRARIES OpenMP::OpenMP_CXX)
+    include(CheckIncludeFileCXX)
+    if(OpenMP_CXX_FOUND)
+        check_include_file_cxx("omp-tools.h" OMPT_FOUND CMAKE_REQUIRED_LIBRARIES OpenMP::OpenMP_CXX)
+    endif()
 endif()
 
+option(Radare_USE_STATIC_LIBS "Link Radare statically" OFF)
+
+if(Radare_USE_STATIC_LIBS)
+    set(R_asm_USE_STATIC_LIBS ON)
+    set(R_anal_USE_STATIC_LIBS ON)
+endif()
+FindPkgConfigWrapper(R_asm "r_asm>=5.8.0" r_asm)
+FindPkgConfigWrapper(R_anal "r_anal>=5.8.0" r_anal)
+
+if(R_anal_FOUND AND R_asm_FOUND)
+    set(Radare_FOUND TRUE)
+endif()
+
+
+
 # configurable options
-CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON Radare_FOUND OFF)
-option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
-add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
 option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
+option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
+add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
+CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON Radare_FOUND OFF)
 add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
 CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
 add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
@@ -307,7 +327,7 @@ add_feature_info("x86_energy" x86_energy_FOUND "Provide additional power measure
 if (USE_RADARE)
     if (Radare_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
-        target_link_libraries(lo2s PRIVATE PkgConfig::Radare)
+        target_link_libraries(lo2s PRIVATE R_asm::R_asm R_anal::R_anal)
         target_sources(lo2s PRIVATE
             src/radare.cpp
         )
