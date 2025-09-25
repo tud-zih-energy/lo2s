@@ -321,6 +321,7 @@ public:
     }
 
 protected:
+    static std::set<Cpu> get_cpu_set_for(EventAttr attr);
     void update_availability();
 
     struct perf_event_attr attr_;
