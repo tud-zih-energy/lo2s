@@ -105,6 +105,8 @@ add_subdirectory(lib/nitro)
 
 add_subdirectory(lib/indicators)
 
+add_subdirectory(lib/pmu-events)
+
 # configure x64_adapt_cxx library
 include(lib/x86_adapt/x86_adapt.cmake)
 
@@ -278,6 +280,7 @@ target_link_libraries(lo2s
         std::filesystem
         LibDw::LibDw
         indicators::indicators
+        PMUEvents::pmu-events
     )
 
 # old glibc versions require -lrt for clock_gettime()

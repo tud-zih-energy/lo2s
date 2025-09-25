@@ -29,6 +29,8 @@
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
+
+#include <lo2s/perf/pmu-events.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/platform.hpp>
@@ -565,6 +567,8 @@ void parse_program_options(int argc, const char** argv)
             print_availability(std::cout, "Libpfm events",
                                perf::PFM4::instance().get_pfm4_events());
 #endif
+            print_availability(std::cout, "perf PMU events",
+                               perf::PMUEvents::instance().get_events());
 
             std::cout << "(* Only available in process-monitoring mode" << std::endl;
             std::cout << "(# Only available in system-monitoring mode" << std::endl;
