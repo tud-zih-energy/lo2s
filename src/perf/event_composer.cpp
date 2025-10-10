@@ -28,30 +28,6 @@ namespace perf
 
 EventComposer::EventComposer()
 {
-    auto test_event = EventResolver::instance().get_event_by_name("cpu-cycles");
-
-    std::optional<EventGuard> guard;
-    do
-    {
-        try
-        {
-            guard = test_event.open(Thread(0));
-        }
-        catch (std::system_error& e)
-        {
-            if (test_event.exclude_kernel() && e.code().value() == EACCES &&
-                perf_event_paranoid() > 1)
-            {
-                perf_warn_paranoid();
-                exclude_kernel_ = 1;
-                test_event.set_exclude_kernel();
-            }
-            else
-            {
-                throw;
-            }
-        }
-    } while (!guard.has_value());
 }
 
 // Due to differences in the kernels and hardwares implementation of sampling, the preciseness of
