@@ -10,3 +10,6 @@
 [submodule "lib/indicators"]
 	path = lib/indicators
 	url = https://github.com/p-ranav/indicators
+[submodule "lib/pmu-events"]
+	path = lib/pmu-events
+	url = https://github.com/tud-zih-energy/pmu-events.git

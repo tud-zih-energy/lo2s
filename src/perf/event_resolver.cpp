@@ -27,6 +27,7 @@
 #include <lo2s/perf/pfm.hpp>
 #endif
 #include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/pmu-events.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
@@ -312,6 +313,15 @@ EventAttr EventResolver::cache_event(const std::string& name)
             {
             }
 #endif
+
+            try
+            {
+                EventAttr ev = PMUEvents::instance().read_event(name);
+                return event_map_.emplace(name, ev).first->second.value();
+            }
+            catch (EventAttr::InvalidEvent& e)
+            {
+            }
 
             std::optional<EventAttr> ev = SysfsEventAttr(name);
             return event_map_.emplace(name, ev).first->second.value();
