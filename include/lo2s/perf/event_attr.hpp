@@ -336,7 +336,7 @@ class PredefinedEventAttr : public EventAttr
 {
 public:
     PredefinedEventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
-                        std::uint64_t config1 = 0);
+                        std::uint64_t config1 = 0, std::set<Cpu> cpus = std::set<Cpu>());
 };
 
 class RawEventAttr : public EventAttr

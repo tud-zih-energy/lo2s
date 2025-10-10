@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
 #include <lo2s/build_config.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_resolver.hpp>
@@ -148,11 +149,17 @@ EventAttr::EventAttr(const std::string& name, perf_type_id type, std::uint64_t c
 PredefinedEventAttr::PredefinedEventAttr(const std::string& name, perf_type_id type,
                                          std::uint64_t config,
 
-                                         std::uint64_t config1)
+                                         std::uint64_t config1, std::set<Cpu> cpus)
 : EventAttr(name, type, config, config1)
 {
-
-    cpus_ = get_cpu_set_for(*this);
+    if (cpus.empty())
+    {
+        cpus_ = get_cpu_set_for(*this);
+    }
+    else
+    {
+        cpus_ = cpus;
+    }
 
     event_is_openable();
 }
