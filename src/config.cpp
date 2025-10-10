@@ -30,6 +30,7 @@
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
+#include <lo2s/perf/pmu-events.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/platform.hpp>
@@ -608,6 +609,9 @@ static void check_print_options(nitro::options::parser& parser,
 #ifdef HAVE_LIBPFM
         print_availability(std::cout, "Libpfm events", perf::PFM4::instance().get_pfm4_events());
 #endif
+
+        print_availability(std::cout, "perf pmu-events",
+                           perf::PMUEvents::instance().get_pmu_events());
         std::cout << "(* Only available in process-monitoring mode" << std::endl;
         std::cout << "(# Only available in system-monitoring mode" << std::endl;
 
