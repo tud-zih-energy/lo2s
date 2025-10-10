@@ -49,34 +49,5 @@ int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int
     return syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags);
 }
 
-void perf_warn_paranoid()
-{
-    static bool warning_issued = false;
-
-    if (!warning_issued)
-    {
-        Log::warn() << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
-                       "retrying without kernel samples.";
-        Log::warn() << "To solve this warning you can do one of the following:";
-        Log::warn() << " * sysctl kernel.perf_event_paranoid=1";
-        Log::warn() << " * run lo2s as root";
-        Log::warn() << " * run with --no-kernel to disable kernel space sampling in "
-                       "the first place,";
-        warning_issued = true;
-    }
-}
-
-void perf_check_disabled()
-{
-    if (perf_event_paranoid() == 3)
-    {
-        Log::error() << "kernel.perf_event_paranoid is set to 3, which disables perf altogether.";
-        Log::warn() << "To solve this error, you can do one of the following:";
-        Log::warn() << " * sysctl kernel.perf_event_paranoid=2";
-        Log::warn() << " * run lo2s as root";
-
-        throw std::runtime_error("Perf is disabled via a paranoid setting of 3.");
-    }
-}
 } // namespace perf
 } // namespace lo2s

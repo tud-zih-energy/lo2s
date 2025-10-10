@@ -727,6 +727,19 @@ void parse_program_options(int argc, const char** argv)
 
     if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
     {
+        if (perf::perf_event_paranoid() > 0)
+        {
+            std::cerr << "You requested system-wide perf measurements, but "
+                         "kernel.perf_event_paranoid > 0, "
+                      << std::endl;
+            std::cerr << "To be able to do system-wide perf measurements in lo2s, do one of the "
+                         "following:"
+                      << std::endl;
+            std::cerr << " * sysctl kernel.perf_event_paranoid=0" << std::endl;
+            std::cerr << " * run lo2s as root" << std::endl;
+
+            std::exit(1);
+        }
         config.monitor_type = lo2s::MonitorType::CPU_SET;
         config.sampling = false;
         config.process_recording = arguments.given("process-recording");
@@ -788,9 +801,15 @@ void parse_program_options(int argc, const char** argv)
         std::exit(EXIT_FAILURE);
     }
 
-    if (config.sampling)
+    if (config.sampling && perf::perf_event_paranoid() == 3)
     {
-        perf::perf_check_disabled();
+        std::cerr << "kernel.perf_event_paranoid is set to 3, which disables perf altogether."
+                  << std::endl;
+        std::cerr << "To solve this error, you can do one of the following:" << std::endl;
+        std::cerr << " * sysctl kernel.perf_event_paranoid=2" << std::endl;
+        std::cerr << " * run lo2s as root" << std::endl;
+
+        std::exit(1);
     }
 
     if (config.sampling && !perf::EventResolver::instance().has_event(config.sampling_event))
@@ -927,7 +946,22 @@ void parse_program_options(int argc, const char** argv)
     config.metric_leader = arguments.get("metric-leader");
     config.group_counters = perf_group_events;
     config.userspace_counters = perf_userspace_events;
+
     config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
+
+    if (perf::perf_event_paranoid() > 1 && !config.exclude_kernel)
+    {
+        std::cerr << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
+                     "retrying without kernel samples."
+                  << std::endl;
+        std::cerr << "To solve this warning you can do one of the following:" << std::endl;
+        std::cerr << " * sysctl kernel.perf_event_paranoid=1" << std::endl;
+        std::cerr << " * run lo2s as root" << std::endl;
+        std::cerr << " * run with --no-kernel to disable kernel space sampling in "
+                     "the first place,"
+                  << std::endl;
+        config.exclude_kernel = 1;
+    }
 
     if (arguments.count("x86-adapt-knob"))
     {
