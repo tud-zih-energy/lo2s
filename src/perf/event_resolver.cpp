@@ -159,7 +159,7 @@ std::vector<std::string> EventResolver::get_tracepoint_event_names()
         std::ifstream ifs_available_events;
         ifs_available_events.exceptions(std::ios::failbit | std::ios::badbit);
 
-        ifs_available_events.open("/sys/kernel/debug/tracing/available_events");
+        ifs_available_events.open("/sys/kernel/tracing/available_events");
         ifs_available_events.exceptions(std::ios::badbit);
 
         std::vector<std::string> available;

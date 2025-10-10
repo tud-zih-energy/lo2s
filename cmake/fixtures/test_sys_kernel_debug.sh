@@ -1,4 +1,4 @@
-if test ! -d "/sys/kernel/debug/tracing/" || test ! -x "/sys/kernel/debug/tracing"
+if test ! -d "/sys/kernel/tracing/" || test ! -x "/sys/kernel/tracing"
 then
     exit -1
 else

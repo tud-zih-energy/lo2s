@@ -27,7 +27,7 @@ add_test(NAME system_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tes
 set_tests_properties(system_counters PROPERTIES FIXTURES_REQUIRED PARANOID0)
 
 # Tracepoint based tests, those require perf_event_paranoid=-1 and
-# /sys/kernel/debug/tracing availability
+# /sys/kernel/tracing availability
 add_test(NAME tracepoint_recording COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/tracepoint_recording/tracepoint_recording.sh)
 set_tests_properties(tracepoint_recording PROPERTIES FIXTURES_REQUIRED "PARANOIDMINUS1;DEBUGFS")
 

@@ -39,7 +39,7 @@ TracepointEventAttr::TracepointEventAttr(const std::string& name)
     update_availability();
 }
 
-const std::filesystem::path TracepointEventAttr::base_path_ = "/sys/kernel/debug/tracing/events";
+const std::filesystem::path TracepointEventAttr::base_path_ = "/sys/kernel/tracing/events";
 
 TracepointEventAttr::ParseError::ParseError(const std::string& what, int error_code)
 : std::runtime_error{ what + ": " + std::strerror(error_code) }
