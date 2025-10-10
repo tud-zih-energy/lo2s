@@ -380,7 +380,7 @@ void parse_program_options(int argc, const char** argv)
     sensors_options.toggle("sensors", "Record sensors using libsensors.").short_name("S");
 
     io_options.toggle("block-io",
-                      "Enable recording of block I/O events (requires access to debugfs)");
+                      "Enable recording of block I/O events (requires access to tracefs)");
 
     std::vector<std::string> accelerators;
 
@@ -425,7 +425,7 @@ void parse_program_options(int argc, const char** argv)
         .default_value("16");
 
     io_options.toggle("posix-io",
-                      "Enable recording of POSIX I/o events (requires access to debugfs)");
+                      "Enable recording of POSIX I/o events (requires access to tracefs)");
 
     nitro::options::arguments arguments;
     try
@@ -477,17 +477,17 @@ void parse_program_options(int argc, const char** argv)
     {
         try
         {
-            if (!std::filesystem::exists("/sys/kernel/debug/tracing"))
+            if (!std::filesystem::exists("/sys/kernel/tracing"))
             {
                 Log::error() << "syscall, block-io and tracepoint recording require access to "
-                                "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+                                "/sys/kernel/tracing, make sure it exists and is accessible";
                 std::exit(EXIT_FAILURE);
             }
         }
         catch (std::filesystem::filesystem_error&)
         {
             Log::error() << "syscall, block-io and tracepoint recording require access to "
-                            "/sys/kernel/debug/tracing, make sure it exists and is accessible";
+                            "/sys/kernel/tracing, make sure it exists and is accessible";
             std::exit(EXIT_FAILURE);
         }
     }
@@ -580,7 +580,7 @@ void parse_program_options(int argc, const char** argv)
             if (tracepoints.empty())
             {
                 std::cout << "No tracepoints found!\n";
-                std::cout << "Make sure that the debugfs is mounted and that you have read-execute "
+                std::cout << "Make sure that the tracefs is mounted and that you have read-execute "
                              "access to it.\n";
                 std::cout << "\n";
                 std::cout << "For more information, see the section TRACEPOINT in the man-page\n";

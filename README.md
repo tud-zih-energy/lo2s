@@ -77,10 +77,10 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
    `sudo sysctl kernel.perf_event_paranoid=1`
 
- * Tracepoints, block I/O and syscalls require access to debugfs.
+ * Tracepoints, block I/O and syscalls require access to tracefs.
  Grant permissions at your own discretion.
 
-   `sudo mount -t debugfs none /sys/kernel/debug`
+   `sudo mount -t tracefs none /sys/kernel/tracing`
 
 
 # Installation
