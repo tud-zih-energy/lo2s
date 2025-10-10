@@ -472,7 +472,7 @@ Format is one of
 =back
 
 Tracepoint events can be found under
-F</sys/kernel/debug/tracing/events/I<E<lt>groupE<gt>>/I<E<lt>nameE<gt>>>.
+F</sys/kernel/tracing/events/I<E<lt>groupE<gt>>/I<E<lt>nameE<gt>>>.
 Use B<--list-tracepoints> to get a list of tracepoints events.
 
 Using L<perf-probe(2)>, it is possible to define dynamic tracepoints for use
@@ -501,15 +501,15 @@ B<lo2s>:
 
 
 Recording tracepoint events usually requires both read and execute permissions
-on F</sys/kernel/debug>.
+on F</sys/kernel/tracing>.
 
-To mount the debugfs execute:
+To mount the tracefs execute:
 
-    # mount -t debugfs none /sys/kernel/debug
+    # mount -t tracefs none /sys/kernel/tracing
 
-Non-root access requires you to change the ownership of the debugfs and execute with kernel.perf_event_paranoid set to -1:
+Non-root access requires you to change the ownership of the tracefs and execute with kernel.perf_event_paranoid set to -1:
 
-    # chown -R myusername /sys/kernel/debug
+    # chown -R myusername /sys/kernel/tracing
     # sysctl kernel.perf_event_paranoid=-1
 
 
