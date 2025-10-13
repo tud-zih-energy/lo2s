@@ -35,6 +35,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <system_error>
 
 extern "C"
 {
@@ -85,17 +86,25 @@ protected:
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
 
-        EventAttr event = EventComposer::instance().create_sampling_event();
-        if (enable_on_exec)
+        try
         {
-            event.set_enable_on_exec();
-        }
-        else
-        {
-            event.set_disabled();
-        }
+            EventAttr event = EventComposer::instance().create_sampling_event();
+            if (enable_on_exec)
+            {
+                event.set_enable_on_exec();
+            }
+            else
+            {
+                event.set_disabled();
+            }
 
-        event_ = event.open(scope, config().cgroup_fd);
+            event_ = event.open(scope, config().cgroup_fd);
+        }
+        catch (std::system_error& e)
+        {
+            throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
+                                                 config().sampling_event, scope.name(), e.what()));
+        }
 
         try
         {
