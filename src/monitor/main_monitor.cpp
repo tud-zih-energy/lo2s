@@ -27,15 +27,13 @@
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <thread>
-
 namespace lo2s
 {
 namespace monitor
 {
 MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
 {
-    if (config().sampling)
+    if (config().use_perf_sampling)
     {
         perf::time::Converter::instance();
     }

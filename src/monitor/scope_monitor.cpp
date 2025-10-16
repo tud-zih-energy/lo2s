@@ -42,7 +42,7 @@ namespace monitor
 ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 : PollMonitor(trace, scope.name(), config().perf_read_interval), scope_(scope)
 {
-    if (config().sampling || config().process_recording)
+    if (config().use_perf_sampling || config().use_process_recording)
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(scope, trace, enable_on_exec);
         add_fd(sample_writer_->fd());

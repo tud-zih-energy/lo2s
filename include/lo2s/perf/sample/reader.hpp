@@ -73,7 +73,7 @@ public:
         uint32_t pid, tid;
         uint64_t time;
         uint32_t cpu, res;
-        /* only relevant for has_cct_ / PERF_SAMPLE_CALLCHAIN */
+        /* only relevant for record_callgraph_ / PERF_SAMPLE_CALLCHAIN */
         uint64_t nr;
         uint64_t ips[1]; // ISO C++ forbits zero-size array
     };
@@ -81,7 +81,7 @@ public:
 protected:
     using EventReader<T>::init_mmap;
 
-    Reader(ExecutionScope scope, bool enable_on_exec) : has_cct_(config().enable_cct)
+    Reader(ExecutionScope scope, bool enable_on_exec) : record_callgraph_(config().enable_callgraph)
     {
         Log::debug() << "initializing event_reader for:" << scope.name()
                      << ", enable_on_exec: " << enable_on_exec;
@@ -103,7 +103,8 @@ protected:
         catch (std::system_error& e)
         {
             throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
-                                                 config().sampling_event, scope.name(), e.what()));
+                                                 config().perf_sampling_event, scope.name(),
+                                                 e.what()));
         }
 
         try
@@ -143,7 +144,7 @@ protected:
     }
 
 protected:
-    bool has_cct_;
+    bool record_callgraph_;
 
 private:
     std::optional<EventGuard> event_;

@@ -26,6 +26,7 @@
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_resolver.hpp>
+#include <nitro/options/arguments.hpp>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
@@ -38,22 +39,21 @@
 #include <lo2s/util.hpp>
 #include <lo2s/version.hpp>
 
-#include <nitro/lang/optional.hpp>
-
 #ifdef HAVE_X86_ADAPT
 #include <lo2s/metric/x86_adapt/knobs.hpp>
 #endif
 
 #include <nitro/options/parser.hpp>
 
+#include <fmt/core.h>
+
 #include <algorithm>
-#include <charconv>
 #include <cstdlib>
 #include <cstring>
 #include <ctime> // for CLOCK_* macros
 #include <filesystem>
-#include <iomanip> // for std::setw
 #include <iterator>
+#include <optional>
 
 extern "C"
 {
@@ -152,11 +152,679 @@ std::vector<int64_t> parse_syscall_names(std::vector<std::string> requested_sysc
     return syscall_nrs;
 }
 
-static nitro::lang::optional<Config> instance;
+static std::optional<Config> instance = std::nullopt;
 
 const Config& config()
 {
     return *instance;
+}
+
+static Config default_config()
+{
+    Config config;
+    // Default to use_perf_sampling (and thus use_perf) to
+    // allow perf_event_open in --list-events.
+    config.use_perf_sampling = true;
+    return config;
+}
+
+/* Some parts of lo2s want to read config() before we are finished parsing it,
+ * e.g. the event listing code. In this case supply it with a sane default config
+ */
+
+const Config& config_or_default()
+{
+    static Config default_conf = default_config();
+
+    if (instance.has_value())
+    {
+        return *instance;
+    }
+
+    return default_conf;
+}
+
+static void set_verbosity(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    if (arguments.given("quiet") && arguments.given("verbose"))
+    {
+        lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
+        config.quiet = false;
+    }
+    else
+    {
+        if (arguments.given("quiet"))
+        {
+            lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
+        }
+        else
+        {
+            using sl = nitro::log::severity_level;
+            switch (arguments.given("verbose"))
+            {
+            case 0:
+                lo2s::logging::set_min_severity_level(sl::warn);
+                break;
+            case 1:
+                lo2s::Log::info() << "Enabling log-level 'info'";
+                lo2s::logging::set_min_severity_level(sl::info);
+                break;
+            case 2:
+                lo2s::Log::info() << "Enabling log-level 'debug'";
+                lo2s::logging::set_min_severity_level(sl::debug);
+                break;
+            case 3:
+            default:
+                lo2s::Log::info() << "Enabling log-level 'trace'";
+                lo2s::logging::set_min_severity_level(sl::trace);
+                break;
+            }
+        }
+    }
+}
+
+static void set_general_options(lo2s::Config& config, nitro::options::arguments& arguments,
+                                int argc, const char** argv)
+{
+    config.quiet = arguments.given("quiet");
+
+    if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
+    {
+        config.monitor_type = MonitorType::CPU_SET;
+    }
+    else
+    {
+        config.monitor_type = MonitorType::PROCESS;
+    }
+
+    config.process =
+        arguments.provided("pid") ? Process(arguments.as<pid_t>("pid")) : Process::invalid();
+
+    config.read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("readout-interval"));
+
+    config.lo2s_command_line = "";
+
+    // The entire command line of lo2s, to be written to the trace
+    std::vector<std::string> lo2s_command_line;
+    for (int i = 0; i < argc; i++)
+    {
+        lo2s_command_line.emplace_back(argv[i]);
+    }
+
+    config.lo2s_command_line = fmt::format("{}", fmt::join(lo2s_command_line, " "));
+}
+
+static void set_otf2_trace_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.trace_path = arguments.get("output-trace");
+}
+
+static void set_program_under_test_options(lo2s::Config& config,
+                                           nitro::options::arguments& arguments)
+{
+    config.command = arguments.positionals();
+    config.drop_root = arguments.given("drop-root");
+
+    if (arguments.provided("as-user"))
+    {
+        config.drop_root = true;
+        config.user = arguments.get("as-user");
+    }
+}
+
+static void set_perf_general_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
+
+    if (arguments.provided("perf-readout-interval"))
+    {
+        config.perf_read_interval =
+            std::chrono::milliseconds(arguments.as<std::uint64_t>("perf-readout-interval"));
+    }
+    if (arguments.provided("cgroup"))
+    {
+        config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
+
+        if (config.cgroup_fd == -1)
+        {
+            Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
+            std::exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void set_perf_instruction_sampling_options(lo2s::Config& config,
+                                                  nitro::options::arguments& arguments)
+{
+    if (!arguments.provided("instruction-sampling"))
+    {
+        if (arguments.given("all-cpus-sampling"))
+        {
+            config.use_perf_sampling = true;
+        }
+        else if (arguments.given("all-cpus"))
+        {
+            config.use_perf_sampling = false;
+        }
+        else
+        {
+            config.use_perf_sampling = true;
+        }
+    }
+    else
+    {
+        config.use_perf_sampling = arguments.given("instruction-sampling");
+    }
+
+    if (!arguments.provided("process-recording"))
+    {
+        if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
+        {
+            config.use_process_recording = true;
+        }
+        else
+        {
+            config.use_process_recording = false;
+        }
+    }
+    else
+    {
+        config.use_process_recording = arguments.given("process-recording");
+    }
+
+    config.perf_sampling_period = arguments.as<std::uint64_t>("count");
+    config.perf_sampling_event = arguments.get("event");
+
+    config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
+    config.enable_callgraph = arguments.given("call-graph");
+    config.disassemble = arguments.given("disassemble");
+
+    std::string dwarf_mode = arguments.get("dwarf");
+    if (dwarf_mode == "full")
+    {
+        config.dwarf = DwarfUsage::FULL;
+
+        char* debuginfod_urls = getenv("DEBUGINFOD_URLS");
+        if (debuginfod_urls == nullptr)
+        {
+            Log::warn()
+                << "DEBUGINFOD_URLS not set! Will not be able to lookup debug info via debuginfod!";
+        }
+    }
+    else if (dwarf_mode == "local")
+    {
+        config.dwarf = DwarfUsage::LOCAL;
+
+        setenv("DEBUGINFOD_URLS", "", 1);
+    }
+    else if (dwarf_mode == "none")
+    {
+        config.dwarf = DwarfUsage::NONE;
+    }
+    else
+    {
+        std::cerr << "Unknown DWARF mode: " << dwarf_mode << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+static void set_python_sampling_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.use_python = arguments.given("python");
+}
+
+static void set_perf_tracepoint_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.tracepoint_events = arguments.get_all("tracepoint");
+}
+
+static void set_perf_io_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.use_block_io = arguments.given("block-io");
+    config.use_posix_io = arguments.given("posix-io");
+}
+
+static void set_perf_syscall_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    if (arguments.provided("syscall"))
+    {
+        std::vector<std::string> requested_syscalls = arguments.get_all("syscall");
+        config.use_syscalls = true;
+
+        if (std::find(requested_syscalls.begin(), requested_syscalls.end(), "all") ==
+            requested_syscalls.end())
+        {
+            config.syscall_filter = parse_syscall_names(requested_syscalls);
+        }
+    }
+}
+
+static void set_perf_metric_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.userspace_read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
+
+    // Use time interval based metric recording as a default
+    if (!arguments.provided("metric-leader"))
+    {
+        config.metric_use_frequency = true;
+        config.metric_frequency = arguments.as<std::uint64_t>("metric-frequency");
+    }
+    else
+    {
+        config.metric_use_frequency = false;
+        config.metric_count = arguments.as<std::uint64_t>("metric-count");
+    }
+
+    config.group_counters = arguments.get_all("metric-event");
+    config.userspace_counters = arguments.get_all("userspace-metric-event");
+
+    if (arguments.given("standard-metrics"))
+    {
+        for (const auto& mem_event : platform::get_mem_events())
+        {
+            config.group_counters.emplace_back(mem_event.name());
+        }
+        config.group_counters.emplace_back("instructions");
+        config.group_counters.emplace_back("cpu-cycles");
+    }
+
+    for (const auto& event : config.userspace_counters)
+    {
+        auto it = std::find(config.group_counters.begin(), config.group_counters.end(), event);
+
+        if (it != config.group_counters.end())
+        {
+            Log::warn()
+                << event
+                << " given as both userspace and grouped metric event only using it in userspace "
+                   "measuring mode";
+            config.group_counters.erase(it);
+        }
+    }
+
+    if (!config.metric_leader.empty() || !config.group_counters.empty())
+    {
+        config.use_group_metrics = true;
+    }
+    if (!config.userspace_counters.empty())
+    {
+        config.use_userspace_metrics = true;
+    }
+    config.metric_leader = arguments.get("metric-leader");
+}
+
+static void set_perf_clock_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    try
+    {
+        std::string requested_clock_name = arguments.get("clockid");
+        // large PEBS only works when the clockid isn't set, however the internal clock
+        // large PEBS uses should be equal to monotonic-raw, so use monotonic-raw outside
+        // of pebs and everything should be in sync
+        if (requested_clock_name == "pebs")
+        {
+            requested_clock_name = "monotonic-raw";
+            config.use_pebs = true;
+        }
+        const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
+
+        lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
+#ifndef USE_HW_BREAKPOINT_COMPAT
+        config.clockid = clock.id;
+#else
+        if (requested_clock_name != "monotonic-raw")
+        {
+            lo2s::Log::warn() << "This installation was built without support for setting a "
+                                 "perf reference clock.";
+            lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
+                                 "local reference clock.";
+        }
+#endif
+        lo2s::time::Clock::set_clock(clock.id);
+    }
+    catch (const lo2s::time::ClockProvider::InvalidClock& e)
+    {
+        lo2s::Log::fatal() << "Invalid clock requested: " << e.what();
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+static void set_x86adapt_energy_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+
+    config.use_x86_energy = arguments.given("x86-energy");
+    config.x86_adapt_knobs = arguments.get_all("x86-adapt-knob");
+}
+
+static void set_sensor_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.use_sensors = arguments.given("sensors");
+}
+
+static void set_accelerator_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.nec_read_interval =
+        std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
+
+    config.nec_check_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-check-interval"));
+
+    for (const auto& accel : arguments.get_all("accel"))
+    {
+        if (accel == "nec")
+        {
+#ifdef HAVE_VEOSINFO
+            config.use_nec = true;
+#else
+            std::cerr << "lo2s was built without support for NEC SX-Aurora sampling\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
+        else if (accel == "nvidia")
+        {
+#ifdef HAVE_CUDA
+            config.use_nvidia = true;
+#else
+            std::cerr << "lo2s was built without support for CUDA kernel recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
+        else if (accel == "openmp")
+        {
+#ifdef HAVE_OPENMP
+            config.use_openmp = true;
+#else
+            std::cerr << "lo2s was built without support for OpenMP recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
+        else if (accel == "amd")
+        {
+#ifdef HAVE_HIP
+            config.use_hip = true;
+#else
+            std::cerr << "lo2s was built without support for AMD HIP recording\n";
+            std::exit(EXIT_FAILURE);
+#endif
+        }
+        else
+        {
+            std::cerr << "Unknown Accelerator " << accel << "!";
+            std::exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void set_ringbuf_options(lo2s::Config& config, nitro::options::arguments& arguments)
+{
+    config.socket_path = arguments.get("socket");
+    config.injectionlib_path = arguments.get("ld-library-path");
+    config.ringbuf_size = arguments.as<uint64_t>("ringbuf-size");
+
+    config.ringbuf_read_interval =
+        std::chrono::milliseconds(arguments.as<std::uint64_t>("ringbuf-read-interval"));
+}
+
+static void check_print_options(nitro::options::parser& parser,
+                                nitro::options::arguments& arguments)
+{
+    if (arguments.given("list-knobs"))
+    {
+#ifdef HAVE_X86_ADAPT
+
+        std::map<std::string, std::string> node_knobs = metric::x86_adapt::x86_adapt_node_knobs();
+        std::cout << io::make_argument_list("x86_adapt node knobs", node_knobs.begin(),
+                                            node_knobs.end());
+
+        std::map<std::string, std::string> cpu_knobs = metric::x86_adapt::x86_adapt_cpu_knobs();
+        std::cout << io::make_argument_list("x86_adapt CPU knobs", cpu_knobs.begin(),
+                                            cpu_knobs.end());
+        std::exit(EXIT_SUCCESS);
+#else
+        std::cerr << "lo2s was built without support for x86_adapt; cannot read knobs.\n";
+        std::exit(EXIT_FAILURE);
+#endif
+    }
+    if (arguments.given("list-clockids"))
+    {
+        auto& clockids = time::ClockProvider::get_descriptions();
+        std::cout << io::make_argument_list("available clockids", std::begin(clockids),
+                                            std::end(clockids));
+        std::exit(EXIT_SUCCESS);
+    }
+
+    if (arguments.given("list-events"))
+    {
+        print_availability(std::cout, "predefined events",
+                           perf::EventResolver::instance().get_predefined_events());
+        // TODO: find a better solution ?
+        std::vector<perf::SysfsEventAttr> sys_events =
+            perf::EventResolver::instance().get_pmu_events();
+        std::vector<perf::EventAttr> events(sys_events.begin(), sys_events.end());
+        print_availability(std::cout, "Kernel PMU events", events);
+
+#ifdef HAVE_LIBPFM
+        print_availability(std::cout, "Libpfm events", perf::PFM4::instance().get_pfm4_events());
+#endif
+        std::cout << "(* Only available in process-monitoring mode" << std::endl;
+        std::cout << "(# Only available in system-monitoring mode" << std::endl;
+
+        std::exit(EXIT_SUCCESS);
+    }
+
+    if (arguments.given("list-tracepoints"))
+    {
+        std::vector<std::string> tracepoints =
+            perf::EventResolver::instance().get_tracepoint_event_names();
+
+        if (tracepoints.empty())
+        {
+            std::cout << "No tracepoints found!\n";
+            std::cout << "Make sure that the tracefs is mounted and that you have read-execute "
+                         "access to it.\n";
+            std::cout << "\n";
+            std::cout << "For more information, see the section TRACEPOINT in the man-page\n";
+            std::exit(EXIT_FAILURE);
+        }
+        else
+        {
+            list_arguments_sorted(std::cout, "Kernel tracepoint events", tracepoints);
+            std::exit(EXIT_SUCCESS);
+        }
+    }
+    if (arguments.given("help"))
+    {
+        parser.usage();
+        std::exit(EXIT_SUCCESS);
+    }
+
+    if (arguments.given("version"))
+    {
+        print_version(std::cout);
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
+static void check_program_under_test_options(lo2s::Config& config)
+{
+    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.process == Process::invalid() &&
+        config.command.empty())
+    {
+        lo2s::Log::fatal() << "No process to monitor provided. "
+                              "You need to pass either a COMMAND or a PID.";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (config.drop_root && (std::getenv("SUDO_UID") == nullptr) && (config.user.empty()))
+    {
+        Log::error() << "-u was specified but no sudo was detected.";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (config.monitor_type == lo2s::MonitorType::CPU_SET && config.use_posix_io)
+    {
+        Log::fatal() << "POSIX I/O recording can only be enabled in process monitoring mode.";
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+static void check_perf_options(lo2s::Config& config)
+{
+    if (config.use_perf())
+    {
+
+        if (perf::perf_event_paranoid() == 3)
+        {
+            std::cerr << "kernel.perf_event_paranoid is set to 3, which disables perf altogether."
+                      << std::endl;
+            std::cerr << "To solve this error, you can do one of the following:" << std::endl;
+            std::cerr << " * sysctl kernel.perf_event_paranoid=2" << std::endl;
+            std::cerr << " * run lo2s as root" << std::endl;
+
+            std::exit(1);
+        }
+
+        if (config.use_any_tracepoint())
+        {
+            try
+            {
+                if (!std::filesystem::exists("/sys/kernel/tracing"))
+                {
+                    Log::error() << "syscall, block-io and tracepoint recording require access to "
+                                    "/sys/kernel/tracing, make sure it exists and is accessible";
+                    std::exit(EXIT_FAILURE);
+                }
+            }
+            catch (std::filesystem::filesystem_error&)
+            {
+                Log::error() << "syscall, block-io and tracepoint recording require access to "
+                                "/sys/kernel/tracing, make sure it exists and is accessible";
+                std::exit(EXIT_FAILURE);
+            }
+        }
+
+        if (perf::perf_event_paranoid() > 1 && !config.exclude_kernel)
+        {
+            std::cerr << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
+                         "retrying without kernel samples."
+                      << std::endl;
+            std::cerr << "To solve this warning you can do one of the following:" << std::endl;
+            std::cerr << " * sysctl kernel.perf_event_paranoid=1" << std::endl;
+            std::cerr << " * run lo2s as root" << std::endl;
+            std::cerr << " * run with --no-kernel to disable kernel space sampling in "
+                         "the first place,"
+                      << std::endl;
+            config.exclude_kernel = 1;
+        }
+
+        if (config.monitor_type == MonitorType::CPU_SET)
+        {
+            if (perf::perf_event_paranoid() > 0)
+            {
+                std::cerr << "You requested system-wide perf measurements, but "
+                             "kernel.perf_event_paranoid > 0, "
+                          << std::endl;
+                std::cerr
+                    << "To be able to do system-wide perf measurements in lo2s, do one of the "
+                       "following:"
+                    << std::endl;
+                std::cerr << " * sysctl kernel.perf_event_paranoid=0" << std::endl;
+                std::cerr << " * run lo2s as root" << std::endl;
+
+                std::exit(1);
+            }
+        }
+
+        if (config.use_perf_sampling &&
+            !perf::EventResolver::instance().has_event(config.perf_sampling_event))
+        {
+            lo2s::Log::fatal() << "requested sampling event \'" << config.perf_sampling_event
+                               << "\' is not available!";
+            std::exit(EXIT_FAILURE); // hmm...
+        }
+        if (config.cgroup_fd != -1 && config.monitor_type == MonitorType::PROCESS)
+        {
+            Log::fatal() << "cgroup filtering can only be used in system-wide monitoring mode";
+            std::exit(EXIT_FAILURE);
+        }
+    }
+}
+
+static void check_perf_metric_options(lo2s::Config& config)
+{
+    if (!config.metric_use_frequency && config.metric_leader.empty())
+    {
+        Log::fatal() << "--metric-count can only be used in conjunction with a --metric-leader";
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (config.metric_use_frequency && !config.metric_leader.empty())
+    {
+        Log::fatal() << "--metric-frequency can only be used with the default --metric-leader";
+        std::exit(EXIT_FAILURE);
+    }
+    if (config.metric_leader.empty() && config.metric_frequency == 0)
+    {
+        Log::fatal()
+            << "--metric-frequency should not be zero when using the default metric leader";
+        std::exit(EXIT_FAILURE);
+    }
+    if (!config.metric_leader.empty() && config.metric_count == 0)
+    {
+        Log::fatal()
+            << "--metric-count needs to be provided and not == 0 if a custom metric leader is used";
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+static void check_optional_features(lo2s::Config& config)
+{
+#ifndef HAVE_X86_ADAPT
+    if (!config.x86_adapt_knobs.empty())
+    {
+        Log::fatal() << "lo2s was built without support for x86_adapt; "
+                        "cannot request x86_adapt knobs.\n";
+        std::exit(EXIT_FAILURE);
+    }
+#endif
+
+#ifndef HAVE_X86_ENERGY
+    if (config.use_x86_energy)
+    {
+        lo2s::Log::fatal() << "lo2s was built without support for x86_energy; "
+                              "cannot request x86_energy readings.\n";
+        std::exit(EXIT_FAILURE);
+    }
+#endif
+
+#ifndef HAVE_SENSORS
+    if (config.use_sensors)
+    {
+        lo2s::Log::fatal() << "lo2s was built without support for libsensors; "
+                              "cannot request sensor recording.\n";
+        std::exit(EXIT_FAILURE);
+    }
+#endif
+#ifndef HAVE_RADARE
+    if (config.disassemble)
+    {
+        lo2s::Log::warn() << "Disassemble requested, but not supported by this installation.";
+    }
+    config.disassemble = false;
+#endif
+
+#ifndef HAVE_DEBUGINFOD
+    if (config.dwarf == DwarfUsage::FULL)
+    {
+        Log::warn() << "No Debuginfod support available, downgrading to use only local files!";
+        config.dwarf = DwarfUsage::LOCAL;
+
+        // If we unset DEBUGINFOD_URLS, it will only use locally cached debug info files
+        setenv("DEBUGINFOD_URLS", "", 1);
+    }
+#endif
 }
 
 void parse_program_options(int argc, const char** argv)
@@ -281,8 +949,6 @@ void parse_program_options(int argc, const char** argv)
                                         "(default: disabled). In process monitoring:")
         .default_value(true)
         .allow_reverse();
-
-    // sampling_options.toggle("no-instruction-sampling", "Disable instruction sampling.");
 
     sampling_options.option("event", "Interrupt source event for sampling.")
         .short_name("e")
@@ -438,562 +1104,49 @@ void parse_program_options(int argc, const char** argv)
         parser.usage();
         std::exit(EXIT_FAILURE);
     }
+    set_verbosity(config, arguments);
+    // Check all the options that just print something
+    check_print_options(parser, arguments);
 
-    config.trace_path = arguments.get("output-trace");
-    config.quiet = arguments.given("quiet");
-    config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
-    config.process =
-        arguments.provided("pid") ? Process(arguments.as<pid_t>("pid")) : Process::invalid();
-    config.drop_root = arguments.given("drop-root");
-    config.sampling_event = arguments.get("event");
-    config.sampling_period = arguments.as<std::uint64_t>("count");
-    config.enable_cct = arguments.given("call-graph");
-    config.suppress_ip = arguments.given("no-ip");
-    config.use_x86_energy = arguments.given("x86-energy");
-    config.use_sensors = arguments.given("sensors");
-    config.use_block_io = arguments.given("block-io");
-    config.tracepoint_events = arguments.get_all("tracepoint");
-    config.use_python = arguments.given("python");
+    // First step: Set all the values in the config
+    set_general_options(config, arguments, argc, argv);
 
-    config.socket_path = arguments.get("socket");
-    config.injectionlib_path = arguments.get("ld-library-path");
-    config.ringbuf_size = arguments.as<uint64_t>("ringbuf-size");
-    config.command = arguments.positionals();
+    set_otf2_trace_options(config, arguments);
 
-    if (arguments.given("help"))
-    {
-        parser.usage();
-        std::exit(EXIT_SUCCESS);
-    }
+    set_program_under_test_options(config, arguments);
 
-    if (arguments.given("version"))
-    {
-        print_version(std::cout);
-        std::exit(EXIT_SUCCESS);
-    }
+    set_perf_general_options(config, arguments);
 
-    if (!arguments.get_all("tracepoint").empty() || arguments.given("block-io") ||
-        !arguments.get_all("syscall").empty())
-    {
-        try
-        {
-            if (!std::filesystem::exists("/sys/kernel/tracing"))
-            {
-                Log::error() << "syscall, block-io and tracepoint recording require access to "
-                                "/sys/kernel/tracing, make sure it exists and is accessible";
-                std::exit(EXIT_FAILURE);
-            }
-        }
-        catch (std::filesystem::filesystem_error&)
-        {
-            Log::error() << "syscall, block-io and tracepoint recording require access to "
-                            "/sys/kernel/tracing, make sure it exists and is accessible";
-            std::exit(EXIT_FAILURE);
-        }
-    }
+    set_perf_instruction_sampling_options(config, arguments);
 
-    if (arguments.given("quiet") && arguments.given("verbose"))
-    {
-        lo2s::Log::warn() << "Cannot be quiet and verbose at the same time. Refusing to be quiet.";
-        config.quiet = false;
-    }
-    else
-    {
-        if (arguments.given("quiet"))
-        {
-            lo2s::logging::set_min_severity_level(nitro::log::severity_level::error);
-        }
-        else
-        {
-            using sl = nitro::log::severity_level;
-            switch (arguments.given("verbose"))
-            {
-            case 0:
-                lo2s::logging::set_min_severity_level(sl::warn);
-                break;
-            case 1:
-                lo2s::Log::info() << "Enabling log-level 'info'";
-                lo2s::logging::set_min_severity_level(sl::info);
-                break;
-            case 2:
-                lo2s::Log::info() << "Enabling log-level 'debug'";
-                lo2s::logging::set_min_severity_level(sl::debug);
-                break;
-            case 3:
-            default:
-                lo2s::Log::info() << "Enabling log-level 'trace'";
-                lo2s::logging::set_min_severity_level(sl::trace);
-                break;
-            }
-        }
-    }
+    set_python_sampling_options(config, arguments);
 
-    if (arguments.given("drop-root") && (std::getenv("SUDO_UID") == nullptr) &&
-        (!arguments.provided("as-user")))
-    {
-        Log::error() << "-u was specified but no sudo was detected.";
-        std::exit(EXIT_FAILURE);
-    }
+    set_perf_tracepoint_options(config, arguments);
 
-    if (arguments.provided("as-user"))
-    {
-        config.drop_root = true;
-        config.user = arguments.get("as-user");
-    }
+    set_perf_io_options(config, arguments);
 
-    // list arguments to arguments and exit
-    {
-        if (arguments.given("list-clockids"))
-        {
-            auto& clockids = time::ClockProvider::get_descriptions();
-            std::cout << io::make_argument_list("available clockids", std::begin(clockids),
-                                                std::end(clockids));
-            std::exit(EXIT_SUCCESS);
-        }
+    set_perf_syscall_options(config, arguments);
 
-        if (arguments.given("list-events"))
-        {
-            print_availability(std::cout, "predefined events",
-                               perf::EventResolver::instance().get_predefined_events());
-            // TODO: find a better solution ?
-            std::vector<perf::SysfsEventAttr> sys_events =
-                perf::EventResolver::instance().get_pmu_events();
-            std::vector<perf::EventAttr> events(sys_events.begin(), sys_events.end());
-            print_availability(std::cout, "Kernel PMU events", events);
+    set_perf_metric_options(config, arguments);
 
-#ifdef HAVE_LIBPFM
-            print_availability(std::cout, "Libpfm events",
-                               perf::PFM4::instance().get_pfm4_events());
-#endif
+    set_perf_clock_options(config, arguments);
 
-            std::cout << "(* Only available in process-monitoring mode" << std::endl;
-            std::cout << "(# Only available in system-monitoring mode" << std::endl;
+    set_x86adapt_energy_options(config, arguments);
 
-            std::exit(EXIT_SUCCESS);
-        }
+    set_accelerator_options(config, arguments);
 
-        if (arguments.given("list-tracepoints"))
-        {
-            std::vector<std::string> tracepoints =
-                perf::EventResolver::instance().get_tracepoint_event_names();
+    set_ringbuf_options(config, arguments);
 
-            if (tracepoints.empty())
-            {
-                std::cout << "No tracepoints found!\n";
-                std::cout << "Make sure that the tracefs is mounted and that you have read-execute "
-                             "access to it.\n";
-                std::cout << "\n";
-                std::cout << "For more information, see the section TRACEPOINT in the man-page\n";
-                std::exit(EXIT_FAILURE);
-            }
-            else
-            {
-                list_arguments_sorted(std::cout, "Kernel tracepoint events", tracepoints);
-                std::exit(EXIT_SUCCESS);
-            }
-        }
+    set_sensor_options(config, arguments);
 
-        if (arguments.given("list-knobs"))
-        {
-#ifdef HAVE_X86_ADAPT
+    // Check correctness of given config
 
-            std::map<std::string, std::string> node_knobs =
-                metric::x86_adapt::x86_adapt_node_knobs();
-            std::cout << io::make_argument_list("x86_adapt node knobs", node_knobs.begin(),
-                                                node_knobs.end());
+    // Check presence of optional compile-time features
+    check_optional_features(config);
 
-            std::map<std::string, std::string> cpu_knobs = metric::x86_adapt::x86_adapt_cpu_knobs();
-            std::cout << io::make_argument_list("x86_adapt CPU knobs", cpu_knobs.begin(),
-                                                cpu_knobs.end());
-            std::exit(EXIT_SUCCESS);
-#else
-            std::cerr << "lo2s was built without support for x86_adapt; cannot read knobs.\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-    }
-
-    for (const auto& accel : arguments.get_all("accel"))
-    {
-        if (accel == "nec")
-        {
-#ifdef HAVE_VEOSINFO
-            config.use_nec = true;
-#else
-            std::cerr << "lo2s was built without support for NEC SX-Aurora sampling\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-        else if (accel == "nvidia")
-        {
-#ifdef HAVE_CUDA
-            config.use_nvidia = true;
-#else
-            std::cerr << "lo2s was built without support for CUDA kernel recording\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-        else if (accel == "openmp")
-        {
-#ifdef HAVE_OPENMP
-            config.use_openmp = true;
-#else
-            std::cerr << "lo2s was built without support for OpenMP recording\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-        else if (accel == "amd")
-        {
-#ifdef HAVE_HIP
-            config.use_hip = true;
-#else
-            std::cerr << "lo2s was built without support for AMD HIP recording\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-        else
-        {
-            std::cerr << "Unknown Accelerator " << accel << "!";
-            parser.usage();
-            std::exit(EXIT_FAILURE);
-        }
-    }
-
-    std::vector<std::string> perf_group_events = arguments.get_all("metric-event");
-    std::vector<std::string> perf_userspace_events = arguments.get_all("userspace-metric-event");
-
-    for (const auto& event : perf_userspace_events)
-    {
-        auto it = std::find(perf_group_events.begin(), perf_group_events.end(), event);
-
-        if (it != perf_group_events.end())
-        {
-            Log::warn()
-                << event
-                << " given as both userspace and grouped metric event only using it in userspace "
-                   "measuring mode";
-            perf_group_events.erase(it);
-        }
-    }
-
-    if (arguments.provided("syscall"))
-    {
-        std::vector<std::string> requested_syscalls = arguments.get_all("syscall");
-        config.use_syscalls = true;
-
-        if (std::find(requested_syscalls.begin(), requested_syscalls.end(), "all") ==
-            requested_syscalls.end())
-        {
-            config.syscall_filter = parse_syscall_names(requested_syscalls);
-        }
-    }
-
-    std::string dwarf_mode = arguments.get("dwarf");
-    if (dwarf_mode == "full")
-    {
-#ifdef HAVE_DEBUGINFOD
-        config.dwarf = DwarfUsage::FULL;
-
-        char* debuginfod_urls = getenv("DEBUGINFOD_URLS");
-
-        if (debuginfod_urls == nullptr)
-        {
-            Log::warn()
-                << "DEBUGINFOD_URLS not set! Will not be able to lookup debug info via debuginfod!";
-        }
-#else
-        Log::warn() << "No Debuginfod support available, downgrading to use only local files!";
-        config.dwarf = DwarfUsage::LOCAL;
-
-        // If we unset DEBUGINFOD_URLS, it will only use locally cached debug info files
-        setenv("DEBUGINFOD_URLS", "", 1);
-#endif
-    }
-    else if (dwarf_mode == "local")
-    {
-        config.dwarf = DwarfUsage::LOCAL;
-
-        setenv("DEBUGINFOD_URLS", "", 1);
-    }
-    else if (dwarf_mode == "none")
-    {
-        config.dwarf = DwarfUsage::NONE;
-    }
-    else
-    {
-        std::cerr << "Unknown DWARF mode: " << dwarf_mode << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
-    {
-        if (perf::perf_event_paranoid() > 0)
-        {
-            std::cerr << "You requested system-wide perf measurements, but "
-                         "kernel.perf_event_paranoid > 0, "
-                      << std::endl;
-            std::cerr << "To be able to do system-wide perf measurements in lo2s, do one of the "
-                         "following:"
-                      << std::endl;
-            std::cerr << " * sysctl kernel.perf_event_paranoid=0" << std::endl;
-            std::cerr << " * run lo2s as root" << std::endl;
-
-            std::exit(1);
-        }
-        config.monitor_type = lo2s::MonitorType::CPU_SET;
-        config.sampling = false;
-        config.process_recording = arguments.given("process-recording");
-
-        // The check for instruction sampling is a bit more complicated, because the default value
-        // is different depending on the monitoring mode. This check here is only relevant for
-        // system monitoring, where the default is to not use intruction sampling. However, the
-        // configured default value in Nitro::options is to have instruction sampling enabled.
-        // Hence, this check seems a bit odd at first glance.
-        if (arguments.given("all-cpus-sampling") ||
-            (arguments.provided("instruction-sampling") && arguments.given("instruction-sampling")))
-        {
-            config.sampling = true;
-        }
-
-        if (arguments.provided("cgroup"))
-        {
-            config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
-
-            if (config.cgroup_fd == -1)
-            {
-                Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
-                std::exit(EXIT_FAILURE);
-            }
-        }
-    }
-    else
-    {
-        if (arguments.provided("cgroup"))
-        {
-            Log::fatal() << "cgroup filtering can only be used in system-wide monitoring mode";
-            std::exit(EXIT_FAILURE);
-        }
-
-        config.monitor_type = lo2s::MonitorType::PROCESS;
-        config.sampling = true;
-        config.process_recording = false;
-
-        if (!arguments.given("instruction-sampling"))
-        {
-            config.sampling = false;
-        }
-    }
-
-    if (config.monitor_type == lo2s::MonitorType::PROCESS && config.process == Process::invalid() &&
-        config.command.empty())
-    {
-        lo2s::Log::fatal() << "No process to monitor provided. "
-                              "You need to pass either a COMMAND or a PID.";
-        parser.usage(std::cerr);
-        std::exit(EXIT_FAILURE);
-    }
-
-    config.use_posix_io = arguments.given("posix-io");
-
-    if (config.monitor_type == lo2s::MonitorType::CPU_SET && config.use_posix_io)
-    {
-        Log::fatal() << "POSIX I/O recording can only be enabled in process monitoring mode.";
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (config.sampling && perf::perf_event_paranoid() == 3)
-    {
-        std::cerr << "kernel.perf_event_paranoid is set to 3, which disables perf altogether."
-                  << std::endl;
-        std::cerr << "To solve this error, you can do one of the following:" << std::endl;
-        std::cerr << " * sysctl kernel.perf_event_paranoid=2" << std::endl;
-        std::cerr << " * run lo2s as root" << std::endl;
-
-        std::exit(1);
-    }
-
-    if (config.sampling && !perf::EventResolver::instance().has_event(config.sampling_event))
-    {
-        lo2s::Log::fatal() << "requested sampling event \'" << config.sampling_event
-                           << "\' is not available!";
-        std::exit(EXIT_FAILURE); // hmm...
-    }
-
-    // time synchronization
-    config.use_pebs = false;
-    config.clockid = std::nullopt;
-
-    try
-    {
-        std::string requested_clock_name = arguments.get("clockid");
-        // large PEBS only works when the clockid isn't set, however the internal clock
-        // large PEBS uses should be equal to monotonic-raw, so use monotonic-raw outside
-        // of pebs and everything should be in sync
-        if (requested_clock_name == "pebs")
-        {
-            requested_clock_name = "monotonic-raw";
-            config.use_pebs = true;
-        }
-        const auto& clock = lo2s::time::ClockProvider::get_clock_by_name(requested_clock_name);
-
-        lo2s::Log::debug() << "Using clock \'" << clock.name << "\'.";
-#ifndef USE_HW_BREAKPOINT_COMPAT
-        config.clockid = clock.id;
-#else
-        if (requested_clock_name != "monotonic-raw")
-        {
-            lo2s::Log::warn() << "This installation was built without support for setting a "
-                                 "perf reference clock.";
-            lo2s::Log::warn() << "Any parameter to -k/--clockid will only affect the "
-                                 "local reference clock.";
-        }
-#endif
-        lo2s::time::Clock::set_clock(clock.id);
-    }
-    catch (const lo2s::time::ClockProvider::InvalidClock& e)
-    {
-        lo2s::Log::fatal() << "Invalid clock requested: " << e.what();
-        std::exit(EXIT_FAILURE);
-    }
-
-    config.read_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("readout-interval"));
-
-    config.userspace_read_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
-
-    config.nec_read_interval =
-        std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
-
-    config.nec_check_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-check-interval"));
-
-    if (arguments.provided("perf-readout-interval"))
-    {
-        config.perf_read_interval =
-            std::chrono::milliseconds(arguments.as<std::uint64_t>("perf-readout-interval"));
-    }
-
-    config.ringbuf_read_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("ringbuf-read-interval"));
-
-    if (!arguments.given("disassemble"))
-    {
-        config.disassemble = false;
-    }
-    else // disassemble is default
-    {
-#ifdef HAVE_RADARE
-        config.disassemble = true;
-#else
-        if (arguments.provided("disassemble"))
-        {
-            lo2s::Log::warn() << "Disassemble requested, but not supported by this installation.";
-        }
-        config.disassemble = false;
-#endif
-    }
-
-    if (arguments.provided("metric-count") && !arguments.provided("metric-leader"))
-    {
-        Log::fatal() << "--metric-count can only be used in conjunction with a --metric-leader";
-        std::exit(EXIT_FAILURE);
-    }
-
-    if (arguments.provided("metric-frequency") && arguments.provided("metric-leader"))
-    {
-        Log::fatal() << "--metric-frequency can only be used with the default --metric-leader";
-        std::exit(EXIT_FAILURE);
-    }
-
-    // Use time interval based metric recording as a default
-    if (!arguments.provided("metric-leader"))
-    {
-        if (arguments.as<std::uint64_t>("metric-frequency") == 0)
-        {
-            Log::fatal()
-                << "--metric-frequency should not be zero when using the default metric leader";
-            std::exit(EXIT_FAILURE);
-        }
-
-        config.metric_use_frequency = true;
-        config.metric_frequency = arguments.as<std::uint64_t>("metric-frequency");
-    }
-    else
-    {
-
-        if (!arguments.provided("metric-count") || arguments.as<int>("metric-count") == 0)
-        {
-            Log::fatal() << "--metric-count should not be less or equal to zero when using a "
-                            "custom metric leader";
-            std::exit(EXIT_FAILURE);
-        }
-
-        config.metric_use_frequency = false;
-        config.metric_count = arguments.as<std::uint64_t>("metric-count");
-    }
-
-    if (arguments.given("standard-metrics"))
-    {
-        for (const auto& mem_event : platform::get_mem_events())
-        {
-            perf_group_events.emplace_back(mem_event.name());
-        }
-        perf_group_events.emplace_back("instructions");
-        perf_group_events.emplace_back("cpu-cycles");
-    }
-
-    config.metric_leader = arguments.get("metric-leader");
-    config.group_counters = perf_group_events;
-    config.userspace_counters = perf_userspace_events;
-
-    config.exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
-
-    if (perf::perf_event_paranoid() > 1 && !config.exclude_kernel)
-    {
-        std::cerr << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
-                     "retrying without kernel samples."
-                  << std::endl;
-        std::cerr << "To solve this warning you can do one of the following:" << std::endl;
-        std::cerr << " * sysctl kernel.perf_event_paranoid=1" << std::endl;
-        std::cerr << " * run lo2s as root" << std::endl;
-        std::cerr << " * run with --no-kernel to disable kernel space sampling in "
-                     "the first place,"
-                  << std::endl;
-        config.exclude_kernel = 1;
-    }
-
-    if (arguments.count("x86-adapt-knob"))
-    {
-#ifdef HAVE_X86_ADAPT
-        config.x86_adapt_knobs = arguments.get_all("x86-adapt-knob");
-#else
-        Log::fatal() << "lo2s was built without support for x86_adapt; "
-                        "cannot request x86_adapt knobs.\n";
-        std::exit(EXIT_FAILURE);
-#endif
-    }
-
-#ifndef HAVE_X86_ENERGY
-    if (config.use_x86_energy)
-    {
-        lo2s::Log::fatal() << "lo2s was built without support for x86_energy; "
-                              "cannot request x86_energy readings.\n";
-        std::exit(EXIT_FAILURE);
-    }
-#endif
-
-#ifndef HAVE_SENSORS
-    if (config.use_sensors)
-    {
-        lo2s::Log::fatal() << "lo2s was built without support for libsensors; "
-                              "cannot request sensor recording.\n";
-        std::exit(EXIT_FAILURE);
-    }
-#endif
-
-    config.command_line =
-        nitro::lang::join(arguments.positionals().begin(), arguments.positionals().end());
+    check_program_under_test_options(config);
+    check_perf_options(config);
+    check_perf_metric_options(config);
 
     instance = std::move(config);
 }

@@ -60,15 +60,16 @@ namespace trace
 
 constexpr pid_t Trace::METRIC_PID;
 
-std::string get_trace_name(std::string prefix = "")
+std::string get_trace_name()
 {
-    nitro::lang::replace_all(prefix, "{DATE}", get_datetime());
-    nitro::lang::replace_all(prefix, "{HOSTNAME}", nitro::env::hostname());
+    std::string path = config().trace_path;
+    nitro::lang::replace_all(path, "{DATE}", get_datetime());
+    nitro::lang::replace_all(path, "{HOSTNAME}", nitro::env::hostname());
 
-    auto result = prefix;
+    auto result = path;
 
     std::regex env_re("\\{ENV=([^}]*)\\}");
-    auto env_begin = std::sregex_iterator(prefix.begin(), prefix.end(), env_re);
+    auto env_begin = std::sregex_iterator(path.begin(), path.end(), env_re);
     auto env_end = std::sregex_iterator();
 
     for (std::sregex_iterator it = env_begin; it != env_end; ++it)
@@ -80,12 +81,11 @@ std::string get_trace_name(std::string prefix = "")
 }
 
 Trace::Trace()
-: trace_name_(get_trace_name(config().trace_path)), archive_(trace_name_, "traces"),
-  registry_(archive_.registry()),
+: trace_name_(get_trace_name()), archive_(trace_name_, "traces"), registry_(archive_.registry()),
   calling_context_tree_(CallingContext::root(), GlobalCctxNode(nullptr)),
   interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
       intern("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
-      otf2::common::base_type::decimal, 0, config().sampling_period)),
+      otf2::common::base_type::decimal, 0, config().perf_sampling_period)),
   comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
       intern("All pthread locations"), otf2::common::paradigm_type::pthread,
       otf2::common::group_flag_type::none)),
@@ -108,7 +108,7 @@ Trace::Trace()
     summary().set_trace_dir(trace_name_);
 
     archive_.set_creator(std::string("lo2s - ") + lo2s::version());
-    archive_.set_description(config().command_line);
+    archive_.set_description(config().lo2s_command_line);
 
     auto& uname = lo2s::get_uname();
     add_lo2s_property("UNAME::SYSNAME", std::string{ uname.sysname });
@@ -202,7 +202,7 @@ Trace::Trace()
     {
         nec_interrupt_generator_ = registry_.create<otf2::definition::interrupt_generator>(
             intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
-            otf2::common::base_type::decimal, 0, config().sampling_period);
+            otf2::common::base_type::decimal, 0, config().perf_sampling_period);
     }
 
     if (config().use_posix_io)

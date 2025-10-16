@@ -55,79 +55,119 @@ enum class DwarfUsage
 struct Config
 {
     // General
+    bool quiet = false;
     MonitorType monitor_type;
     Process process;
-    std::vector<std::string> command;
-    std::string command_line;
-    bool quiet = false;
-    bool drop_root = false;
-    std::string user = "";
-    // Optional features
-    std::vector<std::string> tracepoint_events;
-#ifdef HAVE_X86_ADAPT
-    std::vector<std::string> x86_adapt_knobs;
-#endif
-    bool use_sensors = false;
-    int cgroup_fd = -1;
+    std::chrono::milliseconds read_interval;
+    std::string lo2s_command_line;
+
     // OTF2
     std::string trace_path;
+
+    // Program-under-test
+    std::vector<std::string> command;
+
+    bool drop_root = false;
+    std::string user = "";
+
     // perf
     std::size_t mmap_pages;
-    bool exclude_kernel = false;
-    bool process_recording = false;
-    // Instruction sampling
-    bool sampling = false;
-    std::uint64_t sampling_period;
-    std::string sampling_event;
-    bool enable_cct = false;
-    bool suppress_ip = false;
-    bool disassemble = false;
-    // Interval monitors
-    std::chrono::nanoseconds read_interval;
-    std::chrono::nanoseconds userspace_read_interval;
     std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
-    std::chrono::nanoseconds ringbuf_read_interval;
-    // Metrics
-    bool metric_use_frequency = true;
+    int cgroup_fd = -1;
 
-    std::uint64_t metric_count;
-    std::uint64_t metric_frequency;
+    // perf -- instruction sampling
+    bool use_perf_sampling = false;
+    bool use_process_recording = false;
 
-    std::string metric_leader;
-    std::vector<std::string> group_counters;
-    std::vector<std::string> userspace_counters;
-    // time synchronizatio
-    std::optional<clockid_t> clockid;
-    bool use_pebs = false;
-    // x86_energy
-    bool use_x86_energy = false;
-    // block I/O
+    std::uint64_t perf_sampling_period;
+    std::string perf_sampling_event;
+
+    bool exclude_kernel = false;
+    bool enable_callgraph = false;
+    bool disassemble = false;
+
+    DwarfUsage dwarf;
+
+    // perf -- Python sampling
+    bool use_python = true;
+
+    // perf -- tracepoints
+    std::vector<std::string> tracepoint_events;
+
+    // perf -- block I/O
     bool use_block_io = false;
-    // posix I/O
+
+    // perf -- posix I/O
     bool use_posix_io = false;
-    // syscalls
+
+    // perf -- syscall recording
     bool use_syscalls = false;
     std::vector<int64_t> syscall_filter;
-    // NEC SX-Aurora Tsubasa
+
+    // perf -- group recorded metrics
+    bool use_group_metrics = false;
+    bool metric_use_frequency = true;
+
+    std::uint64_t metric_count = 0;
+    std::uint64_t metric_frequency = 0;
+
+    std::string metric_leader = "";
+    std::vector<std::string> group_counters;
+
+    // perf -- userspace recorded metrics
+    bool use_userspace_metrics = false;
+    std::chrono::nanoseconds userspace_read_interval;
+    std::vector<std::string> userspace_counters;
+
+    // perf -- clock source
+    std::optional<clockid_t> clockid = std::nullopt;
+    bool use_pebs = false;
+
+    // x86_energy
+    bool use_x86_energy = false;
+
+    // x86_adapt
+    std::vector<std::string> x86_adapt_knobs;
+
+    // Linux sensors
+    bool use_sensors = false;
+
+    // Accelerators
+    // Accelerators -- NEC SX-Aurora Tsubasa
     bool use_nec = false;
     std::chrono::microseconds nec_read_interval;
     std::chrono::milliseconds nec_check_interval;
-    // Nvidia CUPTI
+
+    // Accelerators -- Nvidia CUPTI
     bool use_nvidia = false;
-    // OpenMP
+
+    // Accelerators -- OpenMP
     bool use_openmp = false;
-    // AMD HIP
+
+    // Accelerators -- AMD HIP
     bool use_hip = false;
-    // Function resolution
-    DwarfUsage dwarf;
-    // Python
-    bool use_python = true;
+
     // Ringbuffer interface
     std::string socket_path;
     std::string injectionlib_path;
     uint64_t ringbuf_size;
+    std::chrono::nanoseconds ringbuf_read_interval;
+
+    bool use_any_tracepoint() const
+    {
+        return !tracepoint_events.empty() || use_block_io || use_syscalls;
+    }
+
+    bool use_perf() const
+    {
+        return use_block_io || use_group_metrics || use_userspace_metrics || use_perf_sampling ||
+               use_process_recording;
+    }
 };
 
 const Config& config();
+
+const Config& config_or_default();
+
 void parse_program_options(int argc, const char** argv);
 } // namespace lo2s
