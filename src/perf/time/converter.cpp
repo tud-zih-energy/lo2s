@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "otf2xx/chrono/duration.hpp"
 #include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
 
@@ -30,37 +31,46 @@ namespace time
 {
 Converter::Converter() : offset(otf2::chrono::duration(0))
 {
-    Reader reader;
-    reader.read();
-
-    if (reader.perf_time.time_since_epoch().count() == 0)
+    if (config().use_perf())
     {
-        Log::error()
-            << "Could not determine perf_time offset. Synchronization event was not triggered.";
-        return;
-    }
+        Reader reader;
+        reader.read();
 
-    // we expect local_time <= perf_time, i.e. time_diff < 0
-    const auto time_diff =
-        reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
-
-    if (lo2s::config().clockid.has_value())
-    {
-        if (time_diff < std::chrono::microseconds(-100) or time_diff > std::chrono::microseconds(0))
+        if (reader.perf_time.time_since_epoch().count() == 0)
         {
-            Log::warn() << "Unusually large perf time offset detected after synchronization! ("
-                        << std::showpos << time_diff.count() << std::noshowpos << "ns)";
+            Log::error()
+                << "Could not determine perf_time offset. Synchronization event was not triggered.";
+            return;
+        }
+
+        // we expect local_time <= perf_time, i.e. time_diff < 0
+        const auto time_diff =
+            reader.local_time.time_since_epoch() - reader.perf_time.time_since_epoch();
+
+        if (lo2s::config().clockid.has_value())
+        {
+            if (time_diff < std::chrono::microseconds(-100) or
+                time_diff > std::chrono::microseconds(0))
+            {
+                Log::warn() << "Unusually large perf time offset detected after synchronization! ("
+                            << std::showpos << time_diff.count() << std::noshowpos << "ns)";
+                offset = time_diff;
+            }
+        }
+        else
+        {
             offset = time_diff;
         }
+        Log::debug() << "perf time offset: " << time_diff.count() << "ns ("
+                     << reader.local_time.time_since_epoch().count() << "ns - "
+                     << reader.perf_time.time_since_epoch().count() << "ns).";
     }
     else
     {
-        offset = time_diff;
+        // If we are not using any perf features at all, there is no sense in synchronizing
+        // the perf-internal and external clocks, so use an offset of 0.
+        offset = otf2::chrono::duration(0);
     }
-
-    Log::debug() << "perf time offset: " << time_diff.count() << "ns ("
-                 << reader.local_time.time_since_epoch().count() << "ns - "
-                 << reader.perf_time.time_since_epoch().count() << "ns).";
 }
 } // namespace time
 } // namespace perf

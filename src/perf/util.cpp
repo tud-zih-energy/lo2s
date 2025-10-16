@@ -31,6 +31,7 @@ int perf_event_paranoid()
 int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                     unsigned long flags, int cgroup_fd)
 {
+    assert(config_or_default().use_perf());
     int cpuid = -1;
     pid_t pid = -1;
     if (scope.is_cpu())

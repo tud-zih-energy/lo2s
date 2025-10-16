@@ -110,7 +110,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
     update_calling_context(Process(sample->pid), Thread(sample->tid), tp, false);
 
-    if (!has_cct_)
+    if (!record_callgraph_)
     {
         local_cctx_tree_.cctx_sample(tp, sample->ip);
     }

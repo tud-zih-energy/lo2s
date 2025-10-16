@@ -59,12 +59,12 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
 #endif
     trace_.emplace_thread(process, thread, name);
 
-    if (config().sampling)
+    if (config().use_perf_sampling)
     {
     }
 
     ExecutionScope scope = ExecutionScope(thread);
-    if (config().sampling ||
+    if (config().use_perf_sampling ||
         !perf::EventComposer::instance().has_counters_for(MeasurementScope::group_metric(scope)) ||
         !perf::EventComposer::instance().has_counters_for(
             MeasurementScope::userspace_metric(scope)))

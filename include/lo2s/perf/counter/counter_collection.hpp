@@ -39,6 +39,11 @@ struct CounterCollection
     std::optional<EventAttr> leader = std::nullopt;
     std::vector<EventAttr> counters;
 
+    bool empty() const
+    {
+        return !leader.has_value() && counters.empty();
+    }
+
     double get_scale(int index) const
     {
         if (index == 0)

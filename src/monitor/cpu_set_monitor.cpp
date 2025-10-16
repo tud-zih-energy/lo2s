@@ -48,7 +48,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
     pid_t pid;
 
     const std::filesystem::path proc_path("/proc");
-    if (config().sampling)
+    if (config().use_perf_sampling)
     {
         for (const auto& p : std::filesystem::directory_iterator(proc_path))
         {
@@ -79,7 +79,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
         }
     }
 
-    if (config().sampling || config().process_recording)
+    if (config().use_perf_sampling || config().use_process_recording)
     {
         trace_.emplace_threads(get_comms_for_running_threads());
     }
@@ -157,7 +157,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    if (config().sampling || config().process_recording)
+    if (config().use_perf_sampling || config().use_process_recording)
     {
         trace_.emplace_threads(get_comms_for_running_threads());
     }

@@ -90,7 +90,7 @@ public:
             while (!readers_.at(state.identity).empty())
             {
                 auto event = readers_.at(state.identity).top();
-                if (event->time > earliest_available.top().time)
+                if (!earliest_available.empty() && event->time > earliest_available.top().time)
                 {
                     state.time = event->time;
                     earliest_available.push(state);

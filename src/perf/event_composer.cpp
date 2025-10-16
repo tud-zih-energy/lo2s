@@ -68,13 +68,13 @@ EventAttr EventComposer::create_sampling_event()
         return sampling_event_.value();
     }
 
-    if (config().sampling)
+    if (config().use_perf_sampling)
     {
-        sampling_event_ = EventResolver::instance().get_event_by_name(config().sampling_event);
+        sampling_event_ = EventResolver::instance().get_event_by_name(config().perf_sampling_event);
         Log::debug() << "using sampling event \'" << sampling_event_->name()
-                     << "\', period: " << config().sampling_period;
+                     << "\', period: " << config().perf_sampling_period;
 
-        sampling_event_->sample_period(config().sampling_period);
+        sampling_event_->sample_period(config().perf_sampling_period);
 
         if (config().use_pebs)
         {
@@ -109,12 +109,12 @@ EventAttr EventComposer::create_sampling_event()
     sampling_event_->set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID |
                                      PERF_SAMPLE_CPU);
 
-    if (config().enable_cct)
+    if (config().enable_callgraph)
     {
         sampling_event_->set_sample_type(PERF_SAMPLE_CALLCHAIN);
     }
 
-    if (config().sampling)
+    if (config().use_perf_sampling)
     {
         set_precision(sampling_event_.value());
     }
@@ -207,6 +207,13 @@ void EventComposer::emplace_group_counters()
     {
         return;
     }
+
+    if (config().metric_leader.empty() && config().group_counters.empty())
+    {
+        group_counters_ = counter::CounterCollection{};
+        return;
+    }
+
     counter::CounterCollection res;
 
     res.leader = EventResolver::instance().get_metric_leader(config().metric_leader);
@@ -274,6 +281,11 @@ counter::CounterCollection EventComposer::counters_for(MeasurementScope scope)
     if (scope.type == MeasurementScopeType::GROUP_METRIC)
     {
         emplace_group_counters();
+
+        if (group_counters_->empty())
+        {
+            return {};
+        }
 
         if (group_counters_->leader->is_available_in(scope.scope))
         {
