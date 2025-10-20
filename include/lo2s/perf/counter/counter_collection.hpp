@@ -58,7 +58,7 @@ struct CounterCollection
 
     friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader.value() == rhs.leader.value())
+        if (lhs.leader < rhs.leader)
         {
             return lhs.counters == rhs.counters;
         }
@@ -67,11 +67,11 @@ struct CounterCollection
 
     friend bool operator<(const CounterCollection& lhs, const CounterCollection& rhs)
     {
-        if (lhs.leader.value() == rhs.leader.value())
+        if (lhs.leader == rhs.leader)
         {
             return lhs.counters < rhs.counters;
         }
-        return lhs.leader.value() < rhs.leader.value();
+        return lhs.leader < rhs.leader;
     }
 };
 
