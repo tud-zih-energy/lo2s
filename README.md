@@ -148,6 +148,9 @@ Thomas Ilsche, Robert Schöne, Philipp Joram, Mario Bielert and Andreas Gocht: [
 
 Thomas Ilsche, Mario Bielert, Christian von Elm: [Bridging the Gap between Application Performance Analysis and System Monitoring 📕](https://tu-dresden.de/zih/forschung/ressourcen/dateien/projekte/energyefficiency/2022-lo2s-system-monitoring.pdf) In: 2022 IEEE International Conference on Cluster Computing (CLUSTER), DOI: [10.1109/CLUSTER51413.2022.00080](https://doi.org/10.1109/CLUSTER51413.2022.00080)
 
+Christian von Elm, Robert Schöne: [Performance Tools for the NEC SX-Aurora Tsubasa 📕](https://dl.acm.org/doi/10.1145/3680256.3721323)
+ In: ICPE '25: Companion of the 16th ACM/SPEC International Conference on Performance Engineering, DOI: [10.1145/3680256.3721323](https://doi.org/10.1145/3680256.3721323)
+
 # Name
 
 The name `lo2s` is an acronym for **L**inux **O**TF**2** **S**ampling
