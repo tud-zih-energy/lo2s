@@ -22,6 +22,9 @@ set_tests_properties(process_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
 add_test(NAME userspace_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/userspace_counters/userspace_counters.sh)
 set_tests_properties(userspace_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
 
+add_test(NAME predefined_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/predefined_counters/predefined_counters.sh)
+set_tests_properties(predefined_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
+
 # System Mode tests, those require perf_event_paranoid=0
 add_test(NAME system_sampling COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/system_sampling/system_sampling.sh)
 set_tests_properties(system_sampling PROPERTIES FIXTURES_REQUIRED PARANOID0)
