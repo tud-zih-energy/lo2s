@@ -1,4 +1,4 @@
-if test ! -d "/sys/kernel/tracing/" || test ! -x "/sys/kernel/tracing/events/syscalls/sys_enter_write"
+if test ! -r "/sys/kernel/tracing/events/syscalls/sys_enter_write/format"
 then
     exit -1
 else
