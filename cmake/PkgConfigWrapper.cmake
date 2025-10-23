@@ -38,12 +38,22 @@ macro(FindPkgConfigWrapper libname pkgconfig_lib_name main_library)
     if(${libname}_PKG_CONFIG_FOUND)
         if(${libname}_USE_STATIC_LIBS)
             foreach(LIBRARY IN LISTS ${libname}_PKG_CONFIG_STATIC_LIBRARIES)
+                if(${LIBRARY} STREQUAL "pthread")
+                    set(NEEDS_PTHREAD TRUE)
+                    continue()
+                endif()
+
                 find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.a"
                     HINTS ${${libname}_PKG_CONFIG_STATIC_LIBRARY_DIRS} ENV LIBRARY_PATH)
                 list(APPEND ${libname}_LIBRARIES "${LIBRARY}_LIBRARY")
             endforeach()
         else()
             foreach(LIBRARY IN LISTS ${libname}_PKG_CONFIG_LIBRARIES)
+                if(${LIBRARY} STREQUAL "pthread")
+                    set(NEEDS_PTHREAD TRUE)
+                    continue()
+                endif()
+
                 find_library(${LIBRARY}_LIBRARY NAMES "lib${LIBRARY}.so"
                     HINTS ${${libname}_PKG_CONFIG_LIBRARY_DIRS} ENV LIBRARY_PATH)
                 list(APPEND ${libname}_LIBRARIES "${LIBRARY}_LIBRARY")
@@ -52,8 +62,15 @@ macro(FindPkgConfigWrapper libname pkgconfig_lib_name main_library)
     endif()
 
     include (FindPackageHandleStandardArgs)
+
+    if(${NEEDS_PTHREAD})
+        find_package(Threads REQUIRED)
+    FIND_PACKAGE_HANDLE_STANDARD_ARGS(${libname} DEFAULT_MSG
+        ${libname}_PKG_CONFIG_INCLUDE_DIRS ${${libname}_LIBRARIES} Threads_FOUND)
+    else()
     FIND_PACKAGE_HANDLE_STANDARD_ARGS(${libname} DEFAULT_MSG
         ${libname}_PKG_CONFIG_INCLUDE_DIRS ${${libname}_LIBRARIES})
+    endif()
 
     if(${libname}_FOUND)
         add_library(${libname}::${libname} UNKNOWN IMPORTED)
@@ -68,6 +85,11 @@ macro(FindPkgConfigWrapper libname pkgconfig_lib_name main_library)
             endif()
         endforeach()
         target_include_directories(${libname}::${libname} INTERFACE ${${libname}_PKG_CONFIG_INCLUDE_DIRS})
+        
+        if(${NEEDS_PTHREAD})
+            target_link_libraries(${libname}::${libname} INTERFACE Threads::Threads)
+        endif()
     endif()
+
     mark_as_advanced(${libname}_LIBRARY ${libname}_PKG_CONFIG_INCLUDE_DIRS)
 endmacro()
