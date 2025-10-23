@@ -82,16 +82,12 @@ if(NOT BPFOBJECT_CLANG_EXE)
 
       # Anything older than clang 10 doesn't really work
       string(COMPARE LESS ${CLANG_VERSION_MAJOR} 10 CLANG_VERSION_MAJOR_LT10)
-      if(${CLANG_VERSION_MAJOR_LT10})
-        message(FATAL_ERROR "clang ${CLANG_VERSION} is too old for BPF CO-RE")
+      if(NOT ${CLANG_VERSION_MAJOR_LT10})
+          set(CLANG_RECENT_ENOUGH TRUE)
       endif()
 
       message(STATUS "Found clang version: ${CLANG_VERSION}")
-    else()
-      message(FATAL_ERROR "Failed to parse clang version string: ${CLANG_version_output}")
     endif()
-  else()
-    message(FATAL_ERROR "Command \"${BPFOBJECT_CLANG_EXE} --version\" failed with output:\n${CLANG_version_error}")
   endif()
 endif()
 
@@ -119,36 +115,41 @@ find_package_handle_standard_args(BpfObject
     BPFOBJECT_BPFTOOL_EXE
     BPFOBJECT_CLANG_EXE
     LibBpf_FOUND
+    CLANG_RECENT_ENOUGH
     BPFOBJECT_VMLINUX_H
     GENERATED_VMLINUX_DIR)
 
-# Get clang bpf system includes
-execute_process(
-  COMMAND bash -c "${BPFOBJECT_CLANG_EXE} -v -E - < /dev/null 2>&1 |
-          sed -n '/<...> search starts here:/,/End of search list./{ s| \\(/.*\\)|-idirafter \\1|p }'"
-  OUTPUT_VARIABLE CLANG_SYSTEM_INCLUDES_output
-  ERROR_VARIABLE CLANG_SYSTEM_INCLUDES_error
-  RESULT_VARIABLE CLANG_SYSTEM_INCLUDES_result
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(${CLANG_SYSTEM_INCLUDES_result} EQUAL 0)
-  separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
-  message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
-else()
-  message(FATAL_ERROR "Failed to determine BPF system includes: ${CLANG_SYSTEM_INCLUDES_error}")
-endif()
+if(${BpfObject_FOUND})
+    # Get clang bpf system includes
+    execute_process(
+      COMMAND bash -c "${BPFOBJECT_CLANG_EXE} -v -E - < /dev/null 2>&1 |
+              sed -n '/<...> search starts here:/,/End of search list./{ s| \\(/.*\\)|-idirafter \\1|p }'"
+      OUTPUT_VARIABLE CLANG_SYSTEM_INCLUDES_output
+      ERROR_VARIABLE CLANG_SYSTEM_INCLUDES_error
+      RESULT_VARIABLE CLANG_SYSTEM_INCLUDES_result
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-# Get target arch
-execute_process(COMMAND uname -m
-  COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
-  OUTPUT_VARIABLE ARCH_output
-  ERROR_VARIABLE ARCH_error
-  RESULT_VARIABLE ARCH_result
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(${ARCH_result} EQUAL 0)
-  set(ARCH ${ARCH_output})
-  message(STATUS "BPF target arch: ${ARCH}")
-else()
-  message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
+    if(${CLANG_SYSTEM_INCLUDES_result} EQUAL 0)
+      separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
+      message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
+    else()
+      message(FATAL_ERROR "Failed to determine BPF system includes: ${CLANG_SYSTEM_INCLUDES_error}")
+    endif()
+
+    # Get target arch
+    execute_process(COMMAND uname -m
+      COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
+      OUTPUT_VARIABLE ARCH_output
+      ERROR_VARIABLE ARCH_error
+      RESULT_VARIABLE ARCH_result
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if(${ARCH_result} EQUAL 0)
+      set(ARCH ${ARCH_output})
+      message(STATUS "BPF target arch: ${ARCH}")
+    else()
+      message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
+    endif()
 endif()
 
 # Public macro
