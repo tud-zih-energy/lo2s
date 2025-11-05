@@ -256,7 +256,7 @@ set(SOURCE_FILES
 
     src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
     src/platform.cpp
-    src/topology.cpp src/pipe.cpp src/dwarf_resolve.cpp
+    src/topology.cpp src/dwarf_resolve.cpp
     src/function_resolver.cpp
     src/instruction_resolver.cpp
     src/util.cpp

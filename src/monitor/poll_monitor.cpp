@@ -26,6 +26,11 @@
 
 #include <cmath>
 
+extern "C"
+{
+#include <sys/eventfd.h>
+}
+
 namespace lo2s
 {
 namespace monitor
@@ -35,7 +40,7 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
 : ThreadedMonitor(trace, name)
 {
     pfds_.resize(2);
-    stop_pfd().fd = stop_pipe_.read_fd();
+    stop_pfd().fd = eventfd(0, 0);
     stop_pfd().events = POLLIN;
     stop_pfd().revents = 0;
 
@@ -78,7 +83,8 @@ void PollMonitor::stop()
         return;
     }
 
-    stop_pipe_.write();
+    uint64_t stop_val = 1;
+    write(stop_pfd().fd, &stop_val, sizeof(stop_val));
     thread_.join();
 }
 

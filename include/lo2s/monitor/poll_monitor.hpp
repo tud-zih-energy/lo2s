@@ -24,7 +24,6 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
-#include <lo2s/pipe.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <chrono>
@@ -66,8 +65,6 @@ protected:
     {
         return pfds_[1];
     }
-
-    Pipe stop_pipe_;
 
 private:
     std::vector<pollfd> pfds_;
