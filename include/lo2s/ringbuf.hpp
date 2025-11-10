@@ -85,7 +85,7 @@ public:
         uint64_t version = header_map.as<struct ringbuf_header>()->version;
         if (version != RINGBUF_VERSION)
         {
-            throw new std::runtime_error("Incompatible Ringbuffer Version" +
+            throw new std::runtime_error(std::string("Incompatible Ringbuffer Version") +
                                          std::to_string(RINGBUF_VERSION) +
                                          " (us) != " + std::to_string(version) + " (other side)!");
         }
@@ -198,11 +198,11 @@ class RingbufWriter
 public:
     RingbufWriter(Process process, RingbufMeasurementType type)
     {
-        int fd = memfd_create("lo2s", 0);
+        int fd = memfd_create("lo2s", MFD_ALLOW_SEALING);
 
         if (fd == -1)
         {
-            throw ::std::system_error(errno, std::system_category());
+            throw_errno();
         }
 
         size_t pagesize = sysconf(_SC_PAGESIZE);
@@ -229,6 +229,13 @@ public:
             throw std::system_error(errno, std::system_category());
         }
 
+        // Prevent the other process from modifying the size of the ringbuffer.
+        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_GROW));
+        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK));
+
+        // Prevent the other process from modifying the previously set seals.
+        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_SEAL));
+
         auto header_map = SharedMemory(fd, sizeof(struct ringbuf_header), 0);
 
         struct ringbuf_header* first_header = header_map.as<struct ringbuf_header>();
@@ -239,7 +246,7 @@ public:
         first_header->size = size;
         first_header->tail.store(0);
         first_header->head.store(0);
-
+        first_header->lo2s_ready = false;
         first_header->pid = process.as_pid_t();
 
         rb_ = std::make_unique<ShmRingbuf>(fd);
@@ -293,6 +300,23 @@ public:
         return res;
     }
 
+    bool finalized()
+    {
+        return finalized_;
+    }
+
+    // OpenMP loves to call its measurement callbacks beyond the lifetime of the
+    // main thread (after it has returned from main()), which makes all the uses of RingbufWriter in
+    // the other OpenMP threads UB.
+    //
+    // To alleviate this, set finalized to true in the destructor of RingbufWriter. Hopefully,
+    // enough of the object remains to atleast check that member.
+    ~RingbufWriter()
+    {
+        close(data_socket_);
+        finalized_ = true;
+    }
+
 private:
     // Writes the fd of the shared memory to the Unix Domain Socket
     void write_fd(RingbufMeasurementType type)
@@ -303,8 +327,8 @@ private:
             throw std::runtime_error("LO2S_SOCKET is not set!");
         }
 
-        int data_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
-        if (data_socket == -1)
+        data_socket_ = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+        if (data_socket_ == -1)
         {
             throw std::system_error(errno, std::system_category());
         }
@@ -316,7 +340,7 @@ private:
 
         strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
 
-        int ret = connect(data_socket, (const struct sockaddr*)&addr, sizeof(addr));
+        int ret = connect(data_socket_, (const struct sockaddr*)&addr, sizeof(addr));
         if (ret < 0)
         {
             throw std::system_error(errno, std::system_category());
@@ -352,13 +376,13 @@ private:
         msg.msg_iov = iov;
         msg.msg_iovlen = 1;
 
-        sendmsg(data_socket, &msg, 0);
-
-        close(data_socket);
+        sendmsg(data_socket_, &msg, 0);
     }
 
     size_t reserved_size_ = 0;
     std::unique_ptr<ShmRingbuf> rb_;
+    bool finalized_ = false;
+    int data_socket_;
 };
 
 class RingbufReader

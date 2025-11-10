@@ -66,11 +66,11 @@ PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
     }
 }
 
-void PollMonitor::add_fd(int fd)
+void PollMonitor::add_fd(int fd, int events)
 {
     struct pollfd pfd;
     pfd.fd = fd;
-    pfd.events = POLLIN;
+    pfd.events = events;
     pfd.revents = 0;
     pfds_.push_back(pfd);
 }
@@ -117,21 +117,6 @@ void PollMonitor::run()
             throw_errno();
         }
         Log::trace() << "PollMonitor poll returned " << ret;
-
-        bool panic = false;
-        for (const auto& pfd : pfds_)
-        {
-            if (pfd.revents != 0 && pfd.revents != POLLIN)
-            {
-                Log::warn() << "Poll on raw event fds got unexpected event flags: " << pfd.revents
-                            << ". Stopping raw event polling.";
-                panic = true;
-            }
-        }
-        if (panic)
-        {
-            break;
-        }
 
         monitor();
 

@@ -27,6 +27,7 @@
 #include <lo2s/trace/fwd.hpp>
 
 #include <chrono>
+#include <sys/poll.h>
 #include <vector>
 
 extern "C"
@@ -52,7 +53,7 @@ protected:
     void run() override;
     void monitor();
 
-    void add_fd(int fd);
+    void add_fd(int fd, int events = POLLIN);
 
     virtual void monitor([[maybe_unused]] int fd) {};
 

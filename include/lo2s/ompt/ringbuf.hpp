@@ -17,6 +17,11 @@ public:
 
     bool ompt_enter(uint64_t tp, OMPTCctx cctx)
     {
+
+        if (finalized())
+        {
+            return false;
+        }
         std::lock_guard<std::mutex> guard(mutex_);
 
         struct ompt_enter* ev = reserve<struct ompt_enter>();
@@ -37,6 +42,11 @@ public:
 
     bool ompt_leave(uint64_t tp, OMPTCctx cctx)
     {
+        if (finalized())
+        {
+            return false;
+        }
+
         std::lock_guard<std::mutex> guard(mutex_);
 
         struct ompt_exit* ev = reserve<struct ompt_exit>();

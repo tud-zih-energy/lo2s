@@ -35,6 +35,12 @@ inline std::system_error make_system_error()
     throw make_system_error();
 }
 
+#define CHECK_ERRNO(op)                                                                            \
+    if ((op) == -1)                                                                                \
+    {                                                                                              \
+        throw_errno();                                                                             \
+    }
+
 inline void check_errno(long retval)
 {
     if (retval == -1)

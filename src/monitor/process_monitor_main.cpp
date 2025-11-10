@@ -200,6 +200,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
 
     for (const auto& env_var : env)
     {
+        Log::debug() << "Child process ENV: " << env_var.first << "=" << env_var.second;
         setenv(env_var.first.c_str(), env_var.second.c_str(), 1);
     }
 

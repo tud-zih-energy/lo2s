@@ -65,7 +65,7 @@ private:
     std::map<int, GPUMonitor> gpu_monitors_;
     std::map<int, OpenMPMonitor> openmp_monitors_;
 
-    int socket = -1;
+    int socket_ = -1;
 };
 } // namespace monitor
 } // namespace lo2s

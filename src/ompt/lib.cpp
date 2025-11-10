@@ -35,6 +35,10 @@ static void on_ompt_callback_parallel_begin(ompt_data_t* parent_task_data,
                                             uint32_t requested_team_size, int flag,
                                             const void* codeptr_ra)
 {
+    if (ompt_rb_writer->finalized())
+    {
+        return;
+    }
 
     struct lo2s::omp::OMPTCctx cctx;
 
@@ -49,6 +53,11 @@ static void on_ompt_callback_parallel_begin(ompt_data_t* parent_task_data,
 static void on_ompt_callback_parallel_end(ompt_data_t* parallel_data, ompt_data_t* task_data,
                                           int flag, const void* codeptr_ra)
 {
+    if (ompt_rb_writer->finalized())
+    {
+        return;
+    }
+
     struct lo2s::omp::OMPTCctx cctx;
 
     cctx.type = lo2s::omp::OMPType::PARALLEL;
@@ -61,6 +70,11 @@ static void on_ompt_callback_parallel_end(ompt_data_t* parallel_data, ompt_data_
 static void on_ompt_callback_master(ompt_scope_endpoint_t endpoint, ompt_data_t* parallel_data,
                                     ompt_data_t* task_data, const void* codeptr_ra)
 {
+    if (ompt_rb_writer->finalized())
+    {
+        return;
+    }
+
     struct lo2s::omp::OMPTCctx cctx;
 
     cctx.type = lo2s::omp::OMPType::MASTER;
@@ -81,6 +95,11 @@ static void on_ompt_callback_work(ompt_work_t wstype, ompt_scope_endpoint_t endp
                                   ompt_data_t* parallel_data, ompt_data_t* task_data,
                                   uint64_t count, const void* codeptr_ra)
 {
+    if (ompt_rb_writer->finalized())
+    {
+        return;
+    }
+
     struct lo2s::omp::OMPTCctx cctx;
 
     switch (wstype)
@@ -114,6 +133,11 @@ static void on_ompt_callback_sync_region(ompt_sync_region_t kind, ompt_scope_end
                                          ompt_data_t* parallel_data, ompt_data_t* task_data,
                                          const void* codeptr_ra)
 {
+    if (ompt_rb_writer->finalized())
+    {
+        return;
+    }
+
     struct lo2s::omp::OMPTCctx cctx;
 
     cctx.type = lo2s::omp::OMPType::SYNC;

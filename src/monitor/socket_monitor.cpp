@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fcntl.h>
 #include <lo2s/monitor/socket_monitor.hpp>
 
 #include <lo2s/config.hpp>
@@ -27,7 +28,7 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
-#include <memory>
+#include <stdexcept>
 
 extern "C"
 {
@@ -42,8 +43,8 @@ namespace monitor
 SocketMonitor::SocketMonitor(trace::Trace& trace)
 : PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace)
 {
-    socket = ::socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    if (socket == -1)
+    socket_ = ::socket(AF_UNIX, SOCK_SEQPACKET, 0);
+    if (socket_ == -1)
     {
         throw_errno();
     }
@@ -54,18 +55,18 @@ SocketMonitor::SocketMonitor(trace::Trace& trace)
     strncpy(name.sun_path, config().socket_path.c_str(), sizeof(name.sun_path) - 1);
 
     unlink(config().socket_path.c_str());
-    int ret = bind(socket, (const struct sockaddr*)&name, sizeof(name));
+    int ret = bind(socket_, (const struct sockaddr*)&name, sizeof(name));
     if (ret == -1)
     {
         throw_errno();
     }
 
-    ret = listen(socket, 20);
+    ret = listen(socket_, 20);
     if (ret == -1)
     {
         throw_errno();
     }
-    add_fd(socket);
+    add_fd(socket_);
 }
 
 std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
@@ -124,49 +125,68 @@ void SocketMonitor::finalize_thread()
         monitor.second.stop();
     }
 
-    close(socket);
+    close(socket_);
     unlink(config().socket_path.c_str());
 }
 
 void SocketMonitor::monitor(int fd)
 {
-    if (fd != socket)
+    if (fd == stop_pfd().fd)
     {
         return;
     }
-    int data_socket = accept(socket, NULL, NULL);
-    if (data_socket == -1)
-    {
-        throw_errno();
-    }
 
-    int foo_fd = -1;
-    auto type_fd = read_fd(data_socket);
-
-    if (type_fd.has_value())
+    if (fd != socket_)
     {
-        if (type_fd.value().first == RingbufMeasurementType::GPU)
+        if (gpu_monitors_.count(fd))
         {
-            auto res =
-                gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
-                                      std::forward_as_tuple(trace_, type_fd.value().second));
-            res.first->second.start();
+            gpu_monitors_.erase(fd);
         }
-        else if (type_fd.value().first == RingbufMeasurementType::OPENMP)
-
+        else if (openmp_monitors_.count(fd))
         {
-            auto res =
-                openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
-                                         std::forward_as_tuple(trace_, type_fd.value().second));
-            res.first->second.start();
+            openmp_monitors_.erase(fd);
         }
         else
         {
-            throw std::runtime_error(fmt::format("Invalid ring buffer measurement type: {}",
-                                                 static_cast<uint64_t>(type_fd.value().first)));
+            throw std::runtime_error(fmt::format("fd was never seen before: {}!", fd));
         }
     }
-    close(data_socket);
+    else
+    {
+        int data_socket = accept(socket_, NULL, NULL);
+        if (data_socket == -1)
+        {
+            throw_errno();
+        }
+
+        add_fd(data_socket, 0);
+
+        auto type_fd = read_fd(data_socket);
+
+        if (type_fd.has_value())
+        {
+            if (type_fd.value().first == RingbufMeasurementType::GPU)
+            {
+                auto res = gpu_monitors_.emplace(
+                    std::piecewise_construct, std::forward_as_tuple(data_socket),
+                    std::forward_as_tuple(trace_, type_fd.value().second));
+                res.first->second.start();
+            }
+            else if (type_fd.value().first == RingbufMeasurementType::OPENMP)
+
+            {
+                auto res = openmp_monitors_.emplace(
+                    std::piecewise_construct, std::forward_as_tuple(data_socket),
+                    std::forward_as_tuple(trace_, type_fd.value().second));
+                res.first->second.start();
+            }
+            else
+            {
+                throw std::runtime_error(fmt::format("Invalid ring buffer measurement type: {}",
+                                                     static_cast<uint64_t>(type_fd.value().first)));
+            }
+        }
+    }
 }
 } // namespace monitor
 } // namespace lo2s
