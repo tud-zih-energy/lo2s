@@ -1,3 +1,4 @@
+#include "lo2s/helpers/errno_error.hpp"
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/types.hpp>
@@ -243,7 +244,7 @@ Thread gettid()
     return Thread(syscall(SYS_gettid));
 }
 
-int get_cgroup_mountpoint_fd(std::string cgroup)
+Expected<Fd, ErrnoError> get_cgroup_mountpoint_fd(std::string cgroup)
 {
     std::ifstream mtab("/proc/mounts");
 
@@ -266,16 +267,11 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
             {
                 std::filesystem::path cgroup_path =
                     std::filesystem::path(cgroup_match[2].str()) / cgroup;
-                int fd = open(cgroup_path.c_str(), O_RDONLY);
-
-                if (fd != -1)
-                {
-                    return fd;
-                }
+                return Fd::open(cgroup_path.c_str(), O_RDONLY);
             }
         }
     }
-    return -1;
+    return Unexpected(ErrnoError(-1, fmt::format("No cgroup mountpoint for {} found!", cgroup)));
 }
 
 std::set<std::uint32_t> parse_list(std::string list)
@@ -405,29 +401,6 @@ void bump_rlimit_fd()
     }
 }
 
-int timerfd_from_ns(std::chrono::nanoseconds duration)
-{
-    int timerfd;
-    struct itimerspec tspec;
-    memset(&tspec, 0, sizeof(struct itimerspec));
-
-    tspec.it_value.tv_nsec = 1;
-    tspec.it_interval.tv_sec = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
-    tspec.it_interval.tv_nsec = (duration % std::chrono::seconds(1)).count();
-
-    timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-
-    if (timerfd == -1)
-    {
-        throw_errno();
-    }
-
-    if (timerfd_settime(timerfd, TFD_TIMER_ABSTIME, &tspec, NULL) == -1)
-    {
-        throw_errno();
-    }
-    return timerfd;
-}
 
 bool known_non_executable(const std::string& filename)
 {

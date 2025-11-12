@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <lo2s/helpers/fd.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/util.hpp>
 
@@ -65,18 +66,18 @@ public:
         return *this;
     }
 
-    SharedMemory(int fd, size_t size, size_t offset = 0, void* location = nullptr) : size_(size)
+    SharedMemory(WeakFd fd, size_t size, size_t offset = 0, void* location = nullptr) : size_(size)
     {
         assert((offset % sysconf(_SC_PAGESIZE)) == 0);
 
         if (location == nullptr)
         {
-            addr_ = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+            addr_ = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd.as_int(), offset);
         }
         else
         {
             addr_ =
-                mmap(location, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd, offset);
+                mmap(location, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED, fd.as_int(), offset);
         }
 
         if (addr_ == MAP_FAILED)

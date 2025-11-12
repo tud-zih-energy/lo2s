@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "lo2s/helpers/unix_domain_socket.hpp"
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/openmp_monitor.hpp>
@@ -39,9 +40,9 @@ namespace lo2s
 namespace monitor
 {
 
-OpenMPMonitor::OpenMPMonitor(trace::Trace& trace, int fd)
-: PollMonitor(trace, "OpenMPMonitor", config().ringbuf_read_interval),
-  ringbuf_reader_(fd, config().clockid.value_or(0)), process_(ringbuf_reader_.header()->pid),
+OpenMPMonitor::OpenMPMonitor(trace::Trace& trace, Fd&& memory_fd)
+: PollMonitor(trace, "OpenMPMonitor", config().ringbuf_read_interval), memory_fd_(std::move(memory_fd)),
+  ringbuf_reader_(memory_fd.to_weak(), config().clockid.value_or(0)), process_(ringbuf_reader_.header()->pid),
   trace_(trace), time_converter_(perf::time::Converter::instance())
 {
 }
@@ -65,7 +66,7 @@ void OpenMPMonitor::create_thread_writer(otf2::chrono::time_point tp, uint64_t t
                                              CallingContext::process(process_));
 }
 
-void OpenMPMonitor::monitor(int fd [[maybe_unused]])
+void OpenMPMonitor::read_ringbuffer()
 {
     while (!ringbuf_reader_.empty())
     {

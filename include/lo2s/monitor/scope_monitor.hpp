@@ -53,7 +53,19 @@ public:
 
     void initialize_thread() override;
     void finalize_thread() override;
-    void monitor(int fd) override;
+
+    void read_all();
+
+    void on_stop() override
+    {
+        read_all();
+    }
+
+    void on_readout_interval() override
+    {
+        read_all();
+    }
+    void on_fd_ready(WeakFd fd, int revents) override;
 
     std::string group() const override
     {

@@ -27,6 +27,7 @@
 
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/writer/local.hpp>
+#include <stdexcept>
 
 namespace lo2s
 {
@@ -41,7 +42,20 @@ public:
     ~Recorder();
 
 protected:
-    void monitor(int fd) override;
+    void on_stop() override
+    {
+        read_sensors();
+    }
+
+    void on_readout_interval() override
+    {
+        read_sensors();
+    }
+
+    void on_fd_ready([[maybe_unused]] WeakFd fd, [[maybe_unused]] int revents) override
+    {
+        throw std::runtime_error("Despite never adding an fd to PollMonitor, we got a ready fd returned by it!");
+    }
 
     std::string group() const override
     {
@@ -49,6 +63,7 @@ protected:
     }
 
 private:
+    void read_sensors();
     otf2::writer::local& otf2_writer_;
 
     otf2::definition::metric_instance metric_instance_;

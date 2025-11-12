@@ -45,13 +45,13 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enabl
     if (config().use_perf_sampling || config().use_process_recording)
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(scope, trace, enable_on_exec);
-        add_fd(sample_writer_->fd());
+        add_fd(sample_writer_->get_weak_fd(), POLLIN);
     }
 
     if (config().use_syscalls)
     {
         syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope, trace);
-        add_fd(syscall_writer_->fd());
+        add_fd(syscall_writer_->get_weak_fd(), POLLIN);
     }
 
     if (!perf::EventComposer::instance()
@@ -60,7 +60,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enabl
     {
         group_counter_writer_ =
             std::make_unique<perf::counter::group::Writer>(scope, trace, enable_on_exec);
-        add_fd(group_counter_writer_->fd());
+        add_fd(group_counter_writer_->get_weak_fd(), POLLIN);
     }
 
     if (!perf::EventComposer::instance()
@@ -69,7 +69,7 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enabl
     {
         userspace_counter_writer_ =
             std::make_unique<perf::counter::userspace::Writer>(scope, trace);
-        add_fd(userspace_counter_writer_->fd());
+        add_fd(userspace_counter_writer_->get_weak_fd(), POLLIN);
     }
 
     // note: start() can now be called
@@ -93,31 +93,48 @@ void ScopeMonitor::finalize_thread()
     }
 }
 
-void ScopeMonitor::monitor(int fd)
+void ScopeMonitor::read_all()
 {
+    if (syscall_writer_)
+    {
+        syscall_writer_->read();
+    }
+    if (sample_writer_)
+    {
+        sample_writer_->read();
+    }
+    if (group_counter_writer_)
+    {
+        group_counter_writer_->read();
+    }
+    if (userspace_counter_writer_)
+    {
+        userspace_counter_writer_->read();
+    }
+}
+
+void ScopeMonitor::on_fd_ready(WeakFd fd, [[maybe_unused]] int revents)
+{
+    assert(revents == POLLIN);
     if (!scope_.is_cpu())
     {
         try_pin_to_scope(scope_);
     }
 
-    if (syscall_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || syscall_writer_->fd() == fd))
+    if (syscall_writer_ && syscall_writer_->get_weak_fd() == fd)
     {
         syscall_writer_->read();
     }
-    if (sample_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
+    if (sample_writer_ && sample_writer_->get_weak_fd() == fd)
     {
         sample_writer_->read();
     }
 
-    if (group_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || group_counter_writer_->fd() == fd))
+    if (group_counter_writer_ && group_counter_writer_->get_weak_fd() == fd)
     {
         group_counter_writer_->read();
     }
-    if (userspace_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
+    if (userspace_counter_writer_ && userspace_counter_writer_->get_weak_fd() == fd)
     {
         userspace_counter_writer_->read();
     }

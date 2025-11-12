@@ -23,6 +23,7 @@
 
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/helpers/mem_fd.hpp>
 #include <lo2s/ringbuf_events.hpp>
 #include <lo2s/shared_memory.hpp>
 
@@ -76,7 +77,7 @@ struct ringbuf_header
 class ShmRingbuf
 {
 public:
-    ShmRingbuf(int fd) : fd_(fd)
+    ShmRingbuf(WeakFd fd) : fd_(fd)
     {
         auto header_map = SharedMemory(fd_, sizeof(struct ringbuf_header), 0);
 
@@ -96,7 +97,7 @@ public:
         //
         // in physical memory: [ent|-----|ev]
         //
-        // in virtual memory:  [ent|-----|ev][ent----|ev]
+        // in virtual memory:  [entcg|-----|ev][ent----|ev]
         //
         // As there is no way to reserve a range of virtual memory, mmap()-ing two adjacent
         // ring-buffer without races is tricky. We solve this problem by mmap()-ing an area twice
@@ -175,7 +176,7 @@ public:
         }
     }
 
-    int fd()
+    WeakFd get_weak_fd()
     {
         return fd_;
     }
@@ -189,7 +190,7 @@ public:
 
 private:
     struct ringbuf_header* header_;
-    int fd_;
+    WeakFd fd_;
     SharedMemory first_mapping_, second_mapping_;
 };
 
@@ -198,12 +199,7 @@ class RingbufWriter
 public:
     RingbufWriter(Process process, RingbufMeasurementType type)
     {
-        int fd = memfd_create("lo2s", MFD_ALLOW_SEALING);
-
-        if (fd == -1)
-        {
-            throw_errno();
-        }
+        memory_ = std::make_unique<MemFd>(MemFd::create("lo2s", true).unpack_ok());
 
         size_t pagesize = sysconf(_SC_PAGESIZE);
         size_t size;
@@ -223,20 +219,16 @@ public:
 
         size = pagesize * pages;
 
-        if (ftruncate(fd, size + sysconf(_SC_PAGESIZE)) == -1)
-        {
-            close(fd);
-            throw std::system_error(errno, std::system_category());
-        }
+        memory_->set_size(size + sysconf(_SC_PAGESIZE)).throw_if_error();
 
         // Prevent the other process from modifying the size of the ringbuffer.
-        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_GROW));
-        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK));
-
+        memory_->seal_grow().throw_if_error();
+        memory_->seal_shrink().throw_if_error();
+        
         // Prevent the other process from modifying the previously set seals.
-        CHECK_ERRNO(fcntl(fd, F_ADD_SEALS, F_SEAL_SEAL));
+        memory_->seal_sealing().throw_if_error();
 
-        auto header_map = SharedMemory(fd, sizeof(struct ringbuf_header), 0);
+        auto header_map = SharedMemory(memory_->to_weak(), sizeof(struct ringbuf_header), 0);
 
         struct ringbuf_header* first_header = header_map.as<struct ringbuf_header>();
 
@@ -249,7 +241,7 @@ public:
         first_header->lo2s_ready = false;
         first_header->pid = process.as_pid_t();
 
-        rb_ = std::make_unique<ShmRingbuf>(fd);
+        rb_ = std::make_unique<ShmRingbuf>(memory_->to_weak());
         write_fd(type);
 
         // Wait for other side to open connection
@@ -362,7 +354,7 @@ private:
         cmptr->cmsg_level = SOL_SOCKET;
         cmptr->cmsg_type = SCM_RIGHTS;
 
-        *((int*)CMSG_DATA(cmptr)) = rb_->fd();
+        *((int*)CMSG_DATA(cmptr)) = rb_->get_weak_fd().as_int();
 
         msg.msg_name = NULL;
         msg.msg_namelen = 0;
@@ -383,12 +375,13 @@ private:
     std::unique_ptr<ShmRingbuf> rb_;
     bool finalized_ = false;
     int data_socket_;
+    std::unique_ptr<MemFd> memory_;
 };
 
 class RingbufReader
 {
 public:
-    RingbufReader(int fd, clockid_t clockid) : rb_(std::make_unique<ShmRingbuf>(fd))
+    RingbufReader(WeakFd fd, clockid_t clockid) : rb_(std::make_unique<ShmRingbuf>(fd))
     {
         rb_->header()->clockid = clockid;
         rb_->header()->lo2s_ready.store(1);

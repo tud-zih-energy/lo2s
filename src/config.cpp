@@ -26,6 +26,7 @@
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_resolver.hpp>
+#include <memory>
 #include <nitro/options/arguments.hpp>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
@@ -285,12 +286,17 @@ static void set_perf_general_options(lo2s::Config& config, nitro::options::argum
     }
     if (arguments.provided("cgroup"))
     {
-        config.cgroup_fd = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
+        auto res = get_cgroup_mountpoint_fd(arguments.get("cgroup"));
 
-        if (config.cgroup_fd == -1)
+        if (!res.ok())
         {
             Log::fatal() << "Can not open cgroup directory for " << arguments.get("cgroup");
             std::exit(EXIT_FAILURE);
+        }
+        else
+        {
+            config.cgroup_fd_internal = std::make_unique<Fd>(res.unpack_ok());
+            config.cgroup_fd = config.cgroup_fd_internal->to_weak();
         }
     }
 }
@@ -748,7 +754,7 @@ static void check_perf_options(lo2s::Config& config)
                                << "\' is not available!";
             std::exit(EXIT_FAILURE); // hmm...
         }
-        if (config.cgroup_fd != -1 && config.monitor_type == MonitorType::PROCESS)
+        if (config.cgroup_fd_internal && config.monitor_type == MonitorType::PROCESS)
         {
             Log::fatal() << "cgroup filtering can only be used in system-wide monitoring mode";
             std::exit(EXIT_FAILURE);

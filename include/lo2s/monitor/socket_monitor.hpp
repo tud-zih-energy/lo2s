@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <lo2s/helpers/unix_domain_socket.hpp>
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
@@ -45,7 +46,9 @@ public:
     SocketMonitor(trace::Trace& trace);
 
     void finalize_thread() override;
-    void monitor(int fd) override;
+    void on_readout_interval() override;
+    void on_fd_ready(WeakFd fd, int revents) override;
+    void on_stop() override;
 
     std::string group() const override
     {
@@ -62,10 +65,10 @@ public:
 
 private:
     trace::Trace& trace_;
-    std::map<int, GPUMonitor> gpu_monitors_;
-    std::map<int, OpenMPMonitor> openmp_monitors_;
+    std::map<WeakFd, GPUMonitor> gpu_monitors_;
+    std::map<WeakFd, OpenMPMonitor> openmp_monitors_;
 
-    int socket_ = -1;
+    UnixDomainSocket socket_;
 };
 } // namespace monitor
 } // namespace lo2s

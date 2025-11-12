@@ -25,15 +25,13 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/helpers/fd.hpp>
+#include <lo2s/helpers/event_fd.hpp>
+#include <lo2s/helpers/timer_fd.hpp>
+#include <lo2s/helpers/poll.hpp>
 
 #include <chrono>
-#include <sys/poll.h>
-#include <vector>
-
-extern "C"
-{
-#include <poll.h>
-}
+#include <memory>
 
 namespace lo2s
 {
@@ -47,28 +45,21 @@ public:
 
     void stop() override;
 
-    ~PollMonitor();
-
 protected:
     void run() override;
-    void monitor();
 
-    void add_fd(int fd, int events = POLLIN);
+    void add_fd(WeakFd fd, int events);
 
-    virtual void monitor([[maybe_unused]] int fd) {};
+    virtual void on_fd_ready([[maybe_unused]] WeakFd fd, int revents) = 0; 
 
-    struct pollfd& stop_pfd()
-    {
-        return pfds_[0];
-    }
-
-    struct pollfd& timer_pfd()
-    {
-        return pfds_[1];
-    }
+    virtual void on_stop() = 0;
+    virtual void on_readout_interval() = 0;
 
 private:
-    std::vector<pollfd> pfds_;
+    EventFd stop_fd_;
+    std::unique_ptr<TimerFd> timer_fd_;
+
+    Poll poll_instance_;
 };
 } // namespace monitor
 } // namespace lo2s

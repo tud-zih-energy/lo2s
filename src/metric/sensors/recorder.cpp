@@ -151,7 +151,7 @@ Recorder::Recorder(trace::Trace& trace)
     event_ = std::make_unique<otf2::event::metric>(otf2::chrono::genesis(), metric_instance_);
 }
 
-void Recorder::monitor([[maybe_unused]] int fd)
+void Recorder::read_sensors()
 {
     // update timestamp
     event_->timestamp(time::now());

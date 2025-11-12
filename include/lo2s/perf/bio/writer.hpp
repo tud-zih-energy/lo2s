@@ -158,12 +158,15 @@ public:
 
     std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints()
     {
-        bio_queue_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_bio_queue");
-        bio_issue_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_issue");
-        bio_complete_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_complete");
+        bio_queue_ = perf::EventComposer::instance()
+                         .create_tracepoint_event("block:block_bio_queue")
+                         .unpack_ok();
+        bio_issue_ = perf::EventComposer::instance()
+                         .create_tracepoint_event("block:block_rq_issue")
+                         .unpack_ok();
+        bio_complete_ = perf::EventComposer::instance()
+                            .create_tracepoint_event("block:block_rq_complete")
+                            .unpack_ok();
 
         return { bio_queue_.value(), bio_issue_.value(), bio_complete_.value() };
     }

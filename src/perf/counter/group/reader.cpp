@@ -25,12 +25,10 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
 
-#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_guard.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
-
-#include <cstring>
 
 extern "C"
 {
@@ -65,11 +63,11 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         counter_collection_.leader->set_disabled();
     }
 
-    counter_leader_ = counter_collection_.leader->open(scope, config().cgroup_fd);
+    counter_leader_ = counter_collection_.leader->open(scope, config().cgroup_fd).unpack_ok();
 
     for (auto& counter_ev : counter_collection_.counters)
     {
-        counters_.emplace_back(counter_leader_->open_child(counter_ev, scope));
+        counters_.emplace_back(counter_leader_->open_child(counter_ev, scope).unpack_ok());
     }
 
     if (!enable_on_exec)
@@ -77,7 +75,7 @@ Reader<T>::Reader(ExecutionScope scope, bool enable_on_exec)
         counter_leader_->enable();
     }
 
-    EventReader<T>::init_mmap(counter_leader_.value().get_fd());
+    EventReader<T>::init_mmap(counter_leader_.value().get_weak_fd());
 }
 template class Reader<Writer>;
 } // namespace group

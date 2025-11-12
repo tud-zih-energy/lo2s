@@ -37,7 +37,7 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 : monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
 {
     std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
-        perf::EventComposer::instance().emplace_tracepoints();
+        perf::EventComposer::instance().emplace_tracepoints().unpack_ok();
 
     for (const auto& event : tracepoint_events)
     {
@@ -45,8 +45,9 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
         std::unique_ptr<perf::tracepoint::Writer> writer =
             std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 
-        add_fd(writer->fd());
-        perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),
+        add_fd(writer->get_weak_fd(), POLLIN);
+        perf_writers_.emplace(std::piecewise_construct,
+                              std::forward_as_tuple(writer->get_weak_fd()),
                               std::forward_as_tuple(std::move(writer)));
     }
 }
@@ -56,20 +57,22 @@ void TracepointMonitor::initialize_thread()
     try_pin_to_scope(cpu_.as_scope());
 }
 
-void TracepointMonitor::monitor(int fd)
+void TracepointMonitor::on_readout_interval()
 {
-    if (fd == timer_pfd().fd)
-    {
-        return;
-    }
-    else if (fd == stop_pfd().fd)
-    {
+}
+
+void TracepointMonitor::on_stop()
+{
         for (auto& perf_writer : perf_writers_)
         {
             perf_writer.second->read();
         }
         return;
-    }
+}
+
+void TracepointMonitor::on_fd_ready(WeakFd fd, [[maybe_unused]] int revents)
+{
+    assert(revents == POLLIN);
     perf_writers_.at(fd)->read();
 }
 

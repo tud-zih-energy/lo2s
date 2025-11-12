@@ -20,11 +20,14 @@
 
 #pragma once
 
+#include "lo2s/helpers/fd.hpp"
+#include "lo2s/helpers/unix_domain_socket.hpp"
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/ringbuf.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <stdexcept>
 
 namespace lo2s
 {
@@ -34,10 +37,24 @@ namespace monitor
 class GPUMonitor : public PollMonitor
 {
 public:
-    GPUMonitor(trace::Trace& trace, int fd);
+    GPUMonitor(trace::Trace& trace, Fd &&memory_fd);
 
     void finalize_thread() override;
-    void monitor(int fd) override;
+    
+    void on_stop() override
+    {
+        read_kernel_data();
+    }
+
+    void on_readout_interval() override
+    {
+        read_kernel_data();
+    }
+
+    void on_fd_ready([[maybe_unused]] WeakFd, [[maybe_unused]] int revents) override
+    {
+        throw std::runtime_error("GPUMonitor is not monitoring any fd for readiness, but was still given one!");
+    }
 
     std::string group() const override
     {
@@ -52,6 +69,10 @@ public:
     }
 
 private:
+    void read_kernel_data();
+
+    Fd memory_fd_;
+
     static constexpr int CCTX_LEVEL_PROCESS = 1;
     static constexpr int CCTX_LEVEL_KERNEL = 2;
 

@@ -22,10 +22,11 @@
 #pragma once
 
 #include <lo2s/config.hpp>
+#include <lo2s/helpers/errno_error.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/perf/event_guard.hpp>
 #include <lo2s/perf/event_resolver.hpp>
-
 namespace lo2s
 {
 namespace perf
@@ -46,9 +47,10 @@ public:
     bool has_counters_for(MeasurementScope scope);
 
     EventAttr create_time_event(uint64_t local_time);
-    EventAttr create_sampling_event();
-    perf::tracepoint::TracepointEventAttr create_tracepoint_event(const std::string& name);
-    std::vector<perf::tracepoint::TracepointEventAttr> emplace_tracepoints();
+    Expected<EventAttr, ErrnoError> create_sampling_event();
+    Expected<perf::tracepoint::TracepointEventAttr, ErrnoError>
+    create_tracepoint_event(const std::string& name);
+    Expected<std::vector<perf::tracepoint::TracepointEventAttr>, ErrnoError> emplace_tracepoints();
 
 private:
     void watermark(EventAttr& ev)

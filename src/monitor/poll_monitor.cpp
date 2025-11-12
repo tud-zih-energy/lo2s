@@ -19,12 +19,14 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "lo2s/helpers/fd.hpp"
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/util.hpp>
 
 #include <cmath>
+#include <memory>
 
 extern "C"
 {
@@ -37,42 +39,22 @@ namespace monitor
 {
 PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
                          std::chrono::nanoseconds read_interval)
-: ThreadedMonitor(trace, name)
+: ThreadedMonitor(trace, name), stop_fd_(EventFd::create().unpack_ok()), timer_fd_()
 {
-    pfds_.resize(2);
-    stop_pfd().fd = eventfd(0, 0);
-    stop_pfd().events = POLLIN;
-    stop_pfd().revents = 0;
-
-    // Create and initialize timer_fd
-    struct itimerspec tspec;
-    memset(&tspec, 0, sizeof(struct itimerspec));
+    poll_instance_.add_fd(stop_fd_.to_weak(), POLLIN);
 
     // Set initial expiration to lowest possible value, this together with TFD_TIMER_ABSTIME should
     // synchronize our timers
     if (read_interval.count() != 0)
     {
-
-        timer_pfd().fd = timerfd_from_ns(read_interval);
-        timer_pfd().events = POLLIN;
-        timer_pfd().revents = 0;
-    }
-    else
-    {
-        // fd = -1 is just going to be ignored
-        timer_pfd().fd = -1;
-        timer_pfd().events = 0;
-        timer_pfd().revents = 0;
+        timer_fd_ = std::make_unique<TimerFd>(std::move(TimerFd::create(read_interval).unpack_ok()));
+        poll_instance_.add_fd(timer_fd_->to_weak(), POLLIN);
     }
 }
 
-void PollMonitor::add_fd(int fd, int events)
+void PollMonitor::add_fd(WeakFd fd, int events)
 {
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = events;
-    pfd.revents = 0;
-    pfds_.push_back(pfd);
+    poll_instance_.add_fd(fd, events);
 }
 
 void PollMonitor::stop()
@@ -83,20 +65,8 @@ void PollMonitor::stop()
         return;
     }
 
-    uint64_t stop_val = 1;
-    write(stop_pfd().fd, &stop_val, sizeof(stop_val));
+    stop_fd_.write(1);
     thread_.join();
-}
-
-void PollMonitor::monitor()
-{
-    for (const auto& pfd : pfds_)
-    {
-        if (pfd.revents & POLLIN)
-        {
-            monitor(pfd.fd);
-        }
-    }
 }
 
 void PollMonitor::run()
@@ -104,47 +74,32 @@ void PollMonitor::run()
     bool stop_requested = false;
     do
     {
-        auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
+
+        poll_instance_.poll().throw_if_error();
+        
         num_wakeups_++;
 
-        if (ret == 0)
+    for (const auto& pfd : poll_instance_.fds())
+    {
+        WeakFd fd(pfd.fd);
+        if(timer_fd_ && fd == *timer_fd_)
         {
-            throw std::runtime_error("Received poll timeout despite requesting no timeout.");
+            on_readout_interval();
+            timer_fd_.reset();
         }
-        else if (ret < 0)
+        else if(fd == stop_fd_)
         {
-            Log::error() << "poll failed";
-            throw_errno();
-        }
-        Log::trace() << "PollMonitor poll returned " << ret;
-
-        monitor();
-
-        // Flush timer
-        if (timer_pfd().revents & POLLIN)
-        {
-            [[maybe_unused]] uint64_t expirations;
-            if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
-            {
-                Log::error() << "Flushing timer fd failed";
-                throw_errno();
-            }
-        }
-        if (stop_pfd().revents & POLLIN)
-        {
+            on_stop();
             Log::debug() << "Requested stop of PollMonitor";
             stop_requested = true;
         }
+        else if (pfd.revents != 0)
+        {
+            on_fd_ready(fd, pfd.revents);
+        }
+    }
+
     } while (!stop_requested);
 }
-
-PollMonitor::~PollMonitor()
-{
-    if (timer_pfd().fd != -1)
-    {
-        close(timer_pfd().fd);
-    }
-}
-
 } // namespace monitor
 } // namespace lo2s

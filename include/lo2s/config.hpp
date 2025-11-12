@@ -28,6 +28,7 @@
 
 #include <cstdint>
 
+#include <lo2s/helpers/fd.hpp>
 #include <lo2s/types.hpp>
 
 extern "C"
@@ -73,7 +74,7 @@ struct Config
     // perf
     std::size_t mmap_pages;
     std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
-    int cgroup_fd = -1;
+    WeakFd cgroup_fd = WeakFd::make_invalid();
 
     // perf -- instruction sampling
     bool use_perf_sampling = false;
@@ -163,6 +164,8 @@ struct Config
         return use_block_io || use_group_metrics || use_userspace_metrics || use_perf_sampling ||
                use_process_recording;
     }
+
+    std::unique_ptr<Fd> cgroup_fd_internal;
 };
 
 const Config& config();

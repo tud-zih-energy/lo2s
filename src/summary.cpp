@@ -5,11 +5,9 @@
 #include <filesystem>
 
 #include <array>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
-#include <ratio>
 
 extern "C"
 {

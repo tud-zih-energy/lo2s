@@ -26,6 +26,7 @@
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/perf/event_guard.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -108,7 +109,7 @@ public:
     {
         try
         {
-            event_ = identity_.tracepoint().open(identity.cpu);
+            event_ = identity_.tracepoint().open(identity.cpu.as_scope()).unpack_ok();
         }
         catch (const std::system_error& e)
         {
@@ -120,7 +121,7 @@ public:
 
         try
         {
-            init_mmap(event_.value().get_fd());
+            init_mmap(event_.value().get_weak_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
             event_.value().enable();
@@ -142,9 +143,9 @@ public:
         return reinterpret_cast<TracepointSampleType*>(get());
     }
 
-    int fd() const
+    WeakFd get_weak_fd() const
     {
-        return event_.value().get_fd();
+        return event_.value().get_weak_fd();
     }
 
     IoReader& operator=(const IoReader&) = delete;

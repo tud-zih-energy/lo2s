@@ -19,11 +19,14 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "lo2s/helpers/errno_error.hpp"
+#include "lo2s/helpers/expected.hpp"
+#include <filesystem>
 #include <fstream>
 #include <lo2s/build_config.hpp>
 #include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_guard.hpp>
 #include <lo2s/perf/event_resolver.hpp>
-
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
@@ -48,14 +51,11 @@ std::set<Cpu> get_cpu_set_for(EventAttr ev)
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        try
-        {
-            EventGuard ev_instance = ev.open(cpu.as_scope(), -1);
+        auto res = ev.open(cpu.as_scope());
 
-            cpus.emplace(cpu);
-        }
-        catch (const std::system_error& e)
+        if (res.ok())
         {
+            cpus.emplace(cpu);
         }
     }
 
@@ -75,7 +75,7 @@ std::optional<T> try_read_file(const std::string& filename)
     return val;
 }
 
-static std::uint64_t parse_bitmask(const std::string& format)
+static Expected<std::uint64_t, ErrnoError> parse_bitmask(const std::string& format)
 {
     enum BITMASK_REGEX_GROUPS
     {
@@ -97,7 +97,7 @@ static std::uint64_t parse_bitmask(const std::string& format)
         const auto len = (end + 1) - start;
         if (start < 0 || end > 63 || len > 64)
         {
-            throw EventAttr::InvalidEvent("invalid config mask");
+            return Unexpected(ErrnoError(-1, "invalid config mask"));
         }
 
         /* Set `len` bits and shift them to where they should start.
@@ -164,7 +164,7 @@ PredefinedEventAttr::PredefinedEventAttr(const std::string& name, perf_type_id t
     event_is_openable();
 }
 
-void EventAttr::event_attr_update(std::uint64_t value, const std::string& format)
+MaybeError<ErrnoError> EventAttr::event_attr_update(std::uint64_t value, const std::string& format)
 {
     // Parse config terms //
 
@@ -178,21 +178,32 @@ void EventAttr::event_attr_update(std::uint64_t value, const std::string& format
     const auto colon = format.find_first_of(':');
     if (colon == npos)
     {
-        throw EventAttr::InvalidEvent("invalid format description: missing colon");
+        return ErrnoError(-1, "invalid format description: missing colon");
     }
 
     const auto target_config = format.substr(0, colon);
-    const auto mask = parse_bitmask(format.substr(colon + 1));
+    auto mask = parse_bitmask(format.substr(colon + 1));
+
+    if (!mask.ok())
+    {
+        return mask.unpack_error();
+    }
 
     if (target_config == "config")
     {
-        attr_.config |= apply_mask(value, mask);
+        auto res = apply_mask(value, mask.unpack_ok());
+
+        attr_.config |= res;
     }
 
     if (target_config == "config1")
     {
-        attr_.config1 |= apply_mask(value, mask);
+        auto res = apply_mask(value, mask.unpack_ok());
+
+        attr_.config1 |= res;
     }
+
+    return {};
 }
 
 void EventAttr::sample_period(int period)
@@ -236,8 +247,6 @@ bool EventAttr::event_is_openable()
                              << " not available: " << std::string(std::strerror(errno));
                 break;
             }
-            throw EventAttr::InvalidEvent("not available!");
-
             return false;
         }
     }
@@ -248,32 +257,18 @@ void EventAttr::update_availability()
 {
     bool proc = false;
     bool system = false;
-    try
-    {
-        EventGuard proc_ev = open(Thread(0));
+    auto res = open(Thread(0).as_scope());
 
-        if (proc_ev.get_fd() != -1)
-        {
-            proc = true;
-        }
-    }
-    catch (const std::system_error& e)
+    if (res.ok())
     {
+        proc = true;
     }
+    auto sys_ev = open(supported_cpus().begin()->as_scope());
 
-    try
+    if (sys_ev.ok())
     {
-        EventGuard sys_ev = open(*supported_cpus().begin());
-
-        if (sys_ev.get_fd() != -1)
-        {
-            system = true;
-        }
+        system = true;
     }
-    catch (const std::system_error& e)
-    {
-    }
-
     if (proc == false && system == false)
     {
         availability_ = Availability::UNAVAILABLE;
@@ -673,7 +668,7 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
         std::uint64_t val = std::stol(value, nullptr, 0);
         Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
                      << val << std::dec << std::noshowbase;
-        event_attr_update(val, format.value());
+        event_attr_update(val, format.value()).throw_if_error();
 
         ev_cfg = kv_match.suffix();
     }
@@ -692,109 +687,18 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
     }
 }
 
-EventGuard EventAttr::open(std::variant<Cpu, Thread> location, int cgroup_fd)
+Expected<EventGuard, ErrnoError> EventAttr::open(ExecutionScope scope, WeakFd cgroup_fd)
 {
-    return EventGuard(*this, location, -1, cgroup_fd);
+    return EventGuard::open(*this, scope, WeakFd::make_invalid(), cgroup_fd);
 }
 
-EventGuard EventAttr::open(ExecutionScope location, int cgroup_fd)
-{
-    if (location.is_cpu())
-    {
-        return EventGuard(*this, location.as_cpu(), -1, cgroup_fd);
-    }
-    else
-    {
-        return EventGuard(*this, location.as_thread(), -1, cgroup_fd);
-    }
-}
-
-EventGuard EventAttr::open_as_group_leader(ExecutionScope location, int cgroup_fd)
+Expected<EventGuard, ErrnoError> EventAttr::open_as_group_leader(ExecutionScope scope,
+                                                                 WeakFd cgroup_fd)
 {
     attr_.read_format |= PERF_FORMAT_GROUP;
     attr_.sample_type |= PERF_SAMPLE_READ;
 
-    return open(location, cgroup_fd);
-}
-
-EventGuard EventGuard::open_child(EventAttr& child, ExecutionScope location, int cgroup_fd)
-{
-    if (location.is_cpu())
-    {
-        return EventGuard(child, location.as_cpu(), fd_, cgroup_fd);
-    }
-    else
-    {
-        return EventGuard(child, location.as_thread(), fd_, cgroup_fd);
-    }
-}
-
-EventGuard::EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd,
-                       int cgroup_fd)
-: fd_(-1)
-{
-    ExecutionScope scope;
-    std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
-
-    Log::trace() << "Opening perf event: " << ev.name() << "[" << scope.name()
-                 << ", group fd: " << group_fd << ", cgroup fd: " << cgroup_fd << "]";
-    Log::trace() << ev;
-    fd_ = perf_event_open(&ev.attr(), scope, group_fd, 0, cgroup_fd);
-
-    if (fd_ < 0)
-    {
-        Log::trace() << "Couldn't open event!: " << strerror(errno);
-        throw_errno();
-    }
-
-    if (fcntl(fd_, F_SETFL, O_NONBLOCK))
-    {
-        Log::trace() << "Couldn't set event nonblocking: " << strerror(errno);
-        throw_errno();
-    }
-    Log::trace() << "Succesfully opened perf event! fd: " << fd_;
-}
-
-void EventGuard::enable()
-{
-    if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
-    {
-        throw_errno();
-    }
-}
-
-void EventGuard::disable()
-{
-    if (ioctl(fd_, PERF_EVENT_IOC_DISABLE) == -1)
-    {
-        throw_errno();
-    }
-}
-
-void EventGuard::set_output(const EventGuard& other_ev)
-{
-    if (ioctl(fd_, PERF_EVENT_IOC_SET_OUTPUT, other_ev.get_fd()) == -1)
-    {
-        throw_errno();
-    }
-}
-
-void EventGuard::set_syscall_filter(const std::vector<int64_t>& syscall_filter)
-{
-    if (syscall_filter.empty())
-    {
-        return;
-    }
-
-    std::vector<std::string> names;
-    std::transform(syscall_filter.cbegin(), syscall_filter.end(), std::back_inserter(names),
-                   [](const auto& elem) { return fmt::format("id == {}", elem); });
-    std::string filter = fmt::format("{}", fmt::join(names, "||"));
-
-    if (ioctl(fd_, PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
-    {
-        throw_errno();
-    }
+    return open(scope, cgroup_fd);
 }
 
 } // namespace perf

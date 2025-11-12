@@ -304,13 +304,10 @@ EventAttr EventResolver::cache_event(const std::string& name)
         else
         {
 #ifdef HAVE_LIBPFM
-            try
+            auto pfm_ev = PFM4::instance().pfm4_read_event(name);
+            if (pfm_ev.ok())
             {
-                EventAttr ev = PFM4::instance().pfm4_read_event(name);
-                return event_map_.emplace(name, ev).first->second.value();
-            }
-            catch (EventAttr::InvalidEvent& e)
-            {
+                return event_map_.emplace(name, pfm_ev.unpack_ok()).first->second.value();
             }
 #endif
 

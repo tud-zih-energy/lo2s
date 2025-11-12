@@ -23,6 +23,8 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/helpers/expected.hpp>
+#include <lo2s/helpers/fd.hpp>
 #include <lo2s/types.hpp>
 
 #include <chrono>
@@ -113,7 +115,7 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
 
 void try_pin_to_scope(ExecutionScope scope);
 
-int get_cgroup_mountpoint_fd(std::string cgroup);
+Expected<Fd, ErrnoError> get_cgroup_mountpoint_fd(std::string cgroup);
 
 void bump_rlimit_fd();
 struct rlimit initial_rlimit_fd();
@@ -122,8 +124,6 @@ Thread gettid();
 
 std::set<std::uint32_t> parse_list(std::string list);
 std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);
-
-int timerfd_from_ns(std::chrono::nanoseconds duration);
 
 bool known_non_executable(const std::string& filename);
 

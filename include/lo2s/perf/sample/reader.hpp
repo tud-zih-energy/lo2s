@@ -88,7 +88,7 @@ protected:
 
         try
         {
-            EventAttr event = EventComposer::instance().create_sampling_event();
+            EventAttr event = EventComposer::instance().create_sampling_event().unpack_ok();
             if (enable_on_exec)
             {
                 event.set_enable_on_exec();
@@ -98,7 +98,7 @@ protected:
                 event.set_disabled();
             }
 
-            event_ = event.open(scope, config().cgroup_fd);
+            event_ = event.open(scope, config().cgroup_fd).unpack_ok();
         }
         catch (std::system_error& e)
         {
@@ -109,7 +109,7 @@ protected:
 
         try
         {
-            init_mmap(event_.value().get_fd());
+            init_mmap(event_.value().get_weak_fd());
             Log::debug() << "mmap initialized";
 
             if (!enable_on_exec)

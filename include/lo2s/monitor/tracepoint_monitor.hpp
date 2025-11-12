@@ -40,7 +40,10 @@ public:
     TracepointMonitor(trace::Trace& trace, Cpu cpu);
 
 private:
-    void monitor(int fd) override;
+    void on_fd_ready(WeakFd fd, int revents) override;
+    void on_stop() override;
+    void on_readout_interval() override;
+
     void initialize_thread() override;
     void finalize_thread() override;
 
@@ -51,7 +54,7 @@ private:
 
 private:
     Cpu cpu_;
-    std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
+    std::map<WeakFd, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };
 } // namespace monitor
 } // namespace lo2s

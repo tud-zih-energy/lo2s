@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "lo2s/helpers/fd.hpp"
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
@@ -46,17 +47,22 @@ public:
     {
         for (auto fd : multi_reader_.get_fds())
         {
-            add_fd(fd);
+            add_fd(fd, POLLIN);
         }
     }
 
 private:
-    void monitor(int fd) override
+    void on_readout_interval() override
     {
-        if (fd != timer_pfd().fd)
-        {
-            multi_reader_.read();
-        }
+    }
+    void on_fd_ready([[maybe_unused]] WeakFd fd,[[maybe_unused]] int revents) override
+    {
+        assert(revents == POLLIN);
+        multi_reader_.read();
+    }
+    void on_stop() override
+    {
+        multi_reader_.read();
     }
 
     void finalize_thread() override

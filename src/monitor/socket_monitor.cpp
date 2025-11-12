@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "lo2s/ringbuf.hpp"
 #include <fcntl.h>
 #include <lo2s/monitor/socket_monitor.hpp>
 
@@ -27,6 +28,7 @@
 #include <lo2s/monitor/gpu_monitor.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/helpers/fd.hpp>
 
 #include <stdexcept>
 
@@ -41,76 +43,9 @@ namespace lo2s
 namespace monitor
 {
 SocketMonitor::SocketMonitor(trace::Trace& trace)
-: PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace)
+: PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace), socket_(UnixDomainSocket::create(config().socket_path).unpack_ok())
 {
-    socket_ = ::socket(AF_UNIX, SOCK_SEQPACKET, 0);
-    if (socket_ == -1)
-    {
-        throw_errno();
-    }
-
-    struct sockaddr_un name;
-    memset(&name, 0, sizeof(name));
-    name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, config().socket_path.c_str(), sizeof(name.sun_path) - 1);
-
-    unlink(config().socket_path.c_str());
-    int ret = bind(socket_, (const struct sockaddr*)&name, sizeof(name));
-    if (ret == -1)
-    {
-        throw_errno();
-    }
-
-    ret = listen(socket_, 20);
-    if (ret == -1)
-    {
-        throw_errno();
-    }
-    add_fd(socket_);
-}
-
-std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
-{
-    union
-    {
-        struct cmsghdr cm;
-        char control[CMSG_SPACE(sizeof(int))];
-    } control_un;
-
-    struct msghdr msg;
-    msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
-
-    msg.msg_name = NULL;
-    msg.msg_namelen = 0;
-
-    // We have to send a message together with the fd, so use that to send the type of the
-    // connected measurement
-    RingbufMeasurementType type;
-    struct iovec iov[1];
-    iov[0].iov_base = &type;
-    iov[0].iov_len = 8;
-
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
-
-    if (recvmsg(socket, &msg, 0) <= 0)
-    {
-        throw_errno();
-    }
-
-    struct cmsghdr* cmptr;
-    if ((cmptr = CMSG_FIRSTHDR(&msg)) != nullptr && cmptr->cmsg_len == CMSG_LEN(sizeof(int)))
-    {
-        if (cmptr->cmsg_level != SOL_SOCKET)
-            return std::nullopt;
-        if (cmptr->cmsg_type != SCM_RIGHTS)
-            return std::nullopt;
-
-        int recvfd = *((int*)CMSG_DATA(cmptr));
-        return std::pair<RingbufMeasurementType, int>(type, recvfd);
-    }
-    return std::nullopt;
+    add_fd(socket_.to_weak(), POLLIN);
 }
 
 void SocketMonitor::finalize_thread()
@@ -124,18 +59,10 @@ void SocketMonitor::finalize_thread()
     {
         monitor.second.stop();
     }
-
-    close(socket_);
-    unlink(config().socket_path.c_str());
 }
 
-void SocketMonitor::monitor(int fd)
+void SocketMonitor::on_fd_ready(WeakFd fd, [[maybe_unused]] int revents)
 {
-    if (fd == stop_pfd().fd)
-    {
-        return;
-    }
-
     if (fd != socket_)
     {
         if (gpu_monitors_.count(fd))
@@ -153,40 +80,48 @@ void SocketMonitor::monitor(int fd)
     }
     else
     {
-        int data_socket = accept(socket_, NULL, NULL);
-        if (data_socket == -1)
+        auto child_socket = socket_.accept().unpack_ok();
+
+        add_fd(child_socket.to_weak(), 0);
+
+        auto read_fd_res = child_socket.read_fd();
+
+        if (read_fd_res.ok())
         {
-            throw_errno();
-        }
-
-        add_fd(data_socket, 0);
-
-        auto type_fd = read_fd(data_socket);
-
-        if (type_fd.has_value())
-        {
-            if (type_fd.value().first == RingbufMeasurementType::GPU)
+            auto read_fd = read_fd_res.unpack_ok();
+            if (static_cast<RingbufMeasurementType>(read_fd.first) == RingbufMeasurementType::GPU)
             {
                 auto res = gpu_monitors_.emplace(
-                    std::piecewise_construct, std::forward_as_tuple(data_socket),
-                    std::forward_as_tuple(trace_, type_fd.value().second));
+                    std::piecewise_construct, std::forward_as_tuple(child_socket.to_weak()),
+                    std::forward_as_tuple(trace_, std::move(read_fd.second)));
                 res.first->second.start();
             }
-            else if (type_fd.value().first == RingbufMeasurementType::OPENMP)
+            else if (static_cast<RingbufMeasurementType>(read_fd.first) ==
+                     RingbufMeasurementType::OPENMP)
 
             {
                 auto res = openmp_monitors_.emplace(
-                    std::piecewise_construct, std::forward_as_tuple(data_socket),
-                    std::forward_as_tuple(trace_, type_fd.value().second));
+                    std::piecewise_construct, std::forward_as_tuple(child_socket.to_weak()),
+                    std::forward_as_tuple(trace_, std::move(read_fd.second)));
                 res.first->second.start();
             }
             else
             {
                 throw std::runtime_error(fmt::format("Invalid ring buffer measurement type: {}",
-                                                     static_cast<uint64_t>(type_fd.value().first)));
+                                                     static_cast<uint64_t>(read_fd.first)));
             }
         }
     }
 }
+
+void SocketMonitor::on_readout_interval()
+{
+    throw std::runtime_error("SocketMonitor did not specify a readout interval, but on_readout_intervall still triggered!");
+}
+
+void SocketMonitor::on_stop()
+{
+}
+
 } // namespace monitor
 } // namespace lo2s

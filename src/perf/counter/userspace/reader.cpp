@@ -48,12 +48,12 @@ Reader<T>::Reader(ExecutionScope scope)
 : counter_collection_(
       EventComposer::instance().counters_for(MeasurementScope::userspace_metric(scope))),
   counter_buffer_(counter_collection_.counters.size()),
-  timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
+  timer_fd_(TimerFd::create(config().userspace_read_interval).unpack_ok()),
   data_(counter_collection_.counters.size())
 {
     for (auto& event : counter_collection_.counters)
     {
-        counters_.emplace_back(event.open(scope));
+        counters_.emplace_back(event.open(scope).unpack_ok());
     }
 }
 
@@ -62,17 +62,12 @@ void Reader<T>::read()
 {
     for (std::size_t i = 0; i < counters_.size(); i++)
     {
-        data_[i] = counters_[i].read<UserspaceReadFormat>();
+        data_[i] = counters_[i].read<UserspaceReadFormat>().unpack_ok();
     }
 
     static_cast<T*>(this)->handle(data_);
 
-    [[maybe_unused]] uint64_t expirations;
-    if (::read(timer_fd_, &expirations, sizeof(expirations)) == -1 && errno != EAGAIN)
-    {
-        Log::error() << "Flushing timer fd failed";
-        throw_errno();
-    }
+    timer_fd_.reset();
 }
 
 template class Reader<Writer>;

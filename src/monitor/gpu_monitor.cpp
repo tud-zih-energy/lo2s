@@ -27,8 +27,6 @@
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/time/time.hpp>
 
-#include <memory>
-
 extern "C"
 {
 #include <sys/mman.h>
@@ -40,9 +38,9 @@ namespace lo2s
 namespace monitor
 {
 
-GPUMonitor::GPUMonitor(trace::Trace& trace, int fd)
-: PollMonitor(trace, "GPUMonitor", config().ringbuf_read_interval),
-  ringbuf_reader_(fd, config().clockid.value_or(0)), process_(ringbuf_reader_.header()->pid),
+GPUMonitor::GPUMonitor(trace::Trace& trace, Fd &&memory_fd)
+: PollMonitor(trace, "GPUMonitor", config().ringbuf_read_interval), memory_fd_(std::move(memory_fd)),
+  ringbuf_reader_(memory_fd_.to_weak(), config().clockid.value_or(0)), process_(ringbuf_reader_.header()->pid),
   time_converter_(perf::time::Converter::instance()),
   local_cctx_tree_(
       trace.create_local_cctx_tree(MeasurementScope::gpu(ExecutionScope(process_.as_thread()))))
@@ -56,7 +54,7 @@ void GPUMonitor::finalize_thread()
     local_cctx_tree_.finalize();
 }
 
-void GPUMonitor::monitor(int fd [[maybe_unused]])
+void GPUMonitor::read_kernel_data()
 {
     while (!ringbuf_reader_.empty())
     {

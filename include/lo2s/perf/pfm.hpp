@@ -24,7 +24,6 @@
 #include <lo2s/perf/event_attr.hpp>
 
 #include <cstring>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -56,7 +55,7 @@ public:
         pfm_terminate();
     }
 
-    EventAttr pfm4_read_event(const std::string& ev_desc) const
+    Expected<EventAttr, ErrnoError> pfm4_read_event(const std::string& ev_desc) const
     {
         pfm_perf_encode_arg_t arg;
         struct perf_event_attr attr;
@@ -69,7 +68,7 @@ public:
 
         if (ret != PFM_SUCCESS)
         {
-            throw EventAttr::InvalidEvent("Could not read PFM event encoding");
+            return Unexpected(ErrnoError(-1, "Could not read PFM event encoding"));
         }
 
         EventAttr ev =
@@ -129,40 +128,31 @@ public:
                         else
                         {
                             has_umask = true;
-                            try
-                            {
+                            auto uevent = pfm4_read_event(
+                                fmt::format("{}:{}", full_event_name, attr_info.name));
 
-                                auto uevent = pfm4_read_event(
-                                    fmt::format("{}:{}", full_event_name, attr_info.name));
-                                events.emplace_back(uevent);
-                            }
-                            catch (EventAttr::InvalidEvent& e)
+                            if (uevent.ok())
                             {
+                                events.emplace_back(uevent.unpack_ok());
                             }
                         }
                     }
 
                     if (!has_umask)
                     {
-                        try
+                        auto event = pfm4_read_event(std::string(full_event_name));
+                        if (event.ok())
                         {
-                            auto event = pfm4_read_event(std::string(full_event_name));
-                            events.emplace_back(event);
-                        }
-                        catch (EventAttr::InvalidEvent& e)
-                        {
+                            events.emplace_back(event.unpack_ok());
                         }
                     }
                 }
                 else
                 {
-                    try
+                    auto event = pfm4_read_event(std::string(full_event_name));
+                    if (event.ok())
                     {
-                        auto event = pfm4_read_event(std::string(full_event_name));
-                        events.emplace_back(event);
-                    }
-                    catch (EventAttr::InvalidEvent& e)
-                    {
+                        events.emplace_back(event.unpack_ok());
                     }
                 }
             }

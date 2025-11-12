@@ -19,6 +19,9 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "lo2s/helpers/errno_error.hpp"
+#include "lo2s/helpers/expected.hpp"
+#include "lo2s/helpers/maybe_error.hpp"
 #include <lo2s/perf/event_composer.hpp>
 
 namespace lo2s
@@ -40,32 +43,30 @@ EventComposer::EventComposer()
 //
 // We are only interested in what the most precise available sampling mode is, so test the
 // availability of precision levels in descending order of preciseness.
-static void set_precision(EventAttr& ev)
+static MaybeError<ErrnoError> set_precision(EventAttr& ev)
 {
     uint64_t precise_ip = 3;
     do
     {
-        try
+        auto guard = ev.open(Thread(0).as_scope());
+        if (guard.ok())
         {
-            auto guard = ev.open(Thread(0));
-            return;
+            return {};
         }
-        catch (...)
-        {
             if (precise_ip == 0)
             {
-                throw;
+                ErrnoError(-1, "No precise_ip setting works!");
             }
             ev.set_precise_ip(--precise_ip);
-        }
     } while (true);
 }
 
-EventAttr EventComposer::create_sampling_event()
+Expected<EventAttr, ErrnoError> EventComposer::create_sampling_event()
 {
     if (sampling_event_.has_value())
     {
-        return sampling_event_.value();
+        EventAttr attr = sampling_event_.value();
+        return attr;
     }
 
     if (config().use_perf_sampling)
@@ -118,8 +119,8 @@ EventAttr EventComposer::create_sampling_event()
     {
         set_precision(sampling_event_.value());
     }
-
-    return sampling_event_.value();
+    EventAttr attr = sampling_event_.value();
+    return attr;
 }
 
 EventAttr EventComposer::create_time_event(uint64_t local_time [[maybe_unused]])
@@ -145,22 +146,30 @@ EventAttr EventComposer::create_time_event(uint64_t local_time [[maybe_unused]])
     return ev;
 }
 
-std::vector<perf::tracepoint::TracepointEventAttr> EventComposer::emplace_tracepoints()
+Expected<std::vector<perf::tracepoint::TracepointEventAttr>, ErrnoError>
+EventComposer::emplace_tracepoints()
 {
     if (tracepoint_events_.has_value())
     {
-        return tracepoint_events_.value();
+        auto tracepoints = tracepoint_events_.value();
+        return tracepoints;
     }
 
     tracepoint_events_ = std::vector<tracepoint::TracepointEventAttr>();
     for (const auto& ev_name : config().tracepoint_events)
     {
-        tracepoint_events_->emplace_back(create_tracepoint_event(ev_name));
+        auto res = create_tracepoint_event(ev_name);
+        if (res.ok())
+        {
+            tracepoint_events_->emplace_back(res.unpack_ok());
+        }
     }
-    return tracepoint_events_.value();
+
+    auto tracepoints = tracepoint_events_.value();
+    return tracepoints;
 }
 
-perf::tracepoint::TracepointEventAttr
+Expected<perf::tracepoint::TracepointEventAttr, ErrnoError>
 EventComposer::create_tracepoint_event(const std::string& name)
 {
     auto ev = tracepoint::TracepointEventAttr(name);

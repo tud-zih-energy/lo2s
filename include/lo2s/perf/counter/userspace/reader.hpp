@@ -26,12 +26,9 @@
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/trace/trace.hpp>
-
-#include <cstdint>
+#include <lo2s/helpers/timer_fd.hpp>
 
 #include <vector>
-
-#include <cstdlib>
 
 namespace lo2s
 {
@@ -50,15 +47,15 @@ public:
 
     void read();
 
-    int fd()
+    WeakFd get_weak_fd()
     {
-        return timer_fd_;
+        return timer_fd_.to_weak();
     }
 
 protected:
     CounterCollection counter_collection_;
     UserspaceCounterBuffer counter_buffer_;
-    int timer_fd_;
+    TimerFd timer_fd_;
 
     std::vector<EventGuard> counters_;
     std::vector<UserspaceReadFormat> data_;

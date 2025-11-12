@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "lo2s/helpers/fd.hpp"
 #include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
@@ -34,11 +35,24 @@ namespace monitor
 class OpenMPMonitor : public PollMonitor
 {
 public:
-    OpenMPMonitor(trace::Trace& trace, int fd);
+    OpenMPMonitor(trace::Trace& trace, Fd &&memory_fd);
 
     void finalize_thread() override;
 
-    void monitor(int fd) override;
+    void on_stop() override
+    {
+        read_ringbuffer();
+    }
+
+    void on_readout_interval() override
+    {
+        read_ringbuffer();
+    }
+
+    void on_fd_ready([[maybe_unused]] WeakFd fd, [[maybe_unused]] int revents) override
+    {
+        throw std::runtime_error("OpenMPMonitor does not monitor any fd, but an fd has still become readable!");
+    }
 
     std::string group() const override
     {
@@ -46,7 +60,10 @@ public:
     }
 
 private:
+    void read_ringbuffer();
     void create_thread_writer(otf2::chrono::time_point tp, uint64_t thread);
+
+    Fd memory_fd_;
     RingbufReader ringbuf_reader_;
     Process process_;
     trace::Trace& trace_;

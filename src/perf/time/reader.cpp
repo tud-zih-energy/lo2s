@@ -62,9 +62,9 @@ Reader::Reader()
 
     try
     {
-        ev_instance_ = event.open(Thread(0));
+        ev_instance_ = event.open(Thread(0).as_scope()).unpack_ok();
 
-        init_mmap(ev_instance_.value().get_fd());
+        init_mmap(ev_instance_.value().get_weak_fd());
         ev_instance_.value().enable();
     }
     catch (...)
@@ -82,7 +82,7 @@ Reader::Reader()
 #ifdef USE_HW_BREAKPOINT_COMPAT
     auto pid = fork();
     if (pid == 0)
-    {
+    {cg
         abort();
     }
     else if (pid == -1)

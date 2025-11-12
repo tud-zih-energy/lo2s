@@ -26,14 +26,13 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/types.hpp>
+#include <lo2s/helpers/fd.hpp>
 #include <lo2s/platform.hpp>
 #include <lo2s/shared_memory.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
-#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -176,7 +175,7 @@ public:
     }
 
 protected:
-    void init_mmap(int fd)
+    void init_mmap(WeakFd fd)
     {
         fd_ = fd;
 
@@ -363,7 +362,7 @@ private:
     }
 
 public:
-    int fd()
+    WeakFd get_weak_fd()
     {
         return fd_;
     }
@@ -390,7 +389,7 @@ protected:
     size_t mmap_pages_ = 0;
 
 private:
-    int fd_;
+    WeakFd fd_ = WeakFd::make_invalid();
     SharedMemory shmem_;
     std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };

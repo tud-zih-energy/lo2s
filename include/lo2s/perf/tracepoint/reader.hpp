@@ -24,6 +24,7 @@
 #include <lo2s/perf/tracepoint/format.hpp>
 
 #include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/event_guard.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
@@ -32,10 +33,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
-#include <filesystem>
 #include <optional>
-
-#include <ios>
 
 #include <cstddef>
 
@@ -119,7 +117,7 @@ public:
     {
         try
         {
-            ev_instance_ = event_.open(cpu_, config().cgroup_fd);
+            ev_instance_ = event_.open(cpu_.as_scope(), config().cgroup_fd).unpack_ok();
         }
         catch (const std::system_error& e)
         {
@@ -132,7 +130,7 @@ public:
 
         try
         {
-            init_mmap(ev_instance_.value().get_fd());
+            init_mmap(ev_instance_.value().get_weak_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
             ev_instance_.value().enable();

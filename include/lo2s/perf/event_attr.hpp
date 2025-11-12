@@ -20,6 +20,10 @@
 
 #pragma once
 
+#include "lo2s/helpers/errno_error.hpp"
+#include "lo2s/helpers/fd.hpp"
+#include "lo2s/helpers/maybe_error.hpp"
+#include <lo2s/helpers/perf_event_fd.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 
@@ -31,7 +35,6 @@
 #include <optional>
 #include <ostream>
 #include <set>
-#include <type_traits>
 #include <variant>
 
 extern "C"
@@ -84,13 +87,14 @@ public:
     /**
      * returns an opened instance of any Event object
      */
-    EventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
-    EventGuard open(ExecutionScope location, int cgroup_fd = -1);
+    Expected<EventGuard, ErrnoError> open(ExecutionScope scope,
+                                          WeakFd cgroup_fd = WeakFd::make_invalid());
 
     /**
      * returns an opened instance of a Event object after formating it as a leader Event
      */
-    EventGuard open_as_group_leader(ExecutionScope location, int cgroup_fd = -1);
+    Expected<EventGuard, ErrnoError>
+    open_as_group_leader(ExecutionScope location, WeakFd cgroup_fd = WeakFd::make_invalid());
 
     const Availability& availability() const
     {
@@ -279,7 +283,7 @@ public:
 
     void sample_period(int period);
     void sample_freq(uint64_t freq);
-    void event_attr_update(std::uint64_t value, const std::string& format);
+    MaybeError<ErrnoError> event_attr_update(std::uint64_t value, const std::string& format);
 
     const std::set<Cpu>& supported_cpus() const;
 
@@ -369,88 +373,6 @@ class SysfsEventAttr : public EventAttr
 {
 public:
     SysfsEventAttr(const std::string& ev_name);
-};
-
-/**
- * Contains an opened instance of Event.
- * Use any Event.open() method to construct an object
- */
-class EventGuard
-{
-public:
-    EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd, int cgroup_fd);
-
-    EventGuard() = delete;
-    EventGuard(const EventGuard& other) = delete;
-    EventGuard& operator=(const EventGuard&) = delete;
-
-    EventGuard(EventGuard&& other)
-    {
-        std::swap(fd_, other.fd_);
-    }
-
-    EventGuard& operator=(EventGuard&& other)
-    {
-        std::swap(fd_, other.fd_);
-        return *this;
-    }
-
-    /**
-     * opens child as a counter of the calling (leader) event
-     */
-    EventGuard open_child(EventAttr& child, ExecutionScope location, int cgroup_fd = -1);
-
-    void enable();
-    void disable();
-
-    uint64_t get_id()
-    {
-        uint64_t id;
-        if (ioctl(fd_, PERF_EVENT_IOC_ID, &id) == -1)
-        {
-            throw_errno();
-        }
-
-        return id;
-    }
-
-    void set_output(const EventGuard& other_ev);
-    void set_syscall_filter(const std::vector<int64_t>& filter);
-
-    int get_fd() const
-    {
-        return fd_;
-    }
-
-    bool is_valid() const
-    {
-        return fd_ >= 0;
-    };
-
-    template <class T>
-    T read()
-    {
-        static_assert(std::is_pod_v<T> == true);
-        T val;
-
-        if (::read(fd_, &val, sizeof(val)) == -1)
-        {
-            throw_errno();
-        }
-
-        return val;
-    }
-
-    ~EventGuard()
-    {
-        if (fd_ != -1)
-        {
-            close(fd_);
-        }
-    }
-
-protected:
-    int fd_ = -1;
 };
 
 } // namespace perf

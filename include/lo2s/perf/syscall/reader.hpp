@@ -71,16 +71,16 @@ public:
     Reader(ExecutionScope scope) : scope_(scope)
     {
         tracepoint::TracepointEventAttr enter_event =
-            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_enter");
+            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_enter").unpack_ok();
         tracepoint::TracepointEventAttr exit_event =
-            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_exit");
+            EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_exit").unpack_ok();
 
         enter_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
         exit_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
         try
         {
-            enter_ev_ = enter_event.open(scope_, config().cgroup_fd);
-            exit_ev_ = exit_event.open(scope_, config().cgroup_fd);
+            enter_ev_ = enter_event.open(scope_, config().cgroup_fd).unpack_ok();
+            exit_ev_ = exit_event.open(scope_, config().cgroup_fd).unpack_ok();
         }
         catch (const std::system_error& e)
         {
@@ -88,7 +88,7 @@ public:
             throw_errno();
         }
 
-        init_mmap(enter_ev_.value().get_fd());
+        init_mmap(enter_ev_.value().get_weak_fd());
         Log::debug() << "perf_tracepoint_reader mmap initialized";
 
         exit_ev_.value().set_output(enter_ev_.value());
@@ -99,8 +99,8 @@ public:
         enter_ev_.value().enable();
         exit_ev_.value().enable();
 
-        sys_enter_id = enter_ev_.value().get_id();
-        sys_exit_id = exit_ev_.value().get_id();
+        sys_enter_id = enter_ev_.value().get_id().unpack_ok();
+        sys_exit_id = exit_ev_.value().get_id().unpack_ok();
     }
 
     Reader(Reader&& other)

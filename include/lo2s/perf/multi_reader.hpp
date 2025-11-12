@@ -25,6 +25,7 @@
 #include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/helpers/fd.hpp>
 #include <lo2s/topology.hpp>
 
 #include <lo2s/trace/trace.hpp>
@@ -56,7 +57,7 @@ public:
                 IoReaderIdentity id(tp, cpu);
                 auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
                                                std::forward_as_tuple(id));
-                fds_.emplace_back(reader.first->second.fd());
+                fds_.emplace_back(reader.first->second.get_weak_fd());
             }
         }
     }
@@ -126,7 +127,7 @@ public:
         read();
     }
 
-    const std::vector<int>& get_fds() const
+    const std::vector<WeakFd>& get_fds() const
     {
         return fds_;
     }
@@ -157,7 +158,7 @@ private:
     std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
         earliest_available_;
 
-    std::vector<int> fds_;
+    std::vector<WeakFd> fds_;
 };
 
 } // namespace perf
