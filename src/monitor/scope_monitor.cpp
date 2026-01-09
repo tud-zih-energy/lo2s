@@ -54,18 +54,14 @@ ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enabl
         add_fd(syscall_writer_->fd());
     }
 
-    if (!perf::EventComposer::instance()
-             .counters_for(MeasurementScope::group_metric(scope))
-             .counters.empty())
+    if (config().use_group_metrics)
     {
         group_counter_writer_ =
             std::make_unique<perf::counter::group::Writer>(scope, trace, enable_on_exec);
         add_fd(group_counter_writer_->fd());
     }
 
-    if (!perf::EventComposer::instance()
-             .counters_for(MeasurementScope::userspace_metric(scope))
-             .counters.empty())
+    if (config().use_userspace_metrics)
     {
         userspace_counter_writer_ =
             std::make_unique<perf::counter::userspace::Writer>(scope, trace);
