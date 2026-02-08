@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.11)
 project(lo2s VERSION 1.8.0)
 set(LO2S_COPYRIGHT_YEAR "2025")
 
+# Check if we are running Linux
+if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    message(FATAL_ERROR "You can only build and run lo2s on a Linux machine. I'm sorry.")
+endif()
 
 include(CMakeDependentOption)
 include(CheckIncludeFiles)
@@ -87,18 +91,17 @@ else()
     set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
 endif()
 
-# Check if we are running Linux
-if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    message(FATAL_ERROR "You can only build and run lo2s on a Linux machine. I'm sorry.")
-endif()
-
 # configure OTF2xx submodule
 set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds CACHE INTERNAL "")
 add_subdirectory(lib/otf2xx)
 mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
 # configure fmtlib submodule
-add_subdirectory(lib/fmt)
+find_package(fmt)
+
+if(NOT fmt_FOUND)
+    add_subdirectory(lib/fmt)
+endif()
 
 # configure Nitro submodule
 add_subdirectory(lib/nitro)
@@ -131,7 +134,7 @@ find_package(Debuginfod)
 # be pretty pointless
 if(NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
     find_package(CUDAToolkit)
-    find_package(rocprofiler-sdk)
+    find_package(rocprofiler-sdk NO_MODULE)
     find_package(OpenMP)
 
     include(CheckIncludeFileCXX)
@@ -140,20 +143,17 @@ if(NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
     endif()
 endif()
 
-option(Radare_USE_STATIC_LIBS "Link Radare statically" OFF)
-
 if(Radare_USE_STATIC_LIBS)
     set(R_asm_USE_STATIC_LIBS ON)
     set(R_anal_USE_STATIC_LIBS ON)
 endif()
+
 FindPkgConfigWrapper(R_asm "r_asm>=5.8.0" r_asm)
 FindPkgConfigWrapper(R_anal "r_anal>=5.8.0" r_anal)
 
 if(R_anal_FOUND AND R_asm_FOUND)
     set(Radare_FOUND TRUE)
 endif()
-
-
 
 # configurable options
 option(UML_LOOK "Generate graphs with an UML look" OFF)
@@ -177,7 +177,7 @@ CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug informat
 add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
 CMAKE_DEPENDENT_OPTION(USE_OPENMP "Use OMPT to record OpenMP activity" ON "OMPT_FOUND" OFF)
 add_feature_info("USE_OPENMP" USE_OPENMP "Use OMPT to record OpenMP activity")
-CMAKE_DEPENDENT_OPTION(USE_HIP "Use rocprofiler-sdk to record AMD HIP activity" ON "rocprofiler-sdk_FOUND" OFF)
+CMAKE_DEPENDENT_OPTION(USE_HIP "Use rocprofiler-sdk to record AMD HIP activity" ON "${rocprofiler-sdk_FOUND}" OFF)
 add_feature_info("USE_HIP" USE_HIP "Use rocprofiler-sdk to record AMD HIP activity")
 
 # system configuration checks
@@ -207,9 +207,6 @@ CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_eve
 if(NOT HAVE_PERF_RECORD_SWITCH)
     message(FATAL_ERROR "lo2s requires support for perf context switch recording. Make sure that you are running on a kernel that support context_switch with perf_event_open")
 endif()
-
-# detect version of running kernel
-string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" LINUX_VERSION ${CMAKE_SYSTEM_VERSION})
 
 # prepare list of source files
 set(SOURCE_FILES
@@ -449,7 +446,6 @@ if(USE_HIP)
     endif()
 endif()
 
-
 # generate version string used in lo2s
 if(Git_FOUND)
     _is_git(${CMAKE_SOURCE_DIR} IN_GIT)
@@ -502,7 +498,6 @@ else()
     endif()
 endif()
 
-
 configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
 
 # define include directory of target lo2s
@@ -510,7 +505,6 @@ target_include_directories(lo2s PRIVATE
     include
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
-
 
 if (USE_BPF)
     if (BpfObject_FOUND)
@@ -525,12 +519,7 @@ endif()
 
 add_subdirectory(man)
 
-message(STATUS "Linux kernel version: ${LINUX_VERSION}")
-
 target_compile_features(lo2s PRIVATE cxx_std_17)
-
-# define feature test macro
-target_compile_definitions(lo2s PRIVATE _GNU_SOURCE)
 
 # build Debug with -Werror. Disable overlength string detection, though, as this
 # gives us false positives from the compiled BPF code, which is included in lo2s
@@ -560,12 +549,6 @@ if(DOXYGEN_FOUND)
     set(DOXYGEN_DOT_GRAPH_DEPTH 1000)
     doxygen_add_docs(doc src include)
 endif()
-
-# Convince clion to accept headers as part of the project by adding them to a dummy target
-# Should not interfer with normal opratation.
-FILE(GLOB_RECURSE clion_dummy_headers *.hpp *.h)
-FILE(GLOB_RECURSE clion_dummy_source main.cpp)
-add_executable(clion_dummy_executable EXCLUDE_FROM_ALL ${clion_dummy_source} ${clion_dummy_headers})
 
 install(TARGETS lo2s RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
