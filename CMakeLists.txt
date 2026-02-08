@@ -156,7 +156,6 @@ endif()
 
 
 # configurable options
-option(IWYU "Developer option for include what you use." OFF)
 option(UML_LOOK "Generate graphs with an UML look" OFF)
 option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
 add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
@@ -540,14 +539,6 @@ target_compile_options(lo2s PRIVATE $<$<CONFIG:Debug>:-Werror> -Wno-overlength-s
 
 enable_testing()
 include(cmake/Tests.cmake)
-
-if (IWYU)
-    find_program(iwyu_path NAMES include-what-you-use iwyu)
-    if(NOT iwyu_path)
-        message(FATAL_ERROR "Could not find the program include-what-you-use")
-    endif()
-    set_property(TARGET lo2s PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
-endif()
 
 #option for generating graphs of the code if doxygen and graphviz are present
 if(DOXYGEN_FOUND)
