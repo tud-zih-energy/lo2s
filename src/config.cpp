@@ -33,7 +33,6 @@
 #include <lo2s/perf/pmu-events.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
-#include <lo2s/platform.hpp>
 #include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
@@ -424,10 +423,6 @@ static void set_perf_metric_options(lo2s::Config& config, nitro::options::argume
 
     if (arguments.given("standard-metrics"))
     {
-        for (const auto& mem_event : platform::get_mem_events())
-        {
-            config.group_counters.emplace_back(mem_event.name());
-        }
         config.group_counters.emplace_back("instructions");
         config.group_counters.emplace_back("cpu-cycles");
     }

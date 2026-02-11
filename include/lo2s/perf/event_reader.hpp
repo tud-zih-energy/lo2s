@@ -26,7 +26,6 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/types.hpp>
-#include <lo2s/platform.hpp>
 #include <lo2s/shared_memory.hpp>
 #include <lo2s/util.hpp>
 
