@@ -337,7 +337,7 @@ struct formatter<lo2s::Process>
     }
 
     template <typename FormatContext>
-    auto format(const lo2s::Process& process, FormatContext& ctx)
+    auto format(const lo2s::Process& process, FormatContext& ctx) const
     {
         return fmt::format_to(ctx.out(), "process {}", process.as_pid_t());
     }

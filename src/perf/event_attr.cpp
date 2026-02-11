@@ -31,6 +31,9 @@
 
 #include <optional>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 extern "C"
 {
 #include <fcntl.h>

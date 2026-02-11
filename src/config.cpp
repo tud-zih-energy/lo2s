@@ -47,6 +47,7 @@
 #include <nitro/options/parser.hpp>
 
 #include <fmt/core.h>
+#include <fmt/ranges.h>
 
 #include <algorithm>
 #include <cstdlib>
