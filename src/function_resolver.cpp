@@ -35,15 +35,15 @@ std::shared_ptr<FunctionResolver> function_resolver_for(const std::string& filen
         return nullptr;
     }
 
-        try
-        {
-            fr = DwarfFunctionResolver::cache(filename);
-        }
-        catch (std::exception& e)
-        {
-            Log::trace() << "Could not open DWARF resolver for (" << filename << ") " << e.what();
-            fr = FunctionResolver::cache(filename);
-        }
+    try
+    {
+        fr = DwarfFunctionResolver::cache(filename);
+    }
+    catch (std::exception& e)
+    {
+        Log::trace() << "Could not open DWARF resolver for (" << filename << ") " << e.what();
+        fr = FunctionResolver::cache(filename);
+    }
 
     return fr;
 }
