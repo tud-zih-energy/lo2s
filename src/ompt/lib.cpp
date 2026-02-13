@@ -21,7 +21,6 @@
 
 #include <lo2s/ompt/events.hpp>
 #include <lo2s/ompt/ringbuf.hpp>
-#include <lo2s/ringbuf.hpp>
 
 #include <omp-tools.h>
 #include <omp.h>

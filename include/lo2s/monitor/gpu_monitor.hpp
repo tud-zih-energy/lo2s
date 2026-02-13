@@ -23,7 +23,7 @@
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/ringbuf.hpp>
+#include <lo2s/rb/reader.hpp>
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s

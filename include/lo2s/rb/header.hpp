@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2024,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,34 +21,41 @@
 
 #pragma once
 
-#include <lo2s/rb/events.hpp>
+#include <atomic>
+#include <cstdint>
+
+extern "C"
+{
+#include <sys/types.h>
+}
 
 namespace lo2s
 {
-namespace gpu
-{
 
-enum class EventType : uint64_t
-{
-    KERNEL = 0,
-    KERNEL_DEF = 1,
+// To resolve possible ringbuf format incompatibilities
+// Increase everytime you:
+//  - change the ringbuf_header
+//  - add, delete or change events
+constexpr uint64_t RINGBUF_VERSION = 2;
 
+enum class RingbufMeasurementType : uint64_t
+{
+    GPU = 0,
+    OPENMP = 1,
 };
 
-struct __attribute__((packed)) kernel_def
+struct ringbuf_header
 {
-    struct event_header header;
-    uint64_t kernel_id;
-    char function[1];
+    uint64_t version;
+    uint64_t size;
+    std::atomic_uint64_t head;
+    std::atomic_uint64_t tail;
+    // set by the writer side (CUPTI, etc.)
+    int64_t pid;
+
+    // set by the reader size (lo2s)
+    std::atomic<uint64_t> lo2s_ready;
+    clockid_t clockid;
 };
 
-struct __attribute__((packed)) kernel
-{
-    struct event_header header;
-    uint64_t start_tp;
-    uint64_t end_tp;
-    uint64_t kernel_id;
-};
-
-} // namespace gpu
 } // namespace lo2s

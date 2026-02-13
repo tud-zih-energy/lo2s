@@ -1,7 +1,7 @@
 #pragma once
 
 #include <lo2s/ompt/events.hpp>
-#include <lo2s/ringbuf.hpp>
+#include <lo2s/rb/writer.hpp>
 
 namespace lo2s
 {

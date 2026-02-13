@@ -232,6 +232,10 @@ set(SOURCE_FILES
     src/resolvers/kallsyms.cpp
     src/resolvers/perf_map.cpp
 
+    src/rb/shm_ringbuf.cpp
+    src/rb/reader.cpp
+    src/rb/writer.cpp
+
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
     src/monitor/socket_monitor.cpp

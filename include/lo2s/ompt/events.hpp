@@ -19,7 +19,7 @@
  */
 
 #pragma once
-#include <lo2s/ringbuf_events.hpp>
+#include <lo2s/rb/events.hpp>
 
 #include <fmt/core.h>
 
