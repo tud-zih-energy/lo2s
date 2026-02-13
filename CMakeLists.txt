@@ -228,6 +228,10 @@ set(SOURCE_FILES
     src/monitor/tracepoint_monitor.cpp
     src/process_controller.cpp
 
+    src/resolvers.cpp
+    src/resolvers/kallsyms.cpp
+    src/resolvers/perf_map.cpp
+
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
     src/monitor/socket_monitor.cpp

@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2024,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,32 +19,32 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/dwarf_resolve.hpp>
-#include <lo2s/function_resolver.hpp>
+#pragma once
 
-#include <nitro/lang/string.hpp>
+#include <lo2s/function_resolver.hpp>
 
 namespace lo2s
 {
-
-std::shared_ptr<FunctionResolver> function_resolver_for(const std::string& filename)
+class ManualFunctionResolver : public FunctionResolver
 {
-    std::shared_ptr<FunctionResolver> fr;
-    if (known_non_executable(filename))
+public:
+    ManualFunctionResolver(const std::string& name, std::map<Address, std::string>& functions)
+    : FunctionResolver(name), functions_(functions)
     {
-        return nullptr;
     }
 
-        try
+    LineInfo lookup_line_info(Address address) override
+    {
+        if (functions_.count(address))
         {
-            fr = DwarfFunctionResolver::cache(filename);
-        }
-        catch (std::exception& e)
-        {
-            Log::trace() << "Could not open DWARF resolver for (" << filename << ") " << e.what();
-            fr = FunctionResolver::cache(filename);
+            return LineInfo::for_function("", functions_.at(address).c_str(), 1, name_);
         }
 
-    return fr;
-}
+        return LineInfo::for_unknown_function();
+    }
+
+protected:
+    std::map<Address, std::string> functions_;
+};
+
 } // namespace lo2s

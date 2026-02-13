@@ -35,13 +35,8 @@ struct Resolvers
 
     std::map<Process, MemoryMap<ManualFunctionResolver>> gpu_function_resolvers;
 
-    void fork(Process parent, Process process)
-    {
-        if (function_resolvers.count(parent) != 0)
-        {
-            function_resolvers.emplace(process, function_resolvers.at(parent));
-        }
-        instruction_resolvers[process] = instruction_resolvers[parent];
-    }
+    void fork(Process parent, Process process);
+
+    void emplace_mappings_for(Process p, const Mapping& m, const std::string& binary_name);
 };
 } // namespace lo2s

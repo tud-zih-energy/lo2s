@@ -28,6 +28,9 @@
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/types.hpp>
+#include <lo2s/resolvers/kallsyms.hpp>
+#include <lo2s/resolvers/manual_function_resolver.hpp>
+#include <lo2s/resolvers/perf_map.hpp>
 
 #include <nitro/lang/string.hpp>
 

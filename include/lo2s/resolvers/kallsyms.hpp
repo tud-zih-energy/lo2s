@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2024,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,32 +19,40 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/dwarf_resolve.hpp>
-#include <lo2s/function_resolver.hpp>
+#pragma once
 
-#include <nitro/lang/string.hpp>
+#include <lo2s/function_resolver.hpp>
 
 namespace lo2s
 {
-
-std::shared_ptr<FunctionResolver> function_resolver_for(const std::string& filename)
+class Kallsyms : public FunctionResolver
 {
-    std::shared_ptr<FunctionResolver> fr;
-    if (known_non_executable(filename))
+public:
+    Kallsyms();
+
+    static std::shared_ptr<Kallsyms> cache()
     {
-        return nullptr;
+        static std::shared_ptr<Kallsyms> k = std::make_shared<Kallsyms>();
+        return k;
     }
 
-        try
-        {
-            fr = DwarfFunctionResolver::cache(filename);
-        }
-        catch (std::exception& e)
-        {
-            Log::trace() << "Could not open DWARF resolver for (" << filename << ") " << e.what();
-            fr = FunctionResolver::cache(filename);
-        }
+    uint64_t start() const
+    {
+        return start_;
+    }
 
-    return fr;
-}
+    LineInfo lookup_line_info(Address addr) override
+    {
+        auto it = kallsyms_.find(addr + start_);
+        if (it != kallsyms_.end())
+        {
+            return LineInfo::for_function("", it->second.c_str(), 1, "[kernel]");
+        }
+        return LineInfo::for_binary("[kernel]");
+    }
+
+private:
+    std::map<Range, std::string> kallsyms_;
+    uint64_t start_ = UINT64_MAX;
+};
 } // namespace lo2s

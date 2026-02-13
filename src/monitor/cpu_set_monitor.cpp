@@ -63,17 +63,7 @@ CpuSetMonitor::CpuSetMonitor() : MainMonitor()
                     std::piecewise_construct, std::forward_as_tuple(p), std::forward_as_tuple(p));
                 for (auto& map : maps)
                 {
-                    auto fr = function_resolver_for(map.second);
-                    if (fr != nullptr)
-                    {
-                        resolvers_.function_resolvers.at(p).emplace(map.first, fr);
-                    }
-                    auto ir = instruction_resolver_for(map.second);
-
-                    if (ir != nullptr)
-                    {
-                        resolvers_.instruction_resolvers[p].emplace(map.first, ir);
-                    }
+                    resolvers_.emplace_mappings_for(p, map.first, map.second);
                 }
             }
         }
