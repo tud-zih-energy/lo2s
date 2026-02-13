@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
+#include <lo2s/execution_scope_group.hpp>
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 
 #include <map>

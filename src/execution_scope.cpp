@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -19,52 +19,43 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <atomic>
-#include <chrono>
-#include <mutex>
-#include <set>
-extern "C"
-{
-#include <sys/types.h>
-}
-
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 namespace lo2s
 {
 
-class Summary
+ExecutionScope::ExecutionScope(Thread thread)
+: type(ExecutionScopeType::THREAD), id(thread.as_int())
 {
-public:
-    void show();
+}
 
-    void add_thread();
-    void register_process(Process process);
+ExecutionScope::ExecutionScope(Process process)
+: type(ExecutionScopeType::PROCESS), id(process.as_int())
+{
+}
 
-    void record_perf_wakeups(std::size_t num_wakeups);
+ExecutionScope::ExecutionScope(Cpu cpu) : type(ExecutionScopeType::CPU), id(cpu.as_int())
+{
+}
 
-    void set_exit_code(int exit_code);
-    void set_trace_dir(const std::string& trace_dir);
+Thread ExecutionScope::as_thread() const
+{
+    assert(type == ExecutionScopeType::THREAD);
+    return Thread(id);
+}
 
-    friend Summary& summary();
+Process ExecutionScope::as_process() const
+{
+    assert(type == ExecutionScopeType::PROCESS);
+    return Process(id);
+}
 
-private:
-    Summary();
-
-    std::chrono::steady_clock::time_point start_wall_time_;
-
-    std::atomic<std::size_t> num_wakeups_;
-    std::atomic<std::size_t> thread_count_;
-
-    std::set<Process> processes_;
-    std::mutex processes_mutex_;
-
-    std::string trace_dir_;
-
-    int exit_code_;
-};
-
-Summary& summary();
+Cpu ExecutionScope::as_cpu() const
+{
+    assert(type == ExecutionScopeType::CPU);
+    return Cpu(id);
+}
 } // namespace lo2s

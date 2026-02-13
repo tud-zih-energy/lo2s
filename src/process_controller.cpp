@@ -79,7 +79,7 @@ namespace lo2s
 static void ptrace_checked_call(enum __ptrace_request request, Thread thread, void* addr = nullptr,
                                 void* data = nullptr)
 {
-    long retval = ptrace(request, thread.as_pid_t(), addr, data);
+    long retval = ptrace(request, thread.as_int(), addr, data);
     if (retval == -1)
     {
         auto ex = make_system_error();
@@ -118,7 +118,7 @@ ProcessController::ProcessController(Process child, const std::string& name, boo
     }
     else
     {
-        attached_pid = child.as_pid_t();
+        attached_pid = child.as_int();
     }
     running = true;
 
@@ -264,7 +264,7 @@ ProcessController::SignalHandlingState ProcessController::handle_signal(Thread c
             Log::debug() << "Detaching from " << child;
 
             // Tracee is in signal-delivery-stop, so we can detach
-            ptrace(PTRACE_DETACH, child.as_pid_t(), 0, status);
+            ptrace(PTRACE_DETACH, child.as_int(), 0, status);
 
             // exit if detached from first child (the original sampled process)
             if (child == first_child_)

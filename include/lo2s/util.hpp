@@ -23,7 +23,8 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <chrono>
 #include <filesystem>

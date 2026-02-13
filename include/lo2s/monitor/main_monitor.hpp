@@ -39,7 +39,6 @@
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 #include <lo2s/resolvers.hpp>
 #include <lo2s/trace/trace.hpp>
-#include <lo2s/types.hpp>
 
 #include <memory>
 #include <vector>

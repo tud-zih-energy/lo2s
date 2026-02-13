@@ -31,16 +31,14 @@
 #include <lo2s/resolvers.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/reg_keys.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <otf2xx/otf2.hpp>
 
 #include <atomic>
-#include <deque>
-#include <map>
 #include <mutex>
-#include <set>
-#include <unordered_map>
 
 namespace lo2s
 {

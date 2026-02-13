@@ -404,7 +404,7 @@ void Trace::update_thread(Thread thread, const std::string& name)
     }
     try
     {
-        auto& iname = intern(fmt::format("{} ({})", name, thread.as_pid_t()));
+        auto& iname = intern(fmt::format("{} ({})", name, thread.as_int()));
         auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread));
         thread_region.name(iname);
         thread_region.canonical_name(iname);
@@ -832,7 +832,7 @@ otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeCo
     }
 
     auto name = thread_names_.at(thread);
-    auto& iname = intern(fmt::format("{} ({})", name, thread.as_pid_t()));
+    auto& iname = intern(fmt::format("{} ({})", name, thread.as_int()));
 
     auto& thread_region = registry_.emplace<otf2::definition::region>(
         ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
@@ -1020,7 +1020,7 @@ void Trace::emplace_thread_exclusive(Process process, Thread thread, const std::
 
     if (thread != Thread(0))
     {
-        thread_name = fmt::format("{} ({})", name, thread.as_pid_t());
+        thread_name = fmt::format("{} ({})", name, thread.as_int());
     }
 
     auto& iname = intern(thread_name);

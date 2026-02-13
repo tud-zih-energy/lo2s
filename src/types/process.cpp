@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -20,39 +20,20 @@
  */
 
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 namespace lo2s
 {
-
-ExecutionScope Thread::as_scope() const
-{
-    return ExecutionScope(*this);
-}
 
 ExecutionScope Process::as_scope() const
 {
     return ExecutionScope(*this);
 }
 
-Process Thread::as_process() const
-{
-    return Process(tid_);
-}
-
 Thread Process::as_thread() const
 {
     return Thread(pid_);
-}
-
-int Cpu::as_int() const
-{
-    return cpu_;
-}
-
-ExecutionScope Cpu::as_scope() const
-{
-    return ExecutionScope(*this);
 }
 
 } // namespace lo2s

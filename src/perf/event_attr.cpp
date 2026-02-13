@@ -30,6 +30,7 @@
 #include <nitro/lang/string.hpp>
 
 #include <optional>
+#include <regex>
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>

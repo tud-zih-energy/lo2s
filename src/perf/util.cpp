@@ -3,6 +3,7 @@
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/util.hpp>
 
 extern "C"
@@ -45,7 +46,7 @@ int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int
     }
     else
     {
-        pid = scope.as_thread().as_pid_t();
+        pid = scope.as_thread().as_int();
     }
     return syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags);
 }

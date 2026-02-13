@@ -26,6 +26,8 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <cstdint>
 #include <optional>

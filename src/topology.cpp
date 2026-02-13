@@ -13,7 +13,7 @@ void Topology::read_proc()
     {
         std::stringstream filename_stream;
 
-        std::filesystem::path topology = base_path / ("cpu"s + std::to_string(cpu_id)) / "topology";
+        std::filesystem::path topology = base_path / fmt::format("cpu{}", cpu_id) / "topology";
         std::ifstream package_stream(topology / "physical_package_id");
         std::ifstream core_stream(topology / "core_id");
 

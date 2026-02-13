@@ -210,7 +210,10 @@ endif()
 
 # prepare list of source files
 set(SOURCE_FILES
-    src/types.cpp
+    src/types/cpu.cpp
+    src/types/thread.cpp
+    src/types/process.cpp
+    src/execution_scope.cpp
 
     src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
 
@@ -408,7 +411,7 @@ endif()
 
 if(USE_CUPTI)
     if(CUDAToolkit_FOUND)
-        target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types.cpp src/time/time.cpp)
+        target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types/process.cpp src/time/time.cpp)
         if (CUDA_USE_STATIC_LIBS)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
         else()

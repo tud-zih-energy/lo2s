@@ -2,7 +2,7 @@
  * This file is part of the lo2s software.
  * Linux OTF2 sampling
  *
- * Copyright (c) 2017,
+ * Copyright (c) 2026,
  *    Technische Universitaet Dresden, Germany
  *
  * lo2s is free software: you can redistribute it and/or modify
@@ -21,50 +21,48 @@
 
 #pragma once
 
-#include <atomic>
-#include <chrono>
-#include <mutex>
-#include <set>
-extern "C"
-{
-#include <sys/types.h>
-}
-
-#include <lo2s/types/process.hpp>
+#include <cstdint>
 
 namespace lo2s
 {
-
-class Summary
+class Core
 {
 public:
-    void show();
+    Core(int64_t core_id, int64_t package_id) : core_id_(core_id), package_id_(package_id)
+    {
+    }
 
-    void add_thread();
-    void register_process(Process process);
+    static Core invalid()
+    {
+        return { -1, -1 };
+    }
 
-    void record_perf_wakeups(std::size_t num_wakeups);
+    friend bool operator==(const Core& lhs, const Core& rhs)
+    {
+        return (lhs.core_id_ == rhs.core_id_) && (lhs.package_id_ == rhs.package_id_);
+    }
 
-    void set_exit_code(int exit_code);
-    void set_trace_dir(const std::string& trace_dir);
+    friend bool operator<(const Core& lhs, const Core& rhs)
+    {
+        if (lhs.package_id_ == rhs.package_id_)
+        {
+            return lhs.core_id_ < rhs.core_id_;
+        }
+        return lhs.package_id_ < rhs.package_id_;
+    }
 
-    friend Summary& summary();
+    int64_t core_as_int() const
+    {
+        return core_id_;
+    }
+
+    int64_t package_as_int() const
+    {
+        return package_id_;
+    }
 
 private:
-    Summary();
-
-    std::chrono::steady_clock::time_point start_wall_time_;
-
-    std::atomic<std::size_t> num_wakeups_;
-    std::atomic<std::size_t> thread_count_;
-
-    std::set<Process> processes_;
-    std::mutex processes_mutex_;
-
-    std::string trace_dir_;
-
-    int exit_code_;
+    int64_t core_id_;
+    int64_t package_id_;
 };
-
-Summary& summary();
 } // namespace lo2s

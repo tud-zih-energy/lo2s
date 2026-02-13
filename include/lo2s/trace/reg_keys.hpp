@@ -23,12 +23,17 @@
 #pragma once
 #include <lo2s/address.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/execution_scope_group.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/thread_fd_instance.hpp>
+#include <lo2s/types/core.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/nec_device.hpp>
+#include <lo2s/types/package.hpp>
 #include <lo2s/util.hpp>
 #include <otf2xx/otf2.hpp>
 

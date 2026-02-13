@@ -23,9 +23,9 @@
 
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
 
-#include <vector>
+#include <map>
 
 namespace lo2s
 {

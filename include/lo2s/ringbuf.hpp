@@ -240,7 +240,7 @@ public:
         first_header->tail.store(0);
         first_header->head.store(0);
 
-        first_header->pid = process.as_pid_t();
+        first_header->pid = process.as_int();
 
         rb_ = std::make_unique<ShmRingbuf>(fd);
         write_fd(type);

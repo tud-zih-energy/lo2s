@@ -23,7 +23,7 @@
 
 #include <lo2s/instruction_resolver.hpp>
 #include <lo2s/memory_map.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
 
 namespace lo2s
 {

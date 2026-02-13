@@ -1,6 +1,8 @@
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>
@@ -70,7 +72,7 @@ std::chrono::duration<double> get_cpu_time()
 
 std::string get_process_exe(Process process)
 {
-    auto proc_exe_filename = fmt::format("/proc/{}/exe", process.as_pid_t());
+    auto proc_exe_filename = fmt::format("/proc/{}/exe", process.as_int());
     char exe_cstr[PATH_MAX + 1];
     auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
 
@@ -105,7 +107,7 @@ static std::string read_file(const std::filesystem::path& path)
 
 std::string get_process_comm(Process process)
 {
-    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) / "comm";
+    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) / "comm";
     try
     {
         return read_file(proc_comm);
@@ -113,14 +115,14 @@ std::string get_process_comm(Process process)
     catch (const std::ios::failure&)
     {
         Log::warn() << "Failed to get name for " << process;
-        return fmt::format("[process {}]", process.as_pid_t());
+        return fmt::format("[process {}]", process.as_int());
     }
 }
 
 std::string get_task_comm(Process process, Thread thread)
 {
-    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_pid_t()) /
-                     "task" / std::to_string(thread.as_pid_t()) / "comm";
+    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) / "task" /
+                     std::to_string(thread.as_int()) / "comm";
     try
     {
         return read_file(task_comm);
@@ -128,7 +130,7 @@ std::string get_task_comm(Process process, Thread thread)
     catch (const std::ios::failure&)
     {
         Log::warn() << "Failed to get name for " << thread << " in " << process;
-        return fmt::format("[thread {}]", thread.as_pid_t());
+        return fmt::format("[thread {}]", thread.as_int());
     }
 }
 
@@ -192,7 +194,7 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
         auto& cur_process = ret[process];
         try
         {
-            std::filesystem::path task(fmt::format("/proc/{}/task", process.as_pid_t()));
+            std::filesystem::path task(fmt::format("/proc/{}/task", process.as_int()));
             for (auto& entry_task : std::filesystem::directory_iterator(task))
             {
                 Thread thread;
@@ -206,8 +208,8 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
                 }
 
                 std::string name = get_task_comm(process, thread);
-                Log::trace() << "mapping from /proc/" << process.as_pid_t() << "/"
-                             << thread.as_pid_t() << ": " << name;
+                Log::trace() << "mapping from /proc/" << process.as_int() << "/" << thread.as_int()
+                             << ": " << name;
                 cur_process.emplace(thread, name);
             }
         }
@@ -225,7 +227,7 @@ void try_pin_to_scope(ExecutionScope scope)
     if (scope.is_thread())
     {
         // Copy affinity from mentioned thread
-        sched_getaffinity(scope.as_thread().as_pid_t(), sizeof(cpumask), &cpumask);
+        sched_getaffinity(scope.as_thread().as_int(), sizeof(cpumask), &cpumask);
     }
     else
     {
@@ -324,7 +326,7 @@ std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
 
 std::vector<std::string> get_thread_cmdline(Thread thread)
 {
-    std::ifstream cmdline(fmt::format("/proc/{}/cmdline", thread.as_pid_t()));
+    std::ifstream cmdline(fmt::format("/proc/{}/cmdline", thread.as_int()));
     std::string cmdline_str;
     cmdline >> cmdline_str;
 
@@ -351,7 +353,7 @@ std::string get_nec_thread_comm(Thread thread)
         {
             if (i + 1 < args.size())
             {
-                return fmt::format("{} ({})", args[i + 1], thread.as_pid_t());
+                return fmt::format("{} ({})", args[i + 1], thread.as_int());
             }
         }
     }
@@ -446,13 +448,13 @@ bool known_non_executable(const std::string& filename)
 std::map<Mapping, std::string> read_maps(Process p)
 {
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
-    auto filename = fmt::format("/proc/{}/task/{}/maps", p.as_pid_t(), p.as_pid_t());
+    auto filename = fmt::format("/proc/{}/task/{}/maps", p.as_int(), p.as_int());
 
     std::map<Mapping, std::string> mappings;
     std::ifstream mapstream(filename);
     if (mapstream.fail())
     {
-        std::ifstream commstream(fmt::format("/proc/{}/comm", p.as_pid_t()));
+        std::ifstream commstream(fmt::format("/proc/{}/comm", p.as_int()));
         std::string comm;
         commstream >> comm;
         Log::error() << "could not open maps file " << filename << " (" << comm << ")";
@@ -488,7 +490,7 @@ std::map<Mapping, std::string> read_maps(Process p)
 bool is_kernel_thread(Thread thread)
 {
 
-    std::ifstream cmdline(std::filesystem::path(fmt::format("/proc/{}", thread.as_pid_t())) /
+    std::ifstream cmdline(std::filesystem::path(fmt::format("/proc/{}", thread.as_int())) /
                           "cmdline");
 
     if (cmdline.good())

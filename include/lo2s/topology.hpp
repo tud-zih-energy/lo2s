@@ -22,23 +22,15 @@
 #pragma once
 
 #include <algorithm>
-#include <fstream>
-#include <iterator>
-#include <map>
-#include <regex>
-#include <set>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <utility>
-
-#include <cstdint>
-
-#include <filesystem>
 
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/core.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/package.hpp>
+
+#include <map>
+#include <set>
 
 #ifdef HAVE_VEOSINFO
 extern "C"
@@ -46,8 +38,6 @@ extern "C"
 #include <veosinfo/veosinfo.h>
 }
 #endif
-
-using namespace std::literals::string_literals;
 
 namespace lo2s
 {

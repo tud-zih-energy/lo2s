@@ -231,7 +231,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
     auto process = config().process;
-    assert(process.as_pid_t() != 0);
+    assert(process.as_int() != 0);
     bool spawn = (config().process == Process::invalid());
 
     if (spawn)
@@ -241,7 +241,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
     else
     {
         // TODO Attach to all threads in a process
-        if (ptrace(PTRACE_ATTACH, process.as_pid_t(), NULL, NULL) == -1)
+        if (ptrace(PTRACE_ATTACH, process.as_int(), NULL, NULL) == -1)
         {
             Log::error() << "Could not attach to " << process
                          << ". Try setting /proc/sys/kernel/yama/ptrace_scope to 0";
@@ -254,7 +254,7 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         Log::error() << "Fork failed.";
         throw_errno();
     }
-    else if (process.as_pid_t() == 0)
+    else if (process.as_int() == 0)
     {
         assert(spawn);
         run_command(config().command);

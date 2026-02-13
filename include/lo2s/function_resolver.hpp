@@ -182,7 +182,7 @@ class PerfMap : public FunctionResolver
 public:
     PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions for {}", process))
     {
-        std::ifstream perf_map_file(fmt::format("/tmp/perf-{}.map", process.as_pid_t()));
+        std::ifstream perf_map_file(fmt::format("/tmp/perf-{}.map", process.as_int()));
 
         // Entries in the perf-[PID].map file have the form:
         // START SIZE SYMBOL

@@ -19,52 +19,20 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
-#include <atomic>
-#include <chrono>
-#include <mutex>
-#include <set>
-extern "C"
-{
-#include <sys/types.h>
-}
-
-#include <lo2s/types/process.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/types/cpu.hpp>
 
 namespace lo2s
 {
 
-class Summary
+int64_t Cpu::as_int() const
 {
-public:
-    void show();
+    return cpu_;
+}
 
-    void add_thread();
-    void register_process(Process process);
+ExecutionScope Cpu::as_scope() const
+{
+    return ExecutionScope(*this);
+}
 
-    void record_perf_wakeups(std::size_t num_wakeups);
-
-    void set_exit_code(int exit_code);
-    void set_trace_dir(const std::string& trace_dir);
-
-    friend Summary& summary();
-
-private:
-    Summary();
-
-    std::chrono::steady_clock::time_point start_wall_time_;
-
-    std::atomic<std::size_t> num_wakeups_;
-    std::atomic<std::size_t> thread_count_;
-
-    std::set<Process> processes_;
-    std::mutex processes_mutex_;
-
-    std::string trace_dir_;
-
-    int exit_code_;
-};
-
-Summary& summary();
 } // namespace lo2s

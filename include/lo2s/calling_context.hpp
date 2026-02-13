@@ -24,7 +24,8 @@
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/ompt/events.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <otf2xx/otf2.hpp>
 
@@ -258,9 +259,9 @@ public:
         case CallingContextType::ROOT:
             return "ROOT";
         case CallingContextType::PROCESS:
-            return fmt::format("process {}", p.as_pid_t());
+            return fmt::format("process {}", p.as_int());
         case CallingContextType::THREAD:
-            return fmt::format("thread {}", t.as_pid_t());
+            return fmt::format("thread {}", t.as_int());
         case CallingContextType::SAMPLE_ADDR:
             return fmt::format("sample addr {}", addr);
         case CallingContextType::GPU_KERNEL:
