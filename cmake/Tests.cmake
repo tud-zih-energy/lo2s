@@ -1,62 +1,40 @@
-add_test(NAME PerfEventParanoid2 COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fixtures/paranoid.sh 2)
-add_test(NAME PerfEventParanoid1 COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fixtures/paranoid.sh 1)
-add_test(NAME PerfEventParanoid0 COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fixtures/paranoid.sh 0)
-add_test(NAME PerfEventParanoidMinus1 COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fixtures/paranoid.sh -1)
 
-add_test(NAME SysKernelTracing COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/fixtures/test_sys_kernel_tracing.sh)
+macro(AddLo2sTest test_name)
+    add_test(NAME ${test_name} COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/${test_name}/${test_name}.sh")
+    # For the CI, not every test is runnable.
+    # This includes everything that requires hardware PMU events.
+    # This undocumented-by-design switch allows the CI to skip tests
+    # where it is detected that they can not possibly run.
+    if(LO2S_TESTS_MAY_SKIP)
+        set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 127)
+    endif()
+endmacro()
 
+AddLo2sTest(process_sampling)
+AddLo2sTest(process_counters)
+AddLo2sTest(predefined_counters)
+AddLo2sTest(userspace_counters)
 
-set_tests_properties(PerfEventParanoid2 PROPERTIES FIXTURES_SETUP PARANOID2)
-set_tests_properties(PerfEventParanoid1 PROPERTIES FIXTURES_SETUP PARANOID1)
-set_tests_properties(PerfEventParanoid0 PROPERTIES FIXTURES_SETUP PARANOID0)
-set_tests_properties(PerfEventParanoidMinus1 PROPERTIES FIXTURES_SETUP PARANOIDMINUS1)
-set_tests_properties(SysKernelTracing PROPERTIES FIXTURES_SETUP TRACEFS)
+AddLo2sTest(system_sampling)
+AddLo2sTest(system_counters)
 
-# Process Mode tests, those require perf_event_paranoid=2
-add_test(NAME process_sampling COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/process_sampling/process_sampling.sh)
-set_tests_properties(process_sampling PROPERTIES FIXTURES_REQUIRED PARANOID2)
-
-add_test(NAME process_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/process_counters/process_counters.sh)
-set_tests_properties(process_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
-
-add_test(NAME userspace_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/userspace_counters/userspace_counters.sh)
-set_tests_properties(userspace_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
-
-add_test(NAME predefined_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/predefined_counters/predefined_counters.sh)
-set_tests_properties(predefined_counters PROPERTIES FIXTURES_REQUIRED PARANOID2)
-
-# System Mode tests, those require perf_event_paranoid=0
-add_test(NAME system_sampling COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/system_sampling/system_sampling.sh)
-set_tests_properties(system_sampling PROPERTIES FIXTURES_REQUIRED PARANOID0)
-
-add_test(NAME system_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/system_counters/system_counters.sh)
-set_tests_properties(system_counters PROPERTIES FIXTURES_REQUIRED PARANOID0)
-
-# Tracepoint based tests, those require perf_event_paranoid=-1 and
-# /sys/kernel/tracing availability
-add_test(NAME tracepoint_recording COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/tracepoint_recording/tracepoint_recording.sh)
-set_tests_properties(tracepoint_recording PROPERTIES FIXTURES_REQUIRED "PARANOIDMINUS1;TRACEFS")
-
-add_test(NAME block_io COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/block_io/block_io.sh)
-set_tests_properties(block_io PROPERTIES FIXTURES_REQUIRED "PARANOIDMINUS1;TRACEFS")
+AddLo2sTest(block_io)
+AddLo2sTest(tracepoint_recording)
 
 if(USE_LIBAUDIT)
-    add_test(NAME syscall_recording COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/syscall_recording/syscall_recording.sh)
-    set_tests_properties(syscall_recording PROPERTIES FIXTURES_REQUIRED "PARANOIDMINUS1;TRACEFS")
+    AddLo2sTest(syscall_recording)
 endif()
 
-# Tests that do not require perf
+
 if(USE_SENSORS)
-    add_test(NAME sensors_recording COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/sensors_recording/sensors_recording.sh)
+    AddLo2sTest(sensors_recording)
 endif()
 
 if(USE_LIBPFM)
-    add_test(NAME pfm_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/pfm_counters/pfm_counters.sh)
-    set_tests_properties(pfm_counters PROPERTIES FIXTURES_REQUIRED PARANOIDMINUS1)
+    AddLo2sTest(pfm_counters)
 endif()
 
 
 if(USE_BPF)
-    add_test(NAME posix_io COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/posix_io/posix_io.sh)
-    set_tests_properties(posix_io PROPERTIES FIXTURES_REQUIRED PARANOIDMINUS1)
+    AddLo2sTest(posix_io)
 endif()

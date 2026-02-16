@@ -16,7 +16,6 @@ jobs:
         hw_breakpoint: [ON, OFF]
 
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v2
       - name: Install dependencies
@@ -41,7 +40,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}}
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}} -DLO2S_TESTS_MAY_SKIP=ON
       - name: Build
         run: make -j 2
       - name: Create source tarball
@@ -52,3 +51,6 @@ jobs:
         with:
           overwrite: true
           path: lo2s*.tar.bz2
+      - name: Test
+        timeout-minutes: 5
+        run: sudo PATH="/opt/otf2/bin:$PATH" ctest --output-on-failure
