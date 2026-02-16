@@ -32,6 +32,7 @@
 extern "C"
 {
 #include <sys/mman.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 }
 
