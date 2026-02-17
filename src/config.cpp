@@ -672,6 +672,17 @@ static void check_program_under_test_options(lo2s::Config& config)
 
 static void check_perf_options(lo2s::Config& config)
 {
+    if (config.use_posix_io)
+    {
+        if (getuid() != 0)
+        {
+            std::cerr << "POSIX I/O recording makes use of BPF" << std::endl;
+            std::cerr << "BPF is currently only available to root" << std::endl;
+            std::cerr << "please re-run lo2s as root." << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+    }
+
     if (config.use_perf())
     {
 
