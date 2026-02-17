@@ -106,15 +106,7 @@ class IoReader : public PullReader
 public:
     IoReader(IoReaderIdentity identity) : identity_(identity), event_(std::nullopt)
     {
-        try
-        {
-            event_ = identity_.tracepoint().open(identity.cpu);
-        }
-        catch (const std::system_error& e)
-        {
-            Log::error() << "perf_event_open for raw tracepoint failed.";
-            throw_errno();
-        }
+        event_ = identity_.tracepoint().open(identity.cpu);
 
         Log::debug() << "Opened block_rq_insert_tracing";
 

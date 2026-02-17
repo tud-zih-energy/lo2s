@@ -38,6 +38,7 @@
 #include <ios>
 
 #include <cstddef>
+#include <stdexcept>
 
 extern "C"
 {
@@ -117,15 +118,7 @@ public:
 
     Reader(Cpu cpu, perf::tracepoint::TracepointEventAttr ev) : event_(ev), cpu_(cpu)
     {
-        try
-        {
-            ev_instance_ = event_.open(cpu_, config().cgroup_fd);
-        }
-        catch (const std::system_error& e)
-        {
-            Log::error() << "perf_event_open for raw tracepoint failed.";
-            throw_errno();
-        }
+        ev_instance_ = event_.open(cpu_.as_scope(), config().cgroup_fd);
 
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
                      << event_.id();
