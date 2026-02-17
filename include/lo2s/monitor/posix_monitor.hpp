@@ -108,7 +108,7 @@ public:
     void insert_thread(Thread thread)
     {
         char insert = 1;
-        pid_t pid = thread.as_pid_t();
+        pid_t pid = thread.as_int();
         bpf_map__update_elem(skel_->maps.pids, &pid, sizeof(pid), &insert, sizeof(char), BPF_ANY);
 
         last_fd_[thread] = -1;
@@ -117,7 +117,7 @@ public:
     // Removes thread from list of threads whose POSIX I/O should be recorded
     void exit_thread(Thread thread)
     {
-        pid_t pid = thread.as_pid_t();
+        pid_t pid = thread.as_int();
         bpf_map__delete_elem(skel_->maps.pids, &pid, sizeof(pid), BPF_ANY);
     }
 
@@ -237,7 +237,7 @@ public:
             otf2::writer::local& writer = trace_.posix_io_writer(thread);
 
             otf2::definition::io_handle& handle = trace_.posix_io_handle(
-                thread, last_fd_[thread], instance_[ThreadFd(last_fd_[thread], thread.as_pid_t())],
+                thread, last_fd_[thread], instance_[ThreadFd(last_fd_[thread], thread.as_int())],
                 filename);
 
             writer << otf2::event::io_operation_complete(time_converter_(e->time), handle,
