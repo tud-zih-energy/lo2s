@@ -79,13 +79,6 @@ if(NOT BPFOBJECT_CLANG_EXE)
       set(CLANG_VERSION "${CMAKE_MATCH_1}")
       string(REPLACE "." ";" CLANG_VERSION_LIST ${CLANG_VERSION})
       list(GET CLANG_VERSION_LIST 0 CLANG_VERSION_MAJOR)
-
-      # Anything older than clang 10 doesn't really work
-      string(COMPARE LESS ${CLANG_VERSION_MAJOR} 10 CLANG_VERSION_MAJOR_LT10)
-      if(NOT ${CLANG_VERSION_MAJOR_LT10})
-          set(CLANG_RECENT_ENOUGH TRUE)
-      endif()
-
       message(STATUS "Found clang version: ${CLANG_VERSION}")
     endif()
   endif()
@@ -115,7 +108,6 @@ find_package_handle_standard_args(BpfObject
     BPFOBJECT_BPFTOOL_EXE
     BPFOBJECT_CLANG_EXE
     LibBpf_FOUND
-    CLANG_RECENT_ENOUGH
     BPFOBJECT_VMLINUX_H
     GENERATED_VMLINUX_DIR)
 
