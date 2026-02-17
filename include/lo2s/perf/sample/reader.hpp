@@ -21,31 +21,28 @@
 
 #pragma once
 
+#include <lo2s/config.hpp>
+#include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/util.hpp>
-
-#include <lo2s/config.hpp>
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/util.hpp>
 
 #include <stdexcept>
+#include <system_error>
 
 #include <cstdlib>
 #include <cstring>
-#include <system_error>
 
 extern "C"
 {
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <linux/perf_event.h>
-
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 }
 
 namespace lo2s

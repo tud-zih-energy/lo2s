@@ -23,12 +23,13 @@
 #include <lo2s/perf/counter/counter_buffer.hpp>
 
 #include <array>
+#include <memory>
+#include <utility>
+
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <memory>
-#include <utility>
 
 namespace lo2s
 {

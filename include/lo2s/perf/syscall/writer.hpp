@@ -24,7 +24,6 @@
 #include <lo2s/perf/syscall/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
-
 #include <lo2s/trace/trace.hpp>
 
 #include <otf2xx/definition/metric_instance.hpp>

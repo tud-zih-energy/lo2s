@@ -23,8 +23,9 @@
 
 #pragma once
 
-#include <cstdint>
 #include <iostream>
+
+#include <cstdint>
 
 #include <fmt/format.h>
 

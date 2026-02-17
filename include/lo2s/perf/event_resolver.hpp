@@ -21,12 +21,12 @@
 
 #pragma once
 
+#include <lo2s/perf/tracepoint/event_attr.hpp>
+
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <lo2s/perf/tracepoint/event_attr.hpp>
 
 namespace lo2s
 {

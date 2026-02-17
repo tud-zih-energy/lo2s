@@ -21,11 +21,13 @@
 
 #pragma once
 
+#include <lo2s/log.hpp>
+
 #include <sstream>
 
 #include <cstdint>
+
 #include <fmt/format.h>
-#include <lo2s/log.hpp>
 
 namespace lo2s
 {

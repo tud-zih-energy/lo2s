@@ -23,11 +23,9 @@
 
 #include <lo2s/metric/plugin/channel.hpp>
 #include <lo2s/metric/plugin/wrapper.hpp>
-
 #include <lo2s/trace/fwd.hpp>
 
 #include <nitro/dl/dl.hpp>
-
 #include <otf2xx/chrono/time_point.hpp>
 
 #include <string>

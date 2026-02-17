@@ -19,14 +19,14 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <lo2s/error.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
+
+#include <lo2s/error.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/event_attr.hpp>
-#include <lo2s/time/time.hpp>
-
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/util.hpp>
+#include <lo2s/time/time.hpp>
 
 #include <cstdlib>
 

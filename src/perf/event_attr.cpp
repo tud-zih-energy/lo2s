@@ -19,16 +19,16 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <fstream>
-#include <lo2s/build_config.hpp>
 #include <lo2s/perf/event_attr.hpp>
-#include <lo2s/perf/event_resolver.hpp>
 
+#include <lo2s/build_config.hpp>
+#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
 #include <nitro/lang/string.hpp>
 
+#include <fstream>
 #include <optional>
 #include <regex>
 

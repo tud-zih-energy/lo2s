@@ -32,7 +32,6 @@ extern "C"
 {
 #include <libr/r_asm.h>
 #include <libr/r_lib.h>
-
 #include <unistd.h>
 }
 

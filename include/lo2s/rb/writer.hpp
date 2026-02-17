@@ -21,11 +21,12 @@
 
 #pragma once
 
-#include <cstdint>
 #include <lo2s/rb/header.hpp>
 #include <lo2s/rb/shm_ringbuf.hpp>
 #include <lo2s/shared_memory.hpp>
 #include <lo2s/types/process.hpp>
+
+#include <cstdint>
 
 extern "C"
 {

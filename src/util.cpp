@@ -1,14 +1,14 @@
+#include <lo2s/util.hpp>
+
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
-#include <lo2s/util.hpp>
+
+#include <nitro/lang/string.hpp>
 
 #include <filesystem>
-
-#include <fmt/core.h>
-
 #include <fstream>
 #include <iomanip>
 #include <ios>
@@ -21,7 +21,7 @@
 #include <cstdint>
 #include <ctime>
 
-#include <nitro/lang/string.hpp>
+#include <fmt/core.h>
 
 extern "C"
 {

@@ -5,9 +5,9 @@
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <fmt/format.h>
-
 #include <string>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {

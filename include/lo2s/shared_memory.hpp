@@ -24,8 +24,9 @@
 #include <lo2s/error.hpp>
 #include <lo2s/util.hpp>
 
-#include <cassert>
 #include <utility>
+
+#include <cassert>
 
 extern "C"
 {

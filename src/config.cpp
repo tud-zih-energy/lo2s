@@ -22,10 +22,10 @@
 #include <lo2s/config.hpp>
 
 #include <lo2s/build_config.hpp>
-
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_resolver.hpp>
+
 #include <nitro/options/arguments.hpp>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
@@ -45,16 +45,17 @@
 
 #include <nitro/options/parser.hpp>
 
-#include <fmt/core.h>
-#include <fmt/ranges.h>
-
 #include <algorithm>
-#include <cstdlib>
-#include <cstring>
-#include <ctime> // for CLOCK_* macros
 #include <filesystem>
 #include <iterator>
 #include <optional>
+
+#include <cstdlib>
+#include <cstring>
+#include <ctime> // for CLOCK_* macros
+
+#include <fmt/core.h>
+#include <fmt/ranges.h>
 
 extern "C"
 {

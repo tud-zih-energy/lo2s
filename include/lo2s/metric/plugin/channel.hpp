@@ -22,7 +22,6 @@
 #pragma once
 
 #include <lo2s/metric/plugin/wrapper.hpp>
-
 #include <lo2s/trace/fwd.hpp>
 
 #include <otf2xx/definition/fwd.hpp>

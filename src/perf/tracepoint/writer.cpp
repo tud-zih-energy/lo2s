@@ -1,8 +1,8 @@
+#include <lo2s/perf/tracepoint/writer.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/tracepoint/writer.hpp>
-
 #include <lo2s/trace/trace.hpp>
 
 #include <fmt/core.h>

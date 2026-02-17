@@ -29,8 +29,9 @@
 
 extern "C"
 {
-#include <bpf/libbpf.h>
 #include <lo2s/perf/posix_io/common.h>
+
+#include <bpf/libbpf.h>
 #include <posix_io.skel.h>
 #include <sys/resource.h>
 }

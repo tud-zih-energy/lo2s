@@ -21,17 +21,18 @@
 
 #pragma once
 
-#include "fmt/format.h"
-#include "lo2s/topology.hpp"
-#include <cstdint>
 #include <lo2s/perf/event_attr.hpp>
+#include <lo2s/topology.hpp>
 
-#include <cstring>
 #include <regex>
 #include <string>
 #include <vector>
 
+#include <cstdint>
+#include <cstring>
+
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 extern "C"
 {
