@@ -18,6 +18,11 @@ namespace perf
 {
 int perf_event_paranoid()
 {
+    // Root is equivalent to -1
+    if (getuid() == 0)
+    {
+        return -1;
+    }
     try
     {
         return get_sysctl<int>("kernel", "perf_event_paranoid");
