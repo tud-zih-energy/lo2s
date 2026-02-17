@@ -699,18 +699,32 @@ static void check_perf_options(lo2s::Config& config)
 
         if (config.use_any_tracepoint())
         {
+            if (perf::perf_event_paranoid() != -1)
+            {
+                std::cerr
+                    << "kernel.perf_event_paranoid is not -1, which disallows access to tracepoints"
+                    << std::endl;
+                std::cerr
+                    << "syscalls, block I/O and tracepoint recording require tracepoint access"
+                    << std::endl;
+                std::cerr << std::endl;
+                std::cerr << "To solve this error, you can do one of the following:" << std::endl;
+                std::cerr << " * sysctl kernel.perf_event_paranoid=-1" << std::endl;
+                std::cerr << " * run lo2s as root" << std::endl;
+                std::exit(EXIT_FAILURE);
+            }
             try
             {
                 if (!std::filesystem::exists("/sys/kernel/tracing"))
                 {
-                    Log::error() << "syscall, block-io and tracepoint recording require access to "
+                    Log::error() << "syscall, block I/O and tracepoint recording require access to "
                                     "/sys/kernel/tracing, make sure it exists and is accessible";
                     std::exit(EXIT_FAILURE);
                 }
             }
             catch (std::filesystem::filesystem_error&)
             {
-                Log::error() << "syscall, block-io and tracepoint recording require access to "
+                Log::error() << "syscall, block I/O and tracepoint recording require access to "
                                 "/sys/kernel/tracing, make sure it exists and is accessible";
                 std::exit(EXIT_FAILURE);
             }
