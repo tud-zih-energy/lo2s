@@ -52,14 +52,9 @@ std::set<Cpu> get_cpu_set_for(EventAttr ev)
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        try
+        if (ev.can_open(cpu.as_scope()))
         {
-            EventGuard ev_instance = ev.open(cpu.as_scope(), -1);
-
             cpus.emplace(cpu);
-        }
-        catch (const std::system_error& e)
-        {
         }
     }
 
@@ -250,33 +245,8 @@ bool EventAttr::event_is_openable()
 
 void EventAttr::update_availability()
 {
-    bool proc = false;
-    bool system = false;
-    try
-    {
-        EventGuard proc_ev = open(Thread(0));
-
-        if (proc_ev.get_fd() != -1)
-        {
-            proc = true;
-        }
-    }
-    catch (const std::system_error& e)
-    {
-    }
-
-    try
-    {
-        EventGuard sys_ev = open(*supported_cpus().begin());
-
-        if (sys_ev.get_fd() != -1)
-        {
-            system = true;
-        }
-    }
-    catch (const std::system_error& e)
-    {
-    }
+    bool proc = can_open(Thread(0).as_scope());
+    bool system = can_open(supported_cpus().begin()->as_scope());
 
     if (proc == false && system == false)
     {
@@ -710,6 +680,21 @@ EventGuard EventAttr::open(ExecutionScope location, int cgroup_fd)
     else
     {
         return EventGuard(*this, location.as_thread(), -1, cgroup_fd);
+    }
+}
+
+bool EventAttr::can_open(ExecutionScope location)
+{
+    int fd = perf_event_open(&attr(), location, -1, 0, -1);
+
+    if (fd < 0)
+    {
+        return false;
+    }
+    else
+    {
+        close(fd);
+        return true;
     }
 }
 

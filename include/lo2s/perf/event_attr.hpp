@@ -89,6 +89,7 @@ public:
     EventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
     EventGuard open(ExecutionScope location, int cgroup_fd = -1);
 
+    bool can_open(ExecutionScope location);
     /**
      * returns an opened instance of a Event object after formating it as a leader Event
      */
