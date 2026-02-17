@@ -330,7 +330,8 @@ EventAttr EventResolver::cache_event(const std::string& name)
     catch (const EventAttr::InvalidEvent& e)
     {
         event_map_.emplace(name, std::nullopt);
-        throw e;
+        throw std::runtime_error(
+            fmt::format("Could not parse '{}' as a perf event: {}", name, e.what()));
     }
 }
 

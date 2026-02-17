@@ -77,16 +77,9 @@ public:
 
         enter_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
         exit_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
-        try
-        {
-            enter_ev_ = enter_event.open(scope_, config().cgroup_fd);
-            exit_ev_ = exit_event.open(scope_, config().cgroup_fd);
-        }
-        catch (const std::system_error& e)
-        {
-            Log::error() << "perf_event_open for raw tracepoint failed.";
-            throw_errno();
-        }
+
+        enter_ev_ = enter_event.open(scope_, config().cgroup_fd);
+        exit_ev_ = exit_event.open(scope_, config().cgroup_fd);
 
         init_mmap(enter_ev_.value().get_fd());
         Log::debug() << "perf_tracepoint_reader mmap initialized";
