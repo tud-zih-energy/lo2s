@@ -19,9 +19,12 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "otf2xx/chrono/duration.hpp"
 #include <lo2s/log.hpp>
 #include <lo2s/perf/time/converter.hpp>
+
+#include <otf2xx/chrono/duration.hpp>
+
+#include <exception>
 
 namespace lo2s
 {
@@ -31,15 +34,15 @@ namespace time
 {
 Converter::Converter() : offset(otf2::chrono::duration(0))
 {
-    if (config().use_perf())
+    try
     {
         Reader reader;
         reader.read();
 
         if (reader.perf_time.time_since_epoch().count() == 0)
         {
-            Log::error()
-                << "Could not determine perf_time offset. Synchronization event was not triggered.";
+            Log::error() << "Could not determine perf_time offset. Synchronization event was "
+                            "not triggered.";
             return;
         }
 
@@ -65,11 +68,12 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
                      << reader.local_time.time_since_epoch().count() << "ns - "
                      << reader.perf_time.time_since_epoch().count() << "ns).";
     }
-    else
+    catch (std::exception& e)
     {
-        // If we are not using any perf features at all, there is no sense in synchronizing
-        // the perf-internal and external clocks, so use an offset of 0.
-        offset = otf2::chrono::duration(0);
+        Log::warn() << "Can not create time synchronization perf event: " << e.what();
+        Log::warn()
+            << "Assuming time synchronization offset of 0, your timestamps might be imprecise";
+        return;
     }
 }
 } // namespace time
