@@ -54,3 +54,9 @@ if(USE_LIBPFM)
     add_test(NAME pfm_counters COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/pfm_counters/pfm_counters.sh)
     set_tests_properties(pfm_counters PROPERTIES FIXTURES_REQUIRED PARANOIDMINUS1)
 endif()
+
+
+if(USE_BPF)
+    add_test(NAME posix_io COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/posix_io/posix_io.sh)
+    set_tests_properties(posix_io PROPERTIES FIXTURES_REQUIRED PARANOIDMINUS1)
+endif()
