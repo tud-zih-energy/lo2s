@@ -21,15 +21,16 @@
 
 #pragma once
 
-#include <fmt/format.h>
-
-#include <cstdint>
 #include <iostream>
 
-class ExecutionScope;
+#include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {
+class ExecutionScope;
+
 class Cpu
 {
 public:
