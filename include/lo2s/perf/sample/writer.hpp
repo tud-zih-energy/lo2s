@@ -23,7 +23,6 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/local_cctx_tree.hpp>
-
 #include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -33,8 +32,9 @@
 #include <otf2xx/definition/calling_context.hpp>
 #include <otf2xx/definition/location.hpp>
 
-#include <cstdint>
 #include <unordered_map>
+
+#include <cstdint>
 
 extern "C"
 {

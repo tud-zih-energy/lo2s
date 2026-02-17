@@ -27,10 +27,9 @@
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <cstdint>
-
 #include <vector>
 
+#include <cstdint>
 #include <cstdlib>
 
 namespace lo2s

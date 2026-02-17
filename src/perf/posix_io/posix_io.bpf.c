@@ -24,10 +24,11 @@
 #include <vmlinux.h>
 // clang-format on
 
+#include <lo2s/perf/posix_io/common.h>
+
 #include <bpf/bpf_core_read.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
-#include <lo2s/perf/posix_io/common.h>
 
 // Is needed to load BPF programs into the kernel
 char LICENSE[] SEC("license") = "GPL";

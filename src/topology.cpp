@@ -1,4 +1,5 @@
 #include <lo2s/topology.hpp>
+
 #include <lo2s/util.hpp>
 
 namespace lo2s

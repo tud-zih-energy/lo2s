@@ -22,8 +22,9 @@
 
 #include <lo2s/perf/counter/counter_buffer.hpp>
 
-#include <cstdint>
 #include <vector>
+
+#include <cstdint>
 
 namespace lo2s
 {

@@ -20,6 +20,7 @@
  */
 
 #include <lo2s/local_cctx_tree.hpp>
+
 #include <lo2s/trace/trace.hpp>
 
 namespace lo2s

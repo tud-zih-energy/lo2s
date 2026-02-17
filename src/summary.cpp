@@ -1,10 +1,10 @@
-#include <lo2s/config.hpp>
 #include <lo2s/summary.hpp>
+
+#include <lo2s/config.hpp>
 #include <lo2s/util.hpp>
 
-#include <filesystem>
-
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>

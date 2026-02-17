@@ -21,10 +21,12 @@
 
 #pragma once
 
+#include <otf2xx/common.hpp>
+
+#include <stdexcept>
+
 #include <cstdint>
 #include <cstdlib>
-#include <otf2xx/common.hpp>
-#include <stdexcept>
 
 namespace lo2s
 {

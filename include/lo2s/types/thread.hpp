@@ -21,10 +21,11 @@
 
 #pragma once
 
-#include <fmt/format.h>
+#include <iostream>
 
 #include <cstdint>
-#include <iostream>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {

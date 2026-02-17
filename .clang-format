@@ -67,4 +67,18 @@ InsertNewlineAtEOF: true
 KeepEmptyLinesAtTheStartOfBlocks: true
 EmptyLineBeforeAccessModifier: Always
 SeparateDefinitionBlocks: Always
+
+MainIncludeChar: Any
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<lo2s/'
+    Priority: 2
+  - Regex: '(hpp|hxx)>$'
+    Priority: 3
+  - Regex: '^<([^c][[:alnum:]|_]+|chrono|compare|charconv|complex|condition_variable|codecvt|coroutine|concepts)>$'
+    Priority: 4 
+  - Regex: '^<c[[:alnum:]|_]+>'
+    Priority: 5
+  - Regex: '\.h>'
+    Priority: 6
 ...

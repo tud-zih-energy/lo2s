@@ -23,10 +23,11 @@
 
 #include <lo2s/perf/event_attr.hpp>
 
-#include <cstring>
 #include <optional>
 #include <string>
 #include <vector>
+
+#include <cstring>
 
 #include <fmt/core.h>
 

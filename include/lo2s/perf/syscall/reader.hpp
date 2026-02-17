@@ -31,10 +31,11 @@
 #include <lo2s/util.hpp>
 
 #include <algorithm>
-#include <cstddef>
 #include <filesystem>
 #include <ios>
 #include <optional>
+
+#include <cstddef>
 
 #include <fmt/format.h>
 extern "C"

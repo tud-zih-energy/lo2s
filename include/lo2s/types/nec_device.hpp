@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include <fmt/format.h>
-
 #include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {

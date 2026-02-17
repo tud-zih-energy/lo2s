@@ -4,18 +4,15 @@
 #error "Trying to build x86 energy stuff without x86 energy support"
 #endif
 
-#include <lo2s/time/time.hpp>
-
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/types.hpp>
 
-#include <x86_energy.hpp>
-
+#include <nitro/lang/enumerate.hpp>
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/writer/local.hpp>
-
-#include <nitro/lang/enumerate.hpp>
+#include <x86_energy.hpp>
 
 namespace lo2s
 {

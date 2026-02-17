@@ -4,17 +4,14 @@
 #error "Trying to build x86 adapt stuff without x86 adapt support"
 #endif
 
-#include <lo2s/time/time.hpp>
-
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 
-#include <x86_adapt_cxx/x86_adapt.hpp>
-
+#include <nitro/lang/enumerate.hpp>
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/writer/local.hpp>
-
-#include <nitro/lang/enumerate.hpp>
+#include <x86_adapt_cxx/x86_adapt.hpp>
 
 #include <atomic>
 #include <chrono>

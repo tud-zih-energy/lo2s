@@ -23,18 +23,15 @@
 
 #include <lo2s/time/time.hpp>
 
-#include <nitro/log/log.hpp>
-
-#include <nitro/log/sink/stderr_mt.hpp>
-
 #include <nitro/log/attribute/message.hpp>
 #include <nitro/log/attribute/pid.hpp>
 #include <nitro/log/attribute/severity.hpp>
 #include <nitro/log/attribute/timestamp.hpp>
-
 #include <nitro/log/filter/and_filter.hpp>
 #include <nitro/log/filter/mpi_master_filter.hpp>
 #include <nitro/log/filter/severity_filter.hpp>
+#include <nitro/log/log.hpp>
+#include <nitro/log/sink/stderr_mt.hpp>
 
 #include <fstream>
 #include <mutex>

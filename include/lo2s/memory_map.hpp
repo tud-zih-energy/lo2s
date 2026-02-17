@@ -34,12 +34,12 @@
 
 #include <nitro/lang/string.hpp>
 
-#include <fmt/core.h>
-
 #include <algorithm>
 #include <fstream>
 #include <shared_mutex>
 #include <thread>
+
+#include <fmt/core.h>
 
 namespace lo2s
 {

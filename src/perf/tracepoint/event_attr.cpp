@@ -20,6 +20,7 @@
  */
 
 #include <lo2s/perf/tracepoint/event_attr.hpp>
+
 #include <regex>
 
 namespace lo2s

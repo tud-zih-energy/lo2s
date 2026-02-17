@@ -20,11 +20,11 @@
  */
 #pragma once
 
+#include <lo2s/log.hpp>
+
 #include <cassert>
 
 #include <fmt/core.h>
-
-#include <lo2s/log.hpp>
 
 namespace lo2s
 {

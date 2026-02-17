@@ -21,12 +21,11 @@
 #pragma once
 
 #include <lo2s/monitor/fwd.hpp>
+#include <lo2s/monitor/gpu_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/monitor/openmp_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/resolvers.hpp>
-
-#include <lo2s/monitor/gpu_monitor.hpp>
-#include <lo2s/monitor/openmp_monitor.hpp>
 
 extern "C"
 {

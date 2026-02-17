@@ -21,11 +21,10 @@
 
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/tracepoint/writer.hpp>
-
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/tracepoint/writer.hpp>
 #include <lo2s/util.hpp>
 
 namespace lo2s

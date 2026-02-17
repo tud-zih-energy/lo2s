@@ -21,14 +21,14 @@
 
 #pragma once
 
+#include <lo2s/types/process.hpp>
+
 #include <chrono>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <cstdint>
-
-#include <lo2s/types/process.hpp>
 
 extern "C"
 {

@@ -1,8 +1,9 @@
+#include <lo2s/perf/util.hpp>
+
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_attr.hpp>
-#include <lo2s/perf/util.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/util.hpp>
 

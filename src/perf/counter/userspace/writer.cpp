@@ -19,9 +19,10 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <lo2s/perf/counter/userspace/writer.hpp>
+
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/time/time.hpp>
 
 namespace lo2s

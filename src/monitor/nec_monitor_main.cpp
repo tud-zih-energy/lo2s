@@ -19,10 +19,11 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <filesystem>
+#include <lo2s/monitor/nec_monitor_main.hpp>
 
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/nec_monitor_main.hpp>
+
+#include <filesystem>
 
 extern "C"
 {

@@ -21,9 +21,8 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/writer.hpp>
-
 #include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/tracepoint/writer.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <map>
