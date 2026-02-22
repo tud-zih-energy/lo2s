@@ -25,7 +25,7 @@ fi
 
 pfm_event="$(perf list --json | jq -r 'last(.[] | select(.EventType == "PFM event")) | .EventName')"
 
-if test -z $pfm_event; then
+if test  $pfm_event = "null"; then
 	echo "perf not build with libpfm support or no PFM event found!"
 	exit 127
 fi
