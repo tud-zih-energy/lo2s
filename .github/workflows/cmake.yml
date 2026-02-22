@@ -66,7 +66,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy"
       - name: Build
         run: make -j 2
       - name: Create source tarball
