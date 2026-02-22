@@ -27,6 +27,8 @@
 #include <rocprofiler-sdk/registration.h>
 #include <rocprofiler-sdk/rocprofiler.h>
 
+namespace
+{
 constexpr size_t HIP_BUFFER_SIZE = 8 * 1024 * 1024;
 
 uint64_t last_timestamp = 0;
@@ -35,7 +37,6 @@ int64_t offset;
 rocprofiler_buffer_id_t client_buffer;
 
 std::unique_ptr<lo2s::gpu::RingbufWriter> rb_writer = nullptr;
-
 struct kernel_cache
 {
     kernel_cache(uint64_t kernel_id, uint64_t start_timestamp, uint64_t end_timestamp)
@@ -67,6 +68,7 @@ int64_t calculate_offset()
 
     return roc_timestamp - lo2s_timestamp;
 }
+} // namespace
 
 void tool_tracing_callback(rocprofiler_context_id_t context, rocprofiler_buffer_id_t buffer_id,
                            rocprofiler_record_header_t** headers, size_t num_headers,
