@@ -61,6 +61,14 @@ Example Usage:
 
 if(NOT BPFOBJECT_BPFTOOL_EXE)
   find_program(BPFOBJECT_BPFTOOL_EXE NAMES bpftool DOC "Path to bpftool executable")
+  execute_process(COMMAND ${BPFOBJECT_BPFTOOL_EXE} version RESULT_VARIABLE BPFTOOL_RES)
+
+  if(NOT ${BPFTOOL_RES} EQUAL 0)
+      message(STATUS "${BPFOBJECT_BPFTOOL_EXE} not usable as bpftool or does not exist!")
+      set(BPFTOOL_USABLE OFF)
+  else()
+      set(BPFTOOL_USABLE ON)
+  endif()
 endif()
 
 if(NOT BPFOBJECT_CLANG_EXE)
@@ -106,6 +114,7 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BpfObject
   REQUIRED_VARS
     BPFOBJECT_BPFTOOL_EXE
+    BPFTOOL_USABLE
     BPFOBJECT_CLANG_EXE
     LibBpf_FOUND
     BPFOBJECT_VMLINUX_H
