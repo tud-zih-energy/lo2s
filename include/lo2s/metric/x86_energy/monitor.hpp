@@ -7,7 +7,7 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/cpu.hpp>
 
 #include <nitro/lang/enumerate.hpp>
 #include <otf2xx/definition/metric_instance.hpp>
