@@ -13,7 +13,29 @@ jobs:
         os: [ubuntu-24.04]
         compiler: [g++-12, g++-13, g++-14, clang++-16, clang++-17, clang++-18]
         build-type: [Debug, RelWithDebInfo]
-        hw_breakpoint: [ON, OFF]
+        hw_breakpoint: [OFF]
+        nvidia: [ OFF ]
+        rocm: [ OFF ]
+        include:
+# One build with everything
+          - os: ubuntu-24.04
+            compiler: clang++-18
+            build-type: Debug
+            hw_breakpoint: OFF
+            nvidia: ON
+            rocm: ON
+          - os: ubuntu-24.04
+            compiler: clang++-18
+            build-type: Debug
+            hw_breakpoint: ON
+            nvidia: OFF
+            rocm: OFF
+          - os: ubuntu-24.04-arm
+            compiler: clang++-18
+            build-type: Debug
+            hw_breakpoint: OFF
+            nvidia: OFF
+            rocm: OFF
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -21,8 +43,30 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev libradare2-dev libomp-dev libbpf-dev libdebuginfod-dev
+          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libradare2-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure
           sudo pip install git-archive-all
+      - name: Install CUPTI
+        if: matrix.nvidia == 'ON'
+        run: |
+          sudo apt-get install libcupti-dev nvidia-cuda-toolkit nvidia-cuda-dev
+      - name: Install ROCm
+        if : matrix.rocm == 'ON'
+        run: |
+          sudo mkdir --parents --mode=0755 /etc/apt/keyrings
+          wget https://repo.radeon.com/rocm/rocm.gpg.key -O - | gpg --dearmor | sudo tee /etc/apt/keyrings/rocm.gpg > /dev/null
+          sudo tee /etc/apt/sources.list.d/rocm.list << EOF
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/rocm/apt/7.2 noble main
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/rocm.gpg] https://repo.radeon.com/graphics/7.2/ubuntu noble main
+          EOF
+
+          sudo tee /etc/apt/preferences.d/rocm-pin-600 << EOF
+          Package: *
+          Pin: release o=repo.radeon.com
+          Pin-Priority: 600
+          EOF
+
+          sudo apt update
+          sudo apt install rocprofiler-sdk rocprofiler rocm-device-libs rocm rocm-dev
       - name: Cache OTF2
         id: cache-otf2
         uses: actions/cache@v4
@@ -44,7 +88,7 @@ jobs:
           path: /opt/x86_adapt
           key: ${{ matrix.os }}-x86_adapt
       - name: Install x86_adapt
-        if: steps.cache-x86_adapt.outputs.cache-hit != 'true'
+        if: steps.cache-x86_adapt.outputs.cache-hit != 'true' && matrix.os != 'ubuntu-24.04-arm'
         run: | 
           git clone https://github.com/tud-zih-energy/x86_adapt
           cd x86_adapt
@@ -57,7 +101,7 @@ jobs:
           path: /opt/x86_energy
           key: ${{ matrix.os }}-x86_energy
       - name: Install x86_energy
-        if: steps.cache-x86_energy.outputs.cache-hit != 'true'
+        if: steps.cache-x86_energy.outputs.cache-hit != 'true' && matrix.os != 'ubuntu-24.04-arm'
         run: | 
           git clone https://github.com/tud-zih-energy/x86_energy
           cd x86_energy
@@ -66,7 +110,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0"
       - name: Build
         run: make -j 2
       - name: Create source tarball
