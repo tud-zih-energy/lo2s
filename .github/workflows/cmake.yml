@@ -50,10 +50,23 @@ jobs:
           cd x86_adapt
           cmake . -DNO_KERNEL_DRIVER=ON -DCMAKE_INSTALL_PREFIX=/opt/x86_adapt
           make -j 2 install
+      - name: Cache x86_energy
+        id: cache-x86_energy
+        uses: actions/cache@v4
+        with:
+          path: /opt/x86_energy
+          key: ${{ matrix.os }}-x86_energy
+      - name: Install x86_energy
+        if: steps.cache-x86_energy.outputs.cache-hit != 'true'
+        run: | 
+          git clone https://github.com/tud-zih-energy/x86_energy
+          cd x86_energy
+          cmake . -DCMAKE_INSTALL_PREFIX=/opt/x86_energy
+          make -j 2 install
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }}} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy"
       - name: Build
         run: make -j 2
       - name: Create source tarball
