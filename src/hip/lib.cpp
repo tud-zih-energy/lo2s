@@ -37,6 +37,7 @@ int64_t offset;
 rocprofiler_buffer_id_t client_buffer;
 
 std::unique_ptr<lo2s::gpu::RingbufWriter> rb_writer = nullptr;
+
 struct kernel_cache
 {
     kernel_cache(uint64_t kernel_id, uint64_t start_timestamp, uint64_t end_timestamp)
