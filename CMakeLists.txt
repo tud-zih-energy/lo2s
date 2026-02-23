@@ -97,7 +97,7 @@ add_subdirectory(lib/otf2xx)
 mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
 # configure fmtlib submodule
-find_package(fmt)
+find_package(fmt NO_MODULE)
 
 if(NOT fmt_FOUND)
     add_subdirectory(lib/fmt)
