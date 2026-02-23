@@ -22,9 +22,7 @@
 #include <lo2s/dwarf_resolve.hpp>
 
 #include <lo2s/config.hpp>
-
-#include <indicators/cursor_control.hpp>
-#include <indicators/progress_bar.hpp>
+#include <lo2s/indicator.hpp>
 
 #ifdef HAVE_DEBUGINFOD
 extern "C"
@@ -67,7 +65,7 @@ static int find_containing_func_for_addr(Dwarf_Die* d, void* arg)
     return DWARF_CB_OK;
 }
 
-std::unique_ptr<indicators::ProgressBar> bar;
+std::unique_ptr<Indicator> bar;
 
 /*
  * Debuginfod reports the progress of the currently downloading debug information to this function.
@@ -81,7 +79,7 @@ static int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b)
 
         if (logging::get_min_severity_level() <= nitro::log::severity_level::info)
         {
-            bar->set_progress(((double)a / (double)b) * 100);
+            bar->submit_status(a, b);
         }
     }
     return 0;
@@ -102,21 +100,13 @@ static int standard_find_debuginfo_wrapper(Dwfl_Module* mod, void** userdata, co
     if (logging::get_min_severity_level() <= nitro::log::severity_level::info &&
         isatty(STDERR_FILENO))
     {
-        bar = std::make_unique<indicators::ProgressBar>(
-            indicators::option::PrefixText(fmt::format("Downloading debuginfo ", file_name)));
+        bar = std::make_unique<Indicator>();
 
         Log::info() << "Looking up debuginfo for: " << file_name;
-        indicators::show_console_cursor(false);
     }
 
     int res = dwfl_standard_find_debuginfo(mod, userdata, modname, base, file_name, debuglink_file,
                                            debuglink_crc, debuginfo_file_name);
-
-    if (logging::get_min_severity_level() <= nitro::log::severity_level::info &&
-        isatty(STDERR_FILENO))
-    {
-        indicators::show_console_cursor(true);
-    }
 
     return res;
 }
