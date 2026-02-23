@@ -106,8 +106,6 @@ endif()
 # configure Nitro submodule
 add_subdirectory(lib/nitro)
 
-add_subdirectory(lib/indicators)
-
 #configure pmu-events submodule
 add_subdirectory(lib/pmu-events)
 
@@ -286,7 +284,6 @@ target_link_libraries(lo2s
         fmt::fmt-header-only
         std::filesystem
         LibDw::LibDw
-        indicators::indicators
         PMUEvents::pmu-events
     )
 
