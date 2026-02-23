@@ -805,7 +805,7 @@ static void check_perf_metric_options(lo2s::Config& config)
     }
 }
 
-static void check_optional_features(lo2s::Config& config)
+static void check_optional_features(lo2s::Config& config [[maybe_unused]])
 {
 #ifndef HAVE_X86_ADAPT
     if (!config.x86_adapt_knobs.empty())
