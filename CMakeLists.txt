@@ -332,15 +332,11 @@ add_feature_info("x86_energy" x86_energy_FOUND "Provide additional power measure
 
 # handle radare dependency
 if (USE_RADARE)
-    if (Radare_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
         target_link_libraries(lo2s PRIVATE R_asm::R_asm R_anal::R_anal)
         target_sources(lo2s PRIVATE
             src/radare.cpp
         )
-    else()
-        message(SEND_ERROR "Radare2 not found but requested.")
-    endif()
 endif()
 
 if (USE_SENSORS)
