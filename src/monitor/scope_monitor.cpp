@@ -22,21 +22,18 @@
 #include <lo2s/monitor/scope_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/monitor/process_monitor.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/counter/group/writer.hpp>
+#include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/perf/syscall/writer.hpp>
+#include <lo2s/trace/trace.hpp>
+#include <lo2s/util.hpp>
 
 #include <memory>
 
-extern "C"
-{
-#include <sched.h>
-}
-
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
@@ -118,5 +115,4 @@ void ScopeMonitor::monitor(int fd)
         userspace_counter_writer_->read();
     }
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

@@ -21,16 +21,16 @@
 
 #include <lo2s/perf/counter/group/writer.hpp>
 
-#include <lo2s/log.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/group/reader.hpp>
+#include <lo2s/perf/counter/metric_writer.hpp>
+#include <lo2s/trace/trace.hpp>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace group
+#include <cassert>
+#include <cstddef>
+
+namespace lo2s::perf::counter::group
 {
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 : Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace)
@@ -62,7 +62,4 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     return false;
 }
 
-} // namespace group
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::group

@@ -39,6 +39,10 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <utility>
+#include <vector>
+
+#include <cstddef>
 
 namespace lo2s
 {
@@ -67,16 +71,16 @@ struct ArgumentList
      * \param first         iterator pointing to first item to print
      * \param last          iterator pointing past the last item to print
      * */
-    constexpr ArgumentList(const std::string& description, InputIterator first, InputIterator last)
-    : description_(description), first_(first), last_(last)
+    ArgumentList(std::string description, InputIterator first, InputIterator last)
+    : description_(std::move(description)), first_(first), last_(last)
     {
     }
 
-    template <class _InputIt>
-    friend ArgumentList<InputIterator> make_argument_list(const std::string&, _InputIt, _InputIt);
+    template <class InputIt>
+    friend ArgumentList<InputIterator> make_argument_list(const std::string&, InputIt, InputIt);
 
-    template <class _InputIt>
-    friend std::ostream& operator<<(std::ostream&, const ArgumentList<_InputIt>&);
+    template <class InputIt>
+    friend std::ostream& operator<<(std::ostream&, const ArgumentList<InputIt>&);
 
 private:
     std::string description_;
@@ -88,8 +92,8 @@ private:
  *          of the arguments
  */
 template <class InputIterator>
-inline constexpr auto make_argument_list(const std::string& description, InputIterator first,
-                                         InputIterator last)
+constexpr auto make_argument_list(const std::string& description, InputIterator first,
+                                  InputIterator last)
 {
     return ArgumentList<InputIterator>{ description, first, last };
 }

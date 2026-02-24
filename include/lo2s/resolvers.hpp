@@ -21,9 +21,14 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
 #include <lo2s/instruction_resolver.hpp>
 #include <lo2s/memory_map.hpp>
+#include <lo2s/resolvers/manual_function_resolver.hpp>
 #include <lo2s/types/process.hpp>
+
+#include <map>
+#include <string>
 
 namespace lo2s
 {

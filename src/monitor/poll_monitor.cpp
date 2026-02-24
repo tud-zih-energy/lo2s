@@ -21,20 +21,27 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 
-#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/monitor/threaded_monitor.hpp>
+#include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
-#include <cmath>
+#include <chrono>
+#include <stdexcept>
+#include <string>
+
+#include <cstdint>
+#include <cstring>
 
 extern "C"
 {
 #include <sys/eventfd.h>
+#include <sys/poll.h>
+#include <unistd.h>
 }
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
                          std::chrono::nanoseconds read_interval)
@@ -103,7 +110,7 @@ void PollMonitor::monitor()
 void PollMonitor::run()
 {
     bool stop_requested = false;
-    do
+    while (!stop_requested)
     {
         auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
         num_wakeups_++;
@@ -112,11 +119,13 @@ void PollMonitor::run()
         {
             throw std::runtime_error("Received poll timeout despite requesting no timeout.");
         }
-        else if (ret < 0)
+
+        if (ret < 0)
         {
             Log::error() << "poll failed";
             throw_errno();
         }
+
         Log::trace() << "PollMonitor poll returned " << ret;
 
         bool panic = false;
@@ -139,7 +148,7 @@ void PollMonitor::run()
         // Flush timer
         if (timer_pfd().revents & POLLIN)
         {
-            [[maybe_unused]] uint64_t expirations;
+            [[maybe_unused]] uint64_t expirations = 0;
             if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
             {
                 Log::error() << "Flushing timer fd failed";
@@ -151,7 +160,7 @@ void PollMonitor::run()
             Log::debug() << "Requested stop of PollMonitor";
             stop_requested = true;
         }
-    } while (!stop_requested);
+    }
 }
 
 PollMonitor::~PollMonitor()
@@ -162,5 +171,4 @@ PollMonitor::~PollMonitor()
     }
 }
 
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

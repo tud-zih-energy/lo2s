@@ -23,9 +23,9 @@
 
 #include <lo2s/rb/events.hpp>
 
-namespace lo2s
-{
-namespace gpu
+#include <cstdint>
+
+namespace lo2s::gpu
 {
 
 enum class EventType : uint64_t
@@ -50,5 +50,4 @@ struct __attribute__((packed)) kernel
     uint64_t kernel_id;
 };
 
-} // namespace gpu
-} // namespace lo2s
+} // namespace lo2s::gpu

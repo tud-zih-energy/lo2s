@@ -21,6 +21,13 @@
 
 #include <lo2s/instruction_resolver.hpp>
 
+#include <lo2s/log.hpp>
+#include <lo2s/util.hpp>
+
+#include <exception>
+#include <memory>
+#include <string>
+
 namespace lo2s
 {
 

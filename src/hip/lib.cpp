@@ -20,16 +20,29 @@
  */
 
 #include <lo2s/gpu/ringbuf.hpp>
+#include <lo2s/types/process.hpp>
 
+#include <iostream>
+#include <memory>
+#include <ostream>
 #include <queue>
 #include <regex>
 
+#include <cstddef>
+#include <cstdint>
+
+#include <rocprofiler-sdk/buffer.h>
+#include <rocprofiler-sdk/buffer_tracing.h>
+#include <rocprofiler-sdk/callback_tracing.h>
+#include <rocprofiler-sdk/context.h>
+#include <rocprofiler-sdk/fwd.h>
+#include <rocprofiler-sdk/internal_threading.h>
 #include <rocprofiler-sdk/registration.h>
 #include <rocprofiler-sdk/rocprofiler.h>
 
 namespace
 {
-constexpr size_t HIP_BUFFER_SIZE = 8 * 1024 * 1024;
+constexpr size_t HIP_BUFFER_SIZE = static_cast<const size_t>(8 * 1024 * 1024);
 
 uint64_t last_timestamp = 0;
 int64_t offset;
@@ -62,24 +75,24 @@ struct kernel_cache
 // So instead, use this crude time synchronization.
 int64_t calculate_offset()
 {
-    uint64_t roc_timestamp;
+    uint64_t roc_timestamp = 0;
     rocprofiler_get_timestamp(&roc_timestamp);
 
-    uint64_t lo2s_timestamp = rb_writer->timestamp();
+    uint64_t const lo2s_timestamp = rb_writer->timestamp();
 
     return roc_timestamp - lo2s_timestamp;
 }
-} // namespace
 
-void tool_tracing_callback(rocprofiler_context_id_t context, rocprofiler_buffer_id_t buffer_id,
+void tool_tracing_callback(rocprofiler_context_id_t /*context*/,
+                           rocprofiler_buffer_id_t /*buffer_id*/,
                            rocprofiler_record_header_t** headers, size_t num_headers,
-                           void* user_data, uint64_t drop_count)
+                           void* /*user_data*/, uint64_t /*drop_count*/)
 {
     std::priority_queue<struct kernel_cache> reorder_buffer;
 
     for (size_t i = 0; i < num_headers; ++i)
     {
-        rocprofiler_record_header_t* header = headers[i];
+        rocprofiler_record_header_t const* header = headers[i];
 
         if (header->category == ROCPROFILER_BUFFER_CATEGORY_TRACING &&
             header->kind == ROCPROFILER_BUFFER_TRACING_KERNEL_DISPATCH)
@@ -93,7 +106,7 @@ void tool_tracing_callback(rocprofiler_context_id_t context, rocprofiler_buffer_
 
             if (reorder_buffer.size() >= 100)
             {
-                struct kernel_cache ev = reorder_buffer.top();
+                struct kernel_cache const ev = reorder_buffer.top();
                 reorder_buffer.pop();
 
                 if (ev.start_timestamp >= last_timestamp)
@@ -111,7 +124,7 @@ void tool_tracing_callback(rocprofiler_context_id_t context, rocprofiler_buffer_
 
     while (!reorder_buffer.empty())
     {
-        struct kernel_cache ev = reorder_buffer.top();
+        struct kernel_cache const ev = reorder_buffer.top();
         reorder_buffer.pop();
 
         if (ev.start_timestamp >= last_timestamp)
@@ -127,7 +140,7 @@ void tool_tracing_callback(rocprofiler_context_id_t context, rocprofiler_buffer_
 }
 
 void code_object_cb(rocprofiler_callback_tracing_record_t record,
-                    rocprofiler_user_data_t* user_data, void* callback_data)
+                    rocprofiler_user_data_t* /*user_data*/, void* /*callback_data*/)
 {
     if (record.kind == ROCPROFILER_CALLBACK_TRACING_CODE_OBJECT)
     {
@@ -148,7 +161,7 @@ void code_object_cb(rocprofiler_callback_tracing_record_t record,
     }
 }
 
-int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data)
+int tool_init(rocprofiler_client_finalize_t /*fini_func*/, void* tool_data)
 {
     rb_writer = std::make_unique<lo2s::gpu::RingbufWriter>(lo2s::Process::me());
 
@@ -185,15 +198,16 @@ int tool_init(rocprofiler_client_finalize_t fini_func, void* tool_data)
     return 0;
 }
 
-void tool_fini(void* tool_data)
+void tool_fini(void* /*tool_data*/)
 {
     rocprofiler_flush_buffer(client_buffer);
 }
 
-extern "C" rocprofiler_tool_configure_result_t* rocprofiler_configure(uint32_t version,
-                                                                      const char* runtime_version,
-                                                                      uint32_t priority,
-                                                                      rocprofiler_client_id_t* id)
+} // namespace
+
+extern "C" rocprofiler_tool_configure_result_t*
+rocprofiler_configure(uint32_t /*version*/, const char* /*runtime_version*/, uint32_t /*priority*/,
+                      rocprofiler_client_id_t* id)
 {
     id->name = "lo2s";
 

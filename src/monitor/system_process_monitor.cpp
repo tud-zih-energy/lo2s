@@ -21,11 +21,14 @@
 
 #include <lo2s/monitor/system_process_monitor.hpp>
 
-namespace lo2s
-{
-namespace monitor
-{
+#include <lo2s/trace/trace.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
+#include <string>
+
+namespace lo2s::monitor
+{
 void SystemProcessMonitor::insert_process([[maybe_unused]] Process parent,
                                           [[maybe_unused]] Process process,
                                           [[maybe_unused]] std::string proc_name,
@@ -50,5 +53,4 @@ void SystemProcessMonitor::exit_thread([[maybe_unused]] Thread thread)
 {
 }
 
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

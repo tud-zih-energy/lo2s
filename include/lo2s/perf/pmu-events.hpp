@@ -21,10 +21,12 @@
 
 #pragma once
 
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_attr.hpp>
-#include <lo2s/topology.hpp>
+#include <lo2s/types/cpu.hpp>
 
 #include <regex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,9 +42,7 @@ extern "C"
 #include <pmu-events/pmu-events.h>
 }
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 class PMUEvents
@@ -50,7 +50,7 @@ class PMUEvents
 public:
     static const PMUEvents& instance()
     {
-        static PMUEvents pmu_events;
+        const static PMUEvents pmu_events;
         return pmu_events;
     }
 
@@ -61,18 +61,19 @@ public:
 
         get_pmus(&pmus);
 
-        std::regex inst_and_ev("(.*)::(.*)");
+        const std::regex inst_and_ev("(.*)::(.*)");
         std::smatch match;
 
         if (std::regex_match(ev_desc, match, inst_and_ev))
         {
             for (size_t cur_class_id = 0; cur_class_id < pmus.num_classes; cur_class_id++)
             {
-                struct pmu_class* cur_class = &pmus.classes[cur_class_id];
+                const struct pmu_class* cur_class = &pmus.classes[cur_class_id];
                 for (int cur_instance_id = 0; cur_instance_id < cur_class->num_instances;
                      cur_instance_id++)
                 {
-                    struct pmu_instance* cur_instance = &cur_class->instances[cur_instance_id];
+                    const struct pmu_instance* cur_instance =
+                        &cur_class->instances[cur_instance_id];
                     if (match[1] == cur_instance->name)
                     {
                         for (uint32_t cur_event_id = 0; cur_event_id < cur_instance->num_entries;
@@ -108,11 +109,11 @@ public:
         get_pmus(&pmus);
         for (size_t cur_class_id = 0; cur_class_id < pmus.num_classes; cur_class_id++)
         {
-            struct pmu_class* cur_class = &pmus.classes[cur_class_id];
+            const struct pmu_class* cur_class = &pmus.classes[cur_class_id];
             for (int cur_instance_id = 0; cur_instance_id < cur_class->num_instances;
                  cur_instance_id++)
             {
-                struct pmu_instance* cur_instance = &cur_class->instances[cur_instance_id];
+                const struct pmu_instance* cur_instance = &cur_class->instances[cur_instance_id];
                 for (uint32_t cur_event_id = 0; cur_event_id < cur_instance->num_entries;
                      cur_event_id++)
                 {
@@ -142,11 +143,11 @@ private:
         std::set<Cpu> res;
         for (size_t range_id = 0; range_id < range_list->len; range_id++)
         {
-            struct range range = range_list->ranges[range_id];
+            const struct range range = range_list->ranges[range_id];
 
             for (uint64_t id = range.start; id <= range.end; id++)
             {
-                res.emplace(Cpu(id));
+                res.emplace(id);
             }
         }
         return res;
@@ -172,5 +173,4 @@ private:
     }
 };
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

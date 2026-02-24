@@ -22,6 +22,7 @@
 #pragma once
 #include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/types/process.hpp>
 #ifdef HAVE_BPF
 #include <lo2s/monitor/posix_monitor.hpp>
 #endif
@@ -30,21 +31,21 @@
 #include <map>
 #include <string>
 
-extern "C"
-{
-#include <sys/types.h>
-}
-
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 class ProcessMonitor : public AbstractProcessMonitor, public MainMonitor
 {
 public:
     ProcessMonitor();
-    ~ProcessMonitor();
+
+    ProcessMonitor(ProcessMonitor&) = delete;
+    ProcessMonitor& operator=(ProcessMonitor&) = delete;
+
+    ProcessMonitor(ProcessMonitor&&) = delete;
+    ProcessMonitor& operator=(ProcessMonitor&&) = delete;
+
+    ~ProcessMonitor() override;
     void insert_process(Process parent, Process child, std::string proc_name,
                         bool spawn = false) override;
     void insert_thread(Process parent, Thread child, std::string name, bool spawn = false) override;
@@ -59,5 +60,4 @@ private:
     std::unique_ptr<PosixMonitor> posix_monitor_;
 #endif
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

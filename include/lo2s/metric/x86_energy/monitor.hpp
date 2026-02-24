@@ -5,20 +5,19 @@
 #endif
 
 #include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/types/cpu.hpp>
 
-#include <nitro/lang/enumerate.hpp>
+#include <otf2xx/definition/metric_class.hpp>
 #include <otf2xx/definition/metric_instance.hpp>
+#include <otf2xx/definition/system_tree_node.hpp>
+#include <otf2xx/event/metric.hpp>
 #include <otf2xx/writer/local.hpp>
 #include <x86_energy.hpp>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_energy
+#include <string>
+
+namespace lo2s::metric::x86_energy
 {
 class Monitor : public monitor::PollMonitor
 {
@@ -46,6 +45,4 @@ private:
     otf2::definition::metric_instance metric_instance_;
     otf2::event::metric metric_event_;
 };
-} // namespace x86_energy
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::x86_energy

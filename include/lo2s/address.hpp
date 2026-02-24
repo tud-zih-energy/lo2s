@@ -21,12 +21,15 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
-
+#include <ios>
+#include <ostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 
 #include <cstdint>
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 namespace lo2s
@@ -38,7 +41,7 @@ namespace lo2s
 class Address
 {
 public:
-    explicit Address(const std::string s)
+    explicit Address(const std::string& s)
     {
         std::stringstream ss;
         ss << std::hex << s;
@@ -86,12 +89,12 @@ public:
 
     Address operator+(Address rhs) const
     {
-        return Address(v_ + rhs.v_);
+        return { v_ + rhs.v_ };
     }
 
     Address operator-(Address rhs) const
     {
-        return Address(v_ - rhs.v_);
+        return { v_ - rhs.v_ };
     }
 
 private:
@@ -182,7 +185,7 @@ struct Mapping
 
     static Mapping max()
     {
-        return Mapping(0, UINT64_MAX, 0);
+        return { 0, UINT64_MAX, 0 };
     }
 
     bool in(const Mapping& m) const
@@ -199,7 +202,8 @@ struct formatter<lo2s::Address>
 {
     constexpr auto parse(format_parse_context& ctx)
     {
-        auto it = ctx.begin(), end = ctx.end();
+        const auto* it = ctx.begin();
+        const auto* end = ctx.end();
         if (it != end && *it != '}')
         {
             throw format_error("invalid format");
@@ -220,7 +224,8 @@ struct formatter<lo2s::Range>
 {
     constexpr auto parse(format_parse_context& ctx)
     {
-        auto it = ctx.begin(), end = ctx.end();
+        const auto* it = ctx.begin();
+        const auto* end = ctx.end();
         if (it != end && *it != '}')
         {
             throw format_error("invalid format");

@@ -20,11 +20,13 @@
  */
 #pragma once
 
-#include <lo2s/log.hpp>
+#include <stdexcept>
+#include <string>
 
 #include <cassert>
+#include <cstdint>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace lo2s
 {

@@ -21,13 +21,19 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/ompt/events.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
-#include <otf2xx/otf2.hpp>
+#include <otf2xx/definition/calling_context.hpp>
+
+#include <map>
+#include <stdexcept>
+#include <string>
+
+#include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {
@@ -49,57 +55,49 @@ struct CallingContext
 public:
     static CallingContext process(Process p)
     {
-        CallingContext c;
-        c.type = CallingContextType::PROCESS;
+        CallingContext c(CallingContextType::PROCESS);
         c.p = p;
         return c;
     }
 
     static CallingContext thread(Thread t)
     {
-        CallingContext c;
-        c.type = CallingContextType::THREAD;
+        CallingContext c(CallingContextType::THREAD);
         c.t = t;
         return c;
     }
 
     static CallingContext sample(Address addr)
     {
-        CallingContext c;
-        c.type = CallingContextType::SAMPLE_ADDR;
+        CallingContext c(CallingContextType::SAMPLE_ADDR);
         c.addr = addr;
         return c;
     }
 
     static CallingContext gpu_kernel(uint64_t kernel_id)
     {
-        CallingContext c;
-        c.type = CallingContextType::GPU_KERNEL;
+        CallingContext c(CallingContextType::GPU_KERNEL);
         c.kernel_id = kernel_id;
         return c;
     }
 
     static CallingContext syscall(uint64_t id)
     {
-        CallingContext c;
-        c.type = CallingContextType::SYSCALL;
+        CallingContext c(CallingContextType::SYSCALL);
         c.syscall_id = id;
         return c;
     }
 
-    static CallingContext openmp(omp::OMPTCctx cctx)
+    static CallingContext openmp(ompt::OMPTCctx cctx)
     {
-        CallingContext c;
-        c.type = CallingContextType::OPENMP;
+        CallingContext c(CallingContextType::OPENMP);
         c.omp_cctx = cctx;
         return c;
     }
 
     static CallingContext root()
     {
-        CallingContext c;
-        c.type = CallingContextType::ROOT;
-        return c;
+        return { CallingContextType::ROOT };
     }
 
     Address to_addr() const
@@ -132,7 +130,7 @@ public:
         throw std::runtime_error("Not a GPU kernel!");
     }
 
-    omp::OMPTCctx to_omp_cctx() const
+    ompt::OMPTCctx to_omp_cctx() const
     {
         if (type == CallingContextType::OPENMP)
         {
@@ -169,27 +167,24 @@ public:
         {
             return lhs.type < rhs.type;
         }
-        else
+        switch (lhs.type)
         {
-            switch (lhs.type)
-            {
-            case CallingContextType::PROCESS:
-                return lhs.p < rhs.p;
-            case CallingContextType::THREAD:
-                return lhs.t < rhs.t;
-            case CallingContextType::GPU_KERNEL:
-                return lhs.kernel_id < rhs.kernel_id;
-            case CallingContextType::SAMPLE_ADDR:
-                return lhs.addr < rhs.addr;
-            case CallingContextType::SYSCALL:
-                return lhs.syscall_id < rhs.syscall_id;
-            case CallingContextType::OPENMP:
-                return lhs.omp_cctx < rhs.omp_cctx;
-            case CallingContextType::ROOT:
-                throw std::runtime_error("Can not have two CallingContext Roots!");
-            }
-            return false;
+        case CallingContextType::PROCESS:
+            return lhs.p < rhs.p;
+        case CallingContextType::THREAD:
+            return lhs.t < rhs.t;
+        case CallingContextType::GPU_KERNEL:
+            return lhs.kernel_id < rhs.kernel_id;
+        case CallingContextType::SAMPLE_ADDR:
+            return lhs.addr < rhs.addr;
+        case CallingContextType::SYSCALL:
+            return lhs.syscall_id < rhs.syscall_id;
+        case CallingContextType::OPENMP:
+            return lhs.omp_cctx < rhs.omp_cctx;
+        case CallingContextType::ROOT:
+            throw std::runtime_error("Can not have two CallingContext Roots!");
         }
+        return false;
     }
 
     friend bool operator==(const CallingContext& lhs, const CallingContext& rhs)
@@ -215,10 +210,7 @@ public:
             }
             return false;
         }
-        else
-        {
-            return false;
-        }
+        return false;
     }
 
     friend bool operator!=(const CallingContext& lhs, const CallingContext& rhs)
@@ -244,10 +236,7 @@ public:
             }
             return false;
         }
-        else
-        {
-            return false;
-        }
+        return false;
     }
 
     std::string name() const
@@ -273,7 +262,7 @@ public:
     }
 
 private:
-    CallingContext() : addr(0)
+    CallingContext(CallingContextType type) : type(type), addr(0)
     {
     }
 
@@ -284,7 +273,7 @@ private:
         Address addr;
         uint64_t kernel_id;
         uint64_t syscall_id;
-        omp::OMPTCctx omp_cctx;
+        ompt::OMPTCctx omp_cctx;
     };
 };
 
@@ -302,15 +291,15 @@ struct LocalCctxNode
 // Node type of the global cctx tree, containing CallingContext -> otf2::cctx mappings.
 struct GlobalCctxNode
 {
-    GlobalCctxNode(otf2::definition::calling_context* cctx) : cctx(cctx)
+    GlobalCctxNode(const otf2::definition::calling_context* cctx) : cctx(cctx)
     {
     }
 
-    otf2::definition::calling_context* cctx;
+    const otf2::definition::calling_context* cctx;
     std::map<CallingContext, GlobalCctxNode> children;
 };
 
-typedef std::map<CallingContext, LocalCctxNode> LocalCctxMap;
-typedef std::map<CallingContext, GlobalCctxNode> GlobalCctxMap;
+using LocalCctxMap = std::map<CallingContext, LocalCctxNode>;
+using GlobalCctxMap = std::map<CallingContext, GlobalCctxNode>;
 
 } // namespace lo2s

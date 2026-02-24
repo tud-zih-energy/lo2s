@@ -1,13 +1,20 @@
 #include <lo2s/metric/x86_adapt/metrics.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/metric/guess_mode.hpp>
+#include <lo2s/metric/x86_adapt/monitor.hpp>
+#include <lo2s/metric/x86_adapt/node_monitor.hpp>
+#include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_adapt
+#include <otf2xx/common.hpp>
+#include <x86_adapt_cxx/configuration_item.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace lo2s::metric::x86_adapt
 {
 
 Metrics::Metrics(trace::Trace& trace, const std::vector<std::string>& item_names)
@@ -95,6 +102,4 @@ void Metrics::stop()
         recorder->stop();
     }
 }
-} // namespace x86_adapt
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::x86_adapt

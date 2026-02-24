@@ -20,37 +20,42 @@
  */
 
 #include <lo2s/gpu/ringbuf.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <iostream>
 #include <memory>
 #include <string>
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <ctime>
 
-extern "C"
-{
-#include <cupti.h>
-#include <time.h>
-#include <unistd.h>
-}
-
+#include <cuda.h>
+#include <cupti_activity.h>
+#include <cupti_callbacks.h>
+#include <cupti_driver_cbid.h>
+#include <cupti_result.h>
+#include <cupti_runtime_cbid.h>
 // Allocate 8 MiB every time CUPTI asks for more event memory
-constexpr size_t CUPTI_BUFFER_SIZE = 8 * 1024 * 1024;
+constexpr size_t CUPTI_BUFFER_SIZE = static_cast<const size_t>(8 * 1024 * 1024);
+
+namespace
+{
 
 std::unique_ptr<lo2s::gpu::RingbufWriter> rb_writer = nullptr;
 
 CUpti_SubscriberHandle subscriber = nullptr;
 
-static void atExitHandler(void)
+void atExitHandler()
 {
     // Flush all remaining activity records
     cuptiActivityFlushAll(1);
 }
 
 // Through bufferRequested, CUPTI asks for more memory to fill with events
-static void CUPTIAPI bufferRequested(uint8_t** buffer, size_t* size, size_t* maxNumRecords)
+void CUPTIAPI bufferRequested(uint8_t** buffer, size_t* size, size_t* maxNumRecords)
 {
     assert(buffer != nullptr && size != nullptr && maxNumRecords != nullptr);
 
@@ -68,12 +73,12 @@ static void CUPTIAPI bufferRequested(uint8_t** buffer, size_t* size, size_t* max
 // bufferCompleted is called when a requested buffer (created through bufferRequested) has
 //  been filled with event data or the end of measurement is reached. We then can process the events
 //  in that CUPTI event buffer and write them to the lo2s ring-buffer
-static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* buffer, size_t size,
-                                     size_t validSize)
+void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* buffer, size_t /*size*/,
+                              size_t validSize)
 {
     CUpti_Activity* record = nullptr;
 
-    size_t ringbuf_full_dropped = 0;
+    size_t const ringbuf_full_dropped = 0;
     while (cuptiActivityGetNextRecord(buffer, validSize, &record) == CUPTI_SUCCESS)
     {
         switch (record->kind)
@@ -81,9 +86,9 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         case CUPTI_ACTIVITY_KIND_KERNEL:
         case CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL:
         {
-            CUpti_ActivityKernel6* kernel = reinterpret_cast<CUpti_ActivityKernel6*>(record);
+            auto const* kernel = reinterpret_cast<CUpti_ActivityKernel6*>(record);
 
-            std::string kernel_name = kernel->name;
+            std::string const kernel_name = kernel->name;
             uint64_t cctx = 0;
             cctx = rb_writer->kernel_def(kernel_name);
 
@@ -95,7 +100,7 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
         }
     }
 
-    size_t cupti_dropped;
+    size_t cupti_dropped = 0;
     cuptiActivityGetNumDroppedRecords(ctx, streamId, &cupti_dropped);
     if (cupti_dropped != 0)
     {
@@ -119,10 +124,10 @@ static void CUPTIAPI bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t* 
 //  - cuProfilerStart -> enable the CUPTI Activity API tracing for the given cuContext
 //  - cuProfilerStop -> flush event buffers and disable CUPTI Activity API tracing
 //  - cudaDeviceReset -> flush event buffers
-void CUPTIAPI callbackHandler(void* userdata, CUpti_CallbackDomain domain, CUpti_CallbackId cbid,
-                              void* cbdata)
+void CUPTIAPI callbackHandler(void* /*userdata*/, CUpti_CallbackDomain domain,
+                              CUpti_CallbackId cbid, void* cbdata)
 {
-    const CUpti_CallbackData* cbInfo = (CUpti_CallbackData*)cbdata;
+    const auto* cbInfo = reinterpret_cast<CUpti_CallbackData*>(cbdata);
 
     if (domain == CUPTI_CB_DOMAIN_DRIVER_API)
     {
@@ -163,15 +168,20 @@ uint64_t timestampfunc()
 {
     return rb_writer->timestamp();
 }
+} // namespace
 
 extern "C" int InitializeInjection(void)
 {
     rb_writer = std::make_unique<lo2s::gpu::RingbufWriter>(lo2s::Process::me());
 
     // Register an atexit() handler for clean-up
-    atexit(&atExitHandler);
+    if (atexit(&atExitHandler) != 0)
+    {
+        std::cerr
+            << "Could not register atExit handler! CUDA recording might not shutdown correctly!";
+    }
 
-    cuptiSubscribe(&subscriber, (CUpti_CallbackFunc)callbackHandler, nullptr);
+    cuptiSubscribe(&subscriber, reinterpret_cast<CUpti_CallbackFunc>(callbackHandler), nullptr);
 
     // Supply our own timestamp generation function. Saves us the work of converting timestamps
     cuptiActivityRegisterTimestampCallback(timestampfunc);

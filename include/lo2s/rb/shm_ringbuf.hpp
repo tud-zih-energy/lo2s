@@ -24,6 +24,9 @@
 #include <lo2s/rb/header.hpp>
 #include <lo2s/shared_memory.hpp>
 
+#include <cstddef>
+#include <cstdint>
+
 namespace lo2s
 {
 class ShmRingbuf

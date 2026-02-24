@@ -1,11 +1,17 @@
 #pragma once
 
 #include <lo2s/gpu/events.hpp>
+#include <lo2s/rb/header.hpp>
 #include <lo2s/rb/writer.hpp>
+#include <lo2s/types/process.hpp>
 
-namespace lo2s
-{
-namespace gpu
+#include <map>
+#include <string>
+
+#include <cstdint>
+#include <cstring>
+
+namespace lo2s::gpu
 {
 
 class RingbufWriter : public lo2s::RingbufWriter
@@ -24,7 +30,7 @@ public:
             return cctxs_.at(func);
         }
 
-        struct kernel_def* ev = reserve<struct kernel_def>(func.size());
+        auto* ev = reserve<struct kernel_def>(func.size());
 
         if (ev == nullptr)
         {
@@ -44,9 +50,9 @@ public:
         return cctx.second;
     }
 
-    bool kernel_def(std::string func, uint64_t kernel_id)
+    bool kernel_def(const std::string& func, uint64_t kernel_id)
     {
-        struct kernel_def* ev = reserve<struct kernel_def>(func.size());
+        auto* ev = reserve<struct kernel_def>(func.size());
 
         if (ev == nullptr)
         {
@@ -64,7 +70,7 @@ public:
 
     bool kernel(uint64_t start_tp, uint64_t end_tp, uint64_t kernel_id)
     {
-        struct kernel* ev = reserve<struct kernel>();
+        auto* ev = reserve<struct kernel>();
 
         if (ev == nullptr)
         {
@@ -85,5 +91,4 @@ private:
     uint64_t next_cctx_ref_ = 0;
 };
 
-} // namespace gpu
-} // namespace lo2s
+} // namespace lo2s::gpu

@@ -21,14 +21,25 @@
 
 #include <lo2s/monitor/process_monitor.hpp>
 
+#include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
+#include <lo2s/util.hpp>
 
-namespace lo2s
-{
-namespace monitor
+#include <exception>
+#include <tuple>
+#include <utility>
+
+#include <cassert>
+
+namespace lo2s::monitor
 {
 
-ProcessMonitor::ProcessMonitor() : MainMonitor()
+ProcessMonitor::ProcessMonitor()
 {
 #ifdef HAVE_BPF
     if (config().use_posix_io)
@@ -40,31 +51,31 @@ ProcessMonitor::ProcessMonitor() : MainMonitor()
     trace_.emplace_monitoring_thread(gettid(), "ProcessMonitor", "ProcessMonitor");
 }
 
-void ProcessMonitor::insert_process(Process parent, Process process, std::string proc_name,
+void ProcessMonitor::insert_process(Process parent, Process child, std::string proc_name,
                                     bool spawn)
 {
-    trace_.emplace_process(parent, process, proc_name);
-    insert_thread(process, process.as_thread(), proc_name, spawn);
+    trace_.emplace_process(parent, child, proc_name);
+    insert_thread(child, child.as_thread(), proc_name, spawn);
 
-    resolvers_.fork(parent, process);
+    resolvers_.fork(parent, child);
 }
 
-void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thread,
-                                   std::string name, bool spawn)
+void ProcessMonitor::insert_thread(Process parent [[maybe_unused]], Thread child, std::string name,
+                                   bool spawn)
 {
 #ifdef HAVE_BPF
     if (posix_monitor_)
     {
-        posix_monitor_->insert_thread(thread);
+        posix_monitor_->insert_thread(child);
     }
 #endif
-    trace_.emplace_thread(process, thread, name);
+    trace_.emplace_thread(parent, child, name);
 
     if (config().use_perf_sampling)
     {
     }
 
-    ExecutionScope scope = ExecutionScope(thread);
+    auto scope = ExecutionScope(child);
     if (config().use_perf_sampling ||
         !perf::EventComposer::instance().has_counters_for(MeasurementScope::group_metric(scope)) ||
         !perf::EventComposer::instance().has_counters_for(
@@ -72,25 +83,24 @@ void ProcessMonitor::insert_thread(Process process [[maybe_unused]], Thread thre
     {
         try
         {
-            auto inserted =
-                threads_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                                 std::forward_as_tuple(scope, trace_, spawn));
+            auto inserted = threads_.emplace(std::piecewise_construct, std::forward_as_tuple(child),
+                                             std::forward_as_tuple(scope, trace_, spawn));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
         }
         catch (const std::exception& e)
         {
-            Log::warn() << "Could not start measurement for " << thread << ": " << e.what();
+            Log::warn() << "Could not start measurement for " << child << ": " << e.what();
         }
     }
 
-    trace_.emplace_thread(process, thread, name);
+    trace_.emplace_thread(parent, child, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.emplace_process(trace::NO_PARENT_PROCESS, process, name);
+    trace_.emplace_process(Process::no_parent(), process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)
@@ -123,5 +133,4 @@ ProcessMonitor::~ProcessMonitor()
     }
 #endif
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

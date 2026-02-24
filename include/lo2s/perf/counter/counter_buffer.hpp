@@ -23,11 +23,9 @@
 
 #include <vector>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
+#include <cstddef>
+
+namespace lo2s::perf::counter
 {
 
 /* when reading perf counters, the counter value is reported as the amount of events since
@@ -41,12 +39,8 @@ template <class T>
 class CounterBuffer
 {
 public:
-    CounterBuffer(const CounterBuffer&) = delete;
-    void operator=(const CounterBuffer&) = delete;
-
-    CounterBuffer(std::size_t ncounters) : accumulated_(ncounters, 0)
-    {
-    }
+    CounterBuffer(CounterBuffer&) = delete;
+    CounterBuffer& operator=(CounterBuffer&) = delete;
 
     auto operator[](std::size_t i) const
     {
@@ -96,7 +90,8 @@ protected:
             {
                 continue;
             }
-            else if (diff_enabled == diff_running)
+
+            if (diff_enabled == diff_running)
             {
                 accumulated_[i] += diff_value;
             }
@@ -107,9 +102,17 @@ protected:
         }
     }
 
+private:
+    friend T;
+    CounterBuffer& operator=(CounterBuffer&&) = default;
+    CounterBuffer(CounterBuffer&&) = default;
+    ~CounterBuffer() = default;
+
+    CounterBuffer(std::size_t ncounters) : accumulated_(ncounters, 0)
+    {
+    }
+
     std::vector<double> accumulated_;
 };
 
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter

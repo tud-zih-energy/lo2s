@@ -1,5 +1,24 @@
 #include <lo2s/rb/writer.hpp>
 
+#include <lo2s/rb/header.hpp>
+#include <lo2s/rb/shm_ringbuf.hpp>
+#include <lo2s/types/process.hpp>
+
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+
+#include <cassert>
+#include <cerrno>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+
+#include <sys/mman.h>
+#include <unistd.h>
+
 extern "C"
 {
 #include <sys/socket.h>
@@ -11,19 +30,19 @@ namespace lo2s
 RingbufWriter::RingbufWriter(Process process, RingbufMeasurementType type)
 {
     constexpr int DEFAULT_PAGE_NUM = 16;
-    int fd = memfd_create("lo2s", 0);
+    int const fd = memfd_create("lo2s", 0);
 
     if (fd == -1)
     {
         throw ::std::system_error(errno, std::system_category());
     }
 
-    size_t pagesize = sysconf(_SC_PAGESIZE);
+    size_t const pagesize = sysconf(_SC_PAGESIZE);
     int size = 0;
 
     int pages = DEFAULT_PAGE_NUM;
 
-    char* lo2s_rb_size = getenv("LO2S_RB_SIZE");
+    char const* lo2s_rb_size = getenv("LO2S_RB_SIZE");
     if (lo2s_rb_size != nullptr)
     {
         pages = std::stoi(lo2s_rb_size);
@@ -77,20 +96,20 @@ uint64_t RingbufWriter::timestamp()
     assert(rb_->header()->lo2s_ready.load());
     struct timespec ts; // NOLINT
     clock_gettime(rb_->header()->clockid, &ts);
-    uint64_t res = (ts.tv_sec * NSEC_IN_SEC) + ts.tv_nsec;
+    uint64_t const res = (ts.tv_sec * NSEC_IN_SEC) + ts.tv_nsec;
     return res;
 }
 
 // Writes the fd of the shared memory to the Unix Domain Socket
 void RingbufWriter::write_fd(RingbufMeasurementType type)
 {
-    char* socket_path = getenv("LO2S_SOCKET");
+    char const* socket_path = getenv("LO2S_SOCKET");
     if (socket_path == nullptr)
     {
         throw std::runtime_error("LO2S_SOCKET is not set!");
     }
 
-    int data_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+    int const data_socket = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if (data_socket == -1)
     {
         throw std::system_error(errno, std::system_category());
@@ -103,7 +122,8 @@ void RingbufWriter::write_fd(RingbufMeasurementType type)
 
     strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
 
-    int ret = connect(data_socket, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
+    int const ret =
+        connect(data_socket, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
     if (ret < 0)
     {
         throw std::system_error(errno, std::system_category());

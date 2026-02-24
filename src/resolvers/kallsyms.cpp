@@ -21,7 +21,18 @@
 
 #include <lo2s/resolvers/kallsyms.hpp>
 
+#include <lo2s/address.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/log.hpp>
+
+#include <fstream>
+#include <map>
 #include <regex>
+#include <string>
+#include <tuple>
+#include <utility>
+
+#include <cstdint>
 
 namespace lo2s
 {
@@ -37,7 +48,7 @@ Kallsyms::Kallsyms() : FunctionResolver("[kernel]")
         Log::debug() << "Can not parse /proc/kallsyms, consider lowering perf_event_paranoid";
         return;
     }
-    std::regex ksym_regex("([0-9a-f]+) (?:t|T) ([^[:space:]]+)");
+    std::regex const ksym_regex("([0-9a-f]+) (?:t|T) ([^[:space:]]+)");
     std::smatch ksym_match;
 
     std::string line;
@@ -81,7 +92,7 @@ Kallsyms::Kallsyms() : FunctionResolver("[kernel]")
         prev = entry.first;
     }
 
-    if (sym_str != "")
+    if (!sym_str.empty())
     {
         kallsyms_.emplace(std::piecewise_construct,
                           std::forward_as_tuple(prev, Address(UINT64_MAX)),

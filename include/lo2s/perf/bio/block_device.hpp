@@ -21,16 +21,14 @@
 
 #pragma once
 
-#include <lo2s/util.hpp>
-
+#include <map>
 #include <string>
-#include <vector>
+#include <utility>
 
 #include <fmt/core.h>
 
 extern "C"
 {
-#include <sys/sysmacros.h>
 #include <sys/types.h>
 }
 
@@ -45,23 +43,23 @@ enum class BlockDeviceType
 
 struct BlockDevice
 {
-    BlockDevice() : id(0), name(), type(BlockDeviceType::PARTITION), parent(0)
+    BlockDevice() : id(0), type(BlockDeviceType::PARTITION), parent(0)
     {
     }
 
-    BlockDevice(dev_t id, const std::string& name, BlockDeviceType type, dev_t parent)
-    : id(id), name(name), type(type), parent(parent)
+    BlockDevice(dev_t id, std::string name, BlockDeviceType type, dev_t parent)
+    : id(id), name(std::move(name)), type(type), parent(parent)
     {
     }
 
     static BlockDevice partition(dev_t id, const std::string& name, dev_t parent)
     {
-        return BlockDevice(id, name, BlockDeviceType::PARTITION, parent);
+        return { id, name, BlockDeviceType::PARTITION, parent };
     }
 
     static BlockDevice disk(dev_t id, const std::string& name)
     {
-        return BlockDevice(id, name, BlockDeviceType::DISK, 0);
+        return { id, name, BlockDeviceType::DISK, 0 };
     }
 
     static BlockDevice block_device_for(dev_t device);

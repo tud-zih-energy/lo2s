@@ -23,7 +23,6 @@
 #pragma once
 #include <lo2s/address.hpp>
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/execution_scope_group.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
@@ -34,20 +33,26 @@
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/nec_device.hpp>
 #include <lo2s/types/package.hpp>
-#include <lo2s/util.hpp>
 
-#include <otf2xx/otf2.hpp>
+#include <otf2xx/definition/calling_context.hpp>
+#include <otf2xx/definition/comm.hpp>
+#include <otf2xx/definition/io_handle.hpp>
+#include <otf2xx/definition/io_regular_file.hpp>
+#include <otf2xx/definition/location.hpp>
+#include <otf2xx/definition/location_group.hpp>
+#include <otf2xx/definition/metric_class.hpp>
+#include <otf2xx/definition/metric_member.hpp>
+#include <otf2xx/definition/region.hpp>
+#include <otf2xx/definition/source_code_location.hpp>
+#include <otf2xx/definition/string.hpp>
+#include <otf2xx/definition/system_tree_node.hpp>
+#include <otf2xx/registry.hpp>
 
 #include <string>
 
-extern "C"
-{
-#include <sys/types.h>
-}
+#include <cstdint>
 
-namespace lo2s
-{
-namespace trace
+namespace lo2s::trace
 {
 
 template <typename KeyType, typename tag>
@@ -56,7 +61,7 @@ struct SimpleKeyType
     using key_type = KeyType;
     key_type key;
 
-    explicit SimpleKeyType(key_type key) : key(key)
+    explicit SimpleKeyType(key_type key) : key(std::move(key))
     {
     }
 };
@@ -272,5 +277,4 @@ struct Holder<otf2::definition::comm_group>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::comm_group, ByProcess>;
 };
-} // namespace trace
-} // namespace lo2s
+} // namespace lo2s::trace

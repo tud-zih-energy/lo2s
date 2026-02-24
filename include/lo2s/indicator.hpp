@@ -81,16 +81,16 @@ private:
 
         std::cout << "[";
 
-        uint64_t max_bar_length = w.ws_col - 2;
+        const uint64_t max_bar_length = w.ws_col - 2;
 
         uint64_t filled_bar_length = 0;
         if (progress_ > 0.0)
         {
-            auto filled_bar_length =
+            filled_bar_length =
                 static_cast<uint64_t>(floor(static_cast<double>(max_bar_length) * progress_));
             filled_bar_length = std::min(max_bar_length, filled_bar_length);
         }
-        uint64_t free_bar_length =
+        uint64_t const free_bar_length =
             std::max(max_bar_length - filled_bar_length, static_cast<uint64_t>(0));
 
         for (uint64_t i = 0; i < filled_bar_length; i++)

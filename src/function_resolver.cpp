@@ -22,8 +22,12 @@
 #include <lo2s/function_resolver.hpp>
 
 #include <lo2s/dwarf_resolve.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/util.hpp>
 
-#include <nitro/lang/string.hpp>
+#include <exception>
+#include <memory>
+#include <string>
 
 namespace lo2s
 {

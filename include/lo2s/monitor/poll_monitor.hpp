@@ -21,22 +21,19 @@
 
 #pragma once
 
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <chrono>
+#include <string>
 #include <vector>
 
 extern "C"
 {
-#include <poll.h>
+#include <sys/poll.h>
 }
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 class PollMonitor : public ThreadedMonitor
 {
@@ -44,9 +41,14 @@ public:
     PollMonitor(trace::Trace& trace, const std::string& name,
                 std::chrono::nanoseconds read_interval);
 
+    PollMonitor(const PollMonitor&) = delete;
+    PollMonitor& operator=(const PollMonitor&) = delete;
+    PollMonitor(PollMonitor&&) = delete;
+    PollMonitor& operator=(PollMonitor&&) = delete;
+
     void stop() override;
 
-    ~PollMonitor();
+    ~PollMonitor() override;
 
 protected:
     void run() override;
@@ -69,5 +71,4 @@ protected:
 private:
     std::vector<pollfd> pfds_;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

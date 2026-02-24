@@ -21,6 +21,25 @@
 
 #include <lo2s/radare.hpp>
 
+#include <lo2s/address.hpp>
+
+#include <ios>
+#include <iosfwd>
+#include <string>
+
+#include <cstddef>
+
+extern "C"
+{
+#include <r_anal.h>
+#include <r_asm.h>
+#include <r_lib.h>
+#include <r_types.h>
+#include <r_util/r_num.h>
+#include <r_util/r_ref.h>
+#include <r_util/r_sys.h>
+}
+
 namespace lo2s
 {
 Radare::Radare() : r_lib_(r_lib_new(nullptr, nullptr)), r_anal_(r_anal_new()), r_asm_(r_asm_new())
@@ -34,7 +53,7 @@ Radare::Radare() : r_lib_(r_lib_new(nullptr, nullptr)), r_anal_(r_anal_new()), r
     r_asm_use(r_asm_, R_SYS_ARCH);
     r_anal_use(r_anal_, R_SYS_ARCH);
 
-    int sysbits = (R_SYS_BITS & R_SYS_BITS_64) ? 64 : 32;
+    int const sysbits = (R_SYS_BITS & R_SYS_BITS_64) ? 64 : 32;
     r_asm_set_bits(r_asm_, sysbits);
     r_anal_set_bits(r_anal_, sysbits);
 }
@@ -46,7 +65,7 @@ std::string Radare::single_instruction(char* buf)
         throw Error("code->assembly is NULL");
     }
 
-    auto it = buf;
+    auto* it = buf;
 
     while (*it != '\0' && *it != '\n')
     {
@@ -58,12 +77,12 @@ std::string Radare::single_instruction(char* buf)
         throw Error("empty instruction");
     }
 
-    return std::string(buf, it - 1);
+    return { buf, it - 1 };
 }
 
 std::string Radare::operator()(Address ip, std::istream& obj)
 {
-    std::streampos offset = ip.value();
+    std::streampos const offset = ip.value();
     if (offset < 0)
     {
         throw Error("cannot read memory above 63bit");
@@ -80,7 +99,7 @@ std::string Radare::operator()(Address ip, std::istream& obj)
     }
 
     r_asm_set_pc(r_asm_, offset);
-    auto code = r_asm_mdisassemble(r_asm_, (unsigned char*)buffer, read_bytes);
+    auto* code = r_asm_mdisassemble(r_asm_, reinterpret_cast<unsigned char*>(buffer), read_bytes);
 
     if (code == nullptr)
     {

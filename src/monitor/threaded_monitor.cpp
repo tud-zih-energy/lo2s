@@ -21,18 +21,23 @@
 
 #include <lo2s/monitor/threaded_monitor.hpp>
 
+#include <lo2s/log.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
-#include <fmt/core.h>
+#include <string>
+#include <utility>
 
-namespace lo2s
+#include <cassert>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
+
+namespace lo2s::monitor
 {
-namespace monitor
-{
-ThreadedMonitor::ThreadedMonitor(trace::Trace& trace, const std::string& name)
-: trace_(trace), name_(name), num_wakeups_(0)
+ThreadedMonitor::ThreadedMonitor(trace::Trace& trace, std::string name)
+: trace_(trace), name_(std::move(name))
 {
 }
 
@@ -71,5 +76,4 @@ void ThreadedMonitor::register_thread()
 {
     trace_.emplace_monitoring_thread(gettid(), name(), group());
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

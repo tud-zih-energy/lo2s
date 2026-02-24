@@ -21,15 +21,32 @@
 
 #include <lo2s/perf/event_composer.hpp>
 
-namespace lo2s
-{
-namespace perf
+#include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/types/thread.hpp>
+
+#include <optional>
+#include <vector>
+
+#include <cassert>
+#include <cstdint>
+
+#include <linux/hw_breakpoint.h>
+#include <linux/perf_event.h>
+
+namespace lo2s::perf
 {
 
-EventComposer::EventComposer()
-{
-}
+EventComposer::EventComposer() = default;
 
+namespace
+{
 // Due to differences in the kernels and hardwares implementation of sampling, the preciseness of
 // the intruction pointers returned by sample events can range from the exact IP at the moment of
 // the triggering event occuring to an arbitrary IP in the vicinity of the triggering sampling event
@@ -40,10 +57,10 @@ EventComposer::EventComposer()
 //
 // We are only interested in what the most precise available sampling mode is, so test the
 // availability of precision levels in descending order of preciseness.
-static void set_precision(EventAttr& ev)
+void set_precision(EventAttr& ev)
 {
     uint64_t precise_ip = 3;
-    do
+    while (true)
     {
         try
         {
@@ -58,8 +75,9 @@ static void set_precision(EventAttr& ev)
             }
             ev.set_precise_ip(--precise_ip);
         }
-    } while (true);
+    }
 }
+} // namespace
 
 EventAttr EventComposer::create_sampling_event()
 {
@@ -68,57 +86,55 @@ EventAttr EventComposer::create_sampling_event()
         return sampling_event_.value();
     }
 
+    auto res = EventResolver::instance().get_event_by_name("dummy");
+
     if (config().use_perf_sampling)
     {
-        sampling_event_ = EventResolver::instance().get_event_by_name(config().perf_sampling_event);
-        Log::debug() << "using sampling event \'" << sampling_event_->name()
+        res = EventResolver::instance().get_event_by_name(config().perf_sampling_event);
+        Log::debug() << "using sampling event \'" << res.name()
                      << "\', period: " << config().perf_sampling_period;
 
-        sampling_event_->sample_period(config().perf_sampling_period);
+        res.sample_period(config().perf_sampling_period);
 
         if (config().use_pebs)
         {
-            sampling_event_->set_clockid(std::nullopt);
+            res.set_clockid(std::nullopt);
         }
         else
         {
-            sampling_event_->set_clockid(config().clockid);
+            res.set_clockid(config().clockid);
         }
-        sampling_event_->set_mmap();
+        res.set_mmap();
 
-        sampling_event_->set_precise_ip(3);
-    }
-    else
-    {
-        sampling_event_ = EventResolver::instance().get_event_by_name("dummy");
+        res.set_precise_ip(3);
     }
 
-    sampling_event_->set_sample_id_all();
-    sampling_event_->set_comm();
-    sampling_event_->set_task();
-    sampling_event_->set_context_switch();
+    res.set_sample_id_all();
+    res.set_comm();
+    res.set_task();
+    res.set_context_switch();
 
     if (exclude_kernel_)
     {
-        sampling_event_->set_exclude_kernel();
+        res.set_exclude_kernel();
     }
 
-    watermark(sampling_event_.value());
+    watermark(res);
 
     // TODO see if we can remove remove tid
-    sampling_event_->set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID |
-                                     PERF_SAMPLE_CPU);
+    res.set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_CPU);
 
     if (config().enable_callgraph)
     {
-        sampling_event_->set_sample_type(PERF_SAMPLE_CALLCHAIN);
+        res.set_sample_type(PERF_SAMPLE_CALLCHAIN);
     }
 
     if (config().use_perf_sampling)
     {
-        set_precision(sampling_event_.value());
+        set_precision(res);
     }
 
+    sampling_event_ = res;
     return sampling_event_.value();
 }
 
@@ -152,11 +168,13 @@ std::vector<perf::tracepoint::TracepointEventAttr> EventComposer::emplace_tracep
         return tracepoint_events_.value();
     }
 
-    tracepoint_events_ = std::vector<tracepoint::TracepointEventAttr>();
+    auto res = std::vector<tracepoint::TracepointEventAttr>();
     for (const auto& ev_name : config().tracepoint_events)
     {
-        tracepoint_events_->emplace_back(create_tracepoint_event(ev_name));
+        res.emplace_back(create_tracepoint_event(ev_name));
     }
+
+    tracepoint_events_ = res;
     return tracepoint_events_.value();
 }
 
@@ -250,7 +268,7 @@ void EventComposer::emplace_group_counters()
                 continue;
             }
 
-            EventAttr ev = perf::EventResolver::instance().get_event_by_name(ev_name);
+            EventAttr const ev = perf::EventResolver::instance().get_event_by_name(ev_name);
             res.counters.emplace_back(ev);
 
             res.counters.back().set_clockid(config().clockid);
@@ -272,59 +290,82 @@ bool EventComposer::has_counters_for(MeasurementScope scope)
     return !counters_for(scope).counters.empty();
 }
 
-counter::CounterCollection EventComposer::counters_for(MeasurementScope scope)
+counter::CounterCollection EventComposer::group_counters_for(ExecutionScope scope)
 {
-    assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
-           scope.type == MeasurementScopeType::USERSPACE_METRIC);
-
     counter::CounterCollection res;
-    if (scope.type == MeasurementScopeType::GROUP_METRIC)
+    emplace_group_counters();
+
+    if (!group_counters_.has_value())
     {
-        emplace_group_counters();
-
-        if (group_counters_->empty())
-        {
-            return {};
-        }
-
-        if (group_counters_->leader->is_available_in(scope.scope))
-        {
-            res.leader = group_counters_->leader.value();
-
-            for (auto& ev : group_counters_->counters)
-            {
-                if (ev.is_available_in(scope.scope))
-                {
-                    res.counters.emplace_back(ev);
-                }
-                else
-                {
-                    Log::warn() << "Scope " << scope.scope.name() << ": skipping " << ev.name()
-                                << ": not available!";
-                }
-            }
-        }
+        return {};
     }
-    else if (scope.type == MeasurementScopeType::USERSPACE_METRIC)
-    {
-        emplace_userspace_counters();
 
-        for (auto& ev : userspace_counters_->counters)
+    auto group_counters = group_counters_.value();
+
+    if (group_counters.empty())
+    {
+        return {};
+    }
+
+    if (!group_counters.leader.has_value())
+    {
+        return {};
+    }
+
+    if (group_counters.leader->is_available_in(scope))
+    {
+        res.leader = group_counters.leader.value();
+
+        for (auto& ev : group_counters.counters)
         {
-            if (ev.is_available_in(scope.scope))
+            if (ev.is_available_in(scope))
             {
                 res.counters.emplace_back(ev);
             }
             else
             {
-                Log::warn() << "Skipping " << ev.name() << " not availabe in " << scope.scope.name()
-                            << "!";
+                Log::warn() << "Scope " << scope.name() << ": skipping " << ev.name()
+                            << ": not available!";
             }
+        }
+    }
+    return res;
+}
+
+counter::CounterCollection EventComposer::userspace_counters_for(ExecutionScope scope)
+{
+    counter::CounterCollection res;
+    emplace_userspace_counters();
+
+    if (!userspace_counters_.has_value())
+    {
+        return {};
+    }
+    for (auto& ev : userspace_counters_->counters)
+    {
+        if (ev.is_available_in(scope))
+        {
+            res.counters.emplace_back(ev);
+        }
+        else
+        {
+            Log::warn() << "Skipping " << ev.name() << " not availabe in " << scope.name() << "!";
         }
     }
 
     return res;
 }
 
-} // namespace perf
-} // namespace lo2s
+counter::CounterCollection EventComposer::counters_for(MeasurementScope scope)
+{
+    assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
+           scope.type == MeasurementScopeType::USERSPACE_METRIC);
+
+    if (scope.type == MeasurementScopeType::GROUP_METRIC)
+    {
+        return group_counters_for(scope.scope);
+    }
+    return userspace_counters_for(scope.scope);
+}
+
+} // namespace lo2s::perf

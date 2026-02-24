@@ -26,15 +26,8 @@
 #include <stdexcept>
 
 #include <cstdint>
-#include <cstdlib>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace plugin
-{
-namespace wrapper
+namespace lo2s::metric::plugin::wrapper
 {
 
 enum class Mode
@@ -139,7 +132,7 @@ enum class Synchronicity
     ASYNC
 };
 
-enum SynchronizationMode
+enum SynchronizationMode // NOLINT
 {
     BEGIN,
     BEGIN_MPP,
@@ -185,9 +178,9 @@ struct PluginInfo
 
     std::uint64_t delta_t;
 
-    int32_t (*initialize)(void);
+    int32_t (*initialize)();
 
-    void (*finalize)(void);
+    void (*finalize)();
 
     Properties* (*get_event_info)(const char* token);
 
@@ -197,7 +190,7 @@ struct PluginInfo
 
     bool (*get_optional_value)(std::int32_t id, std::uint64_t* value);
 
-    void (*set_clock_function)(uint64_t (*clock_time)(void));
+    void (*set_clock_function)(uint64_t (*clock_time)());
 
     uint64_t (*get_all_values)(int32_t id, TimeValuePair** time_value_list);
 
@@ -208,7 +201,4 @@ struct PluginInfo
     //       problems with different sizes in different versions.
     std::uint64_t reserved[200];
 };
-} // namespace wrapper
-} // namespace plugin
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::plugin::wrapper

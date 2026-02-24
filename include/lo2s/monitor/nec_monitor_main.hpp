@@ -21,13 +21,14 @@
 
 #pragma once
 
-#include <lo2s/monitor/nec_thread_monitor.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
-#include <lo2s/types.hpp>
+#include <lo2s/types/nec_device.hpp>
+#include <lo2s/types/thread.hpp>
 
-#include <filesystem>
-#include <utility>
+#include <atomic>
+#include <optional>
+#include <string>
 
 extern "C"
 {
@@ -35,9 +36,7 @@ extern "C"
 #include <veosinfo/veosinfo.h>
 }
 
-namespace lo2s
-{
-namespace nec
+namespace lo2s::nec
 {
 class NecMonitorMain : public monitor::ThreadedMonitor
 {
@@ -64,5 +63,4 @@ private:
     std::atomic<bool> stopped_;
     ve_nodeinfo nodeinfo_;
 };
-} // namespace nec
-} // namespace lo2s
+} // namespace lo2s::nec

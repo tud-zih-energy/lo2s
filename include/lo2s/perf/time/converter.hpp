@@ -24,15 +24,12 @@
 #include <lo2s/perf/clock.hpp>
 #include <lo2s/perf/time/reader.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <otf2xx/chrono/duration.hpp>
+#include <otf2xx/chrono/time_point.hpp>
 
 #include <cstdint>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace time
+namespace lo2s::perf::time
 {
 
 class Converter
@@ -51,6 +48,7 @@ public:
     Converter(Converter&&) = default;
     Converter& operator=(const Converter&) = default;
     Converter& operator=(Converter&&) = default;
+    ~Converter() = default;
 
     otf2::chrono::time_point operator()(std::uint64_t perf_raw) const
     {
@@ -70,6 +68,4 @@ public:
 private:
     otf2::chrono::duration offset;
 };
-} // namespace time
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::time

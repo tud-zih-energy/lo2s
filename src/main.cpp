@@ -26,7 +26,10 @@
 #include <lo2s/summary.hpp>
 #include <lo2s/util.hpp>
 
+#include <exception>
 #include <system_error>
+
+#include <cstdlib>
 
 int main(int argc, const char** argv)
 {

@@ -25,10 +25,16 @@
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/rb/reader.hpp>
+#include <lo2s/types/process.hpp>
 
-namespace lo2s
-{
-namespace monitor
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <map>
+#include <string>
+
+#include <cstdint>
+
+namespace lo2s::monitor
 {
 
 class OpenMPMonitor : public PollMonitor
@@ -58,5 +64,4 @@ private:
 
     static constexpr int CCTX_LEVEL_PROCESS = 1;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

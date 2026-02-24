@@ -20,55 +20,13 @@
  */
 #pragma once
 
-#include <x86_adapt_cxx/exception.hpp>
-#include <x86_adapt_cxx/x86_adapt.hpp>
+#include <map>
+#include <string>
 
-#include <algorithm>
-
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_adapt
+namespace lo2s::metric::x86_adapt
 {
 
-std::map<std::string, std::string> x86_adapt_node_knobs()
-{
-    std::map<std::string, std::string> knobs;
-    try
-    {
-        ::x86_adapt::x86_adapt x86_adapt;
-        auto node_cfg_items = x86_adapt.node_configuration_items();
+std::map<std::string, std::string> x86_adapt_node_knobs();
 
-        for (const auto& item : node_cfg_items)
-        {
-            knobs.emplace(std::piecewise_construct, std::forward_as_tuple(item.name()),
-                          std::forward_as_tuple(item.description()));
-        }
-    }
-    catch (const ::x86_adapt::x86_adapt_error& e)
-    {
-        Log::debug() << "Failed to access x86_adapt node knobs! (error: " << e.what() << ")";
-    }
-    return knobs;
-}
-
-std::map<std::string, std::string> x86_adapt_cpu_knobs()
-{
-    std::map<std::string, std::string> node_knobs = x86_adapt_node_knobs();
-    std::map<std::string, std::string> cpu_knobs;
-    ::x86_adapt::x86_adapt x86_adapt;
-
-    auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
-    for (const auto& item : cpu_cfg_items)
-    {
-        cpu_knobs.emplace(std::piecewise_construct, std::forward_as_tuple(item.name()),
-                          std::forward_as_tuple(item.description()));
-    }
-    std::set_difference(cpu_knobs.begin(), cpu_knobs.end(), node_knobs.begin(), node_knobs.end(),
-                        std::inserter(cpu_knobs, cpu_knobs.end()), cpu_knobs.value_comp());
-    return cpu_knobs;
-}
-} // namespace x86_adapt
-} // namespace metric
-} // namespace lo2s
+std::map<std::string, std::string> x86_adapt_cpu_knobs();
+} // namespace lo2s::metric::x86_adapt

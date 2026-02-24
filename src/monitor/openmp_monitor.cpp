@@ -21,23 +21,17 @@
 
 #include <lo2s/monitor/openmp_monitor.hpp>
 
+#include <lo2s/calling_context.hpp>
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/ompt/events.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <memory>
+#include <cstdint>
 
-extern "C"
-{
-#include <sys/mman.h>
-#include <sys/socket.h>
-}
-
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 OpenMPMonitor::OpenMPMonitor(trace::Trace& trace, int fd)
@@ -70,12 +64,11 @@ void OpenMPMonitor::monitor(int fd [[maybe_unused]])
 {
     while (!ringbuf_reader_.empty())
     {
-        omp::EventType event_type =
-            static_cast<omp::EventType>(ringbuf_reader_.get_top_event_type());
+        auto event_type = static_cast<ompt::EventType>(ringbuf_reader_.get_top_event_type());
 
-        if (event_type == omp::EventType::OMPT_ENTER)
+        if (event_type == ompt::EventType::OMPT_ENTER)
         {
-            struct omp::ompt_enter* kernel = ringbuf_reader_.get<struct omp::ompt_enter>();
+            const auto* kernel = ringbuf_reader_.get<struct ompt::ompt_enter>();
 
             auto tp = time_converter_(kernel->tp);
 
@@ -89,9 +82,9 @@ void OpenMPMonitor::monitor(int fd [[maybe_unused]])
 
             last_tp_[kernel->cctx.tid] = tp;
         }
-        else if (event_type == omp::EventType::OMPT_EXIT)
+        else if (event_type == ompt::EventType::OMPT_EXIT)
         {
-            struct omp::ompt_exit* kernel = ringbuf_reader_.get<struct omp::ompt_exit>();
+            const auto* kernel = ringbuf_reader_.get<struct ompt::ompt_exit>();
 
             auto tp = time_converter_(kernel->tp);
 
@@ -111,5 +104,4 @@ void OpenMPMonitor::monitor(int fd [[maybe_unused]])
         ringbuf_reader_.pop();
     }
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

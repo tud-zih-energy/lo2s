@@ -25,6 +25,8 @@
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
+#include <cassert>
+
 namespace lo2s
 {
 

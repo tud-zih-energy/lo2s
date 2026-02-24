@@ -21,39 +21,51 @@
 
 #include <lo2s/monitor/cpu_set_monitor.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/util.hpp>
 
 #include <filesystem>
+#include <iostream>
 #include <regex>
+#include <stdexcept>
+#include <string>
+#include <system_error>
+#include <tuple>
+#include <utility>
 
+#include <cassert>
 #include <csignal>
 
-namespace lo2s
+extern "C"
 {
-namespace monitor
+#include <sched.h>
+}
+
+namespace lo2s::monitor
 {
-CpuSetMonitor::CpuSetMonitor() : MainMonitor()
+CpuSetMonitor::CpuSetMonitor()
 {
     trace_.emplace_monitoring_thread(gettid(), "CpuSetMonitor", "CpuSetMonitor");
 
     // Prefill Memory maps
-    std::regex proc_regex("/proc/([0-9]+)");
+    const std::regex proc_regex("/proc/([0-9]+)");
     std::smatch pid_match;
-    pid_t pid;
 
     const std::filesystem::path proc_path("/proc");
     if (config().use_perf_sampling)
     {
         for (const auto& p : std::filesystem::directory_iterator(proc_path))
         {
-            std::string path = p.path().string();
+            const std::string path = p.path().string();
             if (std::regex_match(path, pid_match, proc_regex))
             {
-                pid = std::stol(pid_match[1]);
+                const pid_t pid = std::stol(pid_match[1]);
 
                 auto maps = read_maps(Process(pid));
                 Process p(pid);
@@ -110,7 +122,7 @@ void CpuSetMonitor::run()
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
 
-        auto ret = pthread_sigmask(SIG_BLOCK, &ss, NULL);
+        auto ret = pthread_sigmask(SIG_BLOCK, &ss, nullptr);
         if (ret)
         {
             Log::error() << "Failed to set pthread_sigmask: " << ret;
@@ -120,7 +132,7 @@ void CpuSetMonitor::run()
 
     if (config().command.empty() && config().process == Process::invalid())
     {
-        int sig;
+        int sig = 0;
         auto ret = sigwait(&ss, &sig);
         std::cout << "[ lo2s: Encountered SIGINT. Stopping measurements and closing trace ]"
                   << std::endl;
@@ -158,5 +170,4 @@ void CpuSetMonitor::run()
 
     throw std::system_error(0, std::system_category());
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

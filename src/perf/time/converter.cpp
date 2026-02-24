@@ -21,17 +21,17 @@
 
 #include <lo2s/perf/time/converter.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/time/reader.hpp>
 
 #include <otf2xx/chrono/duration.hpp>
 
+#include <chrono>
 #include <exception>
+#include <ios>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace time
+namespace lo2s::perf::time
 {
 Converter::Converter() : offset(otf2::chrono::duration(0))
 {
@@ -77,6 +77,4 @@ Converter::Converter() : offset(otf2::chrono::duration(0))
         return;
     }
 }
-} // namespace time
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::time

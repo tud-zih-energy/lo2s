@@ -21,28 +21,30 @@
 
 #include <lo2s/metric/plugin/metrics.hpp>
 
+#include <lo2s/log.hpp>
 #include <lo2s/metric/plugin/plugin.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <nitro/dl/dl.hpp>
+#include <nitro/dl/exception.hpp>
 #include <nitro/env/get.hpp>
 #include <nitro/lang/string.hpp>
 
 #include <algorithm>
+#include <exception>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include <cctype>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace plugin
+namespace lo2s::metric::plugin
 {
 
-static auto upper_case(std::string input)
+namespace
+{
+
+auto upper_case(std::string input)
 {
     std::transform(input.begin(), input.end(), input.begin(), ::toupper);
 
@@ -61,7 +63,7 @@ auto read_env(const std::string& name)
     }
 }
 
-static auto read_env_variables()
+auto read_env_variables()
 {
     std::vector<std::pair<std::string, std::vector<std::string>>> v;
 
@@ -79,11 +81,13 @@ static auto read_env_variables()
             events = read_env(std::string("METRIC_") + upper_case(plugin) + "_PLUGIN");
         }
 
-        v.push_back({ plugin, nitro::lang::split(events, ",") });
+        v.push_back({ plugin, nitro::lang::split(events, ",") }); // NOLINT
     }
 
     return v;
 }
+
+} // namespace
 
 Metrics::Metrics(trace::Trace& trace) : trace_(trace)
 {
@@ -147,6 +151,4 @@ void Metrics::stop()
     }
     running_ = false;
 }
-} // namespace plugin
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::plugin

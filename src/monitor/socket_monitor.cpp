@@ -22,28 +22,37 @@
 #include <lo2s/monitor/socket_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
+#include <lo2s/error.hpp>
 #include <lo2s/monitor/gpu_monitor.hpp>
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/rb/header.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <memory>
+#include <chrono>
+#include <optional>
+#include <stdexcept>
+#include <tuple>
+#include <utility>
+
+#include <cstdint>
+#include <cstring>
+
+#include <fmt/format.h>
 
 extern "C"
 {
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <unistd.h>
 }
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 SocketMonitor::SocketMonitor(trace::Trace& trace)
-: PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace)
+: PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace),
+  socket(::socket(AF_UNIX, SOCK_SEQPACKET, 0))
 {
-    socket = ::socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if (socket == -1)
     {
         throw_errno();
@@ -55,7 +64,7 @@ SocketMonitor::SocketMonitor(trace::Trace& trace)
     strncpy(name.sun_path, config().socket_path.c_str(), sizeof(name.sun_path) - 1);
 
     unlink(config().socket_path.c_str());
-    int ret = bind(socket, (const struct sockaddr*)&name, sizeof(name));
+    int ret = bind(socket, reinterpret_cast<const struct sockaddr*>(&name), sizeof(name));
     if (ret == -1)
     {
         throw_errno();
@@ -69,6 +78,8 @@ SocketMonitor::SocketMonitor(trace::Trace& trace)
     add_fd(socket);
 }
 
+namespace
+{
 std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
 {
     union
@@ -81,12 +92,12 @@ std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
     msg.msg_control = control_un.control;
     msg.msg_controllen = sizeof(control_un.control);
 
-    msg.msg_name = NULL;
+    msg.msg_name = nullptr;
     msg.msg_namelen = 0;
 
     // We have to send a message together with the fd, so use that to send the type of the
     // connected measurement
-    RingbufMeasurementType type;
+    RingbufMeasurementType type = RingbufMeasurementType::GPU;
     struct iovec iov[1];
     iov[0].iov_base = &type;
     iov[0].iov_len = 8;
@@ -99,19 +110,24 @@ std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
         throw_errno();
     }
 
-    struct cmsghdr* cmptr;
-    if ((cmptr = CMSG_FIRSTHDR(&msg)) != nullptr && cmptr->cmsg_len == CMSG_LEN(sizeof(int)))
+    struct cmsghdr* cmptr = CMSG_FIRSTHDR(&msg);
+    if (cmptr != nullptr && cmptr->cmsg_len == CMSG_LEN(sizeof(int)))
     {
         if (cmptr->cmsg_level != SOL_SOCKET)
+        {
             return std::nullopt;
+        }
         if (cmptr->cmsg_type != SCM_RIGHTS)
+        {
             return std::nullopt;
+        }
 
-        int recvfd = *((int*)CMSG_DATA(cmptr));
+        const int recvfd = *reinterpret_cast<int*>(CMSG_DATA(cmptr));
         return std::pair<RingbufMeasurementType, int>(type, recvfd);
     }
     return std::nullopt;
 }
+} // namespace
 
 void SocketMonitor::finalize_thread()
 {
@@ -135,7 +151,7 @@ void SocketMonitor::monitor(int fd)
     {
         return;
     }
-    int data_socket = accept(socket, NULL, NULL);
+    const int data_socket = accept(socket, nullptr, nullptr);
     if (data_socket == -1)
     {
         throw_errno();
@@ -169,5 +185,4 @@ void SocketMonitor::monitor(int fd)
     }
     close(data_socket);
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

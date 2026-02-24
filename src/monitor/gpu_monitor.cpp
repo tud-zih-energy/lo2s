@@ -21,24 +21,21 @@
 
 #include <lo2s/monitor/gpu_monitor.hpp>
 
+#include <lo2s/address.hpp>
+#include <lo2s/calling_context.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/gpu/events.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/monitor/process_monitor.hpp>
-#include <lo2s/perf/sample/writer.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/trace.hpp>
 
-#include <memory>
+#include <algorithm>
 
-extern "C"
-{
-#include <sys/mman.h>
-#include <sys/socket.h>
-}
+#include <cstdint>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 GPUMonitor::GPUMonitor(trace::Trace& trace, int fd)
@@ -61,11 +58,11 @@ void GPUMonitor::monitor(int fd [[maybe_unused]])
 {
     while (!ringbuf_reader_.empty())
     {
-        uint64_t event_type = ringbuf_reader_.get_top_event_type();
+        const uint64_t event_type = ringbuf_reader_.get_top_event_type();
 
-        if (event_type == (uint64_t)gpu::EventType::KERNEL)
+        if (event_type == static_cast<uint64_t>(gpu::EventType::KERNEL))
         {
-            struct gpu::kernel* kernel = ringbuf_reader_.get<struct gpu::kernel>();
+            const auto* kernel = ringbuf_reader_.get<struct gpu::kernel>();
 
             auto start_tp = time_converter_(kernel->start_tp);
             auto end_tp = time_converter_(kernel->end_tp);
@@ -77,19 +74,15 @@ void GPUMonitor::monitor(int fd [[maybe_unused]])
 
             last_tp_ = end_tp;
         }
-        else if (event_type == (uint64_t)gpu::EventType::KERNEL_DEF)
+        else if (event_type == static_cast<uint64_t>(gpu::EventType::KERNEL_DEF))
         {
-            struct gpu::kernel_def* kernel = ringbuf_reader_.get<struct gpu::kernel_def>();
+            const auto* kernel = ringbuf_reader_.get<struct gpu::kernel_def>();
             functions_.emplace(Address(kernel->kernel_id), std::string(kernel->function));
 
-            if (kernel->kernel_id > highest_func_)
-            {
-                highest_func_ = kernel->kernel_id;
-            }
+            highest_func_ = std::max(kernel->kernel_id, highest_func_);
         }
 
         ringbuf_reader_.pop();
     }
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

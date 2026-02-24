@@ -23,14 +23,14 @@
 
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/cpu.hpp>
 
 #include <map>
 #include <memory>
+#include <string>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 class TracepointMonitor : public PollMonitor
@@ -48,9 +48,7 @@ private:
         return "tracepoint::TracepointMonitor";
     }
 
-private:
     Cpu cpu_;
     std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

@@ -22,17 +22,13 @@
 #pragma once
 
 #include <lo2s/error.hpp>
-#include <lo2s/util.hpp>
-
-#include <utility>
 
 #include <cassert>
+#include <cstddef>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <sys/mman.h>
-#include <unistd.h>
 }
 
 namespace lo2s
@@ -40,26 +36,21 @@ namespace lo2s
 class SharedMemory
 {
 public:
-    SharedMemory() : addr_(nullptr), size_(0)
-    {
-    }
+    SharedMemory() = default;
 
     SharedMemory(SharedMemory&) = delete;
     SharedMemory& operator=(SharedMemory&) = delete;
 
-    SharedMemory(SharedMemory&& other)
+    SharedMemory(SharedMemory&& other) noexcept : addr_(other.addr_), size_(other.size_)
     {
-        addr_ = std::move(other.addr_);
-        size_ = std::move(other.size_);
-
         other.addr_ = nullptr;
     }
 
-    SharedMemory& operator=(SharedMemory&& other)
+    SharedMemory& operator=(SharedMemory&& other) noexcept
     {
         unmap();
-        addr_ = std::move(other.addr_);
-        size_ = std::move(other.size_);
+        addr_ = other.addr_;
+        size_ = other.size_;
 
         other.addr_ = nullptr;
 
@@ -68,8 +59,6 @@ public:
 
     SharedMemory(int fd, size_t size, size_t offset = 0, void* location = nullptr) : size_(size)
     {
-        assert((offset % sysconf(_SC_PAGESIZE)) == 0);
-
         if (location == nullptr)
         {
             addr_ = mmap(nullptr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
@@ -103,7 +92,7 @@ public:
         unmap();
     }
 
-    size_t size()
+    size_t size() const
     {
         return size_;
     }

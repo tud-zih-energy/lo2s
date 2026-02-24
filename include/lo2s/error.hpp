@@ -23,11 +23,13 @@
 
 #include <system_error>
 
+#include <cerrno>
+
 namespace lo2s
 {
 inline std::system_error make_system_error()
 {
-    return std::system_error(errno, std::system_category());
+    return { errno, std::system_category() };
 }
 
 [[noreturn]] inline void throw_errno()

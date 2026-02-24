@@ -1,20 +1,24 @@
 #include <lo2s/perf/tracepoint/writer.hpp>
 
-#include <lo2s/config.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/tracepoint/reader.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/definition/metric_class.hpp>
+
+#include <cstddef>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+namespace lo2s::perf::tracepoint
 {
 
-Writer::Writer(Cpu cpu, perf::tracepoint::TracepointEventAttr event, trace::Trace& trace_,
+Writer::Writer(Cpu cpu, const perf::tracepoint::TracepointEventAttr& event, trace::Trace& trace_,
                const otf2::definition::metric_class& metric_class)
 : Reader(cpu, event),
   writer_(trace_.create_metric_writer(fmt::format("tracepoint metrics for {}", cpu))),
@@ -42,6 +46,4 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     writer_.write(metric_event_);
     return false;
 }
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

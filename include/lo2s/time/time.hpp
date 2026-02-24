@@ -24,24 +24,21 @@
 #include <lo2s/build_config.hpp>
 
 #include <otf2xx/chrono/convert.hpp>
+#include <otf2xx/chrono/time_point.hpp>
 
 #include <chrono>
 #include <stdexcept> // for use by ClockProvider::InvalidClock
 #include <string>    // for use by ClockProvider::get_clock_by_name
 
-#include <cstdint>
 #include <ctime>
 
 extern "C"
 {
 #include <linux/version.h>
-#include <unistd.h>
 }
 
 // All the time stuff is based on the assumption that all times are nanoseconds.
-namespace lo2s
-{
-namespace time
+namespace lo2s::time
 {
 
 struct Clock
@@ -165,5 +162,4 @@ inline otf2::chrono::time_point now()
 {
     return otf2::chrono::convert_time_point(Clock::now());
 }
-} // namespace time
-} // namespace lo2s
+} // namespace lo2s::time

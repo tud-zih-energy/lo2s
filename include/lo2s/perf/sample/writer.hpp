@@ -21,31 +21,19 @@
 
 #pragma once
 
-#include <lo2s/address.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/local_cctx_tree.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/perf/types.hpp>
+#include <lo2s/resolvers.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
-#include <otf2xx/definition/calling_context.hpp>
-#include <otf2xx/definition/location.hpp>
+#include <otf2xx/event/metric.hpp>
 
-#include <unordered_map>
-
-#include <cstdint>
-
-extern "C"
-{
-#include <sys/types.h>
-}
-
-namespace lo2s
-{
-namespace perf
-{
-namespace sample
+namespace lo2s::perf::sample
 {
 
 // Note, this cannot be protected for CRTP reasons...
@@ -55,10 +43,15 @@ public:
     Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
     ~Writer();
 
-public:
+    Writer(Writer&) = delete;
+    Writer(Writer&&) = delete;
+
+    Writer& operator=(Writer&) = delete;
+    Writer& operator=(Writer&&) = delete;
+
     using Reader<Writer>::handle;
     bool handle(const Reader::RecordSampleType* sample);
-    bool handle(const Reader::RecordMmapType* mmap_event);
+    bool handle(const RecordMmapType* mmap_event);
     bool handle(const Reader::RecordCommType* comm);
     bool handle(const Reader::RecordSwitchCpuWideType* context_switch);
     bool handle(const Reader::RecordSwitchType* context_switch);
@@ -89,6 +82,4 @@ private:
     otf2::chrono::time_point first_time_point_;
     otf2::chrono::time_point last_time_point_;
 };
-} // namespace sample
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::sample

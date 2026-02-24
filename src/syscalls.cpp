@@ -21,9 +21,11 @@
 
 #include <lo2s/syscalls.hpp>
 
+#include <stdexcept>
 #include <string>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
 
 #ifdef HAVE_LIBAUDIT
 extern "C"
@@ -35,25 +37,25 @@ extern "C"
 namespace lo2s
 {
 
-std::string syscall_name_for_nr(int64_t syscall_nr)
+std::string syscall_name_for_nr(int syscall_nr)
 {
 #ifdef HAVE_LIBAUDIT
-    int machine;
-    if ((machine = audit_detect_machine()) != -1)
+    const int machine = audit_detect_machine();
+    if (machine != -1)
     {
-        const char* syscall_name;
-        if ((syscall_name = audit_syscall_to_name(syscall_nr, machine)))
+        const char* syscall_name = audit_syscall_to_name(syscall_nr, machine);
+        if (syscall_name != nullptr)
         {
-            return std::string(syscall_name);
+            return syscall_name;
         }
     }
 #endif
     return fmt::format("syscall {}", syscall_nr);
 }
 
-int64_t syscall_nr_for_name(const std::string name)
+int syscall_nr_for_name(const std::string& name)
 {
-    int syscall_nr;
+    int syscall_nr = -1;
     try
     {
         syscall_nr = std::stoi(name);
@@ -61,7 +63,7 @@ int64_t syscall_nr_for_name(const std::string name)
     catch (std::invalid_argument& e)
     {
 #ifdef HAVE_LIBAUDIT
-        int machine = audit_detect_machine();
+        const int machine = audit_detect_machine();
 
         if (machine == -1)
         {

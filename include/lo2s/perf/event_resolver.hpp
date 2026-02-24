@@ -21,16 +21,14 @@
 
 #pragma once
 
-#include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/perf/event_attr.hpp>
 
-#include <stdexcept>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 class EventResolver
@@ -53,18 +51,19 @@ public:
         return e;
     }
 
-private:
     EventResolver();
     EventResolver(const EventResolver&) = delete;
     EventResolver& operator=(const EventResolver&) = delete;
     EventResolver(const EventResolver&&) = delete;
     EventResolver& operator=(const EventResolver&&) = delete;
 
+    ~EventResolver() = default;
+
+private:
     EventAttr cache_event(const std::string& name);
     EventAttr fallback_metric_leader_event();
 
     std::unordered_map<std::string, std::optional<EventAttr>> event_map_;
 };
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

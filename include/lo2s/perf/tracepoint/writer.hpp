@@ -22,34 +22,33 @@
 #pragma once
 
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/reader.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/cpu.hpp>
 
+#include <otf2xx/definition/metric_class.hpp>
 #include <otf2xx/definition/metric_instance.hpp>
 #include <otf2xx/event/metric.hpp>
 #include <otf2xx/writer/local.hpp>
 
-#include <vector>
-
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+namespace lo2s::perf::tracepoint
 {
 // Note, this cannot be protected for CRTP reasons...
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(Cpu cpu, perf::tracepoint::TracepointEventAttr event, trace::Trace& trace,
+    Writer(Cpu cpu, const perf::tracepoint::TracepointEventAttr& event, trace::Trace& trace,
            const otf2::definition::metric_class& metric_class);
 
     Writer(const Writer& other) = delete;
+    Writer& operator=(Writer&) = delete;
 
-    Writer(Writer&& other) = default;
+    Writer& operator=(Writer&&) noexcept = delete;
+    Writer(Writer&& other) noexcept = default;
 
-public:
+    ~Writer() = default;
+
     using Reader<Writer>::handle;
 
     bool handle(const Reader::RecordSampleType* sample);
@@ -62,6 +61,4 @@ private:
 
     otf2::event::metric metric_event_;
 };
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

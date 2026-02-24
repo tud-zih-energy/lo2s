@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>

@@ -23,15 +23,27 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/metric/sensors/recorder.hpp>
+#include <lo2s/monitor/io_monitor.hpp>
+#include <lo2s/monitor/socket_monitor.hpp>
+#include <lo2s/monitor/tracepoint_monitor.hpp>
+#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
-namespace lo2s
+#include <exception>
+#include <memory>
+
+#ifdef HAVE_X86_ADAPT
+#include <lo2s/metric/x86_adapt/metrics.hpp>
+#endif
+#ifdef HAVE_X86_ENERGY
+#include <lo2s/metric/x86_energy/metrics.hpp>
+#endif
+namespace lo2s::monitor
 {
-namespace monitor
-{
-MainMonitor::MainMonitor() : trace_(), metrics_(trace_)
+MainMonitor::MainMonitor() : metrics_(trace_)
 {
     if (config().use_perf_sampling)
     {
@@ -195,5 +207,4 @@ MainMonitor::~MainMonitor()
 
     trace_.finalize(resolvers_);
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

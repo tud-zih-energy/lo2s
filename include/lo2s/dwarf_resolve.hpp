@@ -3,14 +3,15 @@
 #include <lo2s/address.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/line_info.hpp>
+#include <lo2s/util.hpp>
 
 #include <map>
+#include <memory>
+#include <string>
+
 extern "C"
 {
-#include <elfutils/libdw.h>
 #include <elfutils/libdwfl.h>
-#include <fcntl.h>
-#include <unistd.h>
 }
 
 namespace lo2s
@@ -18,9 +19,9 @@ namespace lo2s
 class DwarfFunctionResolver : public FunctionResolver
 {
 public:
-    DwarfFunctionResolver(std::string name);
+    DwarfFunctionResolver(const std::string& name);
 
-    static std::shared_ptr<FunctionResolver> cache(std::string name)
+    static std::shared_ptr<FunctionResolver> cache(const std::string& name)
     {
         return BinaryCache<DwarfFunctionResolver>::instance()[name];
     }
@@ -31,8 +32,8 @@ public:
     DwarfFunctionResolver(DwarfFunctionResolver&&) = delete;
     DwarfFunctionResolver& operator=(DwarfFunctionResolver&&) = delete;
 
-    ~DwarfFunctionResolver();
-    virtual LineInfo lookup_line_info(Address addr) override;
+    ~DwarfFunctionResolver() override;
+    LineInfo lookup_line_info(Address addr) override;
 
     std::string name()
     {

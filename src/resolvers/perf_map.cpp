@@ -21,6 +21,19 @@
 
 #include <lo2s/resolvers/perf_map.hpp>
 
+#include <lo2s/address.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/line_info.hpp>
+#include <lo2s/types/process.hpp>
+
+#include <fstream>
+#include <regex>
+#include <string>
+
+#include <cstdint>
+
+#include <fmt/format.h>
+
 namespace lo2s
 {
 PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions for {}", process))
@@ -31,11 +44,11 @@ PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions 
     // START SIZE SYMBOL
     // Example:
     // ff00ff deadbeef py::foo
-    std::regex perf_map_regex("([0-9a-f]+) ([0-9a-f]+) (.+)");
+    std::regex const perf_map_regex("([0-9a-f]+) ([0-9a-f]+) (.+)");
 
     // python mapfiles have the symbols in the form
     // py::[functioname]:[filename]
-    std::regex python_regex("py::(.+):(.+)");
+    std::regex const python_regex("py::(.+):(.+)");
 
     std::string line;
     while (std::getline(perf_map_file, line))
@@ -45,18 +58,18 @@ PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions 
         if (std::regex_match(line, perf_map_match, perf_map_regex))
         {
             LineInfo info = LineInfo::for_unknown_function();
-            Address start(perf_map_match[1]);
+            Address const start(perf_map_match[1]);
 
             if (start_ == UINT64_MAX)
             {
                 start_ = start;
             }
 
-            Address end(start + Address(perf_map_match[2]));
+            Address const end(start + Address(perf_map_match[2]));
 
             std::smatch python_match;
 
-            std::string symbol_string = perf_map_match[3].str();
+            std::string const symbol_string = perf_map_match[3].str();
 
             if (std::regex_match(symbol_string, python_match, python_regex))
             {
@@ -64,17 +77,15 @@ PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions 
                 // are compiled into the Python interpreter
                 if (python_match[2].str()[0] == '<')
                 {
-                    std::string dso = python_match[2];
-                    std::string function = python_match[1];
-                    info =
-                        LineInfo::for_function("<unknown file>", function.c_str(), 0, dso.c_str());
+                    std::string const dso = python_match[2];
+                    std::string const function = python_match[1];
+                    info = LineInfo::for_function("<unknown file>", function.c_str(), 0, dso);
                 }
                 else
                 {
-                    std::string function = python_match[1];
-                    std::string filename = python_match[2];
-                    info = LineInfo::for_function(filename.c_str(), function.c_str(), 0,
-                                                  filename.c_str());
+                    std::string const function = python_match[1];
+                    std::string const filename = python_match[2];
+                    info = LineInfo::for_function(filename.c_str(), function.c_str(), 0, filename);
                 }
             }
             else
@@ -86,7 +97,7 @@ PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions 
         }
     }
 
-    if (entries_.size() != 0)
+    if (!entries_.empty())
     {
         end_ = (--entries_.end())->first.end;
     }

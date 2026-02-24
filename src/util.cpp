@@ -1,5 +1,6 @@
 #include <lo2s/util.hpp>
 
+#include <lo2s/address.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/types/cpu.hpp>
@@ -8,6 +9,7 @@
 
 #include <nitro/lang/string.hpp>
 
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -17,11 +19,21 @@
 #include <numeric>
 #include <regex>
 #include <set>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 #include <cstdint>
+#include <cstring>
 #include <ctime>
 
 #include <fmt/core.h>
+#include <fmt/format.h>
+#include <linux/limits.h>
+#include <sched.h>
 
 extern "C"
 {
@@ -29,10 +41,8 @@ extern "C"
 #include <limits.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
-#include <sys/sysmacros.h>
 #include <sys/time.h>
 #include <sys/timerfd.h>
-#include <sys/types.h>
 #include <sys/utsname.h>
 #include <unistd.h>
 }
@@ -42,13 +52,14 @@ namespace lo2s
 
 std::size_t get_page_size()
 {
-    static std::size_t page_size = sysconf(_SC_PAGESIZE);
+    static std::size_t const page_size = sysconf(_SC_PAGESIZE);
     return page_size;
 }
 
 std::chrono::duration<double> get_cpu_time()
 {
-    struct rusage usage, child_usage;
+    struct rusage usage;
+    struct rusage child_usage;
     timeval time;
 
     if (getrusage(RUSAGE_SELF, &usage) == -1)
@@ -86,7 +97,9 @@ std::string get_process_exe(Process process)
     return exe_cstr;
 }
 
-static std::string read_file(const std::filesystem::path& path)
+namespace
+{
+std::string read_file(const std::filesystem::path& path)
 {
     std::ifstream s;
     s.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -104,6 +117,7 @@ static std::string read_file(const std::filesystem::path& path)
         throw;
     }
 }
+} // namespace
 
 std::string get_process_comm(Process process)
 {
@@ -159,7 +173,7 @@ int32_t get_task_last_cpu_id(std::istream& proc_stat)
 
 const struct ::utsname& get_uname()
 {
-    static struct instance_wrapper
+    const static struct instance_wrapper
     {
         instance_wrapper()
         {
@@ -178,8 +192,8 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
 {
 
     std::map<Process, std::map<Thread, std::string>> ret;
-    std::filesystem::path proc("/proc");
-    for (auto& entry : std::filesystem::directory_iterator(proc))
+    std::filesystem::path const proc("/proc");
+    for (const auto& entry : std::filesystem::directory_iterator(proc))
     {
         Process process;
         try
@@ -194,8 +208,8 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
         auto& cur_process = ret[process];
         try
         {
-            std::filesystem::path task(fmt::format("/proc/{}/task", process.as_int()));
-            for (auto& entry_task : std::filesystem::directory_iterator(task))
+            std::filesystem::path const task(fmt::format("/proc/{}/task", process.as_int()));
+            for (const auto& entry_task : std::filesystem::directory_iterator(task))
             {
                 Thread thread;
                 try
@@ -215,6 +229,7 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
         }
         catch (...)
         {
+            Log::trace() << "Can not process comm for " << process << " skipping.";
         }
     }
     return ret;
@@ -245,7 +260,7 @@ Thread gettid()
     return Thread(syscall(SYS_gettid));
 }
 
-int get_cgroup_mountpoint_fd(std::string cgroup)
+int get_cgroup_mountpoint_fd(const std::string& cgroup)
 {
     std::ifstream mtab("/proc/mounts");
 
@@ -254,7 +269,7 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
     // whitespaces should not be let anywhere near lo2s anyways
     // /proc/mounts format:
     // device mountpoint fs_type options freq passno
-    std::regex cgroup_regex(R"((\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+))");
+    std::regex const cgroup_regex(R"((\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+))");
     std::smatch cgroup_match;
     std::string line;
     while (std::getline(mtab, line))
@@ -266,9 +281,9 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
             if (cgroup_match[3].str() == "cgroup2" ||
                 (cgroup_match[3].str() == "cgroup" && cgroup_match[4].str().find("perf_event")))
             {
-                std::filesystem::path cgroup_path =
+                std::filesystem::path const cgroup_path =
                     std::filesystem::path(cgroup_match[2].str()) / cgroup;
-                int fd = open(cgroup_path.c_str(), O_RDONLY);
+                int const fd = open(cgroup_path.c_str(), O_RDONLY);
 
                 if (fd != -1)
                 {
@@ -280,7 +295,7 @@ int get_cgroup_mountpoint_fd(std::string cgroup)
     return -1;
 }
 
-std::set<std::uint32_t> parse_list(std::string list)
+std::set<std::uint32_t> parse_list(const std::string& list)
 {
     std::stringstream s;
     s << list;
@@ -294,11 +309,13 @@ std::set<std::uint32_t> parse_list(std::string list)
         if (pos != std::string::npos)
         {
             // is a range
-            uint32_t from = std::stoi(part.substr(0, pos));
-            uint32_t to = std::stoi(part.substr(pos + 1));
+            uint32_t const from = std::stoi(part.substr(0, pos));
+            uint32_t const to = std::stoi(part.substr(pos + 1));
 
             for (auto i = from; i <= to; ++i)
+            {
                 res.insert(i);
+            }
         }
         else
         {
@@ -310,7 +327,7 @@ std::set<std::uint32_t> parse_list(std::string list)
     return res;
 }
 
-std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
+std::set<std::uint32_t> parse_list_from_file(const std::filesystem::path& file)
 {
     std::ifstream list_stream(file);
     std::string list_string;
@@ -321,7 +338,7 @@ std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file)
         return parse_list(list_string);
     }
 
-    return std::set<std::uint32_t>();
+    return {};
 }
 
 std::vector<std::string> get_thread_cmdline(Thread thread)
@@ -334,7 +351,7 @@ std::vector<std::string> get_thread_cmdline(Thread thread)
     std::vector<std::string> args;
     while (cmdline_c_str < cmdline_str.c_str() + cmdline_str.length())
     {
-        args.emplace_back(std::string(cmdline_c_str));
+        args.emplace_back(cmdline_c_str);
         cmdline_c_str += args.back().length() + 1;
     }
     return args;
@@ -409,7 +426,7 @@ void bump_rlimit_fd()
 
 int timerfd_from_ns(std::chrono::nanoseconds duration)
 {
-    int timerfd;
+    int timerfd = 0;
     struct itimerspec tspec;
     memset(&tspec, 0, sizeof(struct itimerspec));
 
@@ -424,7 +441,7 @@ int timerfd_from_ns(std::chrono::nanoseconds duration)
         throw_errno();
     }
 
-    if (timerfd_settime(timerfd, TFD_TIMER_ABSTIME, &tspec, NULL) == -1)
+    if (timerfd_settime(timerfd, TFD_TIMER_ABSTIME, &tspec, nullptr) == -1)
     {
         throw_errno();
     }
@@ -433,16 +450,11 @@ int timerfd_from_ns(std::chrono::nanoseconds duration)
 
 bool known_non_executable(const std::string& filename)
 {
-    if (filename.empty() || std::string("//anon") == filename ||
-        std::string("/dev/zero") == filename || std::string("/anon_hugepage") == filename ||
-        nitro::lang::starts_with(filename, "/memfd") ||
-        nitro::lang::starts_with(filename, "/SYSV") || nitro::lang::starts_with(filename, "[") ||
-        nitro::lang::starts_with(filename, "/dev"))
-    {
-        return true;
-    }
-
-    return false;
+    return filename.empty() || std::string("//anon") == filename ||
+           std::string("/dev/zero") == filename || std::string("/anon_hugepage") == filename ||
+           nitro::lang::starts_with(filename, "/memfd") ||
+           nitro::lang::starts_with(filename, "/SYSV") || nitro::lang::starts_with(filename, "[") ||
+           nitro::lang::starts_with(filename, "/dev");
 }
 
 std::map<Mapping, std::string> read_maps(Process p)
@@ -467,8 +479,8 @@ std::map<Mapping, std::string> read_maps(Process p)
     //                 start       -    end          prot           offset
     //                 device  inode   fr
     // NOTE: we only look at executable entries       here ↓
-    std::regex regex("([0-9a-f]+)\\-([0-9a-f]+)\\s+[r-][w-][x-].?\\s+([0-9a-z]+)"
-                     "\\s+\\S+\\s+\\d+\\s+(.*)");
+    std::regex const regex("([0-9a-f]+)\\-([0-9a-f]+)\\s+[r-][w-][x-].?\\s+([0-9a-z]+)"
+                           "\\s+\\S+\\s+\\d+\\s+(.*)");
     Log::debug() << "opening " << filename;
     while (getline(mapstream, line))
     {
@@ -495,12 +507,12 @@ bool is_kernel_thread(Thread thread)
 
     if (cmdline.good())
     {
-        std::string cmdline_str = "";
+        std::string cmdline_str;
         cmdline >> cmdline_str;
 
         // Kernel threads can be distinguished from normal threads by the empty
         // /proc/[pid]/cmdline file. This is how the ps utility does it.
-        if (cmdline_str == "")
+        if (cmdline_str.empty())
         {
             return true;
         }

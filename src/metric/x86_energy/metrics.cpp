@@ -1,24 +1,30 @@
 #include <lo2s/metric/x86_energy/metrics.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/metric/x86_energy/monitor.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
 
+#include <otf2xx/common.hpp>
+#include <otf2xx/definition/system_tree_node.hpp>
+#include <x86_energy.hpp>
+
+#include <exception>
+#include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <utility>
 
 namespace xe = x86_energy;
 
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_energy
+namespace lo2s::metric::x86_energy
 {
 
 Metrics::Metrics(trace::Trace& trace)
 {
-    xe::Mechanism mechanism;
+    xe::Mechanism const mechanism;
 
     Log::debug() << "Using x86_energy mechanism: " << mechanism.name();
 
@@ -68,7 +74,7 @@ Metrics::Metrics(trace::Trace& trace)
         std::stringstream str;
         str << mechanism.name() << " " << counter;
 
-        std::string metric_name = str.str();
+        std::string const metric_name = str.str();
 
         auto& mc = trace.metric_class();
         // According to the developers, x86_energy gives values in J, not mJ!
@@ -145,6 +151,4 @@ void Metrics::stop()
         recorder->stop();
     }
 }
-} // namespace x86_energy
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::x86_energy

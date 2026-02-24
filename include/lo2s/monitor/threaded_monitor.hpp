@@ -26,16 +26,14 @@
 #include <string>
 #include <thread>
 
-#include <cassert>
+#include <cstddef>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 class ThreadedMonitor
 {
 public:
-    ThreadedMonitor(trace::Trace& trace, const std::string& name);
+    ThreadedMonitor(trace::Trace& trace, std::string name);
 
     // We don't want copies!
     ThreadedMonitor(const ThreadedMonitor&) = delete;
@@ -68,12 +66,10 @@ protected:
     {
     }
 
-protected:
     std::thread thread_;
     trace::Trace& trace_;
     std::string name_;
 
-    std::size_t num_wakeups_;
+    std::size_t num_wakeups_ = 0;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

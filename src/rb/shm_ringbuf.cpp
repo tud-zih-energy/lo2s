@@ -21,15 +21,25 @@
 
 #include <lo2s/rb/shm_ringbuf.hpp>
 
+#include <lo2s/rb/header.hpp>
+#include <lo2s/util.hpp>
+
+#include <stdexcept>
+#include <string>
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+
 namespace lo2s
 {
 ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
 {
     auto header_map = SharedMemory(fd_, sizeof(struct ringbuf_header), 0);
 
-    size_t size = header_map.as<struct ringbuf_header>()->size;
+    size_t const size = header_map.as<struct ringbuf_header>()->size;
 
-    uint64_t version = header_map.as<struct ringbuf_header>()->version;
+    uint64_t const version = header_map.as<struct ringbuf_header>()->version;
     if (version != RINGBUF_VERSION)
     {
         throw std::runtime_error("Incompatible Ringbuffer Version" +
@@ -51,7 +61,7 @@ ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
     // another mapping of the ringbuffer using MMAP_FIXED. This way we only touch mappings we
     // control. Also, put the ringbuffer header on a separate page to make life easier.
 
-    size_t pagesize = sysconf(_SC_PAGESIZE);
+    size_t const pagesize = get_page_size();
 
     first_mapping_ = SharedMemory(fd_, (size * 2) + pagesize, 0);
 
@@ -65,8 +75,8 @@ ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
 std::byte* ShmRingbuf::head(size_t ev_size)
 {
 
-    uint64_t head = header_->head.load();
-    uint64_t tail = header_->tail.load();
+    uint64_t const head = header_->head.load();
+    uint64_t const tail = header_->tail.load();
 
     if (head >= tail)
     {
@@ -110,8 +120,8 @@ void ShmRingbuf::advance_tail(size_t ev_size)
 
 bool ShmRingbuf::can_be_loaded(size_t ev_size)
 {
-    uint64_t head = header_->head.load();
-    uint64_t tail = header_->tail.load();
+    uint64_t const head = header_->head.load();
+    uint64_t const tail = header_->tail.load();
     if (tail <= head)
     {
         return tail + ev_size <= head;

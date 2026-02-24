@@ -20,24 +20,27 @@
  */
 
 #include <lo2s/build_config.hpp>
-#include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_attr.hpp>
+
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <cstdint>
+
+#include <fmt/format.h>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/pmu-events.hpp>
-#include <lo2s/perf/util.hpp>
-#include <lo2s/topology.hpp>
-#include <lo2s/util.hpp>
 
 #include <filesystem>
 #include <fstream>
 #include <ios>
-#include <limits>
 #include <regex>
-#include <set>
 #include <sstream>
 #include <vector>
 
@@ -47,7 +50,6 @@ extern "C"
 {
 #include <linux/perf_event.h>
 #include <linux/version.h>
-#include <unistd.h>
 }
 
 namespace
@@ -62,7 +64,7 @@ struct string_to_id
     T id;
 };
 
-static string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
+string_to_id<perf_hw_cache_id> CACHE_NAME_TABLE[] = {
     { "L1-dcache", PERF_COUNT_HW_CACHE_L1D }, { "L1-icache", PERF_COUNT_HW_CACHE_L1I },
     { "LLC", PERF_COUNT_HW_CACHE_LL },        { "dTLB", PERF_COUNT_HW_CACHE_DTLB },
     { "iTLB", PERF_COUNT_HW_CACHE_ITLB },     { "branch", PERF_COUNT_HW_CACHE_BPU },
@@ -77,7 +79,7 @@ struct cache_op_and_result
     perf_hw_cache_op_result_id result_id;
 };
 
-static string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
+string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
     { "loads", { PERF_COUNT_HW_CACHE_OP_READ, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
     { "stores", { PERF_COUNT_HW_CACHE_OP_WRITE, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
     { "prefetches", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_ACCESS } },
@@ -86,22 +88,20 @@ static string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
     { "prefetch-misses", { PERF_COUNT_HW_CACHE_OP_PREFETCH, PERF_COUNT_HW_CACHE_RESULT_MISS } },
 };
 
-inline constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw_cache_op_id op,
-                                                 perf_hw_cache_op_result_id op_result)
+constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw_cache_op_id op,
+                                          perf_hw_cache_op_result_id op_result)
 {
     return cache | (op << 8) | (op_result << 16);
 }
 
 template <std::size_t N, typename T>
-inline constexpr std::size_t array_size(T (&)[N])
+constexpr std::size_t array_size(T (& /*unused*/)[N])
 {
     return N;
 }
 } // namespace
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 std::vector<SysfsEventAttr> EventResolver::get_pmu_events()
@@ -112,9 +112,7 @@ std::vector<SysfsEventAttr> EventResolver::get_pmu_events()
 
     for (const auto& pmu : std::filesystem::directory_iterator(pmu_devices))
     {
-        const auto pmu_path = pmu.path();
-
-        const std::filesystem::path event_dir(pmu_path / "events");
+        const std::filesystem::path event_dir(pmu.path() / "events");
 
         // some PMUs don't have any events, in that case event_dir doesn't exist
         if (!std::filesystem::is_directory(event_dir))
@@ -126,8 +124,7 @@ std::vector<SysfsEventAttr> EventResolver::get_pmu_events()
         {
             std::stringstream event_name;
 
-            const auto event_path = event.path();
-            const auto extension = event_path.extension();
+            const auto extension = event.path().extension();
 
             // ignore scaling and unit information
             if (extension == ".scale" || extension == ".unit")
@@ -136,11 +133,11 @@ std::vector<SysfsEventAttr> EventResolver::get_pmu_events()
             }
 
             // use std::filesystem::path::string, otherwise the paths are formatted quoted
-            event_name << pmu_path.filename().string() << '/' << event_path.filename().string()
+            event_name << pmu.path().filename().string() << '/' << event.path().filename().string()
                        << '/';
             try
             {
-                SysfsEventAttr event(event_name.str());
+                SysfsEventAttr const event(event_name.str());
                 events.emplace_back(event);
             }
             catch (const EventAttr::InvalidEvent& e)
@@ -182,7 +179,7 @@ std::vector<std::string> EventResolver::get_tracepoint_event_names()
 EventAttr EventResolver::fallback_metric_leader_event()
 {
     Log::debug() << "checking for metric leader event...";
-    for (auto candidate : {
+    for (const auto* candidate : {
              "ref-cycles",
              "cpu-cycles",
              "bus-cycles",
@@ -269,11 +266,11 @@ EventResolver::EventResolver()
     {
         for (auto& operation : CACHE_OPERATION_TABLE)
         {
+            name_fmt.str(std::string());
+            name_fmt << cache.name << '-' << operation.name;
+
             try
             {
-                name_fmt.str(std::string());
-                name_fmt << cache.name << '-' << operation.name;
-
                 event_map_.emplace(
                     name_fmt.str(),
                     PredefinedEventAttr(
@@ -282,6 +279,8 @@ EventResolver::EventResolver()
             }
             catch (EventAttr::InvalidEvent& e)
             {
+                Log::trace() << "Can not insert cache event '" << name_fmt.str()
+                             << "' : " << e.what();
             }
         }
     }
@@ -294,45 +293,56 @@ EventAttr EventResolver::cache_event(const std::string& name)
 
     // save event in event map; return a reference to the inserted event to
     // the caller.
+
+    std::optional<EventAttr> res;
+    if (regex_match(name, raw_regex))
+    {
+        res = event_map_.emplace(name, RawEventAttr(name)).first->second;
+    }
+#ifdef HAVE_LIBPFM
     try
     {
-        if (regex_match(name, raw_regex))
-        {
-            std::optional<EventAttr> ev = RawEventAttr(name);
-            return event_map_.emplace(name, ev).first->second.value();
-        }
-        else
-        {
-#ifdef HAVE_LIBPFM
-            try
-            {
-                EventAttr ev = PFM4::instance().pfm4_read_event(name);
-                return event_map_.emplace(name, ev).first->second.value();
-            }
-            catch (EventAttr::InvalidEvent& e)
-            {
-            }
-#endif
-
-            try
-            {
-                EventAttr ev = PMUEvents::instance().read_event(name);
-                return event_map_.emplace(name, ev).first->second.value();
-            }
-            catch (EventAttr::InvalidEvent& e)
-            {
-            }
-
-            std::optional<EventAttr> ev = SysfsEventAttr(name);
-            return event_map_.emplace(name, ev).first->second.value();
-        }
+        res = event_map_.emplace(name, PFM4::instance().pfm4_read_event(name)).first->second;
     }
-    catch (const EventAttr::InvalidEvent& e)
+    catch (EventAttr::InvalidEvent& e)
     {
-        event_map_.emplace(name, std::nullopt);
-        throw std::runtime_error(
-            fmt::format("Could not parse '{}' as a perf event: {}", name, e.what()));
+        Log::trace() << "Can not open '" << name << "' as a libpfm4 event";
     }
+#endif
+    if (!res.has_value())
+    {
+        try
+        {
+            res = event_map_.emplace(name, PMUEvents::instance().read_event(name)).first->second;
+        }
+        catch (EventAttr::InvalidEvent& e)
+        {
+            Log::trace() << "Can not open '" << name << "' as a pmu-events event";
+        }
+    }
+
+    if (!res.has_value())
+    {
+        try
+        {
+            res = event_map_.emplace(name, SysfsEventAttr(name)).first->second;
+        }
+        catch (const EventAttr::InvalidEvent& e)
+        {
+            event_map_.emplace(name, std::nullopt);
+            throw std::runtime_error(
+                fmt::format("Could not parse '{}' as a perf event: {}", name, e.what()));
+        }
+    }
+    if (!res.has_value())
+    {
+        throw std::runtime_error(
+            fmt::format("Trying to cache_event '{}' event, but it already exists in the event "
+                        "map!. This is a bug, please report it to the developers!",
+                        name));
+    }
+
+    return res.value();
 }
 
 /**
@@ -349,22 +359,16 @@ EventAttr EventResolver::get_event_by_name(const std::string& name)
         {
             return event_it->second.value();
         }
-        else
-        {
-            throw EventAttr::InvalidEvent("The event '" + name + "' is not available");
-        }
+        throw EventAttr::InvalidEvent("The event '" + name + "' is not available");
     }
-    else
-    {
-        return cache_event(name);
-    }
+    return cache_event(name);
 }
 
 EventAttr EventResolver::get_metric_leader(const std::string& metric_leader)
 {
     std::optional<EventAttr> leader;
     Log::info() << "choosing default metric-leader";
-    if (metric_leader == "")
+    if (metric_leader.empty())
     {
 
         try
@@ -407,17 +411,14 @@ bool EventResolver::has_event(const std::string& name)
     {
         return (event_it->second.has_value());
     }
-    else
+    try
     {
-        try
-        {
-            cache_event(name);
-            return true;
-        }
-        catch (const EventAttr::InvalidEvent&)
-        {
-            return false;
-        }
+        cache_event(name);
+        return true;
+    }
+    catch (const EventAttr::InvalidEvent&)
+    {
+        return false;
     }
 }
 
@@ -430,12 +431,11 @@ std::vector<EventAttr> EventResolver::get_predefined_events()
     {
         if (event.second.has_value())
         {
-            events.push_back(std::move(event.second.value()));
+            events.push_back(event.second.value());
         }
     }
 
     return events;
 }
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

@@ -20,29 +20,20 @@
  */
 
 #pragma once
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/trace.hpp>
-#include <lo2s/util.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-#include <otf2xx/otf2.hpp>
+#include <otf2xx/definition/metric_instance.hpp>
+#include <otf2xx/event/metric.hpp>
+#include <otf2xx/writer/local.hpp>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
+namespace lo2s::perf::counter
 {
 class MetricWriter
 {
 public:
-    MetricWriter(MeasurementScope scope, trace::Trace& trace)
-    : time_converter_(time::Converter::instance()), writer_(trace.metric_writer(scope)),
-      metric_instance_(trace.metric_instance(
-          trace.perf_metric_class(scope), writer_.location(),
-          trace.sample_writer(MeasurementScope::sample(scope.scope)).location())),
-      metric_event_(otf2::chrono::genesis(), metric_instance_)
-    {
-    }
+    MetricWriter(MeasurementScope scope, trace::Trace& trace);
 
 protected:
     time::Converter time_converter_;
@@ -50,6 +41,4 @@ protected:
     otf2::definition::metric_instance metric_instance_;
     otf2::event::metric metric_event_;
 };
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter

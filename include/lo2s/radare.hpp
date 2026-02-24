@@ -22,17 +22,17 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
 
-#include <cstddef>
-#include <cstdint>
+#include <fstream>
+#include <istream>
+#include <stdexcept>
+#include <string>
 
 extern "C"
 {
+#include <r_anal.h>
 #include <r_asm.h>
 #include <r_lib.h>
-#include <unistd.h>
 }
 
 namespace lo2s

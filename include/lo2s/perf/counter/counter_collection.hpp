@@ -24,14 +24,12 @@
 #include <lo2s/perf/event_attr.hpp>
 
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
-namespace lo2s
+namespace lo2s::perf::counter
 {
-namespace perf
-{
-namespace counter
-{
+
 struct CounterCollection
 {
     CounterCollection() = default;
@@ -48,12 +46,13 @@ struct CounterCollection
     {
         if (index == 0)
         {
+            if (!leader)
+            {
+                throw std::runtime_error("Trying to get scale for non-existent leader!");
+            }
             return leader.value().scale();
         }
-        else
-        {
-            return counters[index - 1].scale();
-        }
+        return counters[index - 1].scale();
     }
 
     friend bool operator==(const CounterCollection& lhs, const CounterCollection& rhs)
@@ -75,6 +74,4 @@ struct CounterCollection
     }
 };
 
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter

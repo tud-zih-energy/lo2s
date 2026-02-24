@@ -1,19 +1,23 @@
 #include <lo2s/summary.hpp>
 
 #include <lo2s/config.hpp>
+#include <lo2s/types/process.hpp>
 #include <lo2s/util.hpp>
 
 #include <array>
+#include <chrono>
 #include <filesystem>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <numeric>
-#include <ratio>
+#include <sstream>
+#include <string>
+
+#include <cstddef>
 
 extern "C"
 {
-#include <sys/time.h>
 }
 
 namespace lo2s
@@ -26,14 +30,14 @@ Summary& summary()
 }
 
 Summary::Summary()
-: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0), thread_count_(0),
-  exit_code_(0)
+: start_wall_time_(std::chrono::steady_clock::now()), num_wakeups_(0), thread_count_(0)
+
 {
 }
 
 void Summary::register_process(Process process)
 {
-    std::lock_guard<std::mutex> lock(processes_mutex_);
+    std::lock_guard<std::mutex> const lock(processes_mutex_);
     processes_.emplace(process);
 }
 
@@ -52,6 +56,8 @@ void Summary::add_thread()
     thread_count_++;
 }
 
+namespace
+{
 std::string pretty_print_bytes(std::size_t trace_size)
 {
     double result_size = trace_size;
@@ -75,6 +81,7 @@ std::string pretty_print_bytes(std::size_t trace_size)
     out << std::fixed << std::setprecision(2) << result_size << " " << units[unit];
     return out.str();
 }
+} // namespace
 
 void Summary::set_trace_dir(const std::string& trace_dir)
 {
@@ -84,18 +91,20 @@ void Summary::set_trace_dir(const std::string& trace_dir)
 void Summary::show()
 {
 
-    std::size_t trace_size;
+    std::size_t trace_size = 0;
 
     if (config().quiet)
     {
         return;
     }
 
-    std::chrono::duration<double> wall_time = std::chrono::steady_clock::now() - start_wall_time_;
+    std::chrono::duration<double> const wall_time =
+        std::chrono::steady_clock::now() - start_wall_time_;
 
-    std::chrono::duration<double> cpu_time = get_cpu_time();
+    std::chrono::duration<double> const cpu_time = get_cpu_time();
 
-    std::filesystem::recursive_directory_iterator it(trace_dir_), end;
+    std::filesystem::recursive_directory_iterator const it(trace_dir_);
+    std::filesystem::recursive_directory_iterator const end;
 
     trace_size =
         std::accumulate(it, end, static_cast<size_t>(0),
@@ -142,7 +151,7 @@ void Summary::show()
     }
     std::cout << num_wakeups_ << " wakeups, ";
 
-    if (trace_dir_ != "")
+    if (!trace_dir_.empty())
     {
         std::cout << "wrote " << pretty_print_bytes(trace_size) << " " << trace_dir_;
     }

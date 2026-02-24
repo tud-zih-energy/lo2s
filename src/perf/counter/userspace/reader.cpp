@@ -21,13 +21,19 @@
 
 #include <lo2s/perf/counter/userspace/reader.hpp>
 
+#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/event_attr.hpp>
-#include <lo2s/perf/util.hpp>
-#include <lo2s/time/time.hpp>
+#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/util.hpp>
 
+#include <cerrno>
+#include <cstdint>
 #include <cstdlib>
 
 extern "C"
@@ -35,13 +41,7 @@ extern "C"
 #include <unistd.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace userspace
+namespace lo2s::perf::counter::userspace
 {
 template <class T>
 Reader<T>::Reader(ExecutionScope scope)
@@ -67,7 +67,7 @@ void Reader<T>::read()
 
     static_cast<T*>(this)->handle(data_);
 
-    [[maybe_unused]] uint64_t expirations;
+    [[maybe_unused]] uint64_t expirations = 0;
     if (::read(timer_fd_, &expirations, sizeof(expirations)) == -1 && errno != EAGAIN)
     {
         Log::error() << "Flushing timer fd failed";
@@ -76,7 +76,4 @@ void Reader<T>::read()
 }
 
 template class Reader<Writer>;
-} // namespace userspace
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::userspace

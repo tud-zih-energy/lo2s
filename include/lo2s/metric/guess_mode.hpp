@@ -6,9 +6,7 @@
 
 #include <string>
 
-namespace lo2s
-{
-namespace metric
+namespace lo2s::metric
 {
 
 // Yup, this modifies name, deal with it.
@@ -17,7 +15,7 @@ guess_mode(std::string& name,
            otf2::common::metric_mode default_ = otf2::common::metric_mode::absolute_point)
 {
     using otf2::common::metric_mode;
-    auto pos = name.find("#");
+    auto pos = name.find('#');
     if (pos == std::string::npos)
     {
         return default_;
@@ -42,5 +40,4 @@ guess_mode(std::string& name,
     Log::warn() << "Unknown metric mode modifier: " << suffix;
     return default_;
 }
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric

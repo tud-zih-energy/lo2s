@@ -21,9 +21,7 @@
 
 #pragma once
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 class ThreadedMonitor;
 
@@ -38,5 +36,4 @@ class ProcessMonitor;
 class CpuSetMonitor;
 class SocketMonitor;
 class GPUMonitor;
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

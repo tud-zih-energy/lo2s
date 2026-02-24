@@ -24,14 +24,30 @@
 #include <lo2s/build_config.hpp>
 #include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/types/cpu.hpp>
 
+#include <nitro/log/severity.hpp>
 #include <nitro/options/arguments.hpp>
+#include <nitro/options/exception.hpp>
+
+#include <iostream>
+#include <ostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <cstdint>
+
+#include <fmt/format.h>
+#include <sys/types.h>
 #ifdef HAVE_LIBPFM
 #include <lo2s/perf/pfm.hpp>
 #endif
 #include <lo2s/perf/pmu-events.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/syscalls.hpp>
 #include <lo2s/time/time.hpp>
@@ -48,6 +64,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <iterator>
+#include <map>
 #include <optional>
 
 #include <cstdlib>
@@ -59,27 +76,29 @@
 
 extern "C"
 {
-#include <fcntl.h>
 #include <unistd.h>
 }
 
 namespace lo2s
 {
-static inline void list_arguments_sorted(std::ostream& os, const std::string& description,
-                                         std::vector<std::string> items)
+
+namespace
+{
+inline void list_arguments_sorted(std::ostream& os, const std::string& description,
+                                  std::vector<std::string> items)
 {
     std::sort(items.begin(), items.end());
     os << io::make_argument_list(description, items.begin(), items.end());
 }
 
-static inline void print_availability(std::ostream& os, const std::string& description,
-                                      std::vector<perf::EventAttr> events)
+inline void print_availability(std::ostream& os, const std::string& description,
+                               const std::vector<perf::EventAttr>& events)
 {
     std::vector<std::string> event_names;
     for (const auto& ev : events)
     {
-        std::string availability = "";
-        std::string cpu = "";
+        std::string availability;
+        std::string cpu;
 
         if (ev.availability() == perf::Availability::PROCESS_MODE)
         {
@@ -123,7 +142,7 @@ static inline void print_availability(std::ostream& os, const std::string& descr
     list_arguments_sorted(os, description, event_names);
 }
 
-static inline void print_version(std::ostream& os)
+inline void print_version(std::ostream& os)
 {
     // clang-format off
     os << "lo2s " << lo2s::version() << "\n"
@@ -133,12 +152,12 @@ static inline void print_version(std::ostream& os)
     // clang-format on
 }
 
-std::vector<int64_t> parse_syscall_names(std::vector<std::string> requested_syscalls)
+std::vector<int64_t> parse_syscall_names(const std::vector<std::string>& requested_syscalls)
 {
     std::vector<int64_t> syscall_nrs;
     for (const auto& requested_syscall : requested_syscalls)
     {
-        int syscall_nr = syscall_nr_for_name(requested_syscall);
+        int const syscall_nr = syscall_nr_for_name(requested_syscall);
         if (syscall_nr == -1)
         {
 #ifdef HAVE_LIBAUDIT
@@ -154,16 +173,11 @@ std::vector<int64_t> parse_syscall_names(std::vector<std::string> requested_sysc
     return syscall_nrs;
 }
 
-static std::optional<Config> instance = std::nullopt;
+std::optional<Config> instance = std::nullopt;
 
-const Config& config()
+Config default_config()
 {
-    return *instance;
-}
-
-static Config default_config()
-{
-    Config config;
+    static Config config;
     // Default to use_perf_sampling (and thus use_perf) to
     // allow perf_event_open in --list-events.
     config.use_perf_sampling = true;
@@ -174,19 +188,7 @@ static Config default_config()
  * e.g. the event listing code. In this case supply it with a sane default config
  */
 
-const Config& config_or_default()
-{
-    static Config default_conf = default_config();
-
-    if (instance.has_value())
-    {
-        return *instance;
-    }
-
-    return default_conf;
-}
-
-static void set_verbosity(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_verbosity(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     if (arguments.given("quiet") && arguments.given("verbose"))
     {
@@ -225,8 +227,8 @@ static void set_verbosity(lo2s::Config& config, nitro::options::arguments& argum
     }
 }
 
-static void set_general_options(lo2s::Config& config, nitro::options::arguments& arguments,
-                                int argc, const char** argv)
+void set_general_options(lo2s::Config& config, nitro::options::arguments& arguments, int argc,
+                         const char** argv)
 {
     config.quiet = arguments.given("quiet");
 
@@ -249,6 +251,7 @@ static void set_general_options(lo2s::Config& config, nitro::options::arguments&
 
     // The entire command line of lo2s, to be written to the trace
     std::vector<std::string> lo2s_command_line;
+    lo2s_command_line.reserve(argc);
     for (int i = 0; i < argc; i++)
     {
         lo2s_command_line.emplace_back(argv[i]);
@@ -257,13 +260,12 @@ static void set_general_options(lo2s::Config& config, nitro::options::arguments&
     config.lo2s_command_line = fmt::format("{}", fmt::join(lo2s_command_line, " "));
 }
 
-static void set_otf2_trace_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_otf2_trace_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.trace_path = arguments.get("output-trace");
 }
 
-static void set_program_under_test_options(lo2s::Config& config,
-                                           nitro::options::arguments& arguments)
+void set_program_under_test_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.command = arguments.positionals();
     config.drop_root = arguments.given("drop-root");
@@ -275,7 +277,7 @@ static void set_program_under_test_options(lo2s::Config& config,
     }
 }
 
-static void set_perf_general_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_general_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.mmap_pages = arguments.as<std::size_t>("mmap-pages");
 
@@ -296,23 +298,13 @@ static void set_perf_general_options(lo2s::Config& config, nitro::options::argum
     }
 }
 
-static void set_perf_instruction_sampling_options(lo2s::Config& config,
-                                                  nitro::options::arguments& arguments)
+void set_perf_instruction_sampling_options(lo2s::Config& config,
+                                           nitro::options::arguments& arguments)
 {
     if (!arguments.provided("instruction-sampling"))
     {
-        if (arguments.given("all-cpus-sampling"))
-        {
-            config.use_perf_sampling = true;
-        }
-        else if (arguments.given("all-cpus"))
-        {
-            config.use_perf_sampling = false;
-        }
-        else
-        {
-            config.use_perf_sampling = true;
-        }
+        config.use_perf_sampling =
+            arguments.given("all-cpus-sampling") || !arguments.given("all-cpus");
     }
     else
     {
@@ -321,14 +313,8 @@ static void set_perf_instruction_sampling_options(lo2s::Config& config,
 
     if (!arguments.provided("process-recording"))
     {
-        if (arguments.given("all-cpus") || arguments.given("all-cpus-sampling"))
-        {
-            config.use_process_recording = true;
-        }
-        else
-        {
-            config.use_process_recording = false;
-        }
+        config.use_process_recording =
+            arguments.given("all-cpus") || arguments.given("all-cpus-sampling");
     }
     else
     {
@@ -342,12 +328,12 @@ static void set_perf_instruction_sampling_options(lo2s::Config& config,
     config.enable_callgraph = arguments.given("call-graph");
     config.disassemble = arguments.given("disassemble");
 
-    std::string dwarf_mode = arguments.get("dwarf");
+    std::string const dwarf_mode = arguments.get("dwarf");
     if (dwarf_mode == "full")
     {
         config.dwarf = DwarfUsage::FULL;
 
-        char* debuginfod_urls = getenv("DEBUGINFOD_URLS");
+        char const* debuginfod_urls = getenv("DEBUGINFOD_URLS");
         if (debuginfod_urls == nullptr)
         {
             Log::warn()
@@ -371,23 +357,23 @@ static void set_perf_instruction_sampling_options(lo2s::Config& config,
     }
 }
 
-static void set_python_sampling_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_python_sampling_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.use_python = arguments.given("python");
 }
 
-static void set_perf_tracepoint_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_tracepoint_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.tracepoint_events = arguments.get_all("tracepoint");
 }
 
-static void set_perf_io_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_io_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.use_block_io = arguments.given("block-io");
     config.use_posix_io = arguments.given("posix-io");
 }
 
-static void set_perf_syscall_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_syscall_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     if (arguments.provided("syscall"))
     {
@@ -402,7 +388,7 @@ static void set_perf_syscall_options(lo2s::Config& config, nitro::options::argum
     }
 }
 
-static void set_perf_metric_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_metric_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.userspace_read_interval =
         std::chrono::milliseconds(arguments.as<std::uint64_t>("userspace-readout-interval"));
@@ -453,7 +439,7 @@ static void set_perf_metric_options(lo2s::Config& config, nitro::options::argume
     config.metric_leader = arguments.get("metric-leader");
 }
 
-static void set_perf_clock_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_perf_clock_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     try
     {
@@ -489,19 +475,19 @@ static void set_perf_clock_options(lo2s::Config& config, nitro::options::argumen
     }
 }
 
-static void set_x86adapt_energy_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_x86adapt_energy_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
 
     config.use_x86_energy = arguments.given("x86-energy");
     config.x86_adapt_knobs = arguments.get_all("x86-adapt-knob");
 }
 
-static void set_sensor_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_sensor_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.use_sensors = arguments.given("sensors");
 }
 
-static void set_accelerator_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_accelerator_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.nec_read_interval =
         std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
@@ -555,7 +541,7 @@ static void set_accelerator_options(lo2s::Config& config, nitro::options::argume
     }
 }
 
-static void set_ringbuf_options(lo2s::Config& config, nitro::options::arguments& arguments)
+void set_ringbuf_options(lo2s::Config& config, nitro::options::arguments& arguments)
 {
     config.socket_path = arguments.get("socket");
     config.injectionlib_path = arguments.get("ld-library-path");
@@ -565,8 +551,7 @@ static void set_ringbuf_options(lo2s::Config& config, nitro::options::arguments&
         std::chrono::milliseconds(arguments.as<std::uint64_t>("ringbuf-read-interval"));
 }
 
-static void check_print_options(nitro::options::parser& parser,
-                                nitro::options::arguments& arguments)
+void check_print_options(nitro::options::parser& parser, nitro::options::arguments& arguments)
 {
     if (arguments.given("list-knobs"))
     {
@@ -587,7 +572,7 @@ static void check_print_options(nitro::options::parser& parser,
     }
     if (arguments.given("list-clockids"))
     {
-        auto& clockids = time::ClockProvider::get_descriptions();
+        const auto& clockids = time::ClockProvider::get_descriptions();
         std::cout << io::make_argument_list("available clockids", std::begin(clockids),
                                             std::end(clockids));
         std::exit(EXIT_SUCCESS);
@@ -600,7 +585,7 @@ static void check_print_options(nitro::options::parser& parser,
         // TODO: find a better solution ?
         std::vector<perf::SysfsEventAttr> sys_events =
             perf::EventResolver::instance().get_pmu_events();
-        std::vector<perf::EventAttr> events(sys_events.begin(), sys_events.end());
+        std::vector<perf::EventAttr> const events(sys_events.begin(), sys_events.end());
         print_availability(std::cout, "Kernel PMU events", events);
 
 #ifdef HAVE_LIBPFM
@@ -617,7 +602,7 @@ static void check_print_options(nitro::options::parser& parser,
 
     if (arguments.given("list-tracepoints"))
     {
-        std::vector<std::string> tracepoints =
+        std::vector<std::string> const tracepoints =
             perf::EventResolver::instance().get_tracepoint_event_names();
 
         if (tracepoints.empty())
@@ -648,7 +633,7 @@ static void check_print_options(nitro::options::parser& parser,
     }
 }
 
-static void check_program_under_test_options(lo2s::Config& config)
+void check_program_under_test_options(lo2s::Config& config)
 {
     if (config.monitor_type == lo2s::MonitorType::PROCESS && config.process == Process::invalid() &&
         config.command.empty())
@@ -671,7 +656,42 @@ static void check_program_under_test_options(lo2s::Config& config)
     }
 }
 
-static void check_perf_options(lo2s::Config& config)
+void check_tracepoint_options(lo2s::Config& config)
+{
+    if (config.use_any_tracepoint())
+    {
+        if (perf::perf_event_paranoid() != -1)
+        {
+            std::cerr
+                << "kernel.perf_event_paranoid is not -1, which disallows access to tracepoints"
+                << std::endl;
+            std::cerr << "syscalls, block I/O and tracepoint recording require tracepoint access"
+                      << std::endl;
+            std::cerr << std::endl;
+            std::cerr << "To solve this error, you can do one of the following:" << std::endl;
+            std::cerr << " * sysctl kernel.perf_event_paranoid=-1" << std::endl;
+            std::cerr << " * run lo2s as root" << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        try
+        {
+            if (!std::filesystem::exists("/sys/kernel/tracing"))
+            {
+                Log::error() << "syscall, block I/O and tracepoint recording require access to "
+                                "/sys/kernel/tracing, make sure it exists and is accessible";
+                std::exit(EXIT_FAILURE);
+            }
+        }
+        catch (std::filesystem::filesystem_error&)
+        {
+            Log::error() << "syscall, block I/O and tracepoint recording require access to "
+                            "/sys/kernel/tracing, make sure it exists and is accessible";
+            std::exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void check_perf_options(lo2s::Config& config)
 {
     if (config.use_posix_io)
     {
@@ -698,38 +718,7 @@ static void check_perf_options(lo2s::Config& config)
             std::exit(1);
         }
 
-        if (config.use_any_tracepoint())
-        {
-            if (perf::perf_event_paranoid() != -1)
-            {
-                std::cerr
-                    << "kernel.perf_event_paranoid is not -1, which disallows access to tracepoints"
-                    << std::endl;
-                std::cerr
-                    << "syscalls, block I/O and tracepoint recording require tracepoint access"
-                    << std::endl;
-                std::cerr << std::endl;
-                std::cerr << "To solve this error, you can do one of the following:" << std::endl;
-                std::cerr << " * sysctl kernel.perf_event_paranoid=-1" << std::endl;
-                std::cerr << " * run lo2s as root" << std::endl;
-                std::exit(EXIT_FAILURE);
-            }
-            try
-            {
-                if (!std::filesystem::exists("/sys/kernel/tracing"))
-                {
-                    Log::error() << "syscall, block I/O and tracepoint recording require access to "
-                                    "/sys/kernel/tracing, make sure it exists and is accessible";
-                    std::exit(EXIT_FAILURE);
-                }
-            }
-            catch (std::filesystem::filesystem_error&)
-            {
-                Log::error() << "syscall, block I/O and tracepoint recording require access to "
-                                "/sys/kernel/tracing, make sure it exists and is accessible";
-                std::exit(EXIT_FAILURE);
-            }
-        }
+        check_tracepoint_options(config);
 
         if (perf::perf_event_paranoid() > 1 && !config.exclude_kernel)
         {
@@ -742,7 +731,7 @@ static void check_perf_options(lo2s::Config& config)
             std::cerr << " * run with --no-kernel to disable kernel space sampling in "
                          "the first place,"
                       << std::endl;
-            config.exclude_kernel = 1;
+            config.exclude_kernel = true;
         }
 
         if (config.monitor_type == MonitorType::CPU_SET)
@@ -778,7 +767,7 @@ static void check_perf_options(lo2s::Config& config)
     }
 }
 
-static void check_perf_metric_options(lo2s::Config& config)
+void check_perf_metric_options(lo2s::Config& config)
 {
     if (!config.metric_use_frequency && config.metric_leader.empty())
     {
@@ -805,7 +794,7 @@ static void check_perf_metric_options(lo2s::Config& config)
     }
 }
 
-static void check_optional_features(lo2s::Config& config [[maybe_unused]])
+void check_optional_features(lo2s::Config& config [[maybe_unused]])
 {
 #ifndef HAVE_X86_ADAPT
     if (!config.x86_adapt_knobs.empty())
@@ -851,6 +840,28 @@ static void check_optional_features(lo2s::Config& config [[maybe_unused]])
         setenv("DEBUGINFOD_URLS", "", 1);
     }
 #endif
+}
+} // namespace
+
+const Config& config()
+{
+    if (!instance.has_value())
+    {
+        throw std::runtime_error("Config accessed before it was completely parsed!");
+    }
+    return *instance;
+}
+
+const Config& config_or_default()
+{
+    static Config const default_conf = default_config();
+
+    if (instance.has_value())
+    {
+        return *instance;
+    }
+
+    return default_conf;
 }
 
 void parse_program_options(int argc, const char** argv)
@@ -1077,13 +1088,13 @@ void parse_program_options(int argc, const char** argv)
     std::vector<std::string> accelerators;
 
 #ifdef HAVE_CUDA
-    accelerators.push_back("nvidia");
+    accelerators.emplace_back("nvidia");
 #endif
 #ifdef HAVE_VEOSINFO
     accelerators.push_back("nec");
 #endif
 #ifdef HAVE_OPENMP
-    accelerators.push_back("openmp");
+    accelerators.emplace_back("openmp");
 #endif
 
     accel_options

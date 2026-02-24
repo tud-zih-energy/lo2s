@@ -22,20 +22,15 @@
 
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/gpu_monitor.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
 #include <lo2s/monitor/openmp_monitor.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/resolvers.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
+#include <map>
+#include <string>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 class SocketMonitor : public PollMonitor
@@ -66,5 +61,4 @@ private:
 
     int socket = -1;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

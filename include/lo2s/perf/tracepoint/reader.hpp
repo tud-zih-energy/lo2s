@@ -23,33 +23,25 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
-#include <lo2s/util.hpp>
+#include <lo2s/types/cpu.hpp>
 
-#include <filesystem>
-#include <ios>
-#include <optional>
-#include <stdexcept>
+#include <string>
+#include <utility>
 
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+namespace lo2s::perf::tracepoint
 {
 template <class T>
 class Reader : public EventReader<T>
@@ -81,9 +73,9 @@ public:
         {
             std::string ret;
             ret.resize(field.size());
-            auto input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
-            size_t i;
-            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++)
+            const auto* input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
+            size_t i = 0;
+            for (; i < field.size() && input_cstr[i] != '\0'; i++)
             {
                 ret[i] = input_cstr[i];
             }
@@ -92,7 +84,7 @@ public:
         }
 
         template <typename TT>
-        const TT _get(ptrdiff_t offset) const
+        TT _get(ptrdiff_t offset) const
         {
             assert(offset >= 0);
             assert(offset + sizeof(TT) <= size_);
@@ -113,19 +105,37 @@ public:
         RecordDynamicFormat raw_data;
     };
 
-    Reader(Cpu cpu, perf::tracepoint::TracepointEventAttr ev) : event_(ev), cpu_(cpu)
+    Reader(Reader&) = delete;
+    Reader& operator=(Reader&) = delete;
+
+    ~Reader() = default;
+
+    void stop()
     {
-        ev_instance_ = event_.open(cpu_.as_scope(), config().cgroup_fd);
+        ev_instance_.disable();
+        this->read();
+    }
 
-        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu_ << " with id "
-                     << event_.id();
+private:
+    Reader(Reader&& other) noexcept : EventReader<T>(std::forward<perf::EventReader<T>>(other))
+    {
+        std::swap(ev_instance_, other.ev_instance_);
+    }
 
+    Reader& operator=(Reader&& other) noexcept
+    {
+        std::swap(ev_instance_, other.ev_instance_);
+    }
+
+    Reader(Cpu cpu, tracepoint::TracepointEventAttr ev)
+    : ev_instance_(create_tracepoint_ev(cpu, ev)), event_(std::move(ev))
+    {
         try
         {
-            init_mmap(ev_instance_.value().get_fd());
+            init_mmap(ev_instance_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            ev_instance_.value().enable();
+            ev_instance_.enable();
         }
         catch (...)
         {
@@ -133,27 +143,20 @@ public:
         }
     }
 
-    Reader(Reader&& other)
-    : EventReader<T>(std::forward<perf::EventReader<T>>(other)), cpu_(other.cpu_)
+    static EventGuard create_tracepoint_ev(Cpu cpu, tracepoint::TracepointEventAttr& ev)
     {
-        std::swap(ev_instance_, other.ev_instance_);
+        auto eg = ev.open(cpu.as_scope(), config().cgroup_fd);
+        Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu << " with id "
+                     << ev.id();
+        return eg;
     }
 
-    void stop()
-    {
-        ev_instance_.value().disable();
-        this->read();
-    }
+    friend T;
+    EventGuard ev_instance_;
 
 protected:
     using EventReader<T>::init_mmap;
     TracepointEventAttr event_;
-
-private:
-    Cpu cpu_;
-    std::optional<EventGuard> ev_instance_;
 };
 
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

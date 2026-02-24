@@ -63,9 +63,9 @@ public:
     }
 
 public:
-    std::uint64_t get_setting(const configuration_item& item)
+    uint64_t get_setting(const configuration_item& item)
     {
-        std::uint64_t result;
+        uint64_t result;
 
         if (type_ != item.type())
         {
@@ -77,7 +77,7 @@ public:
         return result;
     }
 
-    std::uint64_t operator()(const configuration_item& item)
+    uint64_t operator()(const configuration_item& item)
     {
         return get_setting(item);
     }

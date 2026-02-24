@@ -22,24 +22,21 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/dwarf_resolve.hpp>
 #include <lo2s/function_resolver.hpp>
-#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/types.hpp>
 #include <lo2s/resolvers/kallsyms.hpp>
-#include <lo2s/resolvers/manual_function_resolver.hpp>
 #include <lo2s/resolvers/perf_map.hpp>
-
-#include <nitro/lang/string.hpp>
+#include <lo2s/types/process.hpp>
 
 #include <algorithm>
-#include <fstream>
-#include <shared_mutex>
-#include <thread>
+#include <memory>
+#include <tuple>
+#include <utility>
 
-#include <fmt/core.h>
+#include <cassert>
+#include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {
@@ -51,14 +48,14 @@ template <class T>
 class MemoryMap
 {
 public:
-    MemoryMap()
-    {
-    }
+    MemoryMap() = default;
 
     MemoryMap(const MemoryMap&) = default;
     MemoryMap& operator=(const MemoryMap&) = default;
     MemoryMap(const MemoryMap&&) = delete;
     MemoryMap& operator=(const MemoryMap&&) = delete;
+
+    ~MemoryMap() = default;
 
     void emplace(Mapping new_mapping, std::shared_ptr<T> to_emplace)
     {
@@ -104,7 +101,7 @@ public:
                          << fmt::format("{}", inside_it->first.range) << ", splitting!";
 
             // 1. Save the value of the existing mapping
-            Mapping existing_mapping = inside_it->first;
+            const Mapping existing_mapping = inside_it->first;
             std::shared_ptr<T> content = inside_it->second;
 
             // 2. Delete existing mapping

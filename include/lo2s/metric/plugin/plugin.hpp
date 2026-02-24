@@ -31,11 +31,7 @@
 #include <string>
 #include <vector>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace plugin
+namespace lo2s::metric::plugin
 {
 class Plugin
 {
@@ -46,8 +42,9 @@ public:
     ~Plugin();
 
     Plugin(const Plugin&) = delete;
-
+    Plugin(Plugin&&) = delete;
     Plugin& operator=(const Plugin&) = delete;
+    Plugin& operator=(const Plugin&&) = delete;
 
     void start_recording();
 
@@ -55,7 +52,7 @@ public:
 
     void fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point to);
 
-    const std::string name() const
+    std::string name() const
     {
         return plugin_name_;
     }
@@ -67,6 +64,4 @@ private:
     wrapper::PluginInfo plugin_;
     std::vector<Channel> channels_;
 };
-} // namespace plugin
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::plugin

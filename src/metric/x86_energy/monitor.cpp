@@ -1,19 +1,23 @@
 #include <lo2s/metric/x86_energy/monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/util.hpp>
 
-#include <string>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/definition/metric_class.hpp>
+#include <otf2xx/definition/system_tree_node.hpp>
+#include <x86_energy.hpp>
+
+#include <utility>
 
 #include <fmt/format.h>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_energy
+namespace lo2s::metric::x86_energy
 {
 
 Monitor::Monitor(::x86_energy::SourceCounter counter, Cpu cpu, trace::Trace& trace,
@@ -39,6 +43,4 @@ void Monitor::monitor([[maybe_unused]] int fd)
 
     otf2_writer_.write(metric_event_);
 }
-} // namespace x86_energy
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::x86_energy

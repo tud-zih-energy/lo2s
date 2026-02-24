@@ -27,9 +27,7 @@
 
 #include <map>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 /**
@@ -46,5 +44,4 @@ public:
 private:
     std::map<Cpu, ScopeMonitor> monitors_;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

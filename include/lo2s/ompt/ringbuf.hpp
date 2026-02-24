@@ -1,13 +1,16 @@
 #pragma once
 
 #include <lo2s/ompt/events.hpp>
+#include <lo2s/rb/header.hpp>
 #include <lo2s/rb/writer.hpp>
+#include <lo2s/types/process.hpp>
 
-namespace lo2s
-{
-namespace omp
-{
+#include <mutex>
 
+#include <cstdint>
+
+namespace lo2s::ompt
+{
 class RingbufWriter : public lo2s::RingbufWriter
 {
 public:
@@ -17,9 +20,9 @@ public:
 
     bool ompt_enter(uint64_t tp, OMPTCctx cctx)
     {
-        std::lock_guard<std::mutex> guard(mutex_);
+        const std::lock_guard<std::mutex> guard(mutex_);
 
-        struct ompt_enter* ev = reserve<struct ompt_enter>();
+        auto* ev = reserve<struct ompt_enter>();
 
         if (ev == nullptr)
         {
@@ -37,9 +40,9 @@ public:
 
     bool ompt_leave(uint64_t tp, OMPTCctx cctx)
     {
-        std::lock_guard<std::mutex> guard(mutex_);
+        std::lock_guard<std::mutex> const guard(mutex_);
 
-        struct ompt_exit* ev = reserve<struct ompt_exit>();
+        auto* ev = reserve<struct ompt_exit>();
 
         if (ev == nullptr)
         {
@@ -59,5 +62,4 @@ private:
     std::mutex mutex_;
 };
 
-} // namespace omp
-} // namespace lo2s
+} // namespace lo2s::ompt

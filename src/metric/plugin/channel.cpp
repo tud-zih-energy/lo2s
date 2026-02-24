@@ -20,21 +20,27 @@
  */
 #include <lo2s/metric/plugin/channel.hpp>
 
+#include <lo2s/metric/plugin/wrapper.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/definition/definitions.hpp>
+#include <otf2xx/chrono/duration.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/definition/detail/weak_ref.hpp>
+#include <otf2xx/definition/metric_instance.hpp>
+#include <otf2xx/definition/metric_member.hpp>
 
-#include <memory>
-#include <stdexcept>
+#include <utility>
+#include <vector>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace plugin
-{
+#include <cstdint>
 
-static otf2::definition::metric_instance&&
+#include <otf2/OTF2_Events.h>
+
+namespace lo2s::metric::plugin
+{
+namespace
+{
+otf2::definition::metric_instance&&
 make_metric_instance(otf2::definition::metric_instance&& instance,
                      otf2::definition::metric_member&& member)
 {
@@ -43,16 +49,17 @@ make_metric_instance(otf2::definition::metric_instance&& instance,
     return std::move(instance);
 }
 
-static const char* empty_if_null(const char* cstr)
+const char* empty_if_null(const char* cstr)
 {
     return cstr == nullptr ? "" : cstr;
 }
+} // namespace
 
 Channel::Channel(const char* name, const char* description, const char* unit, wrapper::Mode mode,
                  wrapper::ValueType value_type, wrapper::ValueBase value_base,
                  std::int64_t exponent, trace::Trace& trace)
-: id_(-1), name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)),
-  mode_(mode), value_type_(value_type), writer_(trace.create_metric_writer(name_)),
+: name_(name), description_(empty_if_null(description)), unit_(empty_if_null(unit)), mode_(mode),
+  value_type_(value_type), writer_(trace.create_metric_writer(name_)),
   metric_(
       make_metric_instance(trace.metric_instance(trace.metric_class(), writer_.location(),
                                                  writer_.location().location_group().parent()),
@@ -77,11 +84,11 @@ void Channel::write_value(wrapper::TimeValuePair tv)
 {
     // @tilsche look behind you, a three-headed monkey! -- This is necessary, because we forced too
     // much type-safety in the metric event refactoring :( Need to change that. Band-aid incoming.
+    // NOLINTBEGIN (cppcoreguidelines-pro-type-const-cast)
     const_cast<std::vector<OTF2_MetricValue>&>(event_.raw_values().values())[0].unsigned_int =
         tv.value;
     event_.timestamp(otf2::chrono::time_point(otf2::chrono::duration(tv.timestamp)));
     writer_.write(event_);
+    // NOLINTEND (cppcoreguidelines-pro-type-const-cast)
 }
-} // namespace plugin
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::plugin

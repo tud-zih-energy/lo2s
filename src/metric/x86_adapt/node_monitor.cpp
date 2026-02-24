@@ -1,17 +1,27 @@
 #include <lo2s/metric/x86_adapt/node_monitor.hpp>
 
-#include <lo2s/log.hpp>
+#include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/package.hpp>
+#include <lo2s/util.hpp>
+
+#include <nitro/lang/enumerate.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/definition/metric_class.hpp>
+#include <x86_adapt_cxx/configuration_item.hpp>
+#include <x86_adapt_cxx/device.hpp>
 
 #include <string>
+#include <utility>
+#include <vector>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace x86_adapt
+#include <cassert>
+
+namespace lo2s::metric::x86_adapt
 {
 
 NodeMonitor::NodeMonitor(::x86_adapt::device device,
@@ -46,6 +56,4 @@ void NodeMonitor::monitor([[maybe_unused]] int fd)
 
     otf2_writer_.write(event_);
 }
-} // namespace x86_adapt
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::x86_adapt

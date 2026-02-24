@@ -22,32 +22,36 @@
 #include <lo2s/perf/sample/writer.hpp>
 
 #include <lo2s/address.hpp>
-#include <lo2s/config.hpp>
+#include <lo2s/calling_context.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/monitor/main_monitor.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/resolvers.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
-#include <otf2xx/otf2.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/exception.hpp>
 
+#include <exception>
 #include <map>
 
 #include <cassert>
-#include <cstring>
+#include <cstdint>
 
 extern "C"
 {
 #include <linux/perf_event.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-namespace sample
+namespace lo2s::perf::sample
 {
 
 Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
@@ -64,8 +68,14 @@ Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
 
 Writer::~Writer()
 {
-    local_cctx_tree_.cctx_leave(last_time_point_, CCTX_LEVEL_PROCESS);
-
+    try
+    {
+        local_cctx_tree_.cctx_leave(last_time_point_, CCTX_LEVEL_PROCESS);
+    }
+    catch (otf2::exception& e)
+    {
+        Log::error() << "Could not write final sample leave, your trace might be broken!";
+    }
     local_cctx_tree_.finalize();
 }
 
@@ -76,8 +86,8 @@ void Writer::emplace_resolvers(Resolvers& resolvers)
     {
         try
         {
-            Mapping m(mmap_event.get()->addr, mmap_event.get()->addr + mmap_event.get()->len,
-                      mmap_event.get()->pgoff);
+            Mapping const m(mmap_event.get()->addr, mmap_event.get()->addr + mmap_event.get()->len,
+                            mmap_event.get()->pgoff);
             Process p(mmap_event.get()->pid);
 
             auto fr = function_resolver_for(mmap_event.get()->filename);
@@ -119,7 +129,7 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
     return false;
 }
 
-bool Writer::handle(const Reader::RecordMmapType* mmap_event)
+bool Writer::handle(const RecordMmapType* mmap_event)
 {
     // Since this is an mmap record (as opposed to mmap2), it will only be generated for executable
     if (!scope_.is_cpu() && scope_ != ExecutionScope(Thread(mmap_event->tid)))
@@ -170,7 +180,7 @@ bool Writer::handle(const Reader::RecordSwitchType* context_switch)
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
-    bool is_switch_out = context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT;
+    bool const is_switch_out = context_switch->header.misc & PERF_RECORD_MISC_SWITCH_OUT;
 
     update_calling_context(Process(context_switch->pid), Thread(context_switch->tid), tp,
                            is_switch_out);
@@ -207,7 +217,7 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
 
 bool Writer::handle(const Reader::RecordCommType* comm)
 {
-    std::string new_command{ static_cast<const char*>(comm->comm) };
+    std::string const new_command{ static_cast<const char*>(comm->comm) };
 
     Log::debug() << "Thread " << comm->tid << " in process " << comm->pid << " changed name to \""
                  << new_command << "\"";
@@ -215,7 +225,7 @@ bool Writer::handle(const Reader::RecordCommType* comm)
     // only update name of process if the main thread changes its name
     if (comm->pid == comm->tid)
     {
-        trace_.emplace_process(trace::NO_PARENT_PROCESS, Process(comm->pid), new_command);
+        trace_.emplace_process(Process::no_parent(), Process(comm->pid), new_command);
     }
     else
     {
@@ -252,6 +262,4 @@ void Writer::end()
             last_time_point_, trace_.process_comm(scope_.as_thread()), -1);
     }
 }
-} // namespace sample
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::sample
