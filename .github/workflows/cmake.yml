@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libradare2-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure
+          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure libc6-dev meson
           sudo pip install git-archive-all
       - name: Install CUPTI
         if: matrix.nvidia == 'ON'
@@ -67,12 +67,27 @@ jobs:
 
           sudo apt update
           sudo apt install rocprofiler-sdk rocprofiler rocm-device-libs rocm rocm-dev
+      - name: Cache Radare
+        id: cache-radare2
+        uses: actions/cache@v4
+        with:
+          path: /opt/radare2/
+          key: ${{ matrix.os }}-radare2
+      - name: Install Radare
+        if: steps.cache-radare2.outputs.cache-hit != 'true'
+        run: |
+          wget https://github.com/radareorg/radare2/archive/refs/tags/5.9.8.tar.gz
+          tar xf 5.9.8.tar.gz
+          cd radare2-5.9.8
+          meson build --prefix=/opt/radare2
+          meson compile -C build
+          meson install -C build
       - name: Cache OTF2
         id: cache-otf2
         uses: actions/cache@v4
         with:
           path: /opt/otf2/
-          key: ${{ matrix.os }}-otf2-${OTF2_VERSION}
+          key: ${{ matrix.os }}-otf2
       - name: Install OTF2
         if: steps.cache-otf2.outputs.cache-hit != 'true'
         run: |
@@ -110,7 +125,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0;/opt/radare2"
       - name: Build
         run: make -j 2
       - name: Create source tarball
