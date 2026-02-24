@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <fmt/base.h>
 #pragma once
 
 #include <iostream>
@@ -49,6 +50,11 @@ public:
 
     explicit Process() : pid_(-1)
     {
+    }
+
+    static Process no_parent()
+    {
+        return Process(0);
     }
 
     friend bool operator==(const Process& lhs, const Process& rhs)

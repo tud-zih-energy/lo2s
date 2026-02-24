@@ -22,23 +22,29 @@
 #pragma once
 
 #include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/time/time.hpp>
 #include <lo2s/trace/fwd.hpp>
 
 #include <otf2xx/definition/metric_instance.hpp>
+#include <otf2xx/event/metric.hpp>
 #include <otf2xx/writer/local.hpp>
 
-namespace lo2s
-{
-namespace metric
-{
-namespace sensors
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace lo2s::metric::sensors
 {
 class Recorder : public monitor::PollMonitor
 {
 public:
     Recorder(trace::Trace& trace);
-    ~Recorder();
+    Recorder(Recorder&) = delete;
+    Recorder(Recorder&&) = delete;
+
+    Recorder& operator=(Recorder&) = delete;
+    Recorder& operator=(Recorder&&) = delete;
+    ~Recorder() override;
 
 protected:
     void monitor(int fd) override;
@@ -56,6 +62,4 @@ private:
 
     std::vector<std::pair<const void*, int>> items_;
 };
-} // namespace sensors
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::sensors

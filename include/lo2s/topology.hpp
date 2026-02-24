@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <lo2s/error.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/types/core.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/package.hpp>

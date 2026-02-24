@@ -21,21 +21,15 @@
 
 #pragma once
 
-#include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/perf/counter/metric_writer.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
-#include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
+#include <lo2s/trace/fwd.hpp>
 
 #include <vector>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace userspace
+namespace lo2s::perf::counter::userspace
 {
 class Writer : public Reader<Writer>, MetricWriter
 {
@@ -44,7 +38,4 @@ public:
 
     bool handle(std::vector<UserspaceReadFormat>& data);
 };
-} // namespace userspace
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::userspace

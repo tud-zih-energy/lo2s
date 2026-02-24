@@ -28,12 +28,8 @@
 #include <string>
 #include <vector>
 
+#include <cstddef>
 #include <cstdint>
-
-extern "C"
-{
-#include <unistd.h>
-}
 
 using namespace std::chrono_literals;
 
@@ -68,7 +64,7 @@ struct Config
     std::vector<std::string> command;
 
     bool drop_root = false;
-    std::string user = "";
+    std::string user;
 
     // perf
     std::size_t mmap_pages;
@@ -111,7 +107,7 @@ struct Config
     std::uint64_t metric_count = 0;
     std::uint64_t metric_frequency = 0;
 
-    std::string metric_leader = "";
+    std::string metric_leader;
     std::vector<std::string> group_counters;
 
     // perf -- userspace recorded metrics

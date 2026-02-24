@@ -32,37 +32,44 @@
 #include <nitro/lang/string.hpp>
 
 #include <algorithm>
-#include <filesystem>
-#include <memory>
+#include <exception>
+#include <iterator>
+#include <map>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 #include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 extern "C"
 {
 #include <grp.h>
+#include <linux/prctl.h>
 #include <pwd.h>
 #include <signal.h>
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
+#include <sys/resource.h>
+#include <sys/types.h>
 #include <unistd.h>
 }
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
-static void drop_privileges()
+namespace
+{
+void drop_privileges()
 {
     // get original uid & gid
-    gid_t original_uid;
-    uid_t original_gid;
+    gid_t original_uid = 0;
+    uid_t original_gid = 0;
 
-    if (config().user != "")
+    if (config().user.empty())
     {
-        auto orig_user = getpwnam(config().user.c_str());
+        auto* orig_user = getpwnam(config().user.c_str());
         if (orig_user == nullptr)
         {
             Log::error() << "No user found with username '" + config().user + ".";
@@ -76,10 +83,22 @@ static void drop_privileges()
     {
         assert(std::getenv("SUDO_UID") != nullptr);
 
+        const char* sudo_uid_str = std::getenv("SUDO_UID");
+        const char* sudo_gid_str = std::getenv("SUDO_GID");
         try
         {
-            original_uid = std::stoi(std::getenv("SUDO_UID"));
-            original_gid = std::stoi(std::getenv("SUDO_GID"));
+            if (sudo_gid_str != nullptr && sudo_uid_str != nullptr)
+            {
+                original_uid = std::stoi(sudo_uid_str);
+                original_gid = std::stoi(sudo_gid_str);
+            }
+            else
+            {
+                Log::error() << "No username given and SUDO_UID/GID empty!";
+                Log::error()
+                    << "To drop privileges please either specify a --user or run lo2s under sudo!";
+                throw std::runtime_error("No value for SUDO_UID/GID given");
+            }
         }
         catch (const std::exception& e)
         {
@@ -121,7 +140,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     std::vector<char*> res;
     std::transform(vec.begin(), vec.end(), std::back_inserter(res), [](const std::string& s) {
         char* pc = new char[s.size() + 1];
-        std::strcpy(pc, s.c_str());
+        std::memcpy(pc, s.c_str(), s.size() + 1);
         return pc;
     });
     res.push_back(nullptr);
@@ -129,9 +148,9 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     return res;
 }
 
-[[noreturn]] static void run_command(const std::vector<std::string>& command_and_args)
+[[noreturn]] void run_command(const std::vector<std::string>& command_and_args)
 {
-    struct rlimit initial_rlimit = initial_rlimit_fd();
+    const struct rlimit initial_rlimit = initial_rlimit_fd();
 
     if (initial_rlimit.rlim_cur == 0)
     {
@@ -159,7 +178,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     env.emplace("LO2S_SOCKET", config().socket_path);
     env.emplace("LO2S_RB_SIZE", std::to_string(config().ringbuf_size));
 
-    char* ld_cstr = getenv("LD_LIBRARY_PATH");
+    const char* ld_cstr = getenv("LD_LIBRARY_PATH");
     if (ld_cstr == nullptr)
     {
         env.emplace("LD_LIBRARY_PATH", config().injectionlib_path);
@@ -203,19 +222,22 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     Log::debug() << "Execute the command: " << nitro::lang::join(command_and_args);
 
     // Stop yourself so the parent tracer can do initialize the options
-    raise(SIGSTOP);
+    if (raise(SIGSTOP) != 0)
+    {
+        throw std::runtime_error("Could not raise SISTOP in child!");
+    }
 
     // change user if option was set
-    if (config().drop_root == true)
+    if (config().drop_root)
     {
         drop_privileges();
     }
 
     // run the application which should be sampled
-    execvp(c_args[0], &c_args[0]);
+    execvp(c_args[0], c_args.data());
 
     // should not be executed -> exec failed, let's clean up anyway.
-    for (auto cp : c_args)
+    for (auto* cp : c_args)
     {
         delete[] cp;
     }
@@ -223,13 +245,14 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     Log::error() << "Could not execute the command: " << nitro::lang::join(command_and_args);
     throw_errno();
 }
+} // namespace
 
 void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
     auto process = config().process;
     assert(process.as_int() != 0);
-    bool spawn = (config().process == Process::invalid());
+    const bool spawn = (config().process == Process::invalid());
 
     if (spawn)
     {
@@ -272,5 +295,4 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         controller.run();
     }
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

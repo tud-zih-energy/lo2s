@@ -21,22 +21,15 @@
 
 #pragma once
 
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/perf/syscall/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-#include <otf2xx/definition/metric_instance.hpp>
-#include <otf2xx/event/metric.hpp>
-#include <otf2xx/writer/local.hpp>
+#include <otf2xx/chrono/time_point.hpp>
 
-#include <set>
-
-namespace lo2s
-{
-namespace perf
-{
-namespace syscall
+namespace lo2s::perf::syscall
 {
 // Note, this cannot be protected for CRTP reasons...
 class Writer : public Reader<Writer>
@@ -46,7 +39,10 @@ public:
 
     Writer(const Writer& other) = delete;
 
-    Writer(Writer&& other) = default;
+    Writer& operator=(Writer&) = delete;
+    Writer& operator=(Writer&&) = delete;
+
+    Writer(Writer&& other) noexcept = default;
 
     ~Writer();
 
@@ -62,6 +58,4 @@ private:
 
     otf2::chrono::time_point last_tp_;
 };
-} // namespace syscall
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::syscall

@@ -21,19 +21,12 @@
 
 #pragma once
 
-#include <lo2s/perf/counter/counter_collection.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/perf/counter/group/reader.hpp>
 #include <lo2s/perf/counter/metric_writer.hpp>
-#include <lo2s/perf/time/converter.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace group
+namespace lo2s::perf::counter::group
 {
 class Writer : public Reader<Writer>, MetricWriter
 {
@@ -43,7 +36,4 @@ public:
     using Reader<Writer>::handle;
     bool handle(const RecordSampleType* sample);
 };
-} // namespace group
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::group

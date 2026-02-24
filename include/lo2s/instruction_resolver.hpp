@@ -27,6 +27,7 @@
 #endif
 #include <lo2s/util.hpp>
 
+#include <memory>
 #include <string>
 
 namespace lo2s
@@ -34,9 +35,13 @@ namespace lo2s
 class InstructionResolver
 {
 public:
-    InstructionResolver()
-    {
-    }
+    InstructionResolver() = default;
+    virtual ~InstructionResolver() = default;
+
+    InstructionResolver(InstructionResolver&) = delete;
+    InstructionResolver(InstructionResolver&&) = delete;
+    InstructionResolver& operator=(InstructionResolver&) = delete;
+    InstructionResolver& operator=(InstructionResolver&&) = delete;
 
     static InstructionResolver& cache()
     {
@@ -44,20 +49,16 @@ public:
         return ir;
     }
 
-    virtual std::string lookup_instruction(Address)
+    virtual std::string lookup_instruction(Address addr [[maybe_unused]])
     {
         return "";
-    }
-
-    virtual ~InstructionResolver()
-    {
     }
 };
 #ifdef HAVE_RADARE
 class RadareInstructionResolver : public InstructionResolver
 {
 public:
-    RadareInstructionResolver(std::string name) : radare_(name)
+    RadareInstructionResolver(const std::string& name) : radare_(name)
     {
     }
 
@@ -66,7 +67,7 @@ public:
         return BinaryCache<RadareInstructionResolver>::instance()[name];
     }
 
-    virtual std::string lookup_instruction(Address ip)
+    std::string lookup_instruction(Address ip) override
     {
         return radare_.instruction(ip);
     }

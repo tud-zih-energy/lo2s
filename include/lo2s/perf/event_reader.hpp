@@ -23,17 +23,15 @@
 
 #include <lo2s/build_config.hpp>
 #include <lo2s/config.hpp>
-#include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/types.hpp>
 #include <lo2s/shared_memory.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>
-#include <atomic>
+#include <system_error>
 
 #include <cassert>
-#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -41,15 +39,12 @@
 extern "C"
 {
 #include <linux/perf_event.h>
-#include <sys/mman.h>
 }
 
 /* perf sample has 16 bits size limit */
 #define PERF_SAMPLE_MAX_SIZE (1 << 16)
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 template <class T>
 class EventReader
@@ -65,8 +60,6 @@ public:
     // We don't need the type of the subclass here, because these types are static
     using RecordUnknownType = perf_event_header;
 
-    using RecordMmapType = lo2s::RecordMmapType;
-
     struct RecordMmap2Type
     {
         // BAD things happen if you try this
@@ -75,6 +68,7 @@ public:
         RecordMmap2Type& operator=(const RecordMmap2Type&) = delete;
         RecordMmap2Type(RecordMmap2Type&&) = delete;
         RecordMmap2Type& operator=(RecordMmap2Type&&) = delete;
+        ~RecordMmap2Type() = default;
 
         struct perf_event_header header;
         uint32_t pid;
@@ -150,21 +144,8 @@ public:
         // struct sample_id sample_id;
     };
 
-    EventReader() = default;
-
     EventReader(EventReader<T>&) = delete;
     EventReader& operator=(EventReader<T>&) = delete;
-
-    EventReader(EventReader<T>&& other)
-    {
-        std::swap(this->shmem_, other.shmem_);
-    }
-
-    EventReader& operator=(EventReader&& other)
-    {
-        std::swap(this->shmem_, other.shmem_);
-        return *this;
-    }
 
     ~EventReader()
     {
@@ -197,6 +178,23 @@ protected:
     }
 
 public:
+    EventReader() = default;
+
+    EventReader(EventReader<T>&& other) noexcept
+    {
+        std::swap(this->shmem_, other.shmem_);
+    }
+
+    EventReader& operator=(EventReader&& other) noexcept
+    {
+        std::swap(this->shmem_, other.shmem_);
+        return *this;
+    }
+
+    int fd_;
+    SharedMemory shmem_;
+    std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
+
     void read()
     {
         int64_t read_samples = 0;
@@ -297,7 +295,7 @@ public:
         auto d = data();
 
         auto index = cur_tail % data_size();
-        auto event_header_p = (struct perf_event_header*)(d + index);
+        auto* event_header_p = (struct perf_event_header*)(d + index);
         auto len = event_header_p->size;
 
         assert(cur_tail + len <= cur_head);
@@ -306,14 +304,14 @@ public:
         if (index + len > data_size())
         {
             std::byte* dst = event_copy;
-            do
+            while (len)
             {
                 auto cpy = std::min<std::size_t>(data_size() - index, len);
                 memcpy(dst, d + index, cpy);
                 index = (index + cpy) % data_size();
                 dst += cpy;
                 len -= cpy;
-            } while (len);
+            }
             event_header_p = (struct perf_event_header*)(event_copy);
         }
 
@@ -368,7 +366,7 @@ public:
         return fd_;
     }
 
-    bool handle(const RecordForkType*)
+    bool handle(const RecordForkType* fork [[maybe_unused]])
     {
         // It seems you get fork events even if not enabled via attr.task = true;
         // silently ignore it if our reader type is not specifically interested in forks
@@ -378,7 +376,7 @@ public:
     template <class UNKNOWN_RECORD_TYPE>
     bool handle(const UNKNOWN_RECORD_TYPE* record)
     {
-        auto header = (perf_event_header*)record;
+        const auto* header = (perf_event_header*)record;
         Log::warn() << "unknown perf record type: " << header->type;
         return false;
     }
@@ -388,17 +386,22 @@ protected:
     int64_t throttle_samples = 0;
     int64_t lost_samples = 0;
     size_t mmap_pages_ = 0;
-
-private:
-    int fd_;
-    SharedMemory shmem_;
-    std::byte event_copy[PERF_SAMPLE_MAX_SIZE] __attribute__((aligned(8)));
 };
 
 class DummyCRTPWriter
 {
 };
 
-using PullReader = EventReader<DummyCRTPWriter>;
-} // namespace perf
-} // namespace lo2s
+class PullReader : public EventReader<DummyCRTPWriter>
+{
+public:
+    PullReader() = default;
+
+    PullReader(PullReader&) = delete;
+    PullReader& operator=(PullReader&) = delete;
+
+    PullReader& operator=(PullReader&&) = default;
+    PullReader(PullReader&&) = default;
+    ~PullReader() = default;
+};
+} // namespace lo2s::perf

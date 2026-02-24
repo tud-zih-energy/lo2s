@@ -24,13 +24,16 @@
 #include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/metric_writer.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/nec_device.hpp>
+#include <lo2s/types/thread.hpp>
+
+#include <otf2xx/writer/local.hpp>
 
 #include <chrono>
+#include <string>
 
-namespace lo2s
-{
-namespace nec
+namespace lo2s::nec
 {
 class NecThreadMonitor : public monitor::PollMonitor, perf::counter::MetricWriter
 {
@@ -53,7 +56,6 @@ private:
     Thread nec_thread_;
     trace::Trace& trace_;
     NecDevice device_;
-    perf::CallingContextManager cctx_manager_;
+    CallingContextType cctx_manager_;
 };
-} // namespace nec
-} // namespace lo2s
+} // namespace lo2s::nec

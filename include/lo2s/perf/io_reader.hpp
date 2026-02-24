@@ -21,34 +21,21 @@
 
 #pragma once
 
-#include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
-#include <lo2s/util.hpp>
+#include <lo2s/types/cpu.hpp>
 
-#include <filesystem>
-#include <ios>
+#include <utility>
 
-#include <cstddef>
+#include <cstdint>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/types.h>
 }
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 struct __attribute((__packed__)) TracepointSampleType
@@ -60,8 +47,8 @@ struct __attribute((__packed__)) TracepointSampleType
 
 struct IoReaderIdentity
 {
-    IoReaderIdentity(perf::tracepoint::TracepointEventAttr event, Cpu cpu)
-    : tracepoint_(event), cpu(cpu)
+    IoReaderIdentity(tracepoint::TracepointEventAttr event, Cpu cpu)
+    : tracepoint_(std::move(event)), cpu(cpu)
     {
     }
 
@@ -102,18 +89,17 @@ struct IoReaderIdentity
 class IoReader : public PullReader
 {
 public:
-    IoReader(IoReaderIdentity identity) : identity_(identity), event_(std::nullopt)
+    IoReader(IoReaderIdentity identity)
+    : identity_(identity), event_(identity_.tracepoint().open(identity.cpu))
     {
-        event_ = identity_.tracepoint().open(identity.cpu);
-
         Log::debug() << "Opened block_rq_insert_tracing";
 
         try
         {
-            init_mmap(event_.value().get_fd());
+            init_mmap(event_.get_fd());
             Log::debug() << "perf_tracepoint_reader mmap initialized";
 
-            event_.value().enable();
+            event_.enable();
         }
         catch (...)
         {
@@ -124,7 +110,7 @@ public:
 
     void stop()
     {
-        event_.value().disable();
+        event_.disable();
     }
 
     TracepointSampleType* top()
@@ -134,29 +120,32 @@ public:
 
     int fd() const
     {
-        return event_.value().get_fd();
+        return event_.get_fd();
     }
 
     IoReader& operator=(const IoReader&) = delete;
     IoReader(const IoReader& other) = delete;
 
-    IoReader& operator=(IoReader&& other)
+    IoReader& operator=(IoReader&& other) noexcept
     {
-        PullReader::operator=(std::move(other));
         std::swap(identity_, other.identity_);
         std::swap(event_, other.event_);
+        PullReader::operator=(std::move(other));
 
         return *this;
     }
 
-    IoReader(IoReader&& other) : PullReader(std::move(other)), identity_(other.identity_)
+    IoReader(IoReader&& other) noexcept
+    : PullReader(std::move(other)),          // NOLINT
+      identity_(std::move(other.identity_)), // NOLINT
+      event_(std::move(other.event_))        // NOLINT
     {
-        std::swap(event_, other.event_);
     }
+
+    ~IoReader() = default;
 
 private:
     IoReaderIdentity identity_;
-    std::optional<EventGuard> event_;
+    EventGuard event_;
 };
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

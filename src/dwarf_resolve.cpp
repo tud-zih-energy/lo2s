@@ -21,8 +21,23 @@
 
 #include <lo2s/dwarf_resolve.hpp>
 
+#include <lo2s/address.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/function_resolver.hpp>
 #include <lo2s/indicator.hpp>
+#include <lo2s/line_info.hpp>
+#include <lo2s/log.hpp>
+
+#include <nitro/log/severity.hpp>
+
+#include <memory>
+#include <stdexcept>
+#include <string>
+
+#include <elfutils/libdw.h>
+#include <elfutils/libdwfl.h>
+#include <gelf.h>
+#include <unistd.h>
 
 #ifdef HAVE_DEBUGINFOD
 extern "C"
@@ -33,7 +48,8 @@ extern "C"
 
 namespace lo2s
 {
-
+namespace
+{
 struct getfuncs_arg
 {
     Dwarf_Addr addr;
@@ -48,9 +64,9 @@ struct getfuncs_arg
  * Our implementation of that callback simply checks if the address we are looking up is found in
  * that function DIE, if yes, recording the name of the function DIE and aborting the search.
  */
-static int find_containing_func_for_addr(Dwarf_Die* d, void* arg)
+int find_containing_func_for_addr(Dwarf_Die* d, void* arg)
 {
-    struct getfuncs_arg* args = reinterpret_cast<struct getfuncs_arg*>(arg);
+    auto* args = reinterpret_cast<struct getfuncs_arg*>(arg);
 
     if (dwarf_haspc(d, args->addr))
     {
@@ -72,7 +88,7 @@ std::unique_ptr<Indicator> bar;
  * Use this info to display a nice progress bar if stderr is a tty
  */
 #ifdef HAVE_DEBUGINFOD
-static int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b)
+int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b)
 {
     if (b != 0)
     {
@@ -92,10 +108,10 @@ static int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b)
  * dwfl_standard_find_debuginfo function, which records some additional information to be used in th
  * progress_fn() callback.
  */
-static int standard_find_debuginfo_wrapper(Dwfl_Module* mod, void** userdata, const char* modname,
-                                           Dwarf_Addr base, const char* file_name,
-                                           const char* debuglink_file, GElf_Word debuglink_crc,
-                                           char** debuginfo_file_name)
+int standard_find_debuginfo_wrapper(Dwfl_Module* mod, void** userdata, const char* modname,
+                                    Dwarf_Addr base, const char* file_name,
+                                    const char* debuglink_file, GElf_Word debuglink_crc,
+                                    char** debuginfo_file_name)
 {
     if (logging::get_min_severity_level() <= nitro::log::severity_level::info &&
         isatty(STDERR_FILENO))
@@ -105,8 +121,9 @@ static int standard_find_debuginfo_wrapper(Dwfl_Module* mod, void** userdata, co
         Log::info() << "Looking up debuginfo for: " << file_name;
     }
 
-    int res = dwfl_standard_find_debuginfo(mod, userdata, modname, base, file_name, debuglink_file,
-                                           debuglink_crc, debuginfo_file_name);
+    int const res =
+        dwfl_standard_find_debuginfo(mod, userdata, modname, base, file_name, debuglink_file,
+                                     debuglink_crc, debuginfo_file_name);
 
     return res;
 }
@@ -115,13 +132,15 @@ static int standard_find_debuginfo_wrapper(Dwfl_Module* mod, void** userdata, co
  * If DWARF support is completely disabled, use this cb for debug information lookup. This always
  * reports that no DWARF file could be found.
  */
-static int dwfl_dummy_find_debuginfo(Dwfl_Module*, void**, const char*, GElf_Addr, const char*,
-                                     const char*, GElf_Word, char**)
+int dwfl_dummy_find_debuginfo(Dwfl_Module* /*unused*/, void** /*unused*/, const char* /*unused*/,
+                              GElf_Addr /*unused*/, const char* /*unused*/, const char* /*unused*/,
+                              GElf_Word /*unused*/, char** /*unused*/)
 {
     return -1;
 }
+} // namespace
 
-DwarfFunctionResolver::DwarfFunctionResolver(std::string name) : FunctionResolver(name)
+DwarfFunctionResolver::DwarfFunctionResolver(const std::string& name) : FunctionResolver(name)
 {
     if (config().dwarf == DwarfUsage::NONE)
     {
@@ -150,7 +169,7 @@ DwarfFunctionResolver::DwarfFunctionResolver(std::string name) : FunctionResolve
     if (logging::get_min_severity_level() <= nitro::log::severity_level::info &&
         isatty(STDERR_FILENO))
     {
-        if (debug_c != 0)
+        if (debug_c != nullptr)
         {
             debuginfod_set_progressfn(debug_c, progress_fn);
         }
@@ -158,7 +177,7 @@ DwarfFunctionResolver::DwarfFunctionResolver(std::string name) : FunctionResolve
 
     if (logging::get_min_severity_level() <= nitro::log::severity_level::trace)
     {
-        if (debug_c != 0)
+        if (debug_c != nullptr)
         {
             // This displays quite a lot of additional information from debuginfod, so gate it
             // behind log level trace
@@ -175,7 +194,7 @@ DwarfFunctionResolver::DwarfFunctionResolver(std::string name) : FunctionResolve
     {
         throw std::runtime_error(dwfl_errmsg(dwfl_errno()));
     }
-    dwfl_report_end(dwfl_, NULL, NULL);
+    dwfl_report_end(dwfl_, nullptr, nullptr);
 }
 
 DwarfFunctionResolver::~DwarfFunctionResolver()
@@ -196,7 +215,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     if (config().dwarf != DwarfUsage::NONE)
     {
         Dwarf_Die* cudie = nullptr;
-        Dwarf_Addr bias;
+        Dwarf_Addr bias = 0;
 
         /*
          * On the top level DWARF debug information consists of DIE entries for
@@ -209,7 +228,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
             {
                 // Get line info and src file information ( e.g. "foo.c:42")
                 Dwarf_Line* line = dwarf_getsrc_die(cudie, addr.value());
-                int lineno;
+                int lineno = 0;
                 dwarf_lineno(line, &lineno);
                 const char* srcname = dwarf_linesrc(line, nullptr, nullptr);
 
@@ -221,7 +240,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
                 // one that contains addr.
                 dwarf_getfuncs(cudie, find_containing_func_for_addr, &arg, 0);
 
-                if (arg.name != "")
+                if (!arg.name.empty())
                 {
                     return cache_
                         .emplace(addr, LineInfo::for_function(srcname, arg.name.c_str(), lineno,
@@ -235,10 +254,10 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     // Fall back  to symbol table if we had no luck with the DWARF information
     for (int i = 0; i < dwfl_module_getsymtab(mod_); i++)
     {
-        GElf_Sym sym;       // ELF Symbol data structure
-        GElf_Addr sym_addr; // Starting address of the symbol
-        Dwarf_Addr bias; // Needs to subtracted from the sym_addr to get the real sym_addr in memory
-                         // at runtime.
+        GElf_Sym sym;           // ELF Symbol data structure
+        GElf_Addr sym_addr = 0; // Starting address of the symbol
+        Dwarf_Addr bias = 0;    // Needs to subtracted from the sym_addr to get the real sym_addr in
+                                // memory at runtime.
 
         const char* name =
             dwfl_module_getsym_info(mod_, i, &sym, &sym_addr, nullptr, nullptr, &bias);

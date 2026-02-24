@@ -20,25 +20,24 @@
  */
 #pragma once
 
-#include <string>
-
-extern "C"
-{
-#include <sys/types.h>
-}
-
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
-namespace lo2s
-{
+#include <string>
 
-namespace monitor
+namespace lo2s::monitor
 {
 
 class AbstractProcessMonitor
 {
 public:
+    AbstractProcessMonitor() = default;
+    AbstractProcessMonitor(AbstractProcessMonitor&) = default;
+    AbstractProcessMonitor(AbstractProcessMonitor&&) = default;
+
+    AbstractProcessMonitor& operator=(AbstractProcessMonitor const&) = default;
+    AbstractProcessMonitor& operator=(AbstractProcessMonitor&&) = default;
+
     virtual void insert_process(Process parent, Process process, std::string proc_name,
                                 bool spawn = false) = 0;
     virtual void insert_thread(Process process, Thread thread, std::string name = "",
@@ -47,6 +46,7 @@ public:
     virtual void exit_thread(Thread thread) = 0;
 
     virtual void update_process_name(Process process, const std::string& name) = 0;
+
+    virtual ~AbstractProcessMonitor() = default;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

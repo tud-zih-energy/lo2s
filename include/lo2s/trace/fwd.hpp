@@ -21,12 +21,9 @@
 
 #pragma once
 
-namespace lo2s
-{
-namespace trace
+namespace lo2s::trace
 {
 class Trace;
 
 class Counters;
-} // namespace trace
-} // namespace lo2s
+} // namespace lo2s::trace

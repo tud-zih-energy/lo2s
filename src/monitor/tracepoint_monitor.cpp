@@ -22,20 +22,26 @@
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
+#include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/util.hpp>
 
-namespace lo2s
-{
-namespace monitor
+#include <memory>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+namespace lo2s::monitor
 {
 
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 : monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
 {
-    std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
+    const std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
         perf::EventComposer::instance().emplace_tracepoints();
 
     for (const auto& event : tracepoint_events)
@@ -44,8 +50,9 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
         std::unique_ptr<perf::tracepoint::Writer> writer =
             std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 
-        add_fd(writer->fd());
-        perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer->fd()),
+        int writer_fd = writer->fd();
+        add_fd(writer_fd);
+        perf_writers_.emplace(std::piecewise_construct, std::forward_as_tuple(writer_fd),
                               std::forward_as_tuple(std::move(writer)));
     }
 }
@@ -61,7 +68,8 @@ void TracepointMonitor::monitor(int fd)
     {
         return;
     }
-    else if (fd == stop_pfd().fd)
+
+    if (fd == stop_pfd().fd)
     {
         for (auto& perf_writer : perf_writers_)
         {
@@ -76,5 +84,4 @@ void TracepointMonitor::finalize_thread()
 {
     perf_writers_.clear();
 }
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

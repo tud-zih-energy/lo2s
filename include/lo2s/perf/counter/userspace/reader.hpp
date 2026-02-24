@@ -24,29 +24,17 @@
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
-#include <lo2s/perf/event_resolver.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/perf/event_attr.hpp>
 
 #include <vector>
 
-#include <cstdint>
-#include <cstdlib>
-
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace userspace
+namespace lo2s::perf::counter::userspace
 {
 
 template <class T>
 class Reader
 {
 public:
-    Reader(ExecutionScope scope);
-
     void read();
 
     int fd()
@@ -61,8 +49,9 @@ protected:
 
     std::vector<EventGuard> counters_;
     std::vector<UserspaceReadFormat> data_;
+
+private:
+    Reader(ExecutionScope scope);
+    friend T;
 };
-} // namespace userspace
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::userspace

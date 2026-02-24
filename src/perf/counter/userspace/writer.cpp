@@ -21,17 +21,20 @@
 
 #include <lo2s/perf/counter/userspace/writer.hpp>
 
-#include <lo2s/log.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/counter/metric_writer.hpp>
+#include <lo2s/perf/counter/userspace/reader.hpp>
+#include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/trace/trace.hpp>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace userspace
+#include <vector>
+
+#include <cassert>
+#include <cstddef>
+
+namespace lo2s::perf::counter::userspace
 {
 Writer::Writer(ExecutionScope scope, trace::Trace& trace)
 : Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace)
@@ -62,7 +65,4 @@ bool Writer::handle(std::vector<UserspaceReadFormat>& data)
     return false;
 }
 
-} // namespace userspace
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::userspace

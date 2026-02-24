@@ -21,10 +21,13 @@
 
 #pragma once
 
+#include <functional>
 #include <iostream>
 
+#include <cstddef>
 #include <cstdint>
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 namespace lo2s
@@ -124,7 +127,7 @@ struct hash<lo2s::Thread>
 {
     std::size_t operator()(const lo2s::Thread& t) const
     {
-        return ((std::hash<int64_t>()(t.as_int())));
+        return ((std::hash<int64_t>()(static_cast<std::size_t>(t.as_int()))));
     }
 };
 } // namespace std

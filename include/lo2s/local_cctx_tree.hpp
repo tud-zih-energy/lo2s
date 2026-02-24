@@ -21,15 +21,20 @@
 #pragma once
 
 #include <lo2s/calling_context.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-#include <otf2xx/otf2.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/writer/local.hpp>
 
-extern "C"
-{
-#include <linux/perf_event.h>
-}
+#include <atomic>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
 namespace lo2s
 {
@@ -65,7 +70,7 @@ public:
     uint64_t cctx_enter(const otf2::chrono::time_point& tp, const CallingContext& ctx,
                         const Cctxs&... ctxs)
     {
-        uint64_t level = cur_level() + 1;
+        const uint64_t level = cur_level() + 1;
         cctx_enter(tp, level, ctx, ctxs...);
         return level;
     }

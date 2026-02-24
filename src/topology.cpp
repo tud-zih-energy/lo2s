@@ -1,6 +1,16 @@
 #include <lo2s/topology.hpp>
 
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/package.hpp>
 #include <lo2s/util.hpp>
+
+#include <filesystem>
+#include <fstream>
+#include <string>
+
+#include <cstdint>
+
+#include <fmt/format.h>
 
 namespace lo2s
 {
@@ -12,13 +22,13 @@ void Topology::read_proc()
 
     for (auto cpu_id : online)
     {
-        std::stringstream filename_stream;
-
-        std::filesystem::path topology = base_path / fmt::format("cpu{}", cpu_id) / "topology";
+        std::filesystem::path const topology =
+            base_path / fmt::format("cpu{}", cpu_id) / "topology";
         std::ifstream package_stream(topology / "physical_package_id");
         std::ifstream core_stream(topology / "core_id");
 
-        uint32_t package_id, core_id;
+        uint32_t package_id = 0;
+        uint32_t core_id = 0;
         package_stream >> package_id;
         core_stream >> core_id;
 

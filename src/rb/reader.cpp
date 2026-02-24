@@ -21,6 +21,14 @@
 
 #include <lo2s/rb/reader.hpp>
 
+#include <lo2s/rb/events.hpp>
+#include <lo2s/rb/shm_ringbuf.hpp>
+
+#include <memory>
+#include <stdexcept>
+
+#include <cstdint>
+
 namespace lo2s
 {
 

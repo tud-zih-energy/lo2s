@@ -21,27 +21,20 @@
 
 #pragma once
 
-#include <filesystem>
-#include <stdexcept>
-#include <vector>
+#include <string>
+#include <utility>
 
 #include <cstddef>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+namespace lo2s::perf::tracepoint
 {
 class EventField
 {
 public:
-    EventField()
-    {
-    }
+    EventField() = default;
 
-    EventField(const std::string& name, std::ptrdiff_t offset, std::size_t size)
-    : name_(name), offset_(offset), size_(size)
+    EventField(std::string name, std::ptrdiff_t offset, std::size_t size)
+    : name_(std::move(name)), offset_(offset), size_(size)
     {
     }
 
@@ -85,6 +78,4 @@ private:
     std::ptrdiff_t offset_;
     std::size_t size_ = 0;
 };
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

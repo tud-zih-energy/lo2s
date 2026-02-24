@@ -21,22 +21,24 @@
 
 #pragma once
 
-#include <lo2s/perf/event_composer.hpp>
+#include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/trace/fwd.hpp>
+
+#include <map>
+#include <optional>
+#include <vector>
+
+#include <cstdint>
 
 extern "C"
 {
 #include <sys/sysmacros.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-namespace bio
+namespace lo2s::perf::bio
 {
 struct __attribute((__packed__)) RecordBlock
 {
@@ -77,96 +79,9 @@ struct __attribute((__packed__)) RecordBioQueue
 class Writer
 {
 public:
-    Writer(trace::Trace& trace) : trace_(trace), time_converter_(time::Converter::instance())
-    {
-    }
-
-    void write(IoReaderIdentity& identity, TracepointSampleType* header)
-    {
-        if (identity.tracepoint() == bio_queue_)
-        {
-            struct RecordBioQueue* event = (RecordBioQueue*)header;
-
-            otf2::common::io_operation_mode_type mode = otf2::common::io_operation_mode_type::flush;
-            // TODO: Handle the few io operations that arent either reads or write
-            if (event->rwbs[0] == 'R')
-            {
-                mode = otf2::common::io_operation_mode_type::read;
-            }
-            else if (event->rwbs[0] == 'W')
-            {
-                mode = otf2::common::io_operation_mode_type::write;
-            }
-            else
-            {
-                return;
-            }
-
-            BlockDevice dev = block_device_for<RecordBioQueue>(event);
-
-            otf2::writer::local& writer = trace_.bio_writer(dev);
-            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
-            auto size = event->nr_sector * SECTOR_SIZE;
-
-            sector_cache_[dev][event->sector] += size;
-            writer << otf2::event::io_operation_begin(
-                time_converter_(event->header.time), handle, mode,
-                otf2::common::io_operation_flag_type::non_blocking, size, event->sector);
-        }
-        else if (identity.tracepoint() == bio_issue_)
-        {
-            struct RecordBlock* event = (RecordBlock*)header;
-
-            BlockDevice dev = block_device_for<RecordBlock>(event);
-
-            if (sector_cache_.count(dev) == 0 || sector_cache_.at(dev).count(event->sector) == 0)
-            {
-                return;
-            }
-
-            otf2::writer::local& writer = trace_.bio_writer(dev);
-            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
-
-            writer << otf2::event::io_operation_issued(time_converter_(event->header.time), handle,
-                                                       event->sector);
-        }
-        else if (identity.tracepoint() == bio_complete_)
-        {
-            struct RecordBlock* event = (RecordBlock*)header;
-
-            BlockDevice dev = block_device_for<RecordBlock>(event);
-
-            if (sector_cache_.count(dev) == 0 && sector_cache_[dev].count(event->sector) == 0)
-            {
-                return;
-            }
-
-            otf2::writer::local& writer = trace_.bio_writer(dev);
-            otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
-
-            writer << otf2::event::io_operation_complete(time_converter_(event->header.time),
-                                                         handle, sector_cache_[dev][event->sector],
-                                                         event->sector);
-            sector_cache_[dev][event->sector] = 0;
-        }
-        else
-        {
-            throw std::runtime_error("tracepoint " + identity.tracepoint().name() +
-                                     " not valid for block I/O");
-        }
-    }
-
-    std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints()
-    {
-        bio_queue_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_bio_queue");
-        bio_issue_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_issue");
-        bio_complete_ =
-            perf::EventComposer::instance().create_tracepoint_event("block:block_rq_complete");
-
-        return { bio_queue_.value(), bio_issue_.value(), bio_complete_.value() };
-    }
+    Writer(trace::Trace& trace);
+    void write(IoReaderIdentity& identity, TracepointSampleType* header);
+    std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints();
 
 private:
     template <class T>
@@ -180,7 +95,6 @@ private:
             makedev(event->dev >> 20, event->dev & ((1U << 20) - 1)));
     }
 
-private:
     std::map<BlockDevice, std::map<uint64_t, uint64_t>> sector_cache_;
     trace::Trace& trace_;
     time::Converter& time_converter_;
@@ -193,6 +107,4 @@ private:
     // The unit "sector" is always 512 bit large, regardless of the actual sector size of the device
     static constexpr int SECTOR_SIZE = 512;
 };
-} // namespace bio
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::bio

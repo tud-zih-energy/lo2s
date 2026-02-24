@@ -21,19 +21,11 @@
 
 #pragma once
 
-#include <lo2s/log.hpp>
-
-#include <otf2xx/chrono/chrono.hpp>
-
 #include <chrono>
-
-#include <cstdint>
 
 // All the time stuff is based on the assumption that all times are nanoseconds.
 // XXX check if we need this exposed or can just move it to time/converter.hpp
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 struct Clock
@@ -44,5 +36,4 @@ struct Clock
     using period = duration::period;
     using time_point = std::chrono::time_point<Clock, duration>;
 };
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

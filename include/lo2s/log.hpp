@@ -27,14 +27,15 @@
 #include <nitro/log/attribute/pid.hpp>
 #include <nitro/log/attribute/severity.hpp>
 #include <nitro/log/attribute/timestamp.hpp>
-#include <nitro/log/filter/and_filter.hpp>
-#include <nitro/log/filter/mpi_master_filter.hpp>
 #include <nitro/log/filter/severity_filter.hpp>
-#include <nitro/log/log.hpp>
+#include <nitro/log/logger.hpp>
+#include <nitro/log/record.hpp>
+#include <nitro/log/severity.hpp>
 #include <nitro/log/sink/stderr_mt.hpp>
 
-#include <fstream>
-#include <mutex>
+#include <sstream>
+#include <string>
+#include <utility>
 
 namespace lo2s
 {
@@ -79,7 +80,7 @@ inline nitro::log::severity_level get_min_severity_level()
 inline void set_min_severity_level(std::string verbosity)
 {
     set_min_severity_level(
-        nitro::log::severity_from_string(verbosity, nitro::log::severity_level::info));
+        nitro::log::severity_from_string(std::move(verbosity), nitro::log::severity_level::info));
 }
 
 } // namespace logging

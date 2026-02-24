@@ -22,17 +22,13 @@
 
 #include <lo2s/perf/counter/counter_buffer.hpp>
 
+#include <utility>
 #include <vector>
 
+#include <cstddef>
 #include <cstdint>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace userspace
+namespace lo2s::perf::counter::userspace
 {
 struct UserspaceReadFormat
 {
@@ -76,7 +72,4 @@ protected:
     std::vector<UserspaceReadFormat> previous_;
 };
 
-} // namespace userspace
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::userspace

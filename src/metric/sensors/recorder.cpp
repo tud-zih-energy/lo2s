@@ -22,27 +22,41 @@
 #include <lo2s/metric/sensors/recorder.hpp>
 
 #include <lo2s/config.hpp>
+#include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/monitor/poll_monitor.hpp>
+#include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
 #include <nitro/lang/enumerate.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/common.hpp>
+#include <otf2xx/definition/detail/weak_ref.hpp>
+#include <otf2xx/event/metric.hpp>
+
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <utility>
+
+#include <cassert>
+
+#include <fmt/format.h>
 
 extern "C"
 {
+#include <math.h>
 #include <sensors/sensors.h>
+#include <string.h>
 }
 
-#include <cstring>
-
-namespace lo2s
+namespace lo2s::metric::sensors
 {
-namespace metric
+namespace
 {
-namespace sensors
-{
-
-static const char* get_unit(const sensors_feature* feature)
+const char* get_unit(const sensors_feature* feature)
 {
     switch (feature->type)
     {
@@ -67,14 +81,14 @@ static const char* get_unit(const sensors_feature* feature)
     }
 }
 
-static std::string chip_name_to_str(const sensors_chip_name* chip)
+std::string chip_name_to_str(const sensors_chip_name* chip)
 {
     std::string chip_name;
-    int chip_name_size = sensors_snprintf_chip_name(nullptr, 0, chip);
+    int const chip_name_size = sensors_snprintf_chip_name(nullptr, 0, chip);
     assert(chip_name_size > 0);
 
     chip_name.resize(chip_name_size);
-    int res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size() + 1, chip);
+    int const res = sensors_snprintf_chip_name(chip_name.data(), chip_name.size() + 1, chip);
 
     if (res < 0)
     {
@@ -84,6 +98,7 @@ static std::string chip_name_to_str(const sensors_chip_name* chip)
 
     return chip_name;
 }
+} // namespace
 
 Recorder::Recorder(trace::Trace& trace)
 : PollMonitor(trace, "Sensors recorder", config().read_interval),
@@ -97,12 +112,12 @@ Recorder::Recorder(trace::Trace& trace)
     // with that bullshit? "nr is an internally used variable". For fucks sake. (┛◉Д◉) ┛彡┻━┻
 
     int chip_id = 0;
-    for (auto chip = sensors_get_detected_chips(nullptr, &chip_id); chip != nullptr;
+    for (const auto* chip = sensors_get_detected_chips(nullptr, &chip_id); chip != nullptr;
          chip = sensors_get_detected_chips(nullptr, &chip_id))
     {
-        std::string chip_name = chip_name_to_str(chip);
+        std::string const chip_name = chip_name_to_str(chip);
         int feature_id = 0;
-        for (auto feature = sensors_get_features(chip, &feature_id); feature != nullptr;
+        for (const auto* feature = sensors_get_features(chip, &feature_id); feature != nullptr;
              feature = sensors_get_features(chip, &feature_id))
         {
             std::unique_ptr<char, memory::MallocDelete<char>> label{ sensors_get_label(chip,
@@ -115,17 +130,19 @@ Recorder::Recorder(trace::Trace& trace)
             }
 
             int sub_feature_id = 0;
-            for (auto sub_feature = sensors_get_all_subfeatures(chip, feature, &sub_feature_id);
+            for (const auto* sub_feature =
+                     sensors_get_all_subfeatures(chip, feature, &sub_feature_id);
                  sub_feature != nullptr;
                  sub_feature = sensors_get_all_subfeatures(chip, feature, &sub_feature_id))
             {
                 // Convention says, that the sub feature ending with "_input" is the measurement.
                 // So naturally we ignore everything else. I don't give a fuck for min/max.
                 auto name = std::string(sub_feature->name);
-                if (name.size() <= 6 ||
-                    name.substr(name.size() - 6) != "_input") // if only nitro had an "ends_with"
-                                                              // or we could use c++20...
+                if (name.size() <= 6 || name.substr(name.size() - 6) != "_input")
+                { // if only nitro had an "ends_with"
+                    // or we could use c++20...
                     continue;
+                }
 
                 std::stringstream sensor_name;
                 sensor_name << chip_name << "/" << feature->name << " (" << label.get() << ")";
@@ -133,7 +150,7 @@ Recorder::Recorder(trace::Trace& trace)
 
                 // Sometimes, this wonderful API gives us sensors which fail every time
                 // you try to read them. So check if we really can read them
-                double tmp;
+                double tmp = NAN;
                 if (sensors_get_value(chip, sub_feature->number, &tmp) == 0)
                 {
                     items_.emplace_back(
@@ -159,9 +176,10 @@ void Recorder::monitor([[maybe_unused]] int fd)
     // update event values with sensors data
     for (const auto& index_items : nitro::lang::enumerate(items_))
     {
-        double value;
+        double value = NAN;
         const auto [chip, subf] = index_items.value();
-        int res = sensors_get_value(reinterpret_cast<const sensors_chip_name*>(chip), subf, &value);
+        int const res =
+            sensors_get_value(reinterpret_cast<const sensors_chip_name*>(chip), subf, &value);
         if (res < 0)
         {
             throw_errno();
@@ -179,6 +197,4 @@ Recorder::~Recorder()
 {
     sensors_cleanup();
 }
-} // namespace sensors
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::sensors

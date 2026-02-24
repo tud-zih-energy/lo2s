@@ -21,13 +21,26 @@
 
 #include <lo2s/perf/tracepoint/event_attr.hpp>
 
-#include <regex>
+#include <lo2s/log.hpp>
+#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+#include <nitro/lang/string.hpp>
+
+#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <regex>
+#include <stdexcept>
+#include <string>
+#include <vector>
+
+#include <cerrno>
+#include <cstring>
+
+#include <linux/perf_event.h>
+
+namespace lo2s::perf::tracepoint
 {
 
 TracepointEventAttr::TracepointEventAttr(const std::string& name)
@@ -39,8 +52,6 @@ TracepointEventAttr::TracepointEventAttr(const std::string& name)
     attr_.config = id_;
     update_availability();
 }
-
-const std::filesystem::path TracepointEventAttr::base_path_ = "/sys/kernel/tracing/events";
 
 TracepointEventAttr::ParseError::ParseError(const std::string& what, int error_code)
 : std::runtime_error{ what + ": " + std::strerror(error_code) }
@@ -54,8 +65,10 @@ void TracepointEventAttr::parse_format()
     // allow perf-like name format which uses ':' as a separator
     std::replace(name_.begin(), name_.end(), ':', '/');
 
-    std::filesystem::path path_event = base_path_ / name_;
-    std::ifstream ifs_id, ifs_format;
+    const std::filesystem::path base_path_ = "/sys/kernel/tracing/events";
+    std::filesystem::path const path_event = base_path_ / name_;
+    std::ifstream ifs_id;
+    std::ifstream ifs_format;
 
     auto id_path = path_event / "id";
     auto format_path = path_event / "format";
@@ -89,9 +102,9 @@ void TracepointEventAttr::parse_format()
 
 void TracepointEventAttr::parse_format_line(const std::string& line)
 {
-    static std::regex field_regex(
-        "^\\s+field:([^;]+);\\s+offset:(\\d+);\\s+size:(\\d+);\\s+signed:(\\d+);$");
-    static std::regex type_name_regex("^(.*) ([^ \\[\\]]+)(\\[[^\\]]+\\])?$");
+    static std::regex const field_regex(
+        R"(^\s+field:([^;]+);\s+offset:(\d+);\s+size:(\d+);\s+signed:(\d+);$)");
+    static std::regex const type_name_regex(R"(^(.*) ([^ \[\]]+)(\[[^\]]+\])?$)");
 
     std::smatch field_match;
     if (!std::regex_match(line, field_match, field_regex))
@@ -100,7 +113,7 @@ void TracepointEventAttr::parse_format_line(const std::string& line)
         return;
     }
 
-    std::string param = field_match[1];
+    std::string const param = field_match[1];
     auto offset = stol(field_match[2]);
     auto size = stol(field_match[3]);
 
@@ -112,8 +125,8 @@ void TracepointEventAttr::parse_format_line(const std::string& line)
         return;
     }
 
-    std::string name = type_name_match[2];
-    tracepoint::EventField field(name, offset, size);
+    std::string const name = type_name_match[2];
+    tracepoint::EventField const field(name, offset, size);
 
     if (!nitro::lang::starts_with(name, "common_"))
     {
@@ -121,6 +134,4 @@ void TracepointEventAttr::parse_format_line(const std::string& line)
     }
 }
 
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

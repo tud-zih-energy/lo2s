@@ -21,9 +21,21 @@
 
 #include <lo2s/perf/bio/block_device.hpp>
 
-#include <algorithm>
+#include <filesystem>
+#include <fstream>
+#include <map>
 #include <regex>
-#include <vector>
+#include <string>
+
+#include <cstdint>
+
+#include <fmt/format.h>
+#include <sys/types.h>
+
+extern "C"
+{
+#include <sys/sysmacros.h>
+}
 
 namespace lo2s
 {
@@ -31,7 +43,7 @@ namespace lo2s
 std::map<dev_t, BlockDevice> get_block_devices()
 {
     std::map<dev_t, BlockDevice> result;
-    std::filesystem::path sys_dev_path("/sys/dev/block");
+    std::filesystem::path const sys_dev_path("/sys/dev/block");
 
     const std::regex devname_regex("DEVNAME=(\\S+)");
     const std::regex devtype_regex("DEVTYPE=(\\S+)");
@@ -46,13 +58,12 @@ std::map<dev_t, BlockDevice> get_block_devices()
     for (const std::filesystem::directory_entry& dir_entry :
          std::filesystem::directory_iterator(sys_dev_path))
     {
-        std::string path_str = dir_entry.path().string();
         std::string devname = "unknown device";
         uint32_t major = 0;
         uint32_t minor = 0;
         std::string devtype = "partition";
 
-        std::filesystem::path uevent_path = dir_entry.path() / "uevent";
+        std::filesystem::path const uevent_path = dir_entry.path() / "uevent";
         std::ifstream uevent_file(uevent_path);
 
         while (uevent_file.good())
@@ -128,9 +139,7 @@ BlockDevice BlockDevice::block_device_for(dev_t device)
     {
         return devices[device];
     }
-    else
-    {
-        return BlockDevice::disk(device, fmt::format("{}:{}", major(device), minor(device)));
-    }
+
+    return BlockDevice::disk(device, fmt::format("{}:{}", major(device), minor(device)));
 }
 } // namespace lo2s

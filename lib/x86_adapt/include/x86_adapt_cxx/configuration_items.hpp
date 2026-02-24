@@ -31,9 +31,9 @@
 #include <x86_adapt_cxx/configuration_item.hpp>
 #include <x86_adapt_cxx/exception.hpp>
 
-#include <x86_adapt.h>
-
 #include <string>
+
+#include <x86_adapt.h>
 
 namespace x86_adapt
 {

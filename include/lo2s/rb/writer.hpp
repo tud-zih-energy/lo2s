@@ -23,14 +23,16 @@
 
 #include <lo2s/rb/header.hpp>
 #include <lo2s/rb/shm_ringbuf.hpp>
-#include <lo2s/shared_memory.hpp>
 #include <lo2s/types/process.hpp>
 
+#include <memory>
+
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 
 extern "C"
 {
-#include <sys/mman.h>
 }
 
 namespace lo2s
@@ -53,7 +55,7 @@ public:
         // No other reservation can be active!
         assert(reserved_size_ == 0);
 
-        uint64_t ev_size = sizeof(T) + payload;
+        const uint64_t ev_size = sizeof(T) + payload;
 
         T* ev = reinterpret_cast<T*>(rb_->head(ev_size));
         if (ev == nullptr)

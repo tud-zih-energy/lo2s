@@ -32,35 +32,34 @@
 
 #include <memory>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include <cstddef>
 #include <cstdint>
 
-namespace lo2s
+namespace lo2s::metric::plugin
 {
 
-namespace metric
+namespace
 {
-namespace plugin
-{
-
-static std::uint64_t get_time_wrapper()
+std::uint64_t get_time_wrapper()
 {
     return time::now().time_since_epoch().count();
 }
 
-static std::string lib_name(const std::string& name)
+std::string lib_name(const std::string& name)
 {
     return std::string("lib") + name + ".so";
 }
 
-static std::string entry_name(const std::string& name)
+std::string entry_name(const std::string& name)
 {
     return std::string("SCOREP_MetricPlugin_") + name + "_get_info";
 }
 
-static void parse_properties(std::vector<Channel>& channels, wrapper::Properties* props,
-                             trace::Trace& trace)
+void parse_properties(std::vector<Channel>& channels, wrapper::Properties* props,
+                      trace::Trace& trace)
 {
     if (props == nullptr)
     {
@@ -80,6 +79,7 @@ static void parse_properties(std::vector<Channel>& channels, wrapper::Properties
                               props[index].exponent, trace);
     }
 }
+} // namespace
 
 Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& plugin_events,
                trace::Trace& trace)
@@ -118,7 +118,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
         throw std::runtime_error("Plugin initialization failed.");
     }
 
-    for (auto token : plugin_events_)
+    for (const auto& token : plugin_events_)
     {
         Log::debug() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
 
@@ -166,9 +166,9 @@ void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
             continue;
         }
 
-        wrapper::TimeValuePair* tv_list;
+        wrapper::TimeValuePair* tv_list = nullptr;
         auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
-        std::unique_ptr<wrapper::TimeValuePair, memory::MallocDelete<wrapper::TimeValuePair>>
+        std::unique_ptr<wrapper::TimeValuePair, memory::MallocDelete<wrapper::TimeValuePair>> const
             tv_list_owner(tv_list);
 
         Log::info() << "In plugin: " << plugin_name_ << " received for channel '" << channel.name()
@@ -204,6 +204,4 @@ void Plugin::stop_recording()
         plugin_.synchronize(true, wrapper::SynchronizationMode::END);
     }
 }
-} // namespace plugin
-} // namespace metric
-} // namespace lo2s
+} // namespace lo2s::metric::plugin

@@ -21,12 +21,13 @@
 #pragma once
 #include <lo2s/rb/events.hpp>
 
-#include <fmt/core.h>
-#include <string.h>
+#include <string>
 
-namespace lo2s
-{
-namespace omp
+#include <cstdint>
+
+#include <fmt/format.h>
+
+namespace lo2s::ompt
 {
 enum class OMPType : uint64_t
 {
@@ -59,10 +60,7 @@ struct OMPTCctx
             {
                 return lhs.addr < rhs.addr;
             }
-            else
-            {
-                return lhs.num_threads < rhs.num_threads;
-            }
+            return lhs.num_threads < rhs.num_threads;
         }
         return lhs.type < rhs.type;
     }
@@ -81,11 +79,11 @@ struct OMPTCctx
     {
         switch (type)
         {
-        case lo2s::omp::OMPType::MASTER:
+        case OMPType::MASTER:
             return fmt::format("master {}", addr);
-        case lo2s::omp::OMPType::PARALLEL:
+        case OMPType::PARALLEL:
             return fmt::format("parallel {} {}", num_threads, addr);
-        case lo2s::omp::OMPType::SYNC:
+        case OMPType::SYNC:
             return fmt::format("sync {}", addr);
         case OMPType::WORKSHARE:
             return fmt::format("workshare {}", addr);
@@ -112,5 +110,4 @@ struct ompt_exit
     OMPTCctx cctx;
 };
 
-} // namespace omp
-} // namespace lo2s
+} // namespace lo2s::ompt

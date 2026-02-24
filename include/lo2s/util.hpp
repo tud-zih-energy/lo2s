@@ -29,7 +29,9 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <istream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <set>
 #include <string>
@@ -42,9 +44,7 @@
 extern "C"
 {
 #include <sys/resource.h>
-#include <sys/types.h>
 #include <sys/utsname.h>
-#include <unistd.h>
 }
 
 namespace lo2s
@@ -73,7 +73,7 @@ public:
 
     std::shared_ptr<T> operator[](const std::string& name)
     {
-        std::lock_guard<std::mutex> guard(mutex_);
+        const std::lock_guard<std::mutex> guard(mutex_);
         return elements_.try_emplace(name, std::make_shared<T>(name)).first->second;
     }
 
@@ -114,15 +114,15 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
 
 void try_pin_to_scope(ExecutionScope scope);
 
-int get_cgroup_mountpoint_fd(std::string cgroup);
+int get_cgroup_mountpoint_fd(const std::string& cgroup);
 
 void bump_rlimit_fd();
 struct rlimit initial_rlimit_fd();
 
 Thread gettid();
 
-std::set<std::uint32_t> parse_list(std::string list);
-std::set<std::uint32_t> parse_list_from_file(std::filesystem::path file);
+std::set<std::uint32_t> parse_list(const std::string& list);
+std::set<std::uint32_t> parse_list_from_file(const std::filesystem::path& file);
 
 int timerfd_from_ns(std::chrono::nanoseconds duration);
 

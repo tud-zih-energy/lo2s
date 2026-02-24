@@ -21,10 +21,13 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/util.hpp>
 
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace lo2s
 {
@@ -34,6 +37,11 @@ public:
     FunctionResolver(std::string name) : name_(std::move(name))
     {
     }
+
+    FunctionResolver(FunctionResolver&) = delete;
+    FunctionResolver(FunctionResolver&&) = delete;
+    FunctionResolver& operator=(FunctionResolver&&) = delete;
+    FunctionResolver& operator=(FunctionResolver&) = delete;
 
     static std::shared_ptr<FunctionResolver> cache(const std::string& name)
     {

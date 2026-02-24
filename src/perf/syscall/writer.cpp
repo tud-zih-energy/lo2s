@@ -1,14 +1,18 @@
 #include <lo2s/perf/syscall/writer.hpp>
 
+#include <lo2s/calling_context.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
+#include <lo2s/perf/syscall/reader.hpp>
+#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/trace/trace.hpp>
+
+#include <otf2xx/exception.hpp>
 
 #include <fmt/core.h>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace syscall
+namespace lo2s::perf::syscall
 {
 
 Writer::Writer(ExecutionScope scope, trace::Trace& trace)
@@ -37,10 +41,14 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 
 Writer::~Writer()
 {
-    local_cctx_tree_.cctx_leave(last_tp_, 1);
-
+    try
+    {
+        local_cctx_tree_.cctx_leave(last_tp_, 1);
+    }
+    catch (otf2::exception& e)
+    {
+        Log::error() << "Can not write final syscall leave event, your trace might be broken!";
+    }
     local_cctx_tree_.finalize();
 }
-} // namespace syscall
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::syscall

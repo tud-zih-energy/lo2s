@@ -27,9 +27,10 @@
 
 #include <memory>
 
+#include <cstdint>
+
 extern "C"
 {
-#include <sys/types.h>
 }
 
 namespace lo2s
@@ -45,17 +46,17 @@ public:
     }
 
     template <class T>
-    T* get()
+    const T* get()
     {
-        auto* header =
-            reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+        const auto* header =
+            reinterpret_cast<const struct event_header*>(rb_->tail(sizeof(struct event_header)));
 
         if (header == nullptr)
         {
             return nullptr;
         }
 
-        T* ev = reinterpret_cast<T*>(rb_->tail(header->size));
+        const T* ev = reinterpret_cast<const T*>(rb_->tail(header->size));
         if (ev == nullptr)
         {
             return nullptr;

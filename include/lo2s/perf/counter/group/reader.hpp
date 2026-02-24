@@ -21,26 +21,28 @@
 
 #pragma once
 
+#include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
 #include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
 
 #include <optional>
+#include <stdexcept>
 #include <vector>
+
+#include <cstdint>
 
 extern "C"
 {
-#include <sys/types.h>
+#include <linux/perf_event.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace group
+namespace lo2s::perf::counter::group
 {
 
 // This class is concerned with setting up and reading out perf counters in a group.
@@ -51,7 +53,43 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(ExecutionScope scope, bool enable_on_exec);
+    Reader(ExecutionScope scope, bool enable_on_exec)
+    : counter_collection_(
+          EventComposer::instance().counters_for(MeasurementScope::group_metric(scope))),
+      counter_buffer_(counter_collection_.counters.size() + 1)
+    {
+        if (!counter_collection_.leader.has_value())
+        {
+            throw std::runtime_error(
+                "Invalid Counter Collection: Counter collection has no leader!");
+        }
+
+        Log::debug() << "counter::Reader: leader event: '" << counter_collection_.leader->name()
+                     << "'";
+
+        if (enable_on_exec)
+        {
+            counter_collection_.leader->set_enable_on_exec();
+        }
+        else
+        {
+            counter_collection_.leader->set_disabled();
+        }
+
+        counter_leader_ = counter_collection_.leader->open(scope, config().cgroup_fd);
+
+        for (auto& counter_ev : counter_collection_.counters)
+        {
+            counters_.emplace_back(counter_leader_->open_child(counter_ev, scope));
+        }
+
+        if (!enable_on_exec)
+        {
+            counter_leader_->enable();
+        }
+
+        EventReader<T>::init_mmap(counter_leader_.value().get_fd());
+    }
 
     struct RecordSampleType
     {
@@ -66,9 +104,4 @@ protected:
     CounterCollection counter_collection_;
     GroupCounterBuffer counter_buffer_;
 };
-} // namespace group
-} // namespace counter
-
-// namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::group

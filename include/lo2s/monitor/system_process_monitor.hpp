@@ -21,19 +21,13 @@
 #pragma once
 
 #include <lo2s/monitor/abstract_process_monitor.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <string>
 
-extern "C"
-{
-#include <sys/types.h>
-}
-
-namespace lo2s
-{
-
-namespace monitor
+namespace lo2s::monitor
 {
 
 class SystemProcessMonitor : public AbstractProcessMonitor
@@ -43,18 +37,16 @@ public:
     {
     }
 
-    virtual void insert_process(Process parent, Process process, std::string proc_name,
-                                bool spawn) override;
+    void insert_process(Process parent, Process process, std::string proc_name,
+                        bool spawn) override;
 
-    virtual void insert_thread(Process process, Thread thread, std::string name,
-                               bool spawn) override;
+    void insert_thread(Process process, Thread thread, std::string name, bool spawn) override;
 
-    virtual void exit_thread(Thread thread) override;
+    void exit_thread(Thread thread) override;
 
-    virtual void update_process_name(Process process, const std::string& name) override;
+    void update_process_name(Process process, const std::string& name) override;
 
 private:
     lo2s::trace::Trace& trace_;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

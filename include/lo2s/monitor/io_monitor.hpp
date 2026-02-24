@@ -21,18 +21,14 @@
 
 #pragma once
 
+#include <lo2s/config.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
-#include <lo2s/perf/bio/writer.hpp>
-#include <lo2s/perf/io_reader.hpp>
 #include <lo2s/perf/multi_reader.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-#include <map>
-#include <memory>
+#include <string>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 template <class Writer>
@@ -68,9 +64,7 @@ private:
         return "lo2s::IoMonitor";
     }
 
-private:
     perf::MultiReader<Writer> multi_reader_;
 };
 
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

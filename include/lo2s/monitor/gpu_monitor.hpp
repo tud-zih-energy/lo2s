@@ -20,15 +20,27 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
+#include <lo2s/local_cctx_tree.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/time/converter.hpp>
 #include <lo2s/rb/reader.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/resolvers.hpp>
+#include <lo2s/resolvers/manual_function_resolver.hpp>
+#include <lo2s/trace/fwd.hpp>
+#include <lo2s/types/process.hpp>
 
-namespace lo2s
-{
-namespace monitor
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
+
+#include <cstdint>
+
+namespace lo2s::monitor
 {
 
 class GPUMonitor : public PollMonitor
@@ -46,9 +58,16 @@ public:
 
     void emplace_resolvers(Resolvers& resolvers)
     {
-        resolvers.gpu_function_resolvers[process_].emplace(
-            Mapping(Address(0), Address(highest_func_ + 1), 0),
-            std::make_shared<ManualFunctionResolver>("gpu kernels", functions_));
+        try
+        {
+            resolvers.gpu_function_resolvers[process_].emplace(
+                Mapping(Address(0), Address(highest_func_ + 1), 0),
+                std::make_shared<ManualFunctionResolver>("gpu kernels", functions_));
+        }
+        catch (lo2s::Range::Error& e)
+        {
+            Log::warn() << "Could not create GPU function resolver: " << e.what();
+        }
     }
 
 private:
@@ -64,5 +83,4 @@ private:
     std::map<Address, std::string> functions_;
     uint64_t highest_func_ = 0;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

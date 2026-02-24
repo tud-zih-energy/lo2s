@@ -23,6 +23,8 @@
 
 #include <lo2s/execution_scope.hpp>
 
+#include <cstdint>
+
 namespace lo2s
 {
 

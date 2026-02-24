@@ -21,14 +21,13 @@
 #pragma once
 
 #include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/tracepoint/format.hpp>
 
-#include <nitro/lang/string.hpp>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace tracepoint
+namespace lo2s::perf::tracepoint
 {
 
 /**
@@ -68,7 +67,7 @@ public:
         throw std::out_of_range("field not found");
     }
 
-    int id()
+    int id() const
     {
         return id_;
     }
@@ -76,11 +75,8 @@ public:
 private:
     void parse_format_line(const std::string& line);
 
-    const static std::filesystem::path base_path_;
     int id_;
     std::vector<tracepoint::EventField> fields_;
 };
 
-} // namespace tracepoint
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::tracepoint

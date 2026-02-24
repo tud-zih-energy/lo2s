@@ -37,15 +37,14 @@
 #endif
 #include <lo2s/monitor/socket_monitor.hpp>
 #include <lo2s/monitor/tracepoint_monitor.hpp>
+#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/resolvers.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <memory>
 #include <vector>
 
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 class MainMonitor
@@ -53,6 +52,10 @@ class MainMonitor
 public:
     MainMonitor();
 
+    MainMonitor& operator=(MainMonitor&) = delete;
+    MainMonitor& operator=(MainMonitor&&) = delete;
+    MainMonitor(MainMonitor&) = delete;
+    MainMonitor(MainMonitor&&) = delete;
     virtual ~MainMonitor();
 
 protected:
@@ -76,5 +79,4 @@ protected:
     std::vector<std::unique_ptr<nec::NecMonitorMain>> nec_monitors_;
 #endif
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

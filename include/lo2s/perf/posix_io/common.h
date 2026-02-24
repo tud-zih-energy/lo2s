@@ -21,6 +21,7 @@
 
 #pragma once
 
+// NOLINTBEGIN(cppcoreguidelines-use-enum-class)
 enum type
 {
     OPEN,
@@ -31,9 +32,11 @@ enum type
     WRITE_EXIT
 };
 
+// NOLINTEND(cppcoreguidelines-use-enum-class)
+
 struct syscalls_sys_enter_openat
 {
-    unsigned long __syscall_nr;
+    unsigned long syscall_nr;
     char padding[4];
     unsigned long long dfd;
     char* filename;
@@ -43,14 +46,14 @@ struct syscalls_sys_enter_openat
 
 struct syscalls_sys_exit_openat
 {
-    long __syscall_nr;
+    long syscall_nr;
     char padding[4];
     long ret;
 };
 
 struct syscalls_sys_enter_rw
 {
-    long __syscall_nr;
+    long syscall_nr;
     char padding0[4];
     unsigned long long fd;
     unsigned long long buf;
@@ -59,7 +62,7 @@ struct syscalls_sys_enter_rw
 
 struct syscalls_sys_enter_close
 {
-    long __syscall_nr;
+    long syscall_nr;
     char padding0[4];
     unsigned long long fd;
 };
@@ -81,6 +84,6 @@ struct open_event
 struct read_write_event
 {
     struct posix_event_header header;
-    uint64_t buf;
-    uint64_t count;
+    long long buf;
+    long long count;
 };

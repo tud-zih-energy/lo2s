@@ -21,6 +21,13 @@
 
 #include <lo2s/resolvers.hpp>
 
+#include <lo2s/address.hpp>
+#include <lo2s/function_resolver.hpp>
+#include <lo2s/instruction_resolver.hpp>
+#include <lo2s/types/process.hpp>
+
+#include <string>
+
 namespace lo2s
 {
 void Resolvers::fork(Process parent, Process process)

@@ -22,6 +22,11 @@
 
 #include <lo2s/execution_scope.hpp>
 
+#include <stdexcept>
+#include <string>
+
+#include <fmt/format.h>
+
 namespace lo2s
 {
 
@@ -46,7 +51,7 @@ struct MeasurementScope
     MeasurementScopeType type;
     ExecutionScope scope;
 
-    MeasurementScope() : type(MeasurementScopeType::UNKNOWN), scope()
+    MeasurementScope() : type(MeasurementScopeType::UNKNOWN)
     {
     }
 
@@ -120,10 +125,7 @@ struct MeasurementScope
         {
             return lhs.type < rhs.type;
         }
-        else
-        {
-            return lhs.scope < rhs.scope;
-        }
+        return lhs.scope < rhs.scope;
     }
 
     std::string name() const
@@ -152,7 +154,7 @@ struct MeasurementScope
         case MeasurementScopeType::OPENMP:
             return fmt::format("OpenMP events for {}", scope.name());
         default:
-            throw new std::runtime_error("Unknown ExecutionScopeType!");
+            throw std::runtime_error("Unknown ExecutionScopeType!");
         }
     }
 };

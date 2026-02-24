@@ -31,13 +31,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace lo2s
-{
-namespace perf
-{
-namespace counter
-{
-namespace group
+namespace lo2s::perf::counter::group
 {
 struct GroupReadFormat
 {
@@ -48,25 +42,25 @@ struct GroupReadFormat
 
     static constexpr std::size_t total_size(std::size_t ncounters)
     {
-        return sizeof(GroupReadFormat) + (ncounters - 1) * sizeof(uint64_t);
+        return sizeof(GroupReadFormat) + ((ncounters - 1) * sizeof(uint64_t));
     }
 };
 
 class GroupCounterBuffer : public CounterBuffer<GroupCounterBuffer>
 {
 public:
-    GroupCounterBuffer(std::size_t ncounters) : CounterBuffer<GroupCounterBuffer>(ncounters)
+    GroupCounterBuffer(std::size_t ncounters)
+    : CounterBuffer<GroupCounterBuffer>(ncounters),
+      buf_({ std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)),
+             std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)) }),
+      current_(reinterpret_cast<GroupReadFormat*>(buf_.front().get())),
+      previous_(reinterpret_cast<GroupReadFormat*>(buf_.back().get()))
     {
-        buf_ = { std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)),
-                 std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)) };
-
-        current_ = reinterpret_cast<GroupReadFormat*>(buf_.front().get());
         current_->nr = ncounters;
         current_->time_enabled = 0;
         current_->time_running = 0;
         std::memset(&current_->values, 0, ncounters * sizeof(uint64_t));
 
-        previous_ = reinterpret_cast<GroupReadFormat*>(buf_.back().get());
         previous_->nr = ncounters;
         previous_->time_enabled = 0;
         previous_->time_running = 0;
@@ -128,7 +122,4 @@ protected:
     GroupReadFormat* previous_;
 };
 
-} // namespace group
-} // namespace counter
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::counter::group

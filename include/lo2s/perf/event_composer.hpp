@@ -22,13 +22,20 @@
 #pragma once
 
 #include <lo2s/config.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
-#include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/perf/event_attr.hpp>
+#include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/util.hpp>
 
-namespace lo2s
-{
-namespace perf
+#include <optional>
+#include <string>
+#include <vector>
+
+#include <cstdint>
+
+namespace lo2s::perf
 {
 class EventComposer
 {
@@ -51,11 +58,14 @@ public:
     std::vector<perf::tracepoint::TracepointEventAttr> emplace_tracepoints();
 
 private:
+    counter::CounterCollection group_counters_for(ExecutionScope scope);
+    counter::CounterCollection userspace_counters_for(ExecutionScope scope);
+
     void watermark(EventAttr& ev)
     {
         // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
         // Default behaviour is to wakeup on every event, which is horrible performance wise
-        ev.set_watermark(0.8 * config().mmap_pages * sysconf(_SC_PAGESIZE));
+        ev.set_watermark(0.8 * config().mmap_pages * get_page_size());
     }
 
     void emplace_userspace_counters();
@@ -68,5 +78,4 @@ private:
 
     bool exclude_kernel_;
 };
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

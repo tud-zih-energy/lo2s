@@ -23,7 +23,9 @@
 
 #include <deque>
 #include <memory>
+#include <utility>
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -32,7 +34,7 @@ extern "C"
 #include <linux/perf_event.h>
 }
 
-namespace lo2s
+namespace lo2s::perf
 {
 
 template <class T>
@@ -43,12 +45,14 @@ public:
     PerfEventCache(const PerfEventCache&) = delete;
     PerfEventCache& operator=(const PerfEventCache&) = delete;
 
-    PerfEventCache(PerfEventCache&& other)
+    PerfEventCache(PerfEventCache&& other) noexcept
     {
         std::swap(data_, other.data_);
     }
 
-    PerfEventCache& operator=(PerfEventCache&& other)
+    ~PerfEventCache() = default;
+
+    PerfEventCache& operator=(PerfEventCache&& other) noexcept
     {
         std::swap(data_, other.data_);
         return *this;
@@ -81,6 +85,7 @@ struct RecordMmapType
     RecordMmapType& operator=(const RecordMmapType&) = delete;
     RecordMmapType(RecordMmapType&&) = delete;
     RecordMmapType& operator=(RecordMmapType&&) = delete;
+    ~RecordMmapType() = default;
 
     struct perf_event_header header;
     uint32_t pid, tid;
@@ -101,4 +106,4 @@ struct sample_id
 
 using RawMemoryMapCache = std::deque<PerfEventCache<RecordMmapType>>;
 
-} // namespace lo2s
+} // namespace lo2s::perf

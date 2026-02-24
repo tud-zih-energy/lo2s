@@ -21,7 +21,14 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
 #include <lo2s/function_resolver.hpp>
+#include <lo2s/line_info.hpp>
+
+#include <map>
+#include <memory>
+
+#include <cstdint>
 
 namespace lo2s
 {
@@ -32,7 +39,7 @@ public:
 
     static std::shared_ptr<Kallsyms> cache()
     {
-        static std::shared_ptr<Kallsyms> k = std::make_shared<Kallsyms>();
+        const static std::shared_ptr<Kallsyms> k = std::make_shared<Kallsyms>();
         return k;
     }
 

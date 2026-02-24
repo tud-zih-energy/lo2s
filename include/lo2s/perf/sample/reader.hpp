@@ -22,35 +22,25 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/error.hpp>
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
-#include <lo2s/perf/event_resolver.hpp>
-#include <lo2s/perf/util.hpp>
-#include <lo2s/util.hpp>
 
 #include <stdexcept>
 #include <system_error>
 
-#include <cstdlib>
-#include <cstring>
+#include <cstdint>
+
+#include <fmt/format.h>
 
 extern "C"
 {
-#include <fcntl.h>
 #include <linux/perf_event.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <unistd.h>
 }
 
-namespace lo2s
-{
-namespace perf
-{
-
-namespace sample
+namespace lo2s::perf::sample
 {
 template <class T>
 class Reader : public EventReader<T>
@@ -64,6 +54,7 @@ public:
         RecordSampleType& operator=(const RecordSampleType&) = delete;
         RecordSampleType(RecordSampleType&&) = delete;
         RecordSampleType& operator=(RecordSampleType&&) = delete;
+        ~RecordSampleType() = default;
 
         struct perf_event_header header;
         uint64_t ip;
@@ -75,55 +66,13 @@ public:
         uint64_t ips[1]; // ISO C++ forbits zero-size array
     };
 
-protected:
-    using EventReader<T>::init_mmap;
-
-    Reader(ExecutionScope scope, bool enable_on_exec) : record_callgraph_(config().enable_callgraph)
-    {
-        Log::debug() << "initializing event_reader for:" << scope.name()
-                     << ", enable_on_exec: " << enable_on_exec;
-
-        try
-        {
-            EventAttr event = EventComposer::instance().create_sampling_event();
-            if (enable_on_exec)
-            {
-                event.set_enable_on_exec();
-            }
-            else
-            {
-                event.set_disabled();
-            }
-
-            event_ = event.open(scope, config().cgroup_fd);
-        }
-        catch (std::system_error& e)
-        {
-            throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
-                                                 config().perf_sampling_event, scope.name(),
-                                                 e.what()));
-        }
-
-        try
-        {
-            init_mmap(event_.value().get_fd());
-            Log::debug() << "mmap initialized";
-
-            if (!enable_on_exec)
-            {
-                event_.value().enable();
-            }
-        }
-        catch (...)
-        {
-            throw;
-        }
-    }
-
     Reader(const Reader&) = delete;
     Reader(Reader&&) = delete;
     Reader& operator=(const Reader&) = delete;
     Reader& operator=(Reader&&) = delete;
+
+protected:
+    using EventReader<T>::init_mmap;
 
     ~Reader()
     {
@@ -140,12 +89,49 @@ protected:
         }
     }
 
-protected:
     bool record_callgraph_;
 
 private:
-    std::optional<EventGuard> event_;
+    static EventGuard create_sampling_event(ExecutionScope scope, bool enable_on_exec)
+    {
+        Log::debug() << "initializing event_reader for:" << scope.name()
+                     << ", enable_on_exec: " << enable_on_exec;
+        try
+        {
+            EventAttr event = EventComposer::instance().create_sampling_event();
+            if (enable_on_exec)
+            {
+                event.set_enable_on_exec();
+            }
+            else
+            {
+                event.set_disabled();
+            }
+
+            return event.open(scope, config().cgroup_fd);
+        }
+        catch (std::system_error& e)
+        {
+            throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
+                                                 config().perf_sampling_event, scope.name(),
+                                                 e.what()));
+        }
+    }
+
+    Reader(ExecutionScope scope, bool enable_on_exec)
+    : record_callgraph_(config().enable_callgraph),
+      event_(create_sampling_event(scope, enable_on_exec))
+    {
+        init_mmap(event_.get_fd());
+        Log::debug() << "mmap initialized";
+
+        if (!enable_on_exec)
+        {
+            event_.enable();
+        }
+    }
+
+    friend T;
+    EventGuard event_;
 };
-} // namespace sample
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::sample

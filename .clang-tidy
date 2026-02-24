@@ -1,0 +1,65 @@
+---
+CheckOptions:
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: '.*bits/.*;
+            .*asm-generic/.*;
+            .*linux/time.h;
+            .*include/stdlib.h;
+            ,*include/otf2xx/definition/pre_fwd.hpp;
+            .*include/signal.h;
+            /usr/include/time.h;
+            .*cupti_activity_deprecated.h'
+
+Checks: >
+  clang-diagnostic-*,
+  bugprone-*,
+  cert-*,
+  misc-*,
+  performance-*,
+  readability-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-avoid-c-arrays,
+  -modernize-use-nodiscard,
+  -modernize-use-scoped-lock,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-convert-member-functions-to-static,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-no-malloc,
+  -performance-enum-size,
+  -performance-inefficient-string-concatenation,
+  -performance-avoid-endl,
+  -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
+  -readability-suspicious-call-argument,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-pro-type-member-init,
+  -clang-analyzer-osx*,
+  -clang-analyzer-webkit*,
+  -performance-no-int-to-ptr,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -readability-magic-numbers,
+  -cppcoreguidelines-narrowing-conversions,
+  -bugprone-narrowing-conversions,
+  -clang-analyzer-optin.performance.Padding,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-macro-to-enum,modernize-macro-to-enum,
+  -modernize-use-transparent-functors,
+  -modernize-macro-to-enum,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  -bugprone-crtp-constructor-accessibility
+...

@@ -21,16 +21,15 @@
 
 #pragma once
 
+#include <lo2s/types/process.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <mutex>
 #include <set>
-extern "C"
-{
-#include <sys/types.h>
-}
+#include <string>
 
-#include <lo2s/types/process.hpp>
+#include <cstddef>
 
 namespace lo2s
 {
@@ -63,7 +62,7 @@ private:
 
     std::string trace_dir_;
 
-    int exit_code_;
+    int exit_code_{ 0 };
 };
 
 Summary& summary();

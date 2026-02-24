@@ -20,29 +20,20 @@
 
 #pragma once
 
+#include <lo2s/execution_scope.hpp>
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/perf/syscall/writer.hpp>
+#include <lo2s/resolvers.hpp>
+#include <lo2s/trace/fwd.hpp>
 
-#include <array>
-#include <chrono>
 #include <memory>
-#include <thread>
+#include <string>
 
-#include <cstddef>
-
-extern "C"
-{
-#include <sched.h>
-#include <unistd.h>
-}
-
-namespace lo2s
-{
-namespace monitor
+namespace lo2s::monitor
 {
 
 class ScopeMonitor : public PollMonitor
@@ -60,10 +51,7 @@ public:
         {
             return "lo2s::CpuMonitor";
         }
-        else
-        {
-            return "lo2s::ThreadMonitor";
-        }
+        return "lo2s::ThreadMonitor";
     }
 
     void emplace_resolvers(Resolvers& resolvers)
@@ -81,5 +69,4 @@ private:
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;
     std::unique_ptr<perf::counter::userspace::Writer> userspace_counter_writer_;
 };
-} // namespace monitor
-} // namespace lo2s
+} // namespace lo2s::monitor

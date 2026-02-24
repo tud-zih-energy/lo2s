@@ -21,7 +21,12 @@
 
 #pragma once
 
+#include <lo2s/address.hpp>
 #include <lo2s/function_resolver.hpp>
+#include <lo2s/line_info.hpp>
+
+#include <map>
+#include <string>
 
 namespace lo2s
 {

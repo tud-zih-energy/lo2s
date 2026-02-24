@@ -23,13 +23,11 @@
 
 #include <string>
 
-#include <cstdint>
-
 namespace lo2s
 {
 
-std::string syscall_name_for_nr(int64_t syscall_nr);
+std::string syscall_name_for_nr(int syscall_nr);
 
-int64_t syscall_nr_for_name(const std::string name);
+int syscall_nr_for_name(const std::string& name);
 
 } // namespace lo2s

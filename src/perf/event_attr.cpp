@@ -22,18 +22,40 @@
 #include <lo2s/perf/event_attr.hpp>
 
 #include <lo2s/build_config.hpp>
-#include <lo2s/perf/event_resolver.hpp>
+#include <lo2s/error.hpp>
+#include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
+#include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/util.hpp>
 
-#include <nitro/lang/string.hpp>
-
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
+#include <ios>
+#include <iterator>
+#include <limits>
+#include <map>
 #include <optional>
+#include <ostream>
 #include <regex>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include <cerrno>
+#include <cstdint>
+#include <cstring>
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
+#include <linux/hw_breakpoint.h>
+#include <linux/perf_event.h>
+#include <unistd.h>
 
 extern "C"
 {
@@ -41,11 +63,10 @@ extern "C"
 #include <sys/ioctl.h>
 }
 
-namespace lo2s
+namespace lo2s::perf
 {
-namespace perf
+namespace
 {
-
 std::set<Cpu> get_cpu_set_for(EventAttr ev)
 {
     std::set<Cpu> cpus = std::set<Cpu>();
@@ -74,14 +95,10 @@ std::optional<T> try_read_file(const std::string& filename)
     return val;
 }
 
-static std::uint64_t parse_bitmask(const std::string& format)
+std::uint64_t parse_bitmask(const std::string& format)
 {
-    enum BITMASK_REGEX_GROUPS
-    {
-        BM_WHOLE_MATCH,
-        BM_BEGIN,
-        BM_END,
-    };
+    constexpr int BM_BEGIN = 1;
+    constexpr int BM_END = 2;
 
     std::uint64_t mask = 0x0;
 
@@ -90,8 +107,8 @@ static std::uint64_t parse_bitmask(const std::string& format)
     for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
     {
         const auto& match = *i;
-        int start = std::stoi(match[BM_BEGIN]);
-        int end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
+        int const start = std::stoi(match[BM_BEGIN]);
+        int const end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
 
         const auto len = (end + 1) - start;
         if (start < 0 || end > 63 || len > 64)
@@ -110,7 +127,7 @@ static std::uint64_t parse_bitmask(const std::string& format)
         // Shifting by 64 bits causes undefined behaviour, so in this case set
         // all bits by assigning the maximum possible value for std::uint64_t.
         const std::uint64_t bits =
-            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : (1ull << len) - 1;
+            (len == 64) ? std::numeric_limits<std::uint64_t>::max() : (1ULL << len) - 1;
 
         mask |= bits << start;
     }
@@ -119,23 +136,24 @@ static std::uint64_t parse_bitmask(const std::string& format)
     return mask;
 }
 
-static constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mask)
+constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mask)
 {
     std::uint64_t res = 0;
     for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
     {
-        if (mask & (1ull << mask_bit))
+        if (mask & (1ULL << mask_bit))
         {
-            res |= ((value >> value_bit) & (1ull << 0)) << mask_bit;
+            res |= ((value >> value_bit) & (1ULL << 0)) << mask_bit;
             value_bit++;
         }
     }
     return res;
 }
+} // namespace
 
-EventAttr::EventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
+EventAttr::EventAttr(std::string name, perf_type_id type, std::uint64_t config,
                      std::uint64_t config1)
-: name_(name)
+: name_(std::move(name))
 {
     memset(&attr_, 0, sizeof(attr_));
     attr_.size = sizeof(attr_);
@@ -148,7 +166,7 @@ EventAttr::EventAttr(const std::string& name, perf_type_id type, std::uint64_t c
 PredefinedEventAttr::PredefinedEventAttr(const std::string& name, perf_type_id type,
                                          std::uint64_t config,
 
-                                         std::uint64_t config1, std::set<Cpu> cpus)
+                                         std::uint64_t config1, const std::set<Cpu>& cpus)
 : EventAttr(name, type, config, config1)
 {
     if (cpus.empty())
@@ -235,7 +253,6 @@ bool EventAttr::event_is_openable()
                              << " not available: " << std::string(std::strerror(errno));
                 break;
             }
-            throw EventAttr::InvalidEvent("not available!");
 
             return false;
         }
@@ -245,18 +262,18 @@ bool EventAttr::event_is_openable()
 
 void EventAttr::update_availability()
 {
-    bool proc = can_open(Thread(0).as_scope());
-    bool system = can_open(supported_cpus().begin()->as_scope());
+    bool const proc = can_open(Thread(0).as_scope());
+    bool const system = can_open(supported_cpus().begin()->as_scope());
 
-    if (proc == false && system == false)
+    if (!proc && !system)
     {
         availability_ = Availability::UNAVAILABLE;
     }
-    else if (proc == true && system == false)
+    else if (proc && !system)
     {
         availability_ = Availability::PROCESS_MODE;
     }
-    else if (proc == false && system == true)
+    else if (!proc && system)
     {
         availability_ = Availability::SYSTEM_MODE;
     }
@@ -274,11 +291,13 @@ RawEventAttr::RawEventAttr(const std::string& ev_name)
     event_is_openable();
 }
 
-static void print_bits(std::ostream& stream, const std::string& name,
-                       std::map<uint64_t, std::string> known_bits, uint64_t value)
+namespace
+{
+void print_bits(std::ostream& stream, const std::string& name,
+                const std::map<uint64_t, std::string>& known_bits, uint64_t value)
 {
     std::vector<std::string> active_bits;
-    for (auto elem : known_bits)
+    for (const auto& elem : known_bits)
     {
         if (value & elem.first)
         {
@@ -305,7 +324,9 @@ static void print_bits(std::ostream& stream, const std::string& name,
     }
     stream << "\t" << name << ": " << active_bits_str << "\n";
 }
+} // namespace
 
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
 {
     stream << "{\n";
@@ -338,7 +359,7 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
     stream << std::hex << "\tconfig2: 0x" << event.attr_.config2 << std::dec << "\n";
     stream << "\tprecise_ip: " << event.attr_.precise_ip << "/3\n";
 
-    std::map<uint64_t, std::string> read_format = {
+    std::map<uint64_t, std::string> const read_format = {
         { PERF_FORMAT_TOTAL_TIME_ENABLED, "PERF_FORMAT_TOTAL_TIME_ENABLED" },
         { PERF_FORMAT_TOTAL_TIME_RUNNING, "PERF_FORMAT_TOTAL_TIME_RUNNING" },
         { PERF_FORMAT_ID, "PERF_FORMAT_ID" },
@@ -350,11 +371,12 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
 #ifndef USE_HW_BREAKPOINT_COMPAT
     if (event.attr_.type == PERF_TYPE_BREAKPOINT)
     {
-        std::map<uint64_t, std::string> bp_types = { { HW_BREAKPOINT_EMPTY, "HW_BREAKPOINT_EMPTY" },
-                                                     { HW_BREAKPOINT_W, "HW_BREAKPOINT_W" },
-                                                     { HW_BREAKPOINT_R, "HW_BREAKPOINT_R" },
-                                                     { HW_BREAKPOINT_RW, "HW_BREAKPOINT_RW" },
-                                                     { HW_BREAKPOINT_X, "HW_BREAKPOINT_X" } };
+        std::map<uint64_t, std::string> const bp_types = { { HW_BREAKPOINT_EMPTY,
+                                                             "HW_BREAKPOINT_EMPTY" },
+                                                           { HW_BREAKPOINT_W, "HW_BREAKPOINT_W" },
+                                                           { HW_BREAKPOINT_R, "HW_BREAKPOINT_R" },
+                                                           { HW_BREAKPOINT_RW, "HW_BREAKPOINT_RW" },
+                                                           { HW_BREAKPOINT_X, "HW_BREAKPOINT_X" } };
 
         print_bits(stream, "bp_type", bp_types, event.attr_.bp_type);
         stream << "\tbp_addr: 0x" << std::hex << event.attr_.bp_addr << std::dec << "\n";
@@ -372,6 +394,8 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
         case HW_BREAKPOINT_LEN_8:
             stream << "\tbp_len: HW_BREAKPOINT_LEN_8\n";
             break;
+        default:
+            stream << "\tbp_len: " << event.attr_.bp_len << "\n";
         }
     }
 #endif
@@ -384,7 +408,7 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
         stream << "\tsample_period: " << event.attr_.sample_period << " event(s)\n";
     }
 
-    std::map<uint64_t, std::string> sample_format = {
+    std::map<uint64_t, std::string> const sample_format = {
         { PERF_SAMPLE_CALLCHAIN, "PERF_SAMPLE_CALLCHAIN" },
         { PERF_SAMPLE_READ, "PERF_SAMPLE_READ" },
         { PERF_SAMPLE_IP, "PERF_SAMPLE_IP" },
@@ -513,6 +537,8 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
     return stream;
 }
 
+// NOLINTEND(readability-function-cognitive-complexity)
+
 SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
 : EventAttr(ev_name, static_cast<perf_type_id>(0), 0)
 {
@@ -534,13 +560,6 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
      *
      * */
 
-    enum EVENT_DESCRIPTION_REGEX_GROUPS
-    {
-        ED_WHOLE_MATCH,
-        ED_PMU,
-        ED_NAME,
-    };
-
     static const std::regex ev_name_regex(R"(([a-z0-9-_]+)[\/:]([a-z0-9-_]+)\/?)");
     std::smatch ev_name_match;
 
@@ -552,13 +571,13 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
     }
 
     name_ = ev_name_match[2];
-    std::string pmu_name = ev_name_match[1];
+    std::string const pmu_name = ev_name_match[1];
     pmu_path = std::filesystem::path("/sys/bus/event_source/devices") / pmu_name;
 
     Log::debug() << "parsing event description: pmu='" << pmu_name << "', event='" << name_ << "'";
 
     // read PMU type id
-    auto type = try_read_file<std::underlying_type<perf_type_id>::type>(pmu_path / "type");
+    auto type = try_read_file<std::underlying_type_t<perf_type_id>>(pmu_path / "type");
 
     if (!type.has_value())
     {
@@ -595,12 +614,8 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
      *
      *  */
 
-    enum EVENT_CONFIG_REGEX_GROUPS
-    {
-        EC_WHOLE_MATCH,
-        EC_TERM,
-        EC_VALUE,
-    };
+    constexpr int EC_TERM = 1;
+    constexpr int EC_VALUE = 2;
 
     // If the processor is heterogenous, "cpus" contains the cores that support this PMU. If the
     // PMU is an uncore PMU "cpumask" contains the cores that are logically assigned to that
@@ -644,7 +659,7 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
         static_assert(sizeof(std::uint64_t) >= sizeof(unsigned long),
                       "May not convert from unsigned long to uint64_t!");
 
-        std::uint64_t val = std::stol(value, nullptr, 0);
+        std::uint64_t const val = std::stol(value, nullptr, 0);
         Log::debug() << "parsing config assignment: " << term << " = " << std::hex << std::showbase
                      << val << std::dec << std::noshowbase;
         event_attr_update(val, format.value());
@@ -668,34 +683,30 @@ SysfsEventAttr::SysfsEventAttr(const std::string& ev_name)
 
 EventGuard EventAttr::open(std::variant<Cpu, Thread> location, int cgroup_fd)
 {
-    return EventGuard(*this, location, -1, cgroup_fd);
+    return { *this, location, -1, cgroup_fd };
 }
 
 EventGuard EventAttr::open(ExecutionScope location, int cgroup_fd)
 {
     if (location.is_cpu())
     {
-        return EventGuard(*this, location.as_cpu(), -1, cgroup_fd);
+        return { *this, location.as_cpu(), -1, cgroup_fd };
     }
-    else
-    {
-        return EventGuard(*this, location.as_thread(), -1, cgroup_fd);
-    }
+
+    return { *this, location.as_thread(), -1, cgroup_fd };
 }
 
 bool EventAttr::can_open(ExecutionScope location)
 {
-    int fd = perf_event_open(&attr(), location, -1, 0, -1);
+    int const fd = perf_event_open(&attr(), location, -1, 0, -1);
 
     if (fd < 0)
     {
         return false;
     }
-    else
-    {
-        close(fd);
-        return true;
-    }
+
+    close(fd);
+    return true;
 }
 
 EventGuard EventAttr::open_as_group_leader(ExecutionScope location, int cgroup_fd)
@@ -706,21 +717,17 @@ EventGuard EventAttr::open_as_group_leader(ExecutionScope location, int cgroup_f
     return open(location, cgroup_fd);
 }
 
-EventGuard EventGuard::open_child(EventAttr& child, ExecutionScope location, int cgroup_fd)
+EventGuard EventGuard::open_child(EventAttr& child, ExecutionScope location, int cgroup_fd) const
 {
     if (location.is_cpu())
     {
-        return EventGuard(child, location.as_cpu(), fd_, cgroup_fd);
+        return { child, location.as_cpu(), fd_, cgroup_fd };
     }
-    else
-    {
-        return EventGuard(child, location.as_thread(), fd_, cgroup_fd);
-    }
+    return { child, location.as_thread(), fd_, cgroup_fd };
 }
 
 EventGuard::EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd,
                        int cgroup_fd)
-: fd_(-1)
 {
     ExecutionScope scope;
     std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
@@ -741,10 +748,10 @@ EventGuard::EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int gr
         Log::trace() << "Couldn't set event nonblocking: " << strerror(errno);
         throw_errno();
     }
-    Log::trace() << "Succesfully opened perf event! fd: " << fd_;
+    Log::trace() << "SuccesfULLy opened perf event! fd: " << fd_;
 }
 
-void EventGuard::enable()
+void EventGuard::enable() const
 {
     if (ioctl(fd_, PERF_EVENT_IOC_ENABLE) == -1)
     {
@@ -752,7 +759,7 @@ void EventGuard::enable()
     }
 }
 
-void EventGuard::disable()
+void EventGuard::disable() const
 {
     if (ioctl(fd_, PERF_EVENT_IOC_DISABLE) == -1)
     {
@@ -760,7 +767,7 @@ void EventGuard::disable()
     }
 }
 
-void EventGuard::set_output(const EventGuard& other_ev)
+void EventGuard::set_output(const EventGuard& other_ev) const
 {
     if (ioctl(fd_, PERF_EVENT_IOC_SET_OUTPUT, other_ev.get_fd()) == -1)
     {
@@ -768,7 +775,7 @@ void EventGuard::set_output(const EventGuard& other_ev)
     }
 }
 
-void EventGuard::set_syscall_filter(const std::vector<int64_t>& syscall_filter)
+void EventGuard::set_syscall_filter(const std::vector<int64_t>& syscall_filter) const
 {
     if (syscall_filter.empty())
     {
@@ -778,7 +785,7 @@ void EventGuard::set_syscall_filter(const std::vector<int64_t>& syscall_filter)
     std::vector<std::string> names;
     std::transform(syscall_filter.cbegin(), syscall_filter.end(), std::back_inserter(names),
                    [](const auto& elem) { return fmt::format("id == {}", elem); });
-    std::string filter = fmt::format("{}", fmt::join(names, "||"));
+    std::string const filter = fmt::format("{}", fmt::join(names, "||"));
 
     if (ioctl(fd_, PERF_EVENT_IOC_SET_FILTER, filter.c_str()) == -1)
     {
@@ -786,5 +793,4 @@ void EventGuard::set_syscall_filter(const std::vector<int64_t>& syscall_filter)
     }
 }
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

@@ -21,15 +21,15 @@
 
 #pragma once
 
+#include <lo2s/log.hpp>
 #include <lo2s/perf/event_attr.hpp>
 
-#include <optional>
 #include <string>
 #include <vector>
 
 #include <cstring>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 extern "C"
 {
@@ -38,9 +38,7 @@ extern "C"
 #include <perfmon/pfmlib_perf_event.h>
 }
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 class PFM4
@@ -48,9 +46,15 @@ class PFM4
 public:
     static const PFM4& instance()
     {
-        static PFM4 pfm4;
+        const static PFM4 pfm4;
         return pfm4;
     }
+
+    PFM4(PFM4&) = delete;
+    PFM4(PFM4&&) = delete;
+
+    PFM4& operator=(PFM4&) = delete;
+    PFM4& operator=(PFM4&&) = delete;
 
     ~PFM4()
     {
@@ -66,7 +70,8 @@ public:
         memset(&attr, 0, sizeof(attr));
         arg.attr = &attr;
 
-        int ret = pfm_get_os_event_encoding(ev_desc.c_str(), PFM_PLM3, PFM_OS_PERF_EVENT, &arg);
+        const int ret =
+            pfm_get_os_event_encoding(ev_desc.c_str(), PFM_PLM3, PFM_OS_PERF_EVENT, &arg);
 
         if (ret != PFM_SUCCESS)
         {
@@ -77,6 +82,56 @@ public:
             PredefinedEventAttr(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
 
         return ev;
+    }
+
+    std::vector<EventAttr> get_subevents(std::string& full_event_name, pfm_event_info_t& info) const
+    {
+        std::vector<EventAttr> events;
+        bool has_umask = false;
+        for (int attr_id = 0; attr_id < info.nattrs; attr_id++)
+        {
+            pfm_event_attr_info_t attr_info;
+            memset(&attr_info, 0, sizeof(attr_info));
+            auto ret = pfm_get_event_attr_info(info.idx, attr_id, PFM_OS_PERF_EVENT, &attr_info);
+
+            if (ret != PFM_SUCCESS)
+            {
+                Log::warn() << "Could not get event info for " << full_event_name << ": "
+                            << pfm_strerror(ret);
+            }
+
+            if (attr_info.type != PFM_ATTR_UMASK)
+            {
+                continue;
+            }
+            has_umask = true;
+            try
+            {
+                auto uevent =
+                    pfm4_read_event(fmt::format("{}:{}", full_event_name, attr_info.name));
+                events.emplace_back(uevent);
+            }
+            catch (EventAttr::InvalidEvent& e)
+            {
+                Log::debug() << "Can not parse PFM event: "
+                             << fmt::format("{}:{}", full_event_name, attr_info.name) << ": "
+                             << e.what();
+            }
+        }
+
+        if (!has_umask)
+        {
+            try
+            {
+                auto event = pfm4_read_event(std::string(full_event_name));
+                events.emplace_back(event);
+            }
+            catch (EventAttr::InvalidEvent& e)
+            {
+                Log::debug() << "Can not parse PFM event: " << full_event_name << ": " << e.what();
+            }
+        }
+        return events;
     }
 
     std::vector<EventAttr> get_pfm4_events() const
@@ -109,51 +164,8 @@ public:
                 // the subevents
                 if (info.nattrs != 0)
                 {
-                    bool has_umask = false;
-                    for (int attr_id = 0; attr_id < info.nattrs; attr_id++)
-                    {
-                        pfm_event_attr_info_t attr_info;
-                        memset(&attr_info, 0, sizeof(attr_info));
-                        auto ret = pfm_get_event_attr_info(info.idx, attr_id, PFM_OS_PERF_EVENT,
-                                                           &attr_info);
-
-                        if (ret != PFM_SUCCESS)
-                        {
-                            Log::warn() << "Could not get event info for " << full_event_name
-                                        << ": " << pfm_strerror(ret);
-                        }
-
-                        if (attr_info.type != PFM_ATTR_UMASK)
-                        {
-                            continue;
-                        }
-                        else
-                        {
-                            has_umask = true;
-                            try
-                            {
-
-                                auto uevent = pfm4_read_event(
-                                    fmt::format("{}:{}", full_event_name, attr_info.name));
-                                events.emplace_back(uevent);
-                            }
-                            catch (EventAttr::InvalidEvent& e)
-                            {
-                            }
-                        }
-                    }
-
-                    if (!has_umask)
-                    {
-                        try
-                        {
-                            auto event = pfm4_read_event(std::string(full_event_name));
-                            events.emplace_back(event);
-                        }
-                        catch (EventAttr::InvalidEvent& e)
-                        {
-                        }
-                    }
+                    auto sub_evs = get_subevents(full_event_name, info);
+                    events.insert(events.end(), sub_evs.begin(), sub_evs.end());
                 }
                 else
                 {
@@ -164,6 +176,8 @@ public:
                     }
                     catch (EventAttr::InvalidEvent& e)
                     {
+                        Log::debug()
+                            << "Can not parse PFM event: " << full_event_name << ": " << e.what();
                     }
                 }
             }
@@ -179,5 +193,4 @@ private:
     }
 };
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

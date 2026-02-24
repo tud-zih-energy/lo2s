@@ -20,25 +20,29 @@
 
 #pragma once
 
-#include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
-#include <lo2s/perf/tracepoint/format.hpp>
-#include <lo2s/perf/util.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/thread.hpp>
 
 #include <optional>
 #include <ostream>
 #include <set>
+#include <stdexcept>
+#include <string>
 #include <type_traits>
+#include <utility>
 #include <variant>
+#include <vector>
 
 #include <cstdint>
+#include <cstring>
 
 extern "C"
 {
+#include <linux/perf_event.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 
 #ifndef USE_HW_BREAKPOINT_COMPAT
 #include <linux/hw_breakpoint.h>
@@ -48,9 +52,7 @@ extern "C"
 #endif
 }
 
-namespace lo2s
-{
-namespace perf
+namespace lo2s::perf
 {
 
 enum class Availability
@@ -71,8 +73,7 @@ class EventGuard;
 class EventAttr
 {
 public:
-    EventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
-              std::uint64_t config1 = 0);
+    EventAttr(std::string name, perf_type_id type, std::uint64_t config, std::uint64_t config1 = 0);
 
     class InvalidEvent : public std::runtime_error
     {
@@ -160,7 +161,7 @@ public:
         attr_.disabled = 1;
     }
 
-    bool disabled()
+    bool disabled() const
     {
         return attr_.disabled;
     }
@@ -172,7 +173,7 @@ public:
         attr_.comm = 1;
     }
 
-    bool comm()
+    bool comm() const
     {
         return attr_.comm;
     }
@@ -183,7 +184,7 @@ public:
         attr_.enable_on_exec = 1;
     }
 
-    bool enable_on_exec()
+    bool enable_on_exec() const
     {
         return attr_.enable_on_exec;
     }
@@ -194,7 +195,7 @@ public:
         attr_.task = 1;
     }
 
-    bool task()
+    bool task() const
     {
         return attr_.task;
     }
@@ -210,7 +211,7 @@ public:
         attr_.exclude_kernel = 1;
     }
 
-    bool exclude_kernel()
+    bool exclude_kernel() const
     {
         return attr_.exclude_kernel;
     }
@@ -223,7 +224,7 @@ public:
         attr_.mmap = 1;
     }
 
-    bool mmap()
+    bool mmap() const
     {
         return attr_.mmap;
     }
@@ -235,7 +236,7 @@ public:
         attr_.context_switch = 1;
     }
 
-    bool context_switch()
+    bool context_switch() const
     {
         return attr_.context_switch;
     }
@@ -248,12 +249,12 @@ public:
         attr_.sample_id_all = 1;
     }
 
-    bool sample_id_all()
+    bool sample_id_all() const
     {
         return attr_.sample_id_all;
     }
 
-    uint64_t get_precise_ip()
+    uint64_t get_precise_ip() const
     {
         return attr_.precise_ip;
     }
@@ -299,11 +300,8 @@ public:
         {
             return availability_ != Availability::SYSTEM_MODE;
         }
-        else
-        {
-            return availability_ != Availability::PROCESS_MODE &&
-                   (cpus_.empty() || cpus_.count(scope.as_cpu()));
-        }
+        return availability_ != Availability::PROCESS_MODE &&
+               (cpus_.empty() || cpus_.count(scope.as_cpu()));
     }
 
     bool degrade_precision();
@@ -339,7 +337,7 @@ class PredefinedEventAttr : public EventAttr
 {
 public:
     PredefinedEventAttr(const std::string& name, perf_type_id type, std::uint64_t config,
-                        std::uint64_t config1 = 0, std::set<Cpu> cpus = std::set<Cpu>());
+                        std::uint64_t config1 = 0, const std::set<Cpu>& cpus = std::set<Cpu>());
 };
 
 class RawEventAttr : public EventAttr
@@ -387,12 +385,12 @@ public:
     EventGuard(const EventGuard& other) = delete;
     EventGuard& operator=(const EventGuard&) = delete;
 
-    EventGuard(EventGuard&& other)
+    EventGuard(EventGuard&& other) noexcept
     {
         std::swap(fd_, other.fd_);
     }
 
-    EventGuard& operator=(EventGuard&& other)
+    EventGuard& operator=(EventGuard&& other) noexcept
     {
         std::swap(fd_, other.fd_);
         return *this;
@@ -401,14 +399,14 @@ public:
     /**
      * opens child as a counter of the calling (leader) event
      */
-    EventGuard open_child(EventAttr& child, ExecutionScope location, int cgroup_fd = -1);
+    EventGuard open_child(EventAttr& child, ExecutionScope location, int cgroup_fd = -1) const;
 
-    void enable();
-    void disable();
+    void enable() const;
+    void disable() const;
 
-    uint64_t get_id()
+    uint64_t get_id() const
     {
-        uint64_t id;
+        uint64_t id = 0;
         if (ioctl(fd_, PERF_EVENT_IOC_ID, &id) == -1)
         {
             throw_errno();
@@ -417,8 +415,8 @@ public:
         return id;
     }
 
-    void set_output(const EventGuard& other_ev);
-    void set_syscall_filter(const std::vector<int64_t>& filter);
+    void set_output(const EventGuard& other_ev) const;
+    void set_syscall_filter(const std::vector<int64_t>& filter) const;
 
     int get_fd() const
     {
@@ -433,7 +431,7 @@ public:
     template <class T>
     T read()
     {
-        static_assert(std::is_pod_v<T> == true);
+        static_assert(std::is_pod_v<T>);
         T val;
 
         if (::read(fd_, &val, sizeof(val)) == -1)
@@ -456,5 +454,4 @@ protected:
     int fd_ = -1;
 };
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

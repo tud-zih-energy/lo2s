@@ -22,16 +22,18 @@
 #include <lo2s/perf/time/reader.hpp>
 
 #include <lo2s/log.hpp>
+#include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_composer.hpp>
-#include <lo2s/perf/util.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/types/thread.hpp>
 
-#include <otf2xx/chrono/chrono.hpp>
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <cstdint>
 
 #ifndef USE_HW_BREAKPOINT_COMPAT
 extern "C"
 {
-#include <linux/hw_breakpoint.h>
 }
 #else
 extern "C"
@@ -41,33 +43,21 @@ extern "C"
 }
 #endif
 
-extern "C"
+namespace lo2s::perf::time
 {
-#include <sys/ioctl.h>
-}
-
-namespace lo2s
+EventGuard Reader::create_time_event(otf2::chrono::time_point& local_time)
 {
-namespace perf
-{
-namespace time
-{
-Reader::Reader()
-{
-    static_assert(sizeof(local_time) == 8, "The local time object must not be a big fat "
-                                           "object, or the hardware breakpoint won't work.");
-
-    EventAttr event =
-        EventComposer::instance().create_time_event(reinterpret_cast<uint64_t>(&local_time));
+    static_assert(sizeof(local_time) == sizeof(uint64_t),
+                  "The local time object must not be a big fat "
+                  "object, or the hardware breakpoint won't work.");
 
     try
     {
-        ev_instance_ = event.open(Thread(0));
-
-        init_mmap(ev_instance_.value().get_fd());
-        ev_instance_.value().enable();
+        EventAttr event =
+            EventComposer::instance().create_time_event(reinterpret_cast<uint64_t>(&local_time));
+        return event.open(Thread(0));
     }
-    catch (...)
+    catch (EventAttr::InvalidEvent& e)
     {
 #ifndef USE_HW_BREAKPOINT_COMPAT
         Log::error() << "time synchronization with hardware breakpoints failed, try rebuilding "
@@ -78,6 +68,13 @@ Reader::Reader()
 #endif
         throw;
     }
+}
+
+Reader::Reader() : ev_instance_(Reader::create_time_event(local_time))
+{
+
+    init_mmap(ev_instance_.get_fd());
+    ev_instance_.enable();
 
 #ifdef USE_HW_BREAKPOINT_COMPAT
     auto pid = fork();
@@ -101,6 +98,4 @@ bool Reader::handle(const RecordSyncType* sync_event)
     return true;
 }
 
-} // namespace time
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf::time

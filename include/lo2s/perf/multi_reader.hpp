@@ -22,24 +22,20 @@
 #pragma once
 
 #include <lo2s/log.hpp>
-#include <lo2s/perf/bio/writer.hpp>
 #include <lo2s/perf/io_reader.hpp>
-#include <lo2s/perf/time/converter.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <otf2xx/definition/metric_instance.hpp>
-#include <otf2xx/event/metric.hpp>
-#include <otf2xx/writer/local.hpp>
-
 #include <functional>
+#include <map>
 #include <queue>
-#include <unordered_map>
+#include <tuple>
+#include <utility>
 #include <vector>
 
-namespace lo2s
-{
-namespace perf
+#include <cstdint>
+
+namespace lo2s::perf
 {
 
 template <class Writer>
@@ -50,7 +46,7 @@ public:
     {
         for (const auto& cpu : Topology::instance().cpus())
         {
-            for (auto tp : writer_.get_tracepoints())
+            for (const auto& tp : writer_.get_tracepoints())
             {
                 IoReaderIdentity id(tp, cpu);
                 auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
@@ -67,7 +63,6 @@ public:
     MultiReader& operator=(MultiReader&&) = default;
     ~MultiReader() = default;
 
-public:
     void read()
     {
         std::priority_queue<ReaderState, std::vector<ReaderState>, std::greater<ReaderState>>
@@ -133,7 +128,8 @@ public:
 private:
     struct ReaderState
     {
-        ReaderState(uint64_t time, IoReaderIdentity identity) : time(time), identity(identity)
+        ReaderState(uint64_t time, IoReaderIdentity identity)
+        : time(time), identity(std::move(identity))
         {
         }
 
@@ -159,5 +155,4 @@ private:
     std::vector<int> fds_;
 };
 
-} // namespace perf
-} // namespace lo2s
+} // namespace lo2s::perf

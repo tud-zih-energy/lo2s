@@ -22,32 +22,39 @@
 #include <lo2s/process_controller.hpp>
 
 #include <lo2s/error.hpp>
+#include <lo2s/execution_scope_group.hpp>
 #include <lo2s/log.hpp>
+#include <lo2s/monitor/abstract_process_monitor.hpp>
 #include <lo2s/summary.hpp>
-#include <lo2s/trace/trace.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
 
-#include <exception>
-#include <limits>
+#include <iostream>
+#include <ostream>
+#include <stdexcept>
+#include <string>
 #include <system_error>
 
+#include <cerrno>
 #include <csignal>
-#include <cstdlib>
-#include <cstring>
+
+#include <sys/types.h>
 
 extern "C"
 {
-#include <sys/mman.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
 }
 
+namespace
+{
 // used for attaching to a running process.
 // Its a special case, so ... OH, look behind you, a three headed monkey playing cards.
-static volatile std::sig_atomic_t running;
-static volatile std::sig_atomic_t attached_pid;
-static_assert(std::numeric_limits<pid_t>::max() <= std::numeric_limits<std::sig_atomic_t>::max(),
-              ":[");
+volatile std::sig_atomic_t running;
+volatile std::sig_atomic_t attached_pid;
+
+} // namespace
 
 extern "C" void sig_handler(int signum)
 {
@@ -75,42 +82,41 @@ extern "C" void sig_handler(int signum)
 
 namespace lo2s
 {
-
-static void ptrace_checked_call(enum __ptrace_request request, Thread thread, void* addr = nullptr,
-                                void* data = nullptr)
+namespace
 {
-    long retval = ptrace(request, thread.as_int(), addr, data);
+void ptrace_checked_call(enum __ptrace_request request, Thread thread, void* addr = nullptr,
+                         void* data = nullptr)
+{
+    long const retval = ptrace(request, thread.as_int(), addr, data);
     if (retval == -1)
     {
-        auto ex = make_system_error();
-        Log::info() << "Failed ptrace call: " << request << ", " << thread << ", " << addr << ", "
-                    << data << ": " << ex.what();
-        throw ex;
+        throw_errno();
     }
 }
 
-static void ptrace_setoptions(Thread thread, long options)
+void ptrace_setoptions(Thread thread, long options)
 {
-    ptrace_checked_call(PTRACE_SETOPTIONS, thread, nullptr, (void*)options);
+    ptrace_checked_call(PTRACE_SETOPTIONS, thread, nullptr, reinterpret_cast<void*>(options));
 }
 
-static unsigned long ptrace_geteventmsg(Thread thread)
+unsigned long ptrace_geteventmsg(Thread thread)
 {
-    unsigned long msgval;
+    unsigned long msgval = 0;
     ptrace_checked_call(PTRACE_GETEVENTMSG, thread, nullptr, &msgval);
     return msgval;
 }
 
-static void ptrace_cont(Thread thread, long signum = 0)
+void ptrace_cont(Thread thread, long signum = 0)
 {
     // ptrace(2) mandates passing the signal number in the data parameter.
     ptrace_checked_call(PTRACE_CONT, thread, nullptr, reinterpret_cast<void*>(signum));
 }
+} // namespace
 
 ProcessController::ProcessController(Process child, const std::string& name, bool spawn,
                                      monitor::AbstractProcessMonitor& monitor)
 : first_child_(child.as_thread()), default_signal_handler(signal(SIGINT, sig_handler)),
-  monitor_(monitor), num_wakeups_(0), groups_(ExecutionScopeGroup::instance())
+  monitor_(monitor), groups_(ExecutionScopeGroup::instance())
 {
     if (spawn)
     {
@@ -124,7 +130,7 @@ ProcessController::ProcessController(Process child, const std::string& name, boo
 
     groups_.add_process(child);
 
-    monitor_.insert_process(trace::NO_PARENT_PROCESS, child, name, spawn);
+    monitor_.insert_process(Process::no_parent(), child, name, spawn);
 
     summary().add_thread();
 }
@@ -137,11 +143,11 @@ ProcessController::~ProcessController()
 void ProcessController::run()
 {
     // monitor fork/exit/... via ptrace
-    while (1)
+    while (true)
     {
         /* wait for signal */
-        int status;
-        pid_t child = waitpid(-1, &status, __WALL);
+        int status = 0;
+        pid_t const child = waitpid(-1, &status, __WALL);
 
         num_wakeups_++;
 
@@ -165,7 +171,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
         {
             // we need the pid of the new process
             auto new_process = Process(ptrace_geteventmsg(child));
-            std::string command = get_process_comm(new_process);
+            std::string const command = get_process_comm(new_process);
             Log::debug() << "New " << new_process << " (" << command << "): forked from " << child;
 
             // Register the newly created process for monitoring:
@@ -199,7 +205,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
             auto process = groups_.get_process(child);
-            std::string command = get_task_comm(process, new_thread);
+            std::string const command = get_task_comm(process, new_thread);
             Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
                         << " in " << process;
 
@@ -227,7 +233,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
     {
         // Only in the case of EVENT_EXEC do we know that the signal come from the main thread =
         // (process)
-        std::string name = get_process_comm(child.as_process());
+        std::string const name = get_process_comm(child.as_process());
         Log::debug() << "Exec in " << child << " (" << name << ")";
         monitor_.update_process_name(child.as_process(), name);
     }
@@ -251,75 +257,86 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
     }
 }
 
+ProcessController::SignalHandlingState ProcessController::handle_stop_signal(Thread child,
+                                                                             int status)
+{
+    Log::debug() << "signal-delivery-stop from " << child << ": " << WSTOPSIG(status);
+
+    // Special handling for detaching, then we had just attached to a process
+    if (!attached_pid && !running)
+    {
+        Log::debug() << "Detaching from " << child;
+
+        // Tracee is in signal-delivery-stop, so we can detach
+        ptrace(PTRACE_DETACH, child.as_int(), 0, status);
+
+        // exit if detached from first child (the original sampled process)
+        if (child == first_child_)
+        {
+            std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
+                      << std::endl;
+            return SignalHandlingState::Stop;
+        }
+
+        ptrace_cont(child);
+    }
+
+    switch (WSTOPSIG(status))
+    {
+    case SIGSTOP:
+    {
+        Log::debug() << "Set ptrace options for " << child;
+
+        // we are only interested in fork/join events
+        ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE |
+                                     PTRACE_O_TRACEEXIT | PTRACE_O_TRACEEXEC);
+        // FIXME TODO continue this new thread/process ONLY if already registered in the
+        // thread map.
+        ptrace_cont(child);
+        break;
+    }
+    case SIGTRAP: // maybe a different kind of ptrace-stop
+    {
+        auto event = status >> 16;
+        if (event != 0)
+        {
+            handle_ptrace_event(child, event);
+        }
+        ptrace_cont(child);
+        break;
+    }
+
+    default:
+        Log::debug() << "Forwarding signal for " << child << ": " << WSTOPSIG(status);
+        try
+        {
+            ptrace_cont(child, WSTOPSIG(status));
+        }
+        catch (const std::system_error& e)
+        {
+            if (e.code().value() == ESRCH)
+            {
+                Log::info() << "Received ESRCH for PTRACE_CONT on " << child;
+            }
+            else
+            {
+                throw e;
+            }
+        }
+        return SignalHandlingState::KeepRunning;
+    }
+    return SignalHandlingState::KeepRunning;
+}
+
 ProcessController::SignalHandlingState ProcessController::handle_signal(Thread child, int status)
 {
     Log::debug() << "Handling signal " << status << " from " << child;
     if (WIFSTOPPED(status)) // signal-delivery-stop
     {
-        Log::debug() << "signal-delivery-stop from " << child << ": " << WSTOPSIG(status);
-
-        // Special handling for detaching, then we had just attached to a process
-        if (!attached_pid && !running)
-        {
-            Log::debug() << "Detaching from " << child;
-
-            // Tracee is in signal-delivery-stop, so we can detach
-            ptrace(PTRACE_DETACH, child.as_int(), 0, status);
-
-            // exit if detached from first child (the original sampled process)
-            if (child == first_child_)
-            {
-                std::cout << "[ lo2s: Child exited. Stopping measurements and closing trace. ]"
-                          << std::endl;
-                return SignalHandlingState::Stop;
-            }
-        }
-
-        switch (WSTOPSIG(status))
-        {
-        case SIGSTOP:
-        {
-            Log::debug() << "Set ptrace options for " << child;
-
-            // we are only interested in fork/join events
-            ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
-                                         PTRACE_O_TRACECLONE | PTRACE_O_TRACEEXIT |
-                                         PTRACE_O_TRACEEXEC);
-            // FIXME TODO continue this new thread/process ONLY if already registered in the
-            // thread map.
-            break;
-        }
-        case SIGTRAP: // maybe a different kind of ptrace-stop
-        {
-            auto event = status >> 16;
-            if (event != 0)
-            {
-                handle_ptrace_event(child, event);
-            }
-            break;
-        }
-
-        default:
-            Log::debug() << "Forwarding signal for " << child << ": " << WSTOPSIG(status);
-            try
-            {
-                ptrace_cont(child, WSTOPSIG(status));
-            }
-            catch (const std::system_error& e)
-            {
-                if (e.code().value() == ESRCH)
-                {
-                    Log::info() << "Received ESRCH for PTRACE_CONT on " << child;
-                }
-                else
-                {
-                    throw e;
-                }
-            }
-            return SignalHandlingState::KeepRunning;
-        }
+        return handle_stop_signal(child, status);
     }
-    else if (WIFEXITED(status))
+
+    if (WIFEXITED(status))
     {
         Log::info() << child << " exiting with status " << WEXITSTATUS(status);
 
@@ -333,7 +350,8 @@ ProcessController::SignalHandlingState ProcessController::handle_signal(Thread c
         }
         return SignalHandlingState::KeepRunning;
     }
-    else if (WIFSIGNALED(status))
+
+    if (WIFSIGNALED(status))
     {
         Log::info() << child << " exited due to signal " << WTERMSIG(status);
         // exit if first child (the original sampled process) is dead
@@ -345,27 +363,8 @@ ProcessController::SignalHandlingState ProcessController::handle_signal(Thread c
         }
         return SignalHandlingState::KeepRunning;
     }
-    else
-    {
-        Log::warn() << "Unknown signal for " << child << ": " << status;
-    }
-    // wait for next fork/exit/...
-    try
-    {
-        ptrace_cont(child);
-    }
-    catch (const std::system_error& e)
-    {
-        if (e.code().value() == ESRCH)
-        {
-            Log::info() << "Received ESRCH for PTRACE_CONT on " << child;
-        }
-        else
-        {
-            throw e;
-        }
-    }
-
+    Log::warn() << "Unknown signal for " << child << ": " << status;
+    ptrace_cont(child);
     return SignalHandlingState::KeepRunning;
 }
 } // namespace lo2s

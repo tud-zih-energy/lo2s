@@ -241,7 +241,9 @@ set(SOURCE_FILES
     src/monitor/openmp_monitor.cpp
 
     src/perf/bio/block_device.cpp
+    src/perf/bio/writer.cpp
     src/perf/event_composer.cpp
+    src/perf/counter/metric_writer.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/userspace/reader.cpp
 
@@ -310,6 +312,7 @@ if(X86Adapt_FOUND)
         src/metric/x86_adapt/metrics.cpp
         src/metric/x86_adapt/monitor.cpp
         src/metric/x86_adapt/node_monitor.cpp
+        src/metric/x86_adapt/knobs.cpp
     )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
 endif()
@@ -512,9 +515,10 @@ target_include_directories(lo2s PRIVATE
 if (USE_BPF)
     if (BpfObject_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_BPF)
+        target_sources(lo2s PRIVATE src/monitor/posix_monitor.cpp)
         bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
         add_dependencies(lo2s posix_io_skel)
-        target_link_libraries(lo2s PRIVATE posix_io_skel)
+        target_link_libraries(lo2s PUBLIC posix_io_skel)
     else()
         message(SEND_ERROR "BPF not found but requested.")
     endif()

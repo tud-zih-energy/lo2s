@@ -23,9 +23,12 @@
 
 #include <lo2s/execution_scope_group.hpp>
 #include <lo2s/monitor/abstract_process_monitor.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
-#include <map>
 #include <string>
+
+#include <cstddef>
 
 extern "C"
 {
@@ -47,19 +50,24 @@ public:
     ProcessController(Process child, const std::string& name, bool spawn,
                       monitor::AbstractProcessMonitor& monitor);
 
+    ProcessController(ProcessController&) = delete;
+    ProcessController(ProcessController&&) = delete;
+    ProcessController& operator=(ProcessController&) = delete;
+    ProcessController& operator=(ProcessController&&) = delete;
     ~ProcessController();
 
     void run();
 
 private:
-    void handle_ptrace_event(Thread thread, int event);
+    void handle_ptrace_event(Thread child, int event);
 
-    SignalHandlingState handle_signal(Thread thread, int status);
+    SignalHandlingState handle_signal(Thread child, int status);
+    SignalHandlingState handle_stop_signal(Thread child, int status);
 
-    const Thread first_child_;
+    Thread first_child_;
     sighandler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
-    std::size_t num_wakeups_;
+    std::size_t num_wakeups_{ 0 };
     ExecutionScopeGroup& groups_;
 };
 } // namespace lo2s

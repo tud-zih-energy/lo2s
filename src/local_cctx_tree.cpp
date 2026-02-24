@@ -21,7 +21,15 @@
 
 #include <lo2s/local_cctx_tree.hpp>
 
+#include <lo2s/calling_context.hpp>
+#include <lo2s/measurement_scope.hpp>
 #include <lo2s/trace/trace.hpp>
+
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <cstdint>
+
+#include <linux/perf_event.h>
 
 namespace lo2s
 {
@@ -46,7 +54,7 @@ void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
             }
             continue;
         }
-        else if (ips[i] == PERF_CONTEXT_USER)
+        if (ips[i] == PERF_CONTEXT_USER)
         {
             if (i <= 1)
             {
