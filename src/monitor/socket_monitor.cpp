@@ -28,7 +28,6 @@
 #include <lo2s/rb/header.hpp>
 #include <lo2s/trace/trace.hpp>
 
-#include <chrono>
 #include <optional>
 #include <stdexcept>
 #include <tuple>
@@ -50,8 +49,7 @@ extern "C"
 namespace lo2s::monitor
 {
 SocketMonitor::SocketMonitor(trace::Trace& trace)
-: PollMonitor(trace, "SocketMonitor", std::chrono::nanoseconds(0)), trace_(trace),
-  socket(::socket(AF_UNIX, SOCK_SEQPACKET, 0))
+: PollMonitor(trace, "SocketMonitor"), trace_(trace), socket(::socket(AF_UNIX, SOCK_SEQPACKET, 0))
 {
     if (socket == -1)
     {
@@ -61,9 +59,9 @@ SocketMonitor::SocketMonitor(trace::Trace& trace)
     struct sockaddr_un name;
     memset(&name, 0, sizeof(name));
     name.sun_family = AF_UNIX;
-    strncpy(name.sun_path, config().socket_path.c_str(), sizeof(name.sun_path) - 1);
+    strncpy(name.sun_path, config().rb.socket_path.c_str(), sizeof(name.sun_path) - 1);
 
-    unlink(config().socket_path.c_str());
+    unlink(config().rb.socket_path.c_str());
     int ret = bind(socket, reinterpret_cast<const struct sockaddr*>(&name), sizeof(name));
     if (ret == -1)
     {
@@ -142,7 +140,7 @@ void SocketMonitor::finalize_thread()
     }
 
     close(socket);
-    unlink(config().socket_path.c_str());
+    unlink(config().rb.socket_path.c_str());
 }
 
 void SocketMonitor::monitor(int fd)

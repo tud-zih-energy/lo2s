@@ -23,6 +23,7 @@
 #include <lo2s/error.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/types/cpu.hpp>
+#include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
 #include <optional>
@@ -54,7 +55,6 @@ extern "C"
 
 namespace lo2s::perf
 {
-
 enum class Availability
 {
     UNAVAILABLE,
@@ -90,7 +90,7 @@ public:
     EventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
     EventGuard open(ExecutionScope location, int cgroup_fd = -1);
 
-    bool can_open(ExecutionScope location);
+    bool can_open(ExecutionScope location) const;
     /**
      * returns an opened instance of a Event object after formating it as a leader Event
      */
@@ -121,6 +121,11 @@ public:
         return attr_;
     }
 
+    const perf_event_attr& attr() const
+    {
+        return attr_;
+    }
+
     double scale() const
     {
         return scale_;
@@ -131,9 +136,9 @@ public:
         scale_ = scale;
     }
 
-    void unit(const std::string& unit)
+    void unit(std::string unit)
     {
-        unit_ = unit;
+        unit_ = std::move(unit);
     }
 
     void set_clockid(std::optional<clockid_t> clockid)
@@ -300,6 +305,7 @@ public:
         {
             return availability_ != Availability::SYSTEM_MODE;
         }
+
         return availability_ != Availability::PROCESS_MODE &&
                (cpus_.empty() || cpus_.count(scope.as_cpu()));
     }
@@ -324,7 +330,7 @@ public:
 protected:
     void update_availability();
 
-    struct perf_event_attr attr_;
+    struct perf_event_attr attr_; // NOLINT
 
     double scale_ = 1;
     std::string unit_ = "#";

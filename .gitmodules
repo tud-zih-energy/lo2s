@@ -10,3 +10,6 @@
 [submodule "lib/pmu-events"]
 	path = lib/pmu-events
 	url = https://github.com/tud-zih-energy/pmu-events.git
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json

@@ -97,7 +97,7 @@ public:
         handle_enter_cctx_node(tp, level, cctx);
     }
 
-    uint64_t cur_level()
+    uint64_t cur_level() const
     {
         // The current callstack should always contain the root note
         assert(cur_.size() > 0);
@@ -198,7 +198,7 @@ private:
     trace::Trace& trace_;
     otf2::writer::local& writer_;
     std::vector<LocalCctxMap::value_type*> cur_;
-    std::atomic<size_t> ref_count_;
+    std::atomic<size_t> ref_count_ = 0;
     size_t next_cctx_ref_ = 0;
 };
 } // namespace lo2s

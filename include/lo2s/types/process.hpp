@@ -21,13 +21,11 @@
 
 #pragma once
 
-#include <fmt/base.h>
-#pragma once
-
 #include <iostream>
 
 #include <cstdint>
 
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 extern "C"

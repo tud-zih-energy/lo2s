@@ -51,7 +51,7 @@ struct Clock
 
     static time_point now() noexcept
     {
-        timespec tp;
+        timespec tp; // NOLINT
         clock_gettime(clockid_, &tp);
         return time_point(duration(std::chrono::seconds(tp.tv_sec)) +
                           duration(std::chrono::nanoseconds(tp.tv_nsec)));

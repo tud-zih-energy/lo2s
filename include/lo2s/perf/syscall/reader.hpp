@@ -78,7 +78,7 @@ protected:
 
         enter_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
 
-        return enter_event.open(scope, config().cgroup_fd);
+        return enter_event.open(scope, config().perf.cgroup_fd);
     }
 
     static EventGuard create_exit_ev(ExecutionScope scope)
@@ -86,7 +86,7 @@ protected:
         tracepoint::TracepointEventAttr exit_event =
             EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_exit");
         exit_event.set_sample_type(PERF_SAMPLE_IDENTIFIER);
-        return exit_event.open(scope, config().cgroup_fd);
+        return exit_event.open(scope, config().perf.cgroup_fd);
     }
 
     using EventReader<T>::init_mmap;
@@ -103,8 +103,8 @@ private:
 
         exit_ev_.set_output(enter_ev_);
 
-        enter_ev_.set_syscall_filter(config().syscall_filter);
-        exit_ev_.set_syscall_filter(config().syscall_filter);
+        enter_ev_.set_syscall_filter(config().perf.syscall.syscalls);
+        exit_ev_.set_syscall_filter(config().perf.syscall.syscalls);
 
         enter_ev_.enable();
         exit_ev_.enable();

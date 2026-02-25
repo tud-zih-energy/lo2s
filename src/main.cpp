@@ -19,6 +19,7 @@
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <lo2s/config.hpp>
+#include <lo2s/config/monitor_type.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/cpu_set_monitor.hpp>
 #include <lo2s/monitor/process_monitor.hpp>
@@ -46,7 +47,7 @@ int main(int argc, const char** argv)
         lo2s::parse_program_options(argc, argv);
         lo2s::summary();
 
-        switch (lo2s::config().monitor_type)
+        switch (lo2s::config().general.monitor_type)
         {
         case lo2s::MonitorType::CPU_SET:
             lo2s::monitor::CpuSetMonitor().run();

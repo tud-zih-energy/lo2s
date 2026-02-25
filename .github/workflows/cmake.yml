@@ -16,6 +16,7 @@ jobs:
         hw_breakpoint: [OFF]
         nvidia: [ OFF ]
         rocm: [ OFF ]
+        radare: [ OFF ]
         include:
 # One build with everything
           - os: ubuntu-24.04
@@ -24,6 +25,7 @@ jobs:
             hw_breakpoint: OFF
             nvidia: ON
             rocm: ON
+            radare: ON
           - os: ubuntu-24.04
             compiler: clang++-18
             build-type: Debug
@@ -36,6 +38,8 @@ jobs:
             hw_breakpoint: OFF
             nvidia: OFF
             rocm: OFF
+            radare: OFF
+
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -43,7 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure libc6-dev meson
+          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure libc6-dev meson nlohmann-json3-dev
           sudo pip install git-archive-all
       - name: Install CUPTI
         if: matrix.nvidia == 'ON'
@@ -67,14 +71,8 @@ jobs:
 
           sudo apt update
           sudo apt install rocprofiler-sdk rocprofiler rocm-device-libs rocm rocm-dev
-      - name: Cache Radare
-        id: cache-radare2
-        uses: actions/cache@v4
-        with:
-          path: /opt/radare2/
-          key: ${{ matrix.os }}-radare2
       - name: Install Radare
-        if: steps.cache-radare2.outputs.cache-hit != 'true'
+        if: matrix.radare == 'ON'
         run: |
           wget https://github.com/radareorg/radare2/archive/refs/tags/5.9.8.tar.gz
           tar xf 5.9.8.tar.gz

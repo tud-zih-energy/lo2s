@@ -61,5 +61,7 @@ private:
     std::unique_ptr<otf2::event::metric> event_;
 
     std::vector<std::pair<const void*, int>> items_;
+
+    int fd_;
 };
 } // namespace lo2s::metric::sensors

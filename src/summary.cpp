@@ -1,6 +1,7 @@
 #include <lo2s/summary.hpp>
 
 #include <lo2s/config.hpp>
+#include <lo2s/config/monitor_type.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/util.hpp>
 
@@ -93,7 +94,7 @@ void Summary::show()
 
     std::size_t trace_size = 0;
 
-    if (config().quiet)
+    if (config().general.quiet)
     {
         return;
     }
@@ -106,17 +107,16 @@ void Summary::show()
     std::filesystem::recursive_directory_iterator const it(trace_dir_);
     std::filesystem::recursive_directory_iterator const end;
 
-    trace_size =
-        std::accumulate(it, end, static_cast<size_t>(0),
-                        [](std::size_t sum, const std::filesystem::directory_entry& entry) {
-                            if (!std::filesystem::is_directory(entry))
-                            {
-                                return sum + std::filesystem::file_size(entry);
-                            }
-                            return sum;
-                        });
+    trace_size = std::accumulate(
+        it, end, 0, [](std::size_t sum, const std::filesystem::directory_entry& entry) {
+            if (!std::filesystem::is_directory(entry))
+            {
+                return sum + std::filesystem::file_size(entry);
+            }
+            return sum;
+        });
 
-    if (config().monitor_type == lo2s::MonitorType::PROCESS)
+    if (config().general.monitor_type == lo2s::MonitorType::PROCESS)
     {
         std::cout << "[ lo2s: ";
     }
@@ -124,9 +124,9 @@ void Summary::show()
     {
         std::cout << "[ lo2s (system mode): ";
     }
-    if (!config().command.empty())
+    if (!config().put.command.empty())
     {
-        for (const auto& command : config().command)
+        for (const auto& command : config().put.command)
         {
             std::cout << command << ' ';
         }
@@ -134,14 +134,14 @@ void Summary::show()
         std::cout << " (" << exit_code_ << "), ";
         std::cout << thread_count_ << " threads, ";
     }
-    if (config().monitor_type == lo2s::MonitorType::CPU_SET)
+    if (config().general.monitor_type == lo2s::MonitorType::CPU_SET)
     {
         std::cout << "monitored processes: " << processes_.size() << ", ";
     }
     std::cout << cpu_time.count() << "s CPU, ";
     std::cout << wall_time.count() << "s total ]\n";
 
-    if (config().monitor_type == lo2s::MonitorType::PROCESS)
+    if (config().general.monitor_type == lo2s::MonitorType::PROCESS)
     {
         std::cout << "[ lo2s: ";
     }

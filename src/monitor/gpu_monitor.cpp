@@ -39,9 +39,8 @@ namespace lo2s::monitor
 {
 
 GPUMonitor::GPUMonitor(trace::Trace& trace, int fd)
-: PollMonitor(trace, "GPUMonitor", config().ringbuf_read_interval),
-  ringbuf_reader_(fd, config().clockid.value_or(0)), process_(ringbuf_reader_.header()->pid),
-  time_converter_(perf::time::Converter::instance()),
+: PollMonitor(trace, "GPUMonitor"), ringbuf_reader_(fd, config().perf.clockid.value_or(0)),
+  process_(ringbuf_reader_.header()->pid), time_converter_(perf::time::Converter::instance()),
   local_cctx_tree_(
       trace.create_local_cctx_tree(MeasurementScope::gpu(ExecutionScope(process_.as_thread()))))
 {
