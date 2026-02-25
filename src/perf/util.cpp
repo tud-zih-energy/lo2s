@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+#include <asm/unistd_64.h>
+
 extern "C"
 {
 #include <linux/perf_event.h>
@@ -25,6 +27,12 @@ int perf_event_paranoid()
     }
     try
     {
+        // root is equivalent to -1
+        if (getuid() == 0)
+        {
+            return -1;
+        }
+
         return get_sysctl<int>("kernel", "perf_event_paranoid");
     }
     catch (...)
@@ -34,7 +42,7 @@ int perf_event_paranoid()
     }
 }
 
-int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
+int perf_event_open(const struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
                     unsigned long flags, int cgroup_fd)
 {
     int cpuid = -1;
@@ -46,13 +54,13 @@ int perf_event_open(struct perf_event_attr* perf_attr, ExecutionScope scope, int
             pid = cgroup_fd;
             flags |= PERF_FLAG_PID_CGROUP;
         }
-        cpuid = scope.as_cpu().as_int();
+        cpuid = static_cast<int>(scope.as_cpu().as_int());
     }
     else
     {
-        pid = scope.as_thread().as_int();
+        pid = static_cast<pid_t>(scope.as_thread().as_int());
     }
-    return syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags);
+    return static_cast<int>(syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags));
 }
 
 } // namespace lo2s::perf

@@ -42,8 +42,10 @@
 #include <utility>
 
 #include <cassert>
+#include <cstdint>
 
 #include <fmt/format.h>
+#include <unistd.h>
 
 extern "C"
 {
@@ -101,11 +103,12 @@ std::string chip_name_to_str(const sensors_chip_name* chip)
 } // namespace
 
 Recorder::Recorder(trace::Trace& trace)
-: PollMonitor(trace, "Sensors recorder", config().read_interval),
-  otf2_writer_(trace.create_metric_writer(name())),
+: PollMonitor(trace, "Sensors recorder"), otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(trace.metric_class(), otf2_writer_.location(),
-                                         trace.system_tree_root_node()))
+                                         trace.system_tree_root_node())),
+  fd_(timerfd_from_ns(config().sensors.read_interval))
 {
+
     sensors_init(nullptr);
 
     // Can I just leave a rant here? This freaking C API is the worst. Who, in gods name, came up
@@ -191,6 +194,10 @@ void Recorder::monitor([[maybe_unused]] int fd)
 
     // write event to archive
     otf2_writer_.write(*event_);
+
+    uint64_t num_expirations [[maybe_unused]] = 0;
+
+    ::read(fd_, &num_expirations, sizeof(uint64_t));
 }
 
 Recorder::~Recorder()

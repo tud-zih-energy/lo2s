@@ -67,12 +67,12 @@ void drop_privileges()
     gid_t original_uid = 0;
     uid_t original_gid = 0;
 
-    if (config().user.empty())
+    if (config().put.as_user.user.empty())
     {
-        auto* orig_user = getpwnam(config().user.c_str());
+        auto* orig_user = getpwnam(config().put.as_user.user.c_str());
         if (orig_user == nullptr)
         {
-            Log::error() << "No user found with username '" + config().user + ".";
+            Log::error() << "No user found with username '" + config().put.as_user.user + ".";
             throw_errno();
         }
 
@@ -134,7 +134,6 @@ void drop_privileges()
     assert(getuid() != 0);
     assert(getgid() != 0);
 }
-
 std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
 {
     std::vector<char*> res;
@@ -170,35 +169,35 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
 
     std::map<std::string, std::string> env;
 
-    if (config().use_python)
+    if (config().put.use_python)
     {
         env.emplace("PYTHONPERFSUPPORT", "1");
     }
 
-    env.emplace("LO2S_SOCKET", config().socket_path);
-    env.emplace("LO2S_RB_SIZE", std::to_string(config().ringbuf_size));
+    env.emplace("LO2S_SOCKET", config().rb.socket_path);
+    env.emplace("LO2S_RB_SIZE", std::to_string(config().rb.size));
 
     const char* ld_cstr = getenv("LD_LIBRARY_PATH");
     if (ld_cstr == nullptr)
     {
-        env.emplace("LD_LIBRARY_PATH", config().injectionlib_path);
+        env.emplace("LD_LIBRARY_PATH", config().rb.injectionlib_path);
     }
     else
     {
         std::string ld_lib = ld_cstr;
-        ld_lib += ":" + config().injectionlib_path;
+        ld_lib += ":" + config().rb.injectionlib_path;
         env.emplace("LD_LIBRARY_PATH", ld_lib);
     }
 
 #ifdef HAVE_CUDA
-    if (config().use_nvidia)
+    if (config().accel.nvidia)
     {
         env.emplace("CUDA_INJECTION64_PATH", "liblo2s_injection.so");
     }
 #endif
 
 #ifdef HAVE_OPENMP
-    if (config().use_openmp)
+    if (config().accel.openmp)
     {
         env.emplace("OMP_TOOL", "enabled");
         env.emplace("OMP_TOOL_LIBRARIES", "liblo2s_injection.so");
@@ -206,7 +205,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
 #endif
 
 #ifdef HAVE_HIP
-    if (config().use_hip)
+    if (config().accel.hip)
     {
         env.emplace("LD_PRELOAD", "liblo2s_injection.so");
     }
@@ -228,7 +227,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     }
 
     // change user if option was set
-    if (config().drop_root)
+    if (config().put.as_user.drop_root)
     {
         drop_privileges();
     }
@@ -250,9 +249,9 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
 void process_monitor_main(AbstractProcessMonitor& monitor)
 {
 
-    auto process = config().process;
+    auto process = config().general.process;
     assert(process.as_int() != 0);
-    const bool spawn = (config().process == Process::invalid());
+    const bool spawn = (config().general.process == Process::invalid());
 
     if (spawn)
     {
@@ -277,14 +276,14 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
     else if (process.as_int() == 0)
     {
         assert(spawn);
-        run_command(config().command);
+        run_command(config().put.command);
     }
     else
     {
         std::string proc_name;
         if (spawn)
         {
-            proc_name = config().command.at(0);
+            proc_name = config().put.command.at(0);
         }
         else
         {

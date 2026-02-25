@@ -1,6 +1,5 @@
 #include <lo2s/metric/x86_energy/monitor.hpp>
 
-#include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
@@ -23,8 +22,8 @@ namespace lo2s::metric::x86_energy
 Monitor::Monitor(::x86_energy::SourceCounter counter, Cpu cpu, trace::Trace& trace,
                  const otf2::definition::metric_class& metric_class,
                  const otf2::definition::system_tree_node& stn)
-: PollMonitor(trace, fmt::format("{}", cpu), config().read_interval), counter_(std::move(counter)),
-  cpu_(cpu), otf2_writer_(trace.create_metric_writer(name())),
+: PollMonitor(trace, fmt::format("{}", cpu)), counter_(std::move(counter)), cpu_(cpu),
+  otf2_writer_(trace.create_metric_writer(name())),
   metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(), stn)),
   metric_event_(otf2::chrono::genesis(), metric_instance_)
 // (WOW this is (almost) better than LISP)

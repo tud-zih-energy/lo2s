@@ -26,6 +26,8 @@
 #include <cassert>
 #include <cstddef>
 
+#include <sys/types.h>
+
 extern "C"
 {
 #include <sys/mman.h>
@@ -57,7 +59,7 @@ public:
         return *this;
     }
 
-    SharedMemory(int fd, size_t size, size_t offset = 0, void* location = nullptr) : size_(size)
+    SharedMemory(int fd, size_t size, off_t offset = 0, void* location = nullptr) : size_(size)
     {
         if (location == nullptr)
         {

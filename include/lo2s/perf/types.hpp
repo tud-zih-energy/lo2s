@@ -44,13 +44,12 @@ public:
     PerfEventCache() = delete;
     PerfEventCache(const PerfEventCache&) = delete;
     PerfEventCache& operator=(const PerfEventCache&) = delete;
+    ~PerfEventCache() = default;
 
     PerfEventCache(PerfEventCache&& other) noexcept
     {
         std::swap(data_, other.data_);
     }
-
-    ~PerfEventCache() = default;
 
     PerfEventCache& operator=(PerfEventCache&& other) noexcept
     {

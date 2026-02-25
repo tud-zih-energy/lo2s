@@ -67,7 +67,7 @@ namespace lo2s::perf
 {
 namespace
 {
-std::set<Cpu> get_cpu_set_for(EventAttr ev)
+std::set<Cpu> get_cpu_set_for(const EventAttr& ev)
 {
     std::set<Cpu> cpus = std::set<Cpu>();
 
@@ -111,7 +111,7 @@ std::uint64_t parse_bitmask(const std::string& format)
         int const end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
 
         const auto len = (end + 1) - start;
-        if (start < 0 || end > 63 || len > 64)
+        if (start < 0 || end > 64 - 1 || len > 64)
         {
             throw EventAttr::InvalidEvent("invalid config mask");
         }
@@ -283,8 +283,10 @@ void EventAttr::update_availability()
     }
 }
 
+constexpr int BASE16 = 16;
+
 RawEventAttr::RawEventAttr(const std::string& ev_name)
-: EventAttr(ev_name, PERF_TYPE_RAW, std::stoull(ev_name.substr(1), nullptr, 16), 0)
+: EventAttr(ev_name, PERF_TYPE_RAW, std::stoull(ev_name.substr(1), nullptr, BASE16), 0)
 {
     cpus_ = get_cpu_set_for(*this);
 
@@ -696,7 +698,7 @@ EventGuard EventAttr::open(ExecutionScope location, int cgroup_fd)
     return { *this, location.as_thread(), -1, cgroup_fd };
 }
 
-bool EventAttr::can_open(ExecutionScope location)
+bool EventAttr::can_open(ExecutionScope location) const
 {
     int const fd = perf_event_open(&attr(), location, -1, 0, -1);
 

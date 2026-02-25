@@ -96,6 +96,9 @@ set(OTF2XX_CHRONO_DURATION_TYPE nanoseconds CACHE INTERNAL "")
 add_subdirectory(lib/otf2xx)
 mark_as_advanced(OTF2XX_WITH_MPI OTF2_CONFIG OTF2_PRINT)
 
+
+find_package(nlohmann_json REQUIRED NO_MODULE)
+
 # configure fmtlib submodule
 find_package(fmt NO_MODULE)
 
@@ -213,7 +216,9 @@ set(SOURCE_FILES
     src/types/process.cpp
     src/execution_scope.cpp
 
-    src/metric/plugin/plugin.cpp src/metric/plugin/channel.cpp src/metric/plugin/metrics.cpp
+    src/metric/plugin/plugin.cpp
+    src/metric/plugin/channel.cpp
+    src/metric/plugin/metrics.cpp
 
     src/monitor/cpu_set_monitor.cpp
     src/monitor/poll_monitor.cpp
@@ -224,6 +229,10 @@ set(SOURCE_FILES
     src/monitor/scope_monitor.cpp
     src/monitor/threaded_monitor.cpp
     src/monitor/tracepoint_monitor.cpp
+    src/monitor/socket_monitor.cpp
+    src/monitor/gpu_monitor.cpp
+    src/monitor/openmp_monitor.cpp
+
     src/process_controller.cpp
 
     src/resolvers.cpp
@@ -236,32 +245,50 @@ set(SOURCE_FILES
 
     src/perf/event_resolver.cpp
     src/perf/event_attr.cpp
-    src/monitor/socket_monitor.cpp
-    src/monitor/gpu_monitor.cpp
-    src/monitor/openmp_monitor.cpp
-
     src/perf/bio/block_device.cpp
     src/perf/bio/writer.cpp
     src/perf/event_composer.cpp
     src/perf/counter/metric_writer.cpp
     src/perf/counter/group/reader.cpp
-    src/perf/counter/userspace/reader.cpp
-
-    src/perf/counter/userspace/writer.cpp
     src/perf/counter/group/writer.cpp
-
+    src/perf/counter/userspace/reader.cpp
+    src/perf/counter/userspace/writer.cpp
     src/perf/sample/writer.cpp
     src/perf/time/converter.cpp src/perf/time/reader.cpp
     src/perf/tracepoint/writer.cpp
     src/perf/tracepoint/event_attr.cpp
     src/perf/syscall/writer.cpp
 
+    src/resolvers.cpp
+    src/resolvers/kallsyms.cpp
+
     src/time/time.cpp
 
     src/local_cctx_tree.cpp
     src/trace/trace.cpp
 
-    src/config.cpp src/main.cpp src/monitor/process_monitor.cpp
+    src/config.cpp
+    src/config/monitor_type.cpp
+    src/config/otf2_config.cpp
+    src/config/general_config.cpp
+    src/config/dwarf_config.cpp
+    src/config/rb_config.cpp
+    src/config/accelerator_config.cpp
+    src/config/x86_adapt_config.cpp
+    src/config/x86_energy_config.cpp
+    src/config/put_config.cpp
+    src/config/as_user_config.cpp
+    src/config/perf_config.cpp
+    src/config/perf/tracepoint_config.cpp
+    src/config/perf/syscall_config.cpp
+    src/config/perf/group_config.cpp
+    src/config/perf/userspace_config.cpp
+    src/config/perf/sampling_config.cpp
+    src/config/perf/block_io_config.cpp
+    src/config/perf/posix_io_config.cpp
+    src/config/sensors_config.cpp
+
+    src/main.cpp src/monitor/process_monitor.cpp
     src/topology.cpp src/dwarf_resolve.cpp
     src/function_resolver.cpp
     src/instruction_resolver.cpp
@@ -287,6 +314,7 @@ target_link_libraries(lo2s
         std::filesystem
         LibDw::LibDw
         PMUEvents::pmu-events
+        nlohmann_json::nlohmann_json
     )
 
 # old glibc versions require -lrt for clock_gettime()

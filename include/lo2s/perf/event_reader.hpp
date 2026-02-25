@@ -161,7 +161,7 @@ protected:
     {
         fd_ = fd;
 
-        mmap_pages_ = config().mmap_pages;
+        mmap_pages_ = config().perf.mmap_pages;
 
         try
         {
@@ -298,24 +298,17 @@ public:
         auto* event_header_p = (struct perf_event_header*)(d + index);
         auto len = event_header_p->size;
 
-        assert(cur_tail + len <= cur_head);
-
         // Event spans the wrap-around of the ring buffer
         if (index + len > data_size())
         {
-            std::byte* dst = event_copy;
-            while (len)
-            {
-                auto cpy = std::min<std::size_t>(data_size() - index, len);
-                memcpy(dst, d + index, cpy);
-                index = (index + cpy) % data_size();
-                dst += cpy;
-                len -= cpy;
-            }
-            event_header_p = (struct perf_event_header*)(event_copy);
-        }
+            size_t before_wrap = data_size() - index;
+            size_t after_wrap = len - before_wrap;
+            std::memcpy(event_copy, data() + index, before_wrap);
+            std::memcpy(event_copy + before_wrap, data(), after_wrap);
 
-        return event_header_p;
+            return reinterpret_cast<struct perf_event_header*>(event_copy);
+        }
+        return reinterpret_cast<struct perf_event_header*>(d + index);
     }
 
 private:

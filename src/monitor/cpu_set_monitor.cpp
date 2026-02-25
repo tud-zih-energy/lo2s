@@ -58,7 +58,7 @@ CpuSetMonitor::CpuSetMonitor()
     std::smatch pid_match;
 
     const std::filesystem::path proc_path("/proc");
-    if (config().use_perf_sampling)
+    if (config().perf.sampling.enabled)
     {
         for (const auto& p : std::filesystem::directory_iterator(proc_path))
         {
@@ -79,7 +79,7 @@ CpuSetMonitor::CpuSetMonitor()
         }
     }
 
-    if (config().use_perf_sampling || config().use_process_recording)
+    if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
         trace_.emplace_threads(get_comms_for_running_threads());
     }
@@ -117,7 +117,7 @@ CpuSetMonitor::CpuSetMonitor()
 void CpuSetMonitor::run()
 {
     sigset_t ss;
-    if (config().command.empty() && config().process == Process::invalid())
+    if (config().put.command.empty() && config().general.process == Process::invalid())
     {
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
@@ -130,7 +130,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    if (config().command.empty() && config().process == Process::invalid())
+    if (config().put.command.empty() && config().general.process == Process::invalid())
     {
         int sig = 0;
         auto ret = sigwait(&ss, &sig);
@@ -157,7 +157,7 @@ void CpuSetMonitor::run()
         }
     }
 
-    if (config().use_perf_sampling || config().use_process_recording)
+    if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
         trace_.emplace_threads(get_comms_for_running_threads());
     }

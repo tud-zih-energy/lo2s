@@ -14,6 +14,7 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+} // namespace
  *
  * You should have received a copy of the GNU General Public License
  * along with lo2s.  If not, see <http://www.gnu.org/licenses/>.
@@ -21,149 +22,75 @@
 
 #pragma once
 
-#include <lo2s/types/process.hpp>
+#include <lo2s/config/accelerator_config.hpp>
+#include <lo2s/config/dwarf_config.hpp>
+#include <lo2s/config/general_config.hpp>
+#include <lo2s/config/otf2_config.hpp>
+#include <lo2s/config/perf_config.hpp>
+#include <lo2s/config/put_config.hpp>
+#include <lo2s/config/rb_config.hpp>
+#include <lo2s/config/sensors_config.hpp>
+#include <lo2s/config/x86_adapt_config.hpp>
+#include <lo2s/config/x86_energy_config.hpp>
 
-#include <chrono>
-#include <optional>
-#include <string>
-#include <vector>
+#include <nitro/options/arguments.hpp>
+#include <nitro/options/parser.hpp>
+#include <nlohmann/json_fwd.hpp>
 
-#include <cstddef>
-#include <cstdint>
+extern "C"
+{
+}
 
 using namespace std::chrono_literals;
 
 namespace lo2s
 {
-enum class MonitorType
-{
-    PROCESS,
-    CPU_SET
-};
-
-enum class DwarfUsage
-{
-    NONE,
-    LOCAL,
-    FULL
-};
 
 struct Config
 {
-    // General
-    bool quiet = false;
-    MonitorType monitor_type;
-    Process process;
-    std::chrono::milliseconds read_interval;
-    std::string lo2s_command_line;
+    Config(nitro::options::arguments& arguments, int argc, const char** argv)
+    : general(arguments, argc, argv), otf2(arguments), put(arguments), perf(arguments),
+      dwarf(arguments), x86_energy(arguments), x86_adapt(arguments), sensors(arguments),
+      accel(arguments), rb(arguments)
 
-    // OTF2
-    std::string trace_path;
-
-    // Program-under-test
-    std::vector<std::string> command;
-
-    bool drop_root = false;
-    std::string user;
-
-    // perf
-    std::size_t mmap_pages;
-    std::chrono::nanoseconds perf_read_interval = std::chrono::nanoseconds(0);
-    int cgroup_fd = -1;
-
-    // perf -- instruction sampling
-    bool use_perf_sampling = false;
-    bool use_process_recording = false;
-
-    std::uint64_t perf_sampling_period;
-    std::string perf_sampling_event;
-
-    bool exclude_kernel = false;
-    bool enable_callgraph = false;
-    bool disassemble = false;
-
-    DwarfUsage dwarf;
-
-    // perf -- Python sampling
-    bool use_python = true;
-
-    // perf -- tracepoints
-    std::vector<std::string> tracepoint_events;
-
-    // perf -- block I/O
-    bool use_block_io = false;
-
-    // perf -- posix I/O
-    bool use_posix_io = false;
-
-    // perf -- syscall recording
-    bool use_syscalls = false;
-    std::vector<int64_t> syscall_filter;
-
-    // perf -- group recorded metrics
-    bool use_group_metrics = false;
-    bool metric_use_frequency = true;
-
-    std::uint64_t metric_count = 0;
-    std::uint64_t metric_frequency = 0;
-
-    std::string metric_leader;
-    std::vector<std::string> group_counters;
-
-    // perf -- userspace recorded metrics
-    bool use_userspace_metrics = false;
-    std::chrono::nanoseconds userspace_read_interval;
-    std::vector<std::string> userspace_counters;
-
-    // perf -- clock source
-    std::optional<clockid_t> clockid = std::nullopt;
-    bool use_pebs = false;
-
-    // x86_energy
-    bool use_x86_energy = false;
-
-    // x86_adapt
-    std::vector<std::string> x86_adapt_knobs;
-
-    // Linux sensors
-    bool use_sensors = false;
-
-    // Accelerators
-    // Accelerators -- NEC SX-Aurora Tsubasa
-    bool use_nec = false;
-    std::chrono::microseconds nec_read_interval;
-    std::chrono::milliseconds nec_check_interval;
-
-    // Accelerators -- Nvidia CUPTI
-    bool use_nvidia = false;
-
-    // Accelerators -- OpenMP
-    bool use_openmp = false;
-
-    // Accelerators -- AMD HIP
-    bool use_hip = false;
-
-    // Ringbuffer interface
-    std::string socket_path;
-    std::string injectionlib_path;
-    uint64_t ringbuf_size;
-    std::chrono::nanoseconds ringbuf_read_interval;
-
-    bool use_any_tracepoint() const
     {
-        return !tracepoint_events.empty() || use_block_io || use_syscalls;
     }
 
-    bool use_perf() const
+    GeneralConfig general;
+    Otf2Config otf2;
+    ProgramUnderTestConfig put;
+    perf::Config perf;
+
+    DwarfConfig dwarf;
+
+    X86EnergyConfig x86_energy;
+
+    X86AdaptConfig x86_adapt;
+
+    SensorsConfig sensors;
+
+    AcceleratorConfig accel;
+    RingbufConfig rb;
+
+    static void add_parser(nitro::options::parser& parser);
+
+    void check() const;
+
+    static void parse_print_options(nitro::options::arguments& arguments)
     {
-        return use_block_io || use_group_metrics || use_userspace_metrics || use_perf_sampling ||
-               use_process_recording;
+        perf::Config::parse_print_options(arguments);
+        X86AdaptConfig::parse_print_options(arguments);
+    }
+
+    static void set_verbosity(nitro::options::arguments& arguments)
+    {
+        GeneralConfig::set_verbosity(arguments);
     }
 };
 
 const Config& config();
 
-const Config& config_or_default();
-
 void parse_program_options(int argc, const char** argv);
+
+void to_json(nlohmann::json& j, const Config& config);
 } // namespace lo2s

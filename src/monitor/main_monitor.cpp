@@ -45,7 +45,7 @@ namespace lo2s::monitor
 {
 MainMonitor::MainMonitor() : metrics_(trace_)
 {
-    if (config().use_perf_sampling)
+    if (config().perf.sampling.enabled)
     {
         perf::time::Converter::instance();
     }
@@ -59,7 +59,7 @@ MainMonitor::MainMonitor() : metrics_(trace_)
     // TODO we can still have events earlier due to different timers.
 
     // try to initialize raw counter metrics
-    if (!config().tracepoint_events.empty())
+    if (!config().perf.tracepoints.events.empty())
     {
         try
         {
@@ -75,19 +75,19 @@ MainMonitor::MainMonitor() : metrics_(trace_)
         }
     }
 
-    if (config().use_block_io)
+    if (config().perf.block_io.enabled)
     {
         bio_monitor_ = std::make_unique<IoMonitor<perf::bio::Writer>>(trace_);
         bio_monitor_->start();
     }
 
 #ifdef HAVE_X86_ADAPT
-    if (!config().x86_adapt_knobs.empty())
+    if (!config().x86_adapt.knobs.empty())
     {
         try
         {
             x86_adapt_metrics_ =
-                std::make_unique<metric::x86_adapt::Metrics>(trace_, config().x86_adapt_knobs);
+                std::make_unique<metric::x86_adapt::Metrics>(trace_, config().x86_adapt.knobs);
             x86_adapt_metrics_->start();
         }
         catch (std::exception& e)
@@ -98,7 +98,7 @@ MainMonitor::MainMonitor() : metrics_(trace_)
 #endif
 
 #ifdef HAVE_X86_ENERGY
-    if (config().use_x86_energy)
+    if (config().x86_energy.enabled)
     {
         try
         {
@@ -113,7 +113,7 @@ MainMonitor::MainMonitor() : metrics_(trace_)
 #endif
 
 #ifdef HAVE_SENSORS
-    if (config().use_sensors)
+    if (config().sensors.enabled)
     {
         try
         {
@@ -153,7 +153,7 @@ MainMonitor::~MainMonitor()
     // Note: call stop() in reverse order than start() in constructor
 
 #ifdef HAVE_SENSORS
-    if (config().use_sensors)
+    if (config().sensors.enabled)
     {
         sensors_recorder_->stop();
     }
@@ -179,7 +179,7 @@ MainMonitor::~MainMonitor()
     }
 #endif
 
-    if (config().use_block_io)
+    if (config().perf.block_io.enabled)
     {
         bio_monitor_->stop();
     }

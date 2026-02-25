@@ -21,7 +21,6 @@
 
 #include <lo2s/monitor/tracepoint_monitor.hpp>
 
-#include <lo2s/config.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/writer.hpp>
@@ -39,7 +38,7 @@ namespace lo2s::monitor
 {
 
 TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
-: monitor::PollMonitor(trace, "", config().perf_read_interval), cpu_(cpu)
+: monitor::PollMonitor(trace, ""), cpu_(cpu)
 {
     const std::vector<perf::tracepoint::TracepointEventAttr> tracepoint_events =
         perf::EventComposer::instance().emplace_tracepoints();
@@ -64,11 +63,6 @@ void TracepointMonitor::initialize_thread()
 
 void TracepointMonitor::monitor(int fd)
 {
-    if (fd == timer_pfd().fd)
-    {
-        return;
-    }
-
     if (fd == stop_pfd().fd)
     {
         for (auto& perf_writer : perf_writers_)

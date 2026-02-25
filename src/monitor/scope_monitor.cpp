@@ -23,6 +23,7 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/execution_scope.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
@@ -37,28 +38,28 @@ namespace lo2s::monitor
 {
 
 ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: PollMonitor(trace, scope.name(), config().perf_read_interval), scope_(scope)
+: PollMonitor(trace, scope.name()), scope_(scope)
 {
-    if (config().use_perf_sampling || config().use_process_recording)
+    if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
         sample_writer_ = std::make_unique<perf::sample::Writer>(scope, trace, enable_on_exec);
         add_fd(sample_writer_->fd());
     }
 
-    if (config().use_syscalls)
+    if (config().perf.syscall.enabled)
     {
         syscall_writer_ = std::make_unique<perf::syscall::Writer>(scope, trace);
         add_fd(syscall_writer_->fd());
     }
 
-    if (config().use_group_metrics)
+    if (config().perf.group.enabled)
     {
         group_counter_writer_ =
             std::make_unique<perf::counter::group::Writer>(scope, trace, enable_on_exec);
         add_fd(group_counter_writer_->fd());
     }
 
-    if (config().use_userspace_metrics)
+    if (config().perf.userspace.enabled)
     {
         userspace_counter_writer_ =
             std::make_unique<perf::counter::userspace::Writer>(scope, trace);
@@ -93,24 +94,21 @@ void ScopeMonitor::monitor(int fd)
         try_pin_to_scope(scope_);
     }
 
-    if (syscall_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || syscall_writer_->fd() == fd))
+    if (syscall_writer_ && (fd == stop_pfd().fd || syscall_writer_->fd() == fd))
     {
         syscall_writer_->read();
     }
-    if (sample_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || sample_writer_->fd() == fd))
+    if (sample_writer_ && (fd == stop_pfd().fd || sample_writer_->fd() == fd))
     {
+        Log::error() << "Reading samples!";
         sample_writer_->read();
     }
 
-    if (group_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || group_counter_writer_->fd() == fd))
+    if (group_counter_writer_ && (fd == stop_pfd().fd || group_counter_writer_->fd() == fd))
     {
         group_counter_writer_->read();
     }
-    if (userspace_counter_writer_ &&
-        (fd == timer_pfd().fd || fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
+    if (userspace_counter_writer_ && (fd == stop_pfd().fd || userspace_counter_writer_->fd() == fd))
     {
         userspace_counter_writer_->read();
     }

@@ -76,7 +76,7 @@ public:
             counter_collection_.leader->set_disabled();
         }
 
-        counter_leader_ = counter_collection_.leader->open(scope, config().cgroup_fd);
+        counter_leader_ = counter_collection_.leader->open(scope, config().perf.cgroup_fd);
 
         for (auto& counter_ev : counter_collection_.counters)
         {

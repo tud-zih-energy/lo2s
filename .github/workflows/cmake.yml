@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure libc6-dev meson
+          sudo apt-get install libelf-dev libdw-dev libsensors-dev libpfm4-dev libaudit-dev libomp-dev libbpf-dev libdebuginfod-dev linux-tools-azure libc6-dev meson nlohmann-json3-dev
           sudo pip install git-archive-all
       - name: Install CUPTI
         if: matrix.nvidia == 'ON'

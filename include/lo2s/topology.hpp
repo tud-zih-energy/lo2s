@@ -28,7 +28,6 @@
 #include <algorithm>
 #include <map>
 #include <set>
-
 #ifdef HAVE_VEOSINFO
 extern "C"
 {

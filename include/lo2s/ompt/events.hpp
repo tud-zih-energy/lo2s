@@ -27,6 +27,11 @@
 
 #include <fmt/format.h>
 
+extern "C"
+{
+#include <unistd.h>
+}
+
 namespace lo2s::ompt
 {
 enum class OMPType : uint64_t
@@ -47,8 +52,13 @@ enum class EventType : uint64_t
 
 struct OMPTCctx
 {
+    OMPTCctx(OMPType type, const void* addr, uint64_t num_threads = 0)
+    : type(type), tid(static_cast<int64_t>(::gettid())), addr(reinterpret_cast<uint64_t>(addr)),
+      num_threads(num_threads)
+    {
+    }
     OMPType type;
-    uint64_t tid;
+    int64_t tid;
     uint64_t addr;
     uint64_t num_threads;
 

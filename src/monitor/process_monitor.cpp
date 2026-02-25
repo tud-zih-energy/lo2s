@@ -42,7 +42,7 @@ namespace lo2s::monitor
 ProcessMonitor::ProcessMonitor()
 {
 #ifdef HAVE_BPF
-    if (config().use_posix_io)
+    if (config().perf.posix_io.enabled)
     {
         posix_monitor_ = std::make_unique<PosixMonitor>(trace_);
         posix_monitor_->start();
@@ -71,12 +71,8 @@ void ProcessMonitor::insert_thread(Process parent [[maybe_unused]], Thread child
 #endif
     trace_.emplace_thread(parent, child, name);
 
-    if (config().use_perf_sampling)
-    {
-    }
-
     auto scope = ExecutionScope(child);
-    if (config().use_perf_sampling ||
+    if (config().perf.sampling.enabled ||
         !perf::EventComposer::instance().has_counters_for(MeasurementScope::group_metric(scope)) ||
         !perf::EventComposer::instance().has_counters_for(
             MeasurementScope::userspace_metric(scope)))

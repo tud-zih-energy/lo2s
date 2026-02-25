@@ -24,7 +24,6 @@
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/fwd.hpp>
 
-#include <chrono>
 #include <string>
 #include <vector>
 
@@ -38,8 +37,7 @@ namespace lo2s::monitor
 class PollMonitor : public ThreadedMonitor
 {
 public:
-    PollMonitor(trace::Trace& trace, const std::string& name,
-                std::chrono::nanoseconds read_interval);
+    PollMonitor(trace::Trace& trace, const std::string& name);
 
     PollMonitor(const PollMonitor&) = delete;
     PollMonitor& operator=(const PollMonitor&) = delete;
@@ -48,7 +46,7 @@ public:
 
     void stop() override;
 
-    ~PollMonitor() override;
+    ~PollMonitor() override = default;
 
 protected:
     void run() override;
@@ -61,11 +59,6 @@ protected:
     struct pollfd& stop_pfd()
     {
         return pfds_[0];
-    }
-
-    struct pollfd& timer_pfd()
-    {
-        return pfds_[1];
     }
 
 private:

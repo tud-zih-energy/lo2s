@@ -25,17 +25,15 @@
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/threaded_monitor.hpp>
 #include <lo2s/trace/trace.hpp>
-#include <lo2s/util.hpp>
 
-#include <chrono>
 #include <stdexcept>
 #include <string>
 
 #include <cstdint>
-#include <cstring>
 
 extern "C"
 {
+#include <poll.h>
 #include <sys/eventfd.h>
 #include <sys/poll.h>
 #include <unistd.h>
@@ -43,43 +41,18 @@ extern "C"
 
 namespace lo2s::monitor
 {
-PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name,
-                         std::chrono::nanoseconds read_interval)
+PollMonitor::PollMonitor(trace::Trace& trace, const std::string& name)
 : ThreadedMonitor(trace, name)
 {
-    pfds_.resize(2);
+    pfds_.resize(1);
     stop_pfd().fd = eventfd(0, 0);
     stop_pfd().events = POLLIN;
     stop_pfd().revents = 0;
-
-    // Create and initialize timer_fd
-    struct itimerspec tspec;
-    memset(&tspec, 0, sizeof(struct itimerspec));
-
-    // Set initial expiration to lowest possible value, this together with TFD_TIMER_ABSTIME should
-    // synchronize our timers
-    if (read_interval.count() != 0)
-    {
-
-        timer_pfd().fd = timerfd_from_ns(read_interval);
-        timer_pfd().events = POLLIN;
-        timer_pfd().revents = 0;
-    }
-    else
-    {
-        // fd = -1 is just going to be ignored
-        timer_pfd().fd = -1;
-        timer_pfd().events = 0;
-        timer_pfd().revents = 0;
-    }
 }
 
 void PollMonitor::add_fd(int fd)
 {
-    struct pollfd pfd;
-    pfd.fd = fd;
-    pfd.events = POLLIN;
-    pfd.revents = 0;
+    struct pollfd const pfd{ fd, POLLIN, 0 };
     pfds_.push_back(pfd);
 }
 
@@ -145,16 +118,6 @@ void PollMonitor::run()
 
         monitor();
 
-        // Flush timer
-        if (timer_pfd().revents & POLLIN)
-        {
-            [[maybe_unused]] uint64_t expirations = 0;
-            if (read(timer_pfd().fd, &expirations, sizeof(expirations)) == -1)
-            {
-                Log::error() << "Flushing timer fd failed";
-                throw_errno();
-            }
-        }
         if (stop_pfd().revents & POLLIN)
         {
             Log::debug() << "Requested stop of PollMonitor";
@@ -162,13 +125,4 @@ void PollMonitor::run()
         }
     }
 }
-
-PollMonitor::~PollMonitor()
-{
-    if (timer_pfd().fd != -1)
-    {
-        close(timer_pfd().fd);
-    }
-}
-
 } // namespace lo2s::monitor

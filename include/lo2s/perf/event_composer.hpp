@@ -27,13 +27,14 @@
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
-#include <lo2s/util.hpp>
 
 #include <optional>
 #include <string>
 #include <vector>
 
 #include <cstdint>
+
+#include <unistd.h>
 
 namespace lo2s::perf
 {
@@ -61,11 +62,11 @@ private:
     counter::CounterCollection group_counters_for(ExecutionScope scope);
     counter::CounterCollection userspace_counters_for(ExecutionScope scope);
 
-    void watermark(EventAttr& ev)
+    void watermark(EventAttr& ev) // NOLINT
     {
         // When we poll on the fd given by perf_event_open, wakeup, when our buffer is 80% full
         // Default behaviour is to wakeup on every event, which is horrible performance wise
-        ev.set_watermark(0.8 * config().mmap_pages * get_page_size());
+        ev.set_watermark(0.8 * config().perf.mmap_pages * sysconf(_SC_PAGESIZE));
     }
 
     void emplace_userspace_counters();

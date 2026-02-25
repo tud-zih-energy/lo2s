@@ -113,6 +113,7 @@ void Writer::emplace_resolvers(Resolvers& resolvers)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
+    Log::error() << "sample!";
     auto tp = time_converter_(sample->time);
     tp = adjust_timepoints(tp);
 

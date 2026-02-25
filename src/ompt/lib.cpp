@@ -28,7 +28,6 @@
 #include <cstdint>
 
 #include <omp-tools.h>
-#include <unistd.h>
 
 namespace
 {
@@ -40,12 +39,8 @@ void on_ompt_callback_parallel_begin(ompt_data_t* /*parent_task_data*/,
                                      int /*flag*/, const void* codeptr_ra)
 {
 
-    struct lo2s::ompt::OMPTCctx cctx;
-
-    cctx.type = lo2s::ompt::OMPType::PARALLEL;
-    cctx.addr = reinterpret_cast<uint64_t>(codeptr_ra);
-    cctx.tid = gettid();
-    cctx.num_threads = requested_team_size;
+    struct lo2s::ompt::OMPTCctx const cctx(lo2s::ompt::OMPType::PARALLEL, codeptr_ra,
+                                           requested_team_size);
 
     ompt_rb_writer->ompt_enter(ompt_rb_writer->timestamp(), cctx);
 }
@@ -53,23 +48,14 @@ void on_ompt_callback_parallel_begin(ompt_data_t* /*parent_task_data*/,
 void on_ompt_callback_parallel_end(ompt_data_t* /*parallel_data*/, ompt_data_t* /*task_data*/,
                                    int /*flag*/, const void* codeptr_ra)
 {
-    struct lo2s::ompt::OMPTCctx cctx;
-
-    cctx.type = lo2s::ompt::OMPType::PARALLEL;
-    cctx.addr = reinterpret_cast<uint64_t>(codeptr_ra);
-    cctx.tid = gettid();
-
+    struct lo2s::ompt::OMPTCctx const cctx(lo2s::ompt::OMPType::PARALLEL, codeptr_ra);
     ompt_rb_writer->ompt_leave(ompt_rb_writer->timestamp(), cctx);
 }
 
 void on_ompt_callback_master(ompt_scope_endpoint_t endpoint, ompt_data_t* /*parallel_data*/,
                              ompt_data_t* /*task_data*/, const void* codeptr_ra)
 {
-    struct lo2s::ompt::OMPTCctx cctx;
-
-    cctx.type = lo2s::ompt::OMPType::MASTER;
-    cctx.addr = reinterpret_cast<uint64_t>(codeptr_ra);
-    cctx.tid = gettid();
+    struct lo2s::ompt::OMPTCctx const cctx(lo2s::ompt::OMPType::MASTER, codeptr_ra);
 
     if (endpoint == ompt_scope_begin)
     {
@@ -85,24 +71,23 @@ void on_ompt_callback_work(ompt_work_t wstype, ompt_scope_endpoint_t endpoint,
                            ompt_data_t* /*parallel_data*/, ompt_data_t* /*task_data*/,
                            uint64_t /*count*/, const void* codeptr_ra)
 {
-    struct lo2s::ompt::OMPTCctx cctx;
 
+    lo2s::ompt::OMPType type = lo2s::ompt::OMPType::LOOP;
     switch (wstype)
     {
     case ompt_work_loop:
     case ompt_work_loop_static:
-        cctx.type = lo2s::ompt::OMPType::LOOP;
+        type = lo2s::ompt::OMPType::LOOP;
         break;
     case ompt_work_workshare:
-        cctx.type = lo2s::ompt::OMPType::WORKSHARE;
+        type = lo2s::ompt::OMPType::WORKSHARE;
         break;
     default:
-        cctx.type = lo2s::ompt::OMPType::OTHER;
+        type = lo2s::ompt::OMPType::OTHER;
         break;
     }
 
-    cctx.addr = reinterpret_cast<uint64_t>(codeptr_ra);
-    cctx.tid = gettid();
+    struct lo2s::ompt::OMPTCctx const cctx(type, codeptr_ra);
 
     if (endpoint == ompt_scope_begin)
     {
@@ -118,11 +103,7 @@ void on_ompt_callback_sync_region(ompt_sync_region_t /*kind*/, ompt_scope_endpoi
                                   ompt_data_t* /*parallel_data*/, ompt_data_t* /*task_data*/,
                                   const void* codeptr_ra)
 {
-    struct lo2s::ompt::OMPTCctx cctx;
-
-    cctx.type = lo2s::ompt::OMPType::SYNC;
-    cctx.addr = reinterpret_cast<uint64_t>(codeptr_ra);
-    cctx.tid = gettid();
+    struct lo2s::ompt::OMPTCctx const cctx(lo2s::ompt::OMPType::SYNC, codeptr_ra);
 
     if (endpoint == ompt_scope_begin)
     {
@@ -156,8 +137,8 @@ int ompt_initialize(ompt_function_lookup_t lookup, int /*initial_device_num*/,
 void ompt_finalize(ompt_data_t* tool_data)
 {
 }
-
 ompt_start_tool_result_t ompt_start_tool_result = { &ompt_initialize, &ompt_finalize, 0 };
+
 } // namespace
 
 extern "C" ompt_start_tool_result_t* ompt_start_tool(unsigned int /*omp_version*/,

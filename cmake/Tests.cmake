@@ -38,3 +38,5 @@ endif()
 if(USE_BPF)
     AddLo2sTest(posix_io)
 endif()
+
+AddLo2sTest(cli)
