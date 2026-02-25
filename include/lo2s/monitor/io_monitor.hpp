@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include <lo2s/config.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/multi_reader.hpp>
 #include <lo2s/trace/fwd.hpp>
@@ -35,8 +34,7 @@ template <class Writer>
 class IoMonitor : public PollMonitor
 {
 public:
-    IoMonitor(trace::Trace& trace)
-    : monitor::PollMonitor(trace, "IoMonitor", config().perf_read_interval), multi_reader_(trace)
+    IoMonitor(trace::Trace& trace) : monitor::PollMonitor(trace, "IoMonitor"), multi_reader_(trace)
 
     {
         for (auto fd : multi_reader_.get_fds())
@@ -46,12 +44,9 @@ public:
     }
 
 private:
-    void monitor(int fd) override
+    void monitor(int fd [[maybe_unused]]) override
     {
-        if (fd != timer_pfd().fd)
-        {
-            multi_reader_.read();
-        }
+        multi_reader_.read();
     }
 
     void finalize_thread() override

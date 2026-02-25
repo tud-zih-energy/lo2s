@@ -99,7 +99,7 @@ namespace
 {
 std::string get_trace_name()
 {
-    std::string path = config().trace_path;
+    std::string path = config().otf2.trace_path;
     nitro::lang::replace_all(path, "{DATE}", get_datetime());
     nitro::lang::replace_all(path, "{HOSTNAME}", nitro::env::hostname());
 
@@ -123,7 +123,7 @@ Trace::Trace()
   calling_context_tree_(CallingContext::root(), GlobalCctxNode(nullptr)),
   interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
       intern("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
-      otf2::common::base_type::decimal, 0, config().perf_sampling_period)),
+      otf2::common::base_type::decimal, 0, config().perf.sampling.period)),
   comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
       intern("All pthread locations"), otf2::common::paradigm_type::pthread,
       otf2::common::group_flag_type::none)),
@@ -146,7 +146,7 @@ Trace::Trace()
     summary().set_trace_dir(trace_name_);
 
     archive_.set_creator(std::string("lo2s - ") + lo2s::version());
-    archive_.set_description(config().lo2s_command_line);
+    archive_.set_description(config().general.lo2s_command_line);
 
     const auto& uname = lo2s::get_uname();
     add_lo2s_property("UNAME::SYSNAME", std::string{ uname.sysname });
@@ -210,7 +210,7 @@ Trace::Trace()
 
     groups_.add_process(Process::no_parent());
 
-    if (config().use_block_io)
+    if (config().perf.block_io.enabled)
     {
         bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
             intern("block devices"), intern("hardware"), system_tree_root_node_);
@@ -236,14 +236,14 @@ Trace::Trace()
         }
     }
 
-    if (config().use_nec)
+    if (config().accel.nec)
     {
         nec_interrupt_generator_ = registry_.create<otf2::definition::interrupt_generator>(
             intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
-            otf2::common::base_type::decimal, 0, config().perf_sampling_period);
+            otf2::common::base_type::decimal, 0, config().perf.sampling.period);
     }
 
-    if (config().use_posix_io)
+    if (config().perf.posix_io.enabled)
     {
 
         const std::vector<otf2::common::io_paradigm_property_type> properties;
@@ -836,7 +836,7 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
         intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
 
-    if (config().disassemble)
+    if (config().perf.sampling.disassemble)
     {
         auto it = r.instruction_resolvers[ctx.p].find(addr);
 

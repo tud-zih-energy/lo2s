@@ -48,7 +48,7 @@ Reader<T>::Reader(ExecutionScope scope)
 : counter_collection_(
       EventComposer::instance().counters_for(MeasurementScope::userspace_metric(scope))),
   counter_buffer_(counter_collection_.counters.size()),
-  timer_fd_(timerfd_from_ns(config().userspace_read_interval)),
+  timer_fd_(timerfd_from_ns(config().perf.userspace.read_interval)),
   data_(counter_collection_.counters.size())
 {
     for (auto& event : counter_collection_.counters)

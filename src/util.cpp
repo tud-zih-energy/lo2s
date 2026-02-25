@@ -2,6 +2,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/error.hpp>
+#include <lo2s/io.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
@@ -9,6 +10,7 @@
 
 #include <nitro/lang/string.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -158,24 +160,11 @@ std::string get_datetime()
     return oss.str();
 }
 
-int32_t get_task_last_cpu_id(std::istream& proc_stat)
-{
-    proc_stat.seekg(0);
-    for (int i = 0; i < 38; i++)
-    {
-        std::string ignore;
-        std::getline(proc_stat, ignore, ' ');
-    }
-    int32_t cpu_id = -1;
-    proc_stat >> cpu_id;
-    return cpu_id;
-}
-
 const struct ::utsname& get_uname()
 {
     const static struct instance_wrapper
     {
-        instance_wrapper()
+        instance_wrapper() // NOLINT
         {
             if (::uname(&uname) < 0)
             {
@@ -227,7 +216,7 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
                 cur_process.emplace(thread, name);
             }
         }
-        catch (...)
+        catch (...) // NOLINT
         {
             Log::trace() << "Can not process comm for " << process << " skipping.";
         }
@@ -242,7 +231,8 @@ void try_pin_to_scope(ExecutionScope scope)
     if (scope.is_thread())
     {
         // Copy affinity from mentioned thread
-        sched_getaffinity(scope.as_thread().as_int(), sizeof(cpumask), &cpumask);
+        sched_getaffinity(static_cast<pid_t>(scope.as_thread().as_int()), sizeof(cpumask),
+                          &cpumask);
     }
     else
     {
@@ -398,7 +388,7 @@ struct rlimit initial_rlimit_fd()
 
 void bump_rlimit_fd()
 {
-    struct rlimit highest;
+    struct rlimit highest; // NOLINT
 
     auto ret = getrlimit(RLIMIT_NOFILE, &highest);
 
@@ -518,6 +508,13 @@ bool is_kernel_thread(Thread thread)
         }
     }
     return false;
+}
+
+void list_arguments_sorted(std::ostream& os, const std::string& description,
+                           std::vector<std::string> items)
+{
+    std::sort(items.begin(), items.end());
+    os << io::make_argument_list(description, items.begin(), items.end());
 }
 
 } // namespace lo2s

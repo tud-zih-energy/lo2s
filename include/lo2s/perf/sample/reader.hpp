@@ -108,18 +108,18 @@ private:
                 event.set_disabled();
             }
 
-            return event.open(scope, config().cgroup_fd);
+            return event.open(scope, config().perf.cgroup_fd);
         }
         catch (std::system_error& e)
         {
             throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
-                                                 config().perf_sampling_event, scope.name(),
+                                                 config().perf.sampling.event, scope.name(),
                                                  e.what()));
         }
     }
 
     Reader(ExecutionScope scope, bool enable_on_exec)
-    : record_callgraph_(config().enable_callgraph),
+    : record_callgraph_(config().perf.sampling.enable_callgraph),
       event_(create_sampling_event(scope, enable_on_exec))
     {
         init_mmap(event_.get_fd());

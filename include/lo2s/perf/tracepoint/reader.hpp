@@ -75,7 +75,7 @@ public:
             ret.resize(field.size());
             const auto* input_cstr = reinterpret_cast<const char*>(raw_data_ + field.offset());
             size_t i = 0;
-            for (; i < field.size() && input_cstr[i] != '\0'; i++)
+            for (i = 0; i < field.size() && input_cstr[i] != '\0'; i++)
             {
                 ret[i] = input_cstr[i];
             }
@@ -145,7 +145,7 @@ private:
 
     static EventGuard create_tracepoint_ev(Cpu cpu, tracepoint::TracepointEventAttr& ev)
     {
-        auto eg = ev.open(cpu.as_scope(), config().cgroup_fd);
+        auto eg = ev.open(cpu.as_scope(), config().perf.cgroup_fd);
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu << " with id "
                      << ev.id();
         return eg;

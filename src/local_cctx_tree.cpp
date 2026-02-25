@@ -46,15 +46,7 @@ void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
 
     for (uint64_t i = num_ips - 1; i != 0; i--)
     {
-        if (ips[i] == PERF_CONTEXT_KERNEL)
-        {
-            if (i <= 1)
-            {
-                break;
-            }
-            continue;
-        }
-        if (ips[i] == PERF_CONTEXT_USER)
+        if (ips[i] == PERF_CONTEXT_KERNEL || ips[i] == PERF_CONTEXT_USER)
         {
             if (i <= 1)
             {

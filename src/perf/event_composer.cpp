@@ -88,21 +88,21 @@ EventAttr EventComposer::create_sampling_event()
 
     auto res = EventResolver::instance().get_event_by_name("dummy");
 
-    if (config().use_perf_sampling)
+    if (config().perf.sampling.enabled)
     {
-        res = EventResolver::instance().get_event_by_name(config().perf_sampling_event);
+        res = EventResolver::instance().get_event_by_name(config().perf.sampling.event);
         Log::debug() << "using sampling event \'" << res.name()
-                     << "\', period: " << config().perf_sampling_period;
+                     << "\', period: " << config().perf.sampling.period;
 
-        res.sample_period(config().perf_sampling_period);
+        res.sample_period(config().perf.sampling.period);
 
-        if (config().use_pebs)
+        if (config().perf.sampling.use_pebs)
         {
             res.set_clockid(std::nullopt);
         }
         else
         {
-            res.set_clockid(config().clockid);
+            res.set_clockid(config().perf.clockid);
         }
         res.set_mmap();
 
@@ -124,12 +124,12 @@ EventAttr EventComposer::create_sampling_event()
     // TODO see if we can remove remove tid
     res.set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_CPU);
 
-    if (config().enable_callgraph)
+    if (config().perf.sampling.enable_callgraph)
     {
         res.set_sample_type(PERF_SAMPLE_CALLCHAIN);
     }
 
-    if (config().use_perf_sampling)
+    if (config().perf.sampling.enabled)
     {
         set_precision(res);
     }
@@ -146,7 +146,7 @@ EventAttr EventComposer::create_time_event(uint64_t local_time [[maybe_unused]])
 
     ev.sample_period(1);
     ev.set_watermark(1);
-    ev.set_clockid(config().clockid);
+    ev.set_clockid(config().perf.clockid);
     ev.set_sample_type(PERF_SAMPLE_TIME);
 #else
     EventAttr ev = EventResolver::instance().get_event_by_name("instructions");
@@ -169,7 +169,7 @@ std::vector<perf::tracepoint::TracepointEventAttr> EventComposer::emplace_tracep
     }
 
     auto res = std::vector<tracepoint::TracepointEventAttr>();
-    for (const auto& ev_name : config().tracepoint_events)
+    for (const auto& ev_name : config().perf.tracepoints.events)
     {
         res.emplace_back(create_tracepoint_event(ev_name));
     }
@@ -187,7 +187,7 @@ EventComposer::create_tracepoint_event(const std::string& name)
 
     ev.sample_period(1);
 
-    ev.set_clockid(config().clockid);
+    ev.set_clockid(config().perf.clockid);
     ev.set_sample_type(PERF_SAMPLE_RAW | PERF_SAMPLE_TIME);
     ev.set_disabled();
 
@@ -202,7 +202,7 @@ void EventComposer::emplace_userspace_counters()
     }
 
     counter::CounterCollection res;
-    for (const auto& ev : config().userspace_counters)
+    for (const auto& ev : config().perf.userspace.counters)
     {
         try
         {
@@ -226,7 +226,7 @@ void EventComposer::emplace_group_counters()
         return;
     }
 
-    if (config().metric_leader.empty() && config().group_counters.empty())
+    if (!config().perf.group.enabled)
     {
         group_counters_ = counter::CounterCollection{};
         return;
@@ -234,19 +234,19 @@ void EventComposer::emplace_group_counters()
 
     counter::CounterCollection res;
 
-    res.leader = EventResolver::instance().get_metric_leader(config().metric_leader);
+    res.leader = EventResolver::instance().get_metric_leader(config().perf.group.leader);
     res.leader->set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_READ);
 
-    if (config().metric_use_frequency)
+    if (config().perf.group.use_frequency)
     {
-        res.leader->sample_freq(config().metric_frequency);
+        res.leader->sample_freq(config().perf.group.frequency);
     }
     else
     {
-        res.leader->sample_period(config().metric_count);
+        res.leader->sample_period(config().perf.group.count);
     }
 
-    res.leader->set_clockid(config().clockid);
+    res.leader->set_clockid(config().perf.clockid);
 
     res.leader->set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING |
                                 PERF_FORMAT_GROUP);
@@ -255,7 +255,7 @@ void EventComposer::emplace_group_counters()
 
     // DONT do group_leader_.sample_freq() here, since it requires config() to be complete
 
-    for (const auto& ev_name : config().group_counters)
+    for (const auto& ev_name : config().perf.group.counters)
     {
         try
         {
@@ -271,7 +271,7 @@ void EventComposer::emplace_group_counters()
             EventAttr const ev = perf::EventResolver::instance().get_event_by_name(ev_name);
             res.counters.emplace_back(ev);
 
-            res.counters.back().set_clockid(config().clockid);
+            res.counters.back().set_clockid(config().perf.clockid);
             res.counters.back().set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED |
                                                 PERF_FORMAT_TOTAL_TIME_RUNNING);
         }

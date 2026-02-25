@@ -23,6 +23,7 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/config.hpp>
+#include <lo2s/config/dwarf_config.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/indicator.hpp>
 #include <lo2s/line_info.hpp>
@@ -142,7 +143,7 @@ int dwfl_dummy_find_debuginfo(Dwfl_Module* /*unused*/, void** /*unused*/, const 
 
 DwarfFunctionResolver::DwarfFunctionResolver(const std::string& name) : FunctionResolver(name)
 {
-    if (config().dwarf == DwarfUsage::NONE)
+    if (config().dwarf.usage == DwarfUsage::NONE)
     {
         cb.find_debuginfo = dwfl_dummy_find_debuginfo;
     }
@@ -212,7 +213,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     // Get the name of the current module (e.g. "libfoo.so")
     const char* module_name =
         dwfl_module_info(mod_, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-    if (config().dwarf != DwarfUsage::NONE)
+    if (config().dwarf.usage != DwarfUsage::NONE)
     {
         Dwarf_Die* cudie = nullptr;
         Dwarf_Addr bias = 0;

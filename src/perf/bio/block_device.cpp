@@ -97,9 +97,10 @@ std::map<dev_t, BlockDevice> get_block_devices()
             // Because someone at Linux has a serious glue-sniffing problem these symlinks are
             // relative paths and not absolute. Solution: delete the relative part "../../" from the
             // beginning and make it absolute
-            parent_dev =
-                parent_dev /
-                (std::filesystem::read_symlink(dir_entry.path()).parent_path().string().substr(6));
+            parent_dev = parent_dev / (std::filesystem::read_symlink(dir_entry.path())
+                                           .parent_path()
+                                           .string()
+                                           .substr(std::string("../../").length()));
 
             std::ifstream parent_uevent_file(parent_dev / "uevent");
             while (parent_uevent_file.good())
