@@ -13,7 +13,6 @@ jobs:
         os: [ubuntu-24.04]
         compiler: [g++-12, g++-13, g++-14, clang++-16, clang++-17, clang++-18]
         build-type: [Debug, RelWithDebInfo]
-        hw_breakpoint: [OFF]
         nvidia: [ OFF ]
         rocm: [ OFF ]
         radare: [ OFF ]
@@ -22,20 +21,17 @@ jobs:
           - os: ubuntu-24.04
             compiler: clang++-18
             build-type: Debug
-            hw_breakpoint: OFF
             nvidia: ON
             rocm: ON
             radare: ON
           - os: ubuntu-24.04
             compiler: clang++-18
             build-type: Debug
-            hw_breakpoint: ON
             nvidia: OFF
             rocm: OFF
           - os: ubuntu-24.04-arm
             compiler: clang++-18
             build-type: Debug
-            hw_breakpoint: OFF
             nvidia: OFF
             rocm: OFF
             radare: OFF
@@ -123,14 +119,14 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DUSE_HW_BREAKPOINT_COMPAT=${{ matrix.hw_breakpoint }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0;/opt/radare2"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0;/opt/radare2"
       - name: Build
         run: make -j 2
       - name: Create source tarball
-        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
+        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo'  && github.event_name != 'pull_request'}}
         run: make dist
       - uses: actions/upload-artifact@v4
-        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && matrix.hw_breakpoint == 'ON' && github.event_name != 'pull_request'}}
+        if: ${{ matrix.compiler == 'g++-12' && matrix.os == 'ubuntu-24.04' && matrix.build-type == 'RelWithDebInfo' && github.event_name != 'pull_request'}}
         with:
           overwrite: true
           path: lo2s*.tar.bz2
