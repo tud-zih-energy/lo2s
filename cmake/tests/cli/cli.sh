@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2026 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 function run_test()
 {
 lo2s="./lo2s"

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #pragma once
 
 #include <x86_adapt_cxx/configuration_item.hpp>

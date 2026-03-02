@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2016 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 macro(UnsetIfUpdated UnsetVar WatchedVar)
     if(DEFINED CACHE{OLD_${WatchedVar}})
         if(NOT ${WatchedVar} STREQUAL OLD_${WatchedVar})

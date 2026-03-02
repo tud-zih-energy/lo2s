@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2017 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include <lo2s/perf/tracepoint/writer.hpp>
 
 #include <lo2s/perf/time/converter.hpp>

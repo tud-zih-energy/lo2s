@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # pkg_check_modules with some grievances addressed
 # - Checks for the actual existence of all libraries in the specified static or
 #   shared variant

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2016 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 cmake_minimum_required(VERSION 3.11)
 
 project(lo2s VERSION 1.8.0)

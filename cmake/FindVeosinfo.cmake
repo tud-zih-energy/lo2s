@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 include(${CMAKE_CURRENT_LIST_DIR}/UnsetIfUpdated.cmake)
 
 option(Veosinfo_USE_STATIC_LIBS "link veosinfo statically" OFF)

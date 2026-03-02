@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include <lo2s/metric/x86_adapt/metrics.hpp>
 
 #include <lo2s/log.hpp>

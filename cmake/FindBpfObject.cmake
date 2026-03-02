@@ -1,4 +1,9 @@
-# SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-3-Clause
+#
+# SPDX-FileCopyrightText: (c) 2020, Andrii Nakryiko
+# SPDX-FileCopyrightText: (c) 2026 Technische Universität Dresden
+#
+# Originally from: https://github.com/libbpf/libbpf-bootstrap
 
 #[=======================================================================[.rst:
 FindBpfObject
