@@ -64,11 +64,9 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
 else()
     if(lo2s_USE_STATIC_LIBS STREQUAL "MOSTLY")
         set(Dl_USE_STATIC_LIBS       OFF CACHE BOOL "")
-
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
     elseif(lo2s_USE_STATIC_LIBS STREQUAL "ALL")
         set(Dl_USE_STATIC_LIBS       ON CACHE BOOL "")
-
         # Doesn't seem to work with clang, even though it should,
         # but at least it doesn't complain about it either
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc -static")
@@ -150,33 +148,9 @@ if(R_anal_FOUND AND R_asm_FOUND)
     set(Radare_FOUND TRUE)
 endif()
 
-# configurable options
-option(UML_LOOK "Generate graphs with an UML look" OFF)
-option(USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support." OFF)
-add_feature_info("USE_HW_BREAKPOINT_COMPAT" USE_HW_BREAKPOINT_COMPAT "Time synchronization fallback for old kernels without hardware breakpoint support.")
-CMAKE_DEPENDENT_OPTION(USE_RADARE "Enable Radare support." ON Radare_FOUND OFF)
-add_feature_info("USE_RADARE" USE_RADARE "Use Radare to add instruction information to samples.")
-CMAKE_DEPENDENT_OPTION(USE_SENSORS "Use the libsensors to read system metrics." ON "Sensors_FOUND" OFF)
-add_feature_info("USE_SENSORS" USE_SENSORS "Use the libsensors to read system metrics.")
-CMAKE_DEPENDENT_OPTION(USE_LIBPFM "Use libpfm to retrieve metric information." ON "Libpfm_FOUND" OFF)
-add_feature_info("USE_LIBPFM" USE_LIBPFM "Use libpfm to retrieve metric information.")
-CMAKE_DEPENDENT_OPTION(USE_LIBAUDIT "Use libaudit for syscall name resolution" ON Audit_FOUND OFF)
-add_feature_info("USE_LIBAUDIT" USE_LIBAUDIT "Use libaudit for syscall name resolution.")
-CMAKE_DEPENDENT_OPTION(USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards." ON "Veosinfo_FOUND" OFF)
-add_feature_info("USE_VEOSINFO" USE_VEOSINFO "Use libveosinfo to sample NEC SX-Aurora  Tsubasa cards.")
-CMAKE_DEPENDENT_OPTION(USE_CUPTI "Use CUPTI to record CUDA activity." ON "CUDAToolkit_FOUND" OFF)
-add_feature_info("USE_CUPTI" USE_CUPTI "Use CUPTI to record CUDA activity.")
-CMAKE_DEPENDENT_OPTION(USE_BPF "Use BPF to record POSIX I/O activity" ON BpfObject_FOUND OFF)
-add_feature_info("USE_BPF" USE_BPF "Use BPF to record POSIX I/O activity")
-CMAKE_DEPENDENT_OPTION(USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand." ON "Debuginfod_FOUND" OFF)
-add_feature_info("USE_DEBUGINFOD" USE_DEBUGINFOD "Use Debuginfod to download debug information on-demand.")
-CMAKE_DEPENDENT_OPTION(USE_OPENMP "Use OMPT to record OpenMP activity" ON "OMPT_FOUND" OFF)
-add_feature_info("USE_OPENMP" USE_OPENMP "Use OMPT to record OpenMP activity")
-CMAKE_DEPENDENT_OPTION(USE_HIP "Use rocprofiler-sdk to record AMD HIP activity" ON "${rocprofiler-sdk_FOUND}" OFF)
-add_feature_info("USE_HIP" USE_HIP "Use rocprofiler-sdk to record AMD HIP activity")
+CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 
 # system configuration checks
-CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 CHECK_STRUCT_HAS_MEMBER("struct perf_event_attr" clockid linux/perf_event.h HAVE_PERF_EVENT_ATTR_CLOCKID)
 
 if(NOT HAVE_PERF_EVENT_ATTR_CLOCKID)
@@ -202,6 +176,27 @@ CHECK_STRUCT_HAS_BITFIELD("struct perf_event_attr" context_switch linux/perf_eve
 if(NOT HAVE_PERF_RECORD_SWITCH)
     message(FATAL_ERROR "lo2s requires support for perf context switch recording. Make sure that you are running on a kernel that support context_switch with perf_event_open")
 endif()
+macro(lo2s_dependent_option _USE_OPTION _FOUND_VAL _DESC)
+    CMAKE_DEPENDENT_OPTION(${_USE_OPTION} "${_DESC}" ON ${_FOUND_VAL} OFF)
+    add_feature_info("${_USE_OPTION}" ${_USE_OPTION} ${_DESC})
+endmacro()
+
+lo2s_dependent_option(USE_HW_BREAKPOINT_COMPAT "NOT ${HAVE_HW_BREAKPOINT_H}" "Time synchronization fallback for architectures without hardware breakpoint support.")
+lo2s_dependent_option(USE_RADARE Radare_FOUND "Enable Radare Support")
+lo2s_dependent_option(USE_SENSORS "Sensors_FOUND" "Use the libsensors to read system metrics.")
+lo2s_dependent_option(USE_LIBPFM "Libpfm_FOUND" "Use libpfm to retrieve metric information.")
+lo2s_dependent_option(USE_LIBAUDIT Audit_FOUND "Use libaudit for syscall name resolution")
+lo2s_dependent_option(USE_VEOSINFO "Veosinfo_FOUND" "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards.")
+lo2s_dependent_option(USE_CUPTI "CUDAToolkit_FOUND" "Use CUPTI to record CUDA activity.")
+lo2s_dependent_option(USE_BPF BpfObject_FOUND "Use BPF to record POSIX I/O activity")
+lo2s_dependent_option(USE_DEBUGINFOD "Debuginfod_FOUND" "Use Debuginfod to download debug information on-demand.")
+lo2s_dependent_option(USE_OPENMP "OMPT_FOUND" "Use OMPT to record OpenMP activity")
+lo2s_dependent_option(USE_HIP "${rocprofiler-sdk_FOUND}" "Use rocprofiler-sdk to record AMD HIP activity")
+lo2s_dependent_option(USE_X86_ADAPT "${X86Adapt_FOUND}" "Use x86_adapt to provide extra hardware metrics")
+lo2s_dependent_option(USE_X86_ENERGY "${x86_energy_FOUND}" "Use x86_energy  to provide extra power metrics")
+
+option(UML_LOOK "Generate graphs with an UML look" OFF)
+
 
 # prepare list of source files
 set(SOURCE_FILES
@@ -295,7 +290,6 @@ set(SOURCE_FILES
 # define lo2s target
 add_executable(lo2s ${SOURCE_FILES})
 
-# define dependencies of lo2s target
 target_link_libraries(lo2s
     PRIVATE
         otf2xx::Writer
@@ -310,6 +304,11 @@ target_link_libraries(lo2s
         PMUEvents::pmu-events
         nlohmann_json::nlohmann_json
     )
+
+target_include_directories(lo2s PRIVATE
+    include
+    ${CMAKE_CURRENT_BINARY_DIR}/include
+)
 
 # old glibc versions require -lrt for clock_gettime()
 if(NOT CLOCK_GETTIME_FOUND)
@@ -329,23 +328,24 @@ if(NOT SHM_OPEN_FOUND)
 endif()
 
 # handle x86_adapt dependency
-if(X86Adapt_FOUND)
+if(USE_X86_ADAPT)
     target_sources(lo2s PRIVATE
         src/metric/x86_adapt/metrics.cpp
         src/metric/x86_adapt/monitor.cpp
         src/metric/x86_adapt/node_monitor.cpp
+        src/config/x86_adapt_config.cpp
         src/metric/x86_adapt/knobs.cpp
     )
     target_link_libraries(lo2s PRIVATE x86_adapt::x86_adapt)
 endif()
-add_feature_info("x86_adapt" X86Adapt_FOUND "Provide additional hardware metrics using x86_adapt")
 
 # handle x86_energy dependency
-if(x86_energy_FOUND)
+if(USE_X86_ENERGY)
     target_compile_definitions(lo2s PRIVATE HAVE_X86_ENERGY)
     target_sources(lo2s PRIVATE
         src/metric/x86_energy/metrics.cpp
         src/metric/x86_energy/monitor.cpp
+        src/config/x86_energy_config.cpp
     )
     if(x86_energy_STATIC)
         target_link_libraries(lo2s PRIVATE x86_energy::x86_energy-static)
@@ -353,7 +353,6 @@ if(x86_energy_FOUND)
         target_link_libraries(lo2s PRIVATE x86_energy::x86_energy)
     endif()
 endif()
-add_feature_info("x86_energy" x86_energy_FOUND "Provide additional power measurements using x86_energy")
 
 # handle radare dependency
 if (USE_RADARE)
@@ -377,41 +376,25 @@ if (USE_SENSORS)
 endif()
 
 if (USE_VEOSINFO)
-    if(Veosinfo_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_VEOSINFO)
         target_link_libraries(lo2s PRIVATE Veosinfo::veosinfo)
         target_sources(lo2s PRIVATE src/monitor/nec_thread_monitor.cpp
                                     src/monitor/nec_monitor_main.cpp)
-    else()
-        message(SEND_ERROR "Veosinfo not found but requested.")
-    endif()
 endif()
 
 if (USE_DEBUGINFOD)
-    if (Debuginfod_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_DEBUGINFOD)
         target_link_libraries(lo2s PRIVATE Debuginfod::Debuginfod)
-    else()
-        message(SEND_ERROR "Debuginfod not found but requested")
-    endif()
 endif()
 
 if (USE_LIBPFM)
-    if (Libpfm_FOUND)
-        target_compile_definitions(lo2s PUBLIC HAVE_LIBPFM)
-        target_link_libraries(lo2s PRIVATE Libpfm::libpfm)
-    else()
-        message(SEND_ERROR "Libpfm not found but requested.")
-    endif()
+    target_compile_definitions(lo2s PUBLIC HAVE_LIBPFM)
+    target_link_libraries(lo2s PRIVATE Libpfm::libpfm)
 endif()
 
 if (USE_LIBAUDIT)
-    if (Audit_FOUND)
         target_compile_definitions(lo2s PUBLIC HAVE_LIBAUDIT)
         target_link_libraries(lo2s PRIVATE Audit::Audit)
-    else()
-        message(SEND_ERROR "Libaudit not found but requested.")
-    endif()
 endif()
 
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
@@ -436,7 +419,6 @@ if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
 endif()
 
 if(USE_CUPTI)
-    if(CUDAToolkit_FOUND)
         target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types/process.cpp src/time/time.cpp)
         if (CUDA_USE_STATIC_LIBS)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
@@ -449,29 +431,18 @@ if(USE_CUPTI)
         endif()
 
         target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
-    else()
-        message(SEND_ERROR "Cupti not found but requested.")
-    endif()
 endif()
 
 if(USE_OPENMP)
-    if(OMPT_FOUND)
         target_sources(lo2s_injection PRIVATE src/ompt/lib.cpp)
         target_link_libraries(lo2s_injection PRIVATE OpenMP::OpenMP_CXX)
         target_compile_definitions(lo2s PUBLIC HAVE_OPENMP)
-    else()
-        message(SEND_ERROR "OpenMP not supported but requested.")
-    endif()
 endif()
 
 if(USE_HIP)
-    if(rocprofiler-sdk_FOUND)
         target_sources(lo2s_injection PRIVATE src/hip/lib.cpp)
         target_link_libraries(lo2s_injection PRIVATE rocprofiler-sdk::rocprofiler-sdk)
         target_compile_definitions(lo2s PUBLIC HAVE_HIP)
-    else()
-        message(SEND_ERROR "HIP activity recording not supported but requested.")
-    endif()
 endif()
 
 # generate version string used in lo2s
@@ -489,10 +460,6 @@ else()
 endif()
 configure_file(include/lo2s/version.hpp.in include/lo2s/version.hpp @ONLY)
 
-
-# check for version dependent features and generate a build config
-
-# check if specific perf events are available
 CHECK_NAME_EXISTS(PERF_COUNT_SW_ALIGNMENT_FAULTS linux/perf_event.h HAVE_PERF_EVENT_ALIGNMENT_FAULTS)
 CHECK_NAME_EXISTS(PERF_COUNT_SW_EMULATION_FAULTS linux/perf_event.h HAVE_PERF_EVENT_EMULATION_FAULTS)
 CHECK_NAME_EXISTS(PERF_COUNT_HW_REF_CPU_CYCLES linux/perf_event.h HAVE_PERF_EVENT_REF_CYCLES)
@@ -503,8 +470,6 @@ CHECK_NAME_EXISTS(PERF_COUNT_SW_DUMMY linux/perf_event.h HAVE_PERF_EVENT_DUMMY)
 CHECK_NAME_EXISTS(PERF_COUNT_SW_BPF_OUTPUT linux/perf_event.h HAVE_PERF_EVENT_BPF_OUTPUT)
 CHECK_NAME_EXISTS(PERF_COUNT_SW_CGROUP_SWITCHES linux/perf_event.h HAVE_PERF_EVENT_CGROUP_SWITCHES)
 
-#check if certain clock sources are available
-
 CHECK_NAME_EXISTS(CLOCK_MONOTONIC_RAW linux/time.h HAVE_CLOCK_MONOTONIC_RAW)
 CHECK_NAME_EXISTS(CLOCK_MONOTONIC_COARSE linux/time.h HAVE_CLOCK_MONOTONIC_COARSE)
 CHECK_NAME_EXISTS(CLOCK_REALTIME_COARSE linux/time.h HAVE_CLOCK_REALTIME_COARSE)
@@ -512,38 +477,22 @@ CHECK_NAME_EXISTS(CLOCK_BOOTTIME linux/time.h HAVE_CLOCK_BOOTTIME)
 CHECK_NAME_EXISTS(CLOCK_REALTIME_ALARM linux/time.h HAVE_CLOCK_REALTIME_ALARM)
 CHECK_NAME_EXISTS(CLOCK_BOOTTIME_ALARM linux/time.h HAVE_CLOCK_BOOTTIME_ALARM)
 
-#check if PERF_RECORD_LOST_SAMPLES is available
 CHECK_NAME_EXISTS(PERF_RECORD_LOST_SAMPLES linux/perf_event.h HAVE_PERF_RECORD_LOST_SAMPLES)
 
-# special quirk for old kernel versions
 if (USE_HW_BREAKPOINT_COMPAT)
     if (HAVE_HW_BREAKPOINT_H)
         message(WARNING "Using inaccurate compatibility time synchronization while hardware breakpoints are available. Consider deactivating USE_HW_BREAKPOINT_COMPAT")
-    endif()
-else()
-    if (NOT HAVE_HW_BREAKPOINT_H)
-        message(SEND_ERROR "Missing linux/hw_breakpoint.h, install that or consider activating USE_HW_BREAKPOINT_COMPAT for old kernels with compatibility time synchronization.")
     endif()
 endif()
 
 configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
 
-# define include directory of target lo2s
-target_include_directories(lo2s PRIVATE
-    include
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-)
-
 if (USE_BPF)
-    if (BpfObject_FOUND)
-        target_compile_definitions(lo2s PUBLIC HAVE_BPF)
-        target_sources(lo2s PRIVATE src/monitor/posix_monitor.cpp)
-        bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
-        add_dependencies(lo2s posix_io_skel)
-        target_link_libraries(lo2s PUBLIC posix_io_skel)
-    else()
-        message(SEND_ERROR "BPF not found but requested.")
-    endif()
+    target_compile_definitions(lo2s PUBLIC HAVE_BPF)
+    target_sources(lo2s PRIVATE src/monitor/posix_monitor.cpp)
+    bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
+    add_dependencies(lo2s posix_io_skel)
+    target_link_libraries(lo2s PUBLIC posix_io_skel)
 endif()
 
 add_subdirectory(man)
