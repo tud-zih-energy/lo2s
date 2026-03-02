@@ -1,0 +1,23 @@
+version = 1
+
+[[annotations]]
+
+path = [
+   ".turtle.json",
+   ".clang-format",
+   ".clang-tidy",
+   ".gitignore",
+   "AUTHORS",
+   ".github/workflows/cmake.yml",
+   ".github/workflows/reuse.yml",
+   ".github/pull_request_template.md",
+   "CITATION.cff",
+   "man/lo2s.1.pod",
+   "README.md",
+   ".gitmodules",
+   "share/logo/rendered/*",
+   "share/logo/README.md",
+   "share/logo/src/*"
+   ]
+SPDX-FileCopyrightText = "2016 (c) Technische Universität Dresden"
+SPDX-License-Identifier = "GPL-3.0-or-later"

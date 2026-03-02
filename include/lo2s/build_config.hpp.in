@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2026 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 // Predefined events which are only present in more modern kernels src/perf/event_resolver.cpp
 
 #cmakedefine HAVE_PERF_EVENT_STALLED_CYCLES_FRONTEND

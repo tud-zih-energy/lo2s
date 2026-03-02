@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2017 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #pragma once
 
 #include <lo2s/execution_scope.hpp>

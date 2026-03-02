@@ -1,0 +1,15 @@
+name: Check REUSE 
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo pip install reuse
+      - name: Check REUSE
+        run: |
+          reuse lint

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # This is optional, if found, it will give you
 # X86Adapt_FOUND
 # -DHAVE_X86_ADAPT

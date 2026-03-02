@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2019 (c) Technische Universität Dresden
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include <lo2s/perf/util.hpp>
 
 #include <lo2s/log.hpp>

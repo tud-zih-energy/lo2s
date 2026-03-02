@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 macro(AddLo2sTest test_name)
     add_test(NAME ${test_name} COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/cmake/tests/${test_name}/${test_name}.sh")

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2018 (c) Technische Universität Dresden
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 include(CheckCSourceCompiles)
 
 function(CHECK_STRUCT_HAS_BITFIELD _STRUCT _MEMBER _HEADER _RESULT)
