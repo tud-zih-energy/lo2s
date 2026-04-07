@@ -17,7 +17,6 @@ The traces can contain any of the following information:
 
  * From running threads
    * Calling context samples based on instruction overflows
-   * The calling context samples are annotated with the disassembled assembler instruction string
    * The framepointer-based call-path for each calling context sample
    * Per-thread performance counter readings
    * Which thread was scheduled on which CPU at what time
@@ -58,7 +57,6 @@ In both modes, system-level metrics (e.g. tracepoints), are always grouped by th
 
  * [x86_adapt](https://github.com/tud-zih-energy/x86_adapt) for mircorarchitecture specific metrics
  * [x86_energy](https://github.com/tud-zih-energy/x86_energy) for CPU power metrics
- * [radare2](https://rada.re/n/radare2.html) (>= 5.8.0) for disassembled instruction strings
  * [lm-sensors](https://github.com/lm-sensors/lm-sensors) for sensor readings
  * [libaudit](https://github.com/linux-audit/audit-userspace/) to resolve syscall names, otherwise only syscall nrs can be used in syscall tracing
  * [pod2man](https://www.eyrie.org/~eagle/software/podlators/) to generate the man pages (typically distributed as part of `perl`)

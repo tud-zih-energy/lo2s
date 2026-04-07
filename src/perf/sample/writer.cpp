@@ -8,7 +8,6 @@
 #include <lo2s/calling_context.hpp>
 #include <lo2s/execution_scope.hpp>
 #include <lo2s/function_resolver.hpp>
-#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/sample/reader.hpp>
@@ -79,11 +78,6 @@ void Writer::emplace_resolvers(Resolvers& resolvers)
             if (fr != nullptr)
             {
                 resolvers.function_resolvers.at(p).emplace(m, fr);
-            }
-            auto ir = instruction_resolver_for(mmap_event.get()->filename);
-            if (ir != nullptr)
-            {
-                resolvers.instruction_resolvers[p].emplace(m, ir);
             }
         }
         catch (std::exception& e)

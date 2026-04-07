@@ -6,7 +6,6 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/function_resolver.hpp>
-#include <lo2s/instruction_resolver.hpp>
 #include <lo2s/types/process.hpp>
 
 #include <string>
@@ -19,7 +18,6 @@ void Resolvers::fork(Process parent, Process process)
     {
         function_resolvers.emplace(process, function_resolvers.at(parent));
     }
-    instruction_resolvers[process] = instruction_resolvers[parent];
 }
 
 void Resolvers::emplace_mappings_for(Process p, const Mapping& m, const std::string& binary_name)
@@ -28,12 +26,6 @@ void Resolvers::emplace_mappings_for(Process p, const Mapping& m, const std::str
     if (fr != nullptr)
     {
         function_resolvers.at(p).emplace(m, fr);
-    }
-    auto ir = instruction_resolver_for(binary_name);
-
-    if (ir != nullptr)
-    {
-        instruction_resolvers[p].emplace(m, ir);
     }
 }
 } // namespace lo2s

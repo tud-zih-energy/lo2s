@@ -46,7 +46,6 @@ SamplingConfig::SamplingConfig(nitro::options::arguments& arguments)
     }
     exclude_kernel = !static_cast<bool>(arguments.given("kernel"));
     enable_callgraph = arguments.given("call-graph");
-    disassemble = arguments.given("disassemble");
     period = arguments.as<std::uint64_t>("count");
     event = arguments.get("event");
 }
@@ -76,13 +75,6 @@ void SamplingConfig::add_parser(nitro::options::parser& parser)
     sampling_options.toggle("no-ip",
                             "Do not record instruction pointers [NOT CURRENTLY SUPPORTED]");
 
-    sampling_options
-        .toggle("disassemble", "Enable augmentation of samples with instructions.")
-#ifdef HAVE_RADARE
-        .default_value(true)
-#endif
-        .allow_reverse();
-
     sampling_options.toggle("kernel", "Include events happening in kernel space.")
         .allow_reverse()
         .default_value(true);
@@ -93,13 +85,6 @@ void SamplingConfig::add_parser(nitro::options::parser& parser)
 
 void SamplingConfig::check()
 {
-#ifndef HAVE_RADARE
-    if (disassemble)
-    {
-        lo2s::Log::warn() << "Disassemble requested, but not supported by this installation.";
-    }
-    disassemble = false;
-#endif
     if (getuid() != 0 && perf::perf_event_paranoid() > 1 && exclude_kernel)
     {
         std::cerr << "You requested kernel sampling, but kernel.perf_event_paranoid > 1, "
@@ -128,7 +113,6 @@ void to_json(nlohmann::json& j, const perf::SamplingConfig& config)
                          { "event", config.event },
                          { "exclude_kernel", config.exclude_kernel },
                          { "enable_callgraph", config.enable_callgraph },
-                         { "disassemble", config.disassemble },
                          { "use_pebs", config.use_pebs } });
 }
 } // namespace lo2s::perf

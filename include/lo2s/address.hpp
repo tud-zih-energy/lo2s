@@ -166,6 +166,13 @@ struct Mapping
         return range < other.range;
     }
 
+    // This is solely for putting it back to the /proc/self/maps format.
+    // (pretend mappings are always RX)
+    std::string to_string() const
+    {
+        return fmt::format("{}-{} r-xp {}", range.start, range.end, pgoff);
+    }
+
     static Mapping max()
     {
         return { 0, UINT64_MAX, 0 };

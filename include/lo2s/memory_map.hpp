@@ -174,6 +174,19 @@ public:
         return map_.end();
     }
 
+    std::string to_string() const
+    {
+        std::string res;
+        for (const auto& map : map_)
+        {
+            // If your tool depends on the exact number of digits for any of these numbers: sorry,
+            // not sorry.
+            res += fmt::format("{} 00:00 0 {}\n", map.first.to_string(), map.second->name());
+        }
+
+        return res;
+    }
+
 private:
     std::map<Mapping, std::shared_ptr<T>> map_;
 };
@@ -188,7 +201,11 @@ public:
         auto kall = Kallsyms::cache();
         emplace(Mapping(Kallsyms::cache()->start(), (uint64_t)-1, 0), kall);
         auto perf_map = PerfMap::cache(process);
-        emplace(perf_map->mapping(), perf_map);
+
+        if (perf_map->has_perf_map())
+        {
+            emplace(perf_map->mapping(), perf_map);
+        }
     }
 };
 
