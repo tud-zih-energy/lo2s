@@ -110,16 +110,6 @@ MainMonitor::MainMonitor() : metrics_(trace_)
     }
 #endif
 
-#ifdef HAVE_VEOSINFO
-
-    for (auto device : Topology::instance().nec_devices())
-    {
-        nec_monitors_.emplace_back(std::make_unique<nec::NecMonitorMain>(trace_, device));
-
-        nec_monitors_.back()->start();
-    }
-#endif
-
     try
     {
         socket_monitor_ = std::make_unique<SocketMonitor>(trace_);
@@ -174,13 +164,6 @@ MainMonitor::~MainMonitor()
             tracepoint_monitor->stop();
         }
     }
-
-#ifdef HAVE_VEOSINFO
-    for (auto& nec_monitor : nec_monitors_)
-    {
-        nec_monitor->stop();
-    }
-#endif
 
     // Notify trace, that we will end recording now. That means, get_time() of this call will be
     // the last possible timestamp in the trace

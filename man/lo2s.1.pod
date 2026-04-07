@@ -413,15 +413,7 @@ Record measurements for each sensor found by L<sensors(1)>.
 
 =item B<--accel> I<ACCEL>
 
-Record activity events (instruction samples or kernel execution information) for the given accelerator. Usable accelerators are "nec" for NEC SX-Aurora and "nvidia" for NVidia CUDA accelerators.
-
-=item B<--nec-readout-interval> I<USEC>
-
-Set the interval (in microseconds) between NEC SX-Aurora instruction samples.
-
-=item B<--nec-check-interval> I<MSEC>
-
-Set the interval (in milliseconds) between checks for new NEC SX-Aurora processes.
+Record activity events (instruction samples or kernel execution information) for the given accelerator. Usable accelerators are "nvidia" for NVidia CUDA accelerators.
 
 =back
 
