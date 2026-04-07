@@ -11,12 +11,6 @@
 #include <algorithm>
 #include <map>
 #include <set>
-#ifdef HAVE_VEOSINFO
-extern "C"
-{
-#include <veosinfo/veosinfo.h>
-}
-#endif
 
 namespace lo2s
 {
@@ -48,26 +42,6 @@ public:
     {
         return cpus_;
     }
-
-#ifdef HAVE_VEOSINFO
-    const std::set<NecDevice> nec_devices() const
-    {
-        ve_nodeinfo nodeinfo;
-        auto ret = ve_node_info(&nodeinfo);
-        if (ret == -1)
-        {
-            Log::error() << "Failed to get Vector Engine node information!";
-            throw_errno();
-        }
-
-        std::set<NecDevice> devices;
-        for (int i = 0; i < nodeinfo.total_node_count; i++)
-        {
-            devices.emplace(NecDevice(i));
-        }
-        return devices;
-    }
-#endif
 
     Core core_of(Cpu cpu) const
     {

@@ -29,16 +29,7 @@ AcceleratorConfig::AcceleratorConfig(nitro::options::arguments& arguments)
 
     for (const auto& accel : arguments.get_all("accel"))
     {
-        if (accel == "nec")
-        {
-#ifdef HAVE_VEOSINFO
-            nec = true;
-#else
-            std::cerr << "lo2s was built without support for NEC SX-Aurora sampling\n";
-            std::exit(EXIT_FAILURE);
-#endif
-        }
-        else if (accel == "nvidia")
+        if (accel == "nvidia")
         {
 #ifdef HAVE_CUDA
             nvidia = true;
@@ -80,9 +71,6 @@ void AcceleratorConfig::add_parser(nitro::options::parser& parser)
 
 #ifdef HAVE_CUDA
     accelerators.emplace_back("nvidia");
-#endif
-#ifdef HAVE_VEOSINFO
-    accelerators.emplace_back("nec");
 #endif
 #ifdef HAVE_OPENMP
     accelerators.emplace_back("openmp");

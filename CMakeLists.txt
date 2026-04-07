@@ -45,7 +45,6 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     x86_energy_STATIC
     CUDA_USE_STATIC_LIBS
     Sensors_USE_STATIC_LIBS
-    Veosinfo_USE_STATIC_LIBS
     Audit_USE_STATIC_LIBS
     Debuginfod_USE_STATIC_LIBS
     LibBpf_USE_STATIC_LIBS)
@@ -60,7 +59,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Sensors_USE_STATIC_LIBS  OFF CACHE BOOL "")
     set(Libpfm_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
-    set(Veosinfo_USE_STATIC_LIBS OFF CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    OFF CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   OFF CACHE BOOL "")
 else()
@@ -84,7 +82,6 @@ else()
     set(Sensors_USE_STATIC_LIBS  ON CACHE BOOL "")
     set(Libpfm_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
-    set(Veosinfo_USE_STATIC_LIBS ON CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
@@ -116,7 +113,6 @@ find_package(Doxygen COMPONENTS dot)
 find_package(x86_energy 2.0 CONFIG)
 find_package(StdFilesystem REQUIRED)
 find_package(Sensors)
-find_package(Veosinfo)
 find_package(Libpfm)
 find_package(Audit)
 find_package(BpfObject)
@@ -174,7 +170,6 @@ lo2s_dependent_option(USE_HW_BREAKPOINT_COMPAT "NOT ${HAVE_HW_BREAKPOINT_H}" "Ti
 lo2s_dependent_option(USE_SENSORS "Sensors_FOUND" "Use the libsensors to read system metrics.")
 lo2s_dependent_option(USE_LIBPFM "Libpfm_FOUND" "Use libpfm to retrieve metric information.")
 lo2s_dependent_option(USE_LIBAUDIT Audit_FOUND "Use libaudit for syscall name resolution")
-lo2s_dependent_option(USE_VEOSINFO "Veosinfo_FOUND" "Use libveosinfo to sample NEC SX-Aurora Tsubasa cards.")
 lo2s_dependent_option(USE_CUPTI "CUDAToolkit_FOUND" "Use CUPTI to record CUDA activity.")
 lo2s_dependent_option(USE_BPF BpfObject_FOUND "Use BPF to record POSIX I/O activity")
 lo2s_dependent_option(USE_DEBUGINFOD "Debuginfod_FOUND" "Use Debuginfod to download debug information on-demand.")
@@ -351,13 +346,6 @@ if (USE_SENSORS)
     else()
         message(SEND_ERROR "Sensors not found but requested.")
     endif()
-endif()
-
-if (USE_VEOSINFO)
-        target_compile_definitions(lo2s PUBLIC HAVE_VEOSINFO)
-        target_link_libraries(lo2s PRIVATE Veosinfo::veosinfo)
-        target_sources(lo2s PRIVATE src/monitor/nec_thread_monitor.cpp
-                                    src/monitor/nec_monitor_main.cpp)
 endif()
 
 if (USE_DEBUGINFOD)
