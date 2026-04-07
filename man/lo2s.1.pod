@@ -17,7 +17,6 @@ S<[B<-->[B<no->]B<instruction-sampling>]>
 S<[B<-e> I<EVENT>]>
 S<[B<-c> I<N>]>
 S<[B<-i> I<MSEC>]>
-S<[B<-->[B<no->]B<disassemble>]>
 S<[B<-->[B<no->]B<kernel>]>
 S<[B<-t> I<TRACEPOINT>]>
 S<[B<-E> I<EVENT>]>
@@ -294,11 +293,6 @@ repetetive instruction execution in tight loops.
 =item B<-g>, B<--call-graph>
 
 Record call stack of instruction samples.
-
-=item B<-->[B<no->]B<disassemble>
-
-Enable or disable augmentation of samples with disassembled instructions.
-Enabled by default if supported.
 
 =item B<-->[B<no->]B<kernel>
 

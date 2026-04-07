@@ -42,6 +42,11 @@ public:
         return LineInfo::for_unknown_function();
     }
 
+    bool has_perf_map()
+    {
+        return !entries_.empty();
+    }
+
 private:
     std::map<Range, LineInfo> entries_;
     Address start_ = UINT64_MAX;

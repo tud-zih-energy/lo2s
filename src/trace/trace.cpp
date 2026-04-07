@@ -265,6 +265,7 @@ otf2::chrono::time_point Trace::record_to() const
 
 Trace::~Trace()
 {
+
     if (!local_cctx_trees_finalized_)
     {
         Log::error()
@@ -819,27 +820,9 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
         intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
 
-    if (config().perf.sampling.disassemble)
-    {
-        auto it = r.instruction_resolvers[ctx.p].find(addr);
+    registry_.create<otf2::definition::calling_context_property>(
+        new_cctx, intern("ip"), otf2::attribute_value(intern(std::to_string(addr.value()))));
 
-        if (it != r.instruction_resolvers[ctx.p].end())
-        {
-            try
-            {
-                std::string const instruction =
-                    it->second->lookup_instruction(addr - it->first.range.start + it->first.pgoff);
-                Log::trace() << "mapped " << addr << " to " << instruction;
-
-                registry_.create<otf2::definition::calling_context_property>(
-                    new_cctx, intern("instruction"), otf2::attribute_value(intern(instruction)));
-            }
-            catch (std::exception& ex)
-            {
-                Log::trace() << "could not read instruction from " << addr << ": " << ex.what();
-            }
-        }
-    }
     return new_cctx;
 }
 
@@ -854,7 +837,7 @@ otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeCo
     }
 
     auto name = thread_names_.at(thread);
-    const auto& iname = intern(fmt::format("{} ({})", name, thread.as_int()));
+    const auto& iname = intern(fmt::format("{}FOOBAR ({})", name, thread.as_int()));
 
     auto& thread_region = registry_.emplace<otf2::definition::region>(
         ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
@@ -882,8 +865,10 @@ otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeCo
     }
 
     // create calling context
-    return registry_.create<otf2::definition::calling_context>(
+    auto& node = registry_.create<otf2::definition::calling_context>(
         ByThread(thread), thread_region, otf2::definition::source_code_location());
+
+    return node;
 }
 
 otf2::definition::calling_context& Trace::cctx_for_process(Process process)
@@ -903,8 +888,10 @@ otf2::definition::calling_context& Trace::cctx_for_process(Process process)
         otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
 
     // create calling context
-    return registry_.create<otf2::definition::calling_context>(
+    auto& node = registry_.create<otf2::definition::calling_context>(
         ByProcess(process), thread_region, otf2::definition::source_code_location());
+
+    return node;
 }
 
 /*
@@ -1163,6 +1150,29 @@ void Trace::finalize(Resolvers& resolvers)
         {
             const auto& mapping = merge_calling_contexts(local_cctx, resolvers);
             local_cctx.writer() << mapping;
+        }
+    }
+    for (auto& thread : thread_names_)
+    {
+        if (!registry_.has<otf2::definition::calling_context>(ByThread(thread.first)))
+        {
+            continue;
+        }
+
+        auto& cctx = registry_.get<otf2::definition::calling_context>(ByThread(thread.first));
+        try
+        {
+            Process const process = groups_.get_process(thread.first);
+            if (resolvers.function_resolvers.count(process) == 1)
+            {
+                registry_.create<otf2::definition::calling_context_property>(
+                    cctx, intern("MAPS"),
+                    otf2::attribute_value(
+                        intern(resolvers.function_resolvers.at(process).to_string())));
+            }
+        }
+        catch (const std::out_of_range&)
+        {
         }
     }
     local_cctx_trees_.clear();

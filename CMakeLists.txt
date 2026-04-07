@@ -44,7 +44,6 @@ IfUpdatedUnsetAll(lo2s_USE_STATIC_LIBS
     X86Adapt_STATIC
     x86_energy_STATIC
     CUDA_USE_STATIC_LIBS
-    Radare_USE_STATIC_LIBS
     Sensors_USE_STATIC_LIBS
     Veosinfo_USE_STATIC_LIBS
     Audit_USE_STATIC_LIBS
@@ -62,7 +61,6 @@ if(lo2s_USE_STATIC_LIBS STREQUAL "OFF")
     set(Libpfm_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     OFF CACHE BOOL "")
     set(Veosinfo_USE_STATIC_LIBS OFF CACHE BOOL "")
-    set(Radare_USE_STATIC_LIBS   OFF CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    OFF CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   OFF CACHE BOOL "")
 else()
@@ -87,7 +85,6 @@ else()
     set(Libpfm_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(CUDA_USE_STATIC_LIBS     ON CACHE BOOL "")
     set(Veosinfo_USE_STATIC_LIBS ON CACHE BOOL "")
-    set(Radare_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Audit_USE_STATIC_LIBS    ON CACHE BOOL "")
     set(LibBpf_USE_STATIC_LIBS   ON CACHE BOOL "")
     set(Debuginfod_USE_STATIC_LIBS     ON CACHE BOOL "")
@@ -140,18 +137,6 @@ if(NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
     endif()
 endif()
 
-if(Radare_USE_STATIC_LIBS)
-    set(R_asm_USE_STATIC_LIBS ON)
-    set(R_anal_USE_STATIC_LIBS ON)
-endif()
-
-FindPkgConfigWrapper(R_asm "r_asm>=5.8.0" r_asm)
-FindPkgConfigWrapper(R_anal "r_anal>=5.8.0" r_anal)
-
-if(R_anal_FOUND AND R_asm_FOUND)
-    set(Radare_FOUND TRUE)
-endif()
-
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
 
 # system configuration checks
@@ -186,7 +171,6 @@ macro(lo2s_dependent_option _USE_OPTION _FOUND_VAL _DESC)
 endmacro()
 
 lo2s_dependent_option(USE_HW_BREAKPOINT_COMPAT "NOT ${HAVE_HW_BREAKPOINT_H}" "Time synchronization fallback for architectures without hardware breakpoint support.")
-lo2s_dependent_option(USE_RADARE Radare_FOUND "Enable Radare Support")
 lo2s_dependent_option(USE_SENSORS "Sensors_FOUND" "Use the libsensors to read system metrics.")
 lo2s_dependent_option(USE_LIBPFM "Libpfm_FOUND" "Use libpfm to retrieve metric information.")
 lo2s_dependent_option(USE_LIBAUDIT Audit_FOUND "Use libaudit for syscall name resolution")
@@ -284,7 +268,6 @@ set(SOURCE_FILES
     src/main.cpp src/monitor/process_monitor.cpp
     src/topology.cpp src/dwarf_resolve.cpp
     src/function_resolver.cpp
-    src/instruction_resolver.cpp
     src/util.cpp
     src/perf/util.cpp
     src/syscalls.cpp
@@ -356,15 +339,6 @@ if(USE_X86_ENERGY)
     else()
         target_link_libraries(lo2s PRIVATE x86_energy::x86_energy)
     endif()
-endif()
-
-# handle radare dependency
-if (USE_RADARE)
-        target_compile_definitions(lo2s PUBLIC HAVE_RADARE)
-        target_link_libraries(lo2s PRIVATE R_asm::R_asm R_anal::R_anal)
-        target_sources(lo2s PRIVATE
-            src/radare.cpp
-        )
 endif()
 
 if (USE_SENSORS)
