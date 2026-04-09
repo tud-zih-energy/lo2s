@@ -57,7 +57,6 @@
 #include <otf2xx/writer/local.hpp>
 
 #include <chrono>
-#include <exception>
 #include <filesystem>
 #include <map>
 #include <mutex>
@@ -725,12 +724,9 @@ Trace::cctx_for_gpu_kernel(uint64_t kernel_id, Resolvers& r, struct MergeContext
 
     if (fr != r.gpu_function_resolvers.end())
     {
-        auto it = fr->second.find(kernel_id);
-        if (it != fr->second.end())
-        {
-            line_info = it->second->lookup_line_info(kernel_id);
-        }
+        line_info = fr->second->lookup_line_info(kernel_id);
     }
+
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
         intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
 
@@ -1173,6 +1169,7 @@ void Trace::finalize(Resolvers& resolvers)
         }
         catch (const std::out_of_range&)
         {
+            Log::warn() << "Could not insert \'MAPS\' cctx property for" << thread.first;
         }
     }
     local_cctx_trees_.clear();

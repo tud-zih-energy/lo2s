@@ -42,4 +42,8 @@ if(USE_BPF)
     AddLo2sTest(posix_io)
 endif()
 
+if(USE_CUPTI)
+    AddLo2sTest(gpu_events)
+endif()
+
 AddLo2sTest(cli)

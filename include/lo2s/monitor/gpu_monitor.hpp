@@ -30,7 +30,7 @@ namespace lo2s::monitor
 class GPUMonitor : public PollMonitor
 {
 public:
-    GPUMonitor(trace::Trace& trace, int fd);
+    GPUMonitor(trace::Trace& trace, RingbufReader&& ringbuf_reader_);
 
     void finalize_thread() override;
     void monitor(int fd) override;
@@ -44,9 +44,8 @@ public:
     {
         try
         {
-            resolvers.gpu_function_resolvers[process_].emplace(
-                Mapping(Address(0), Address(highest_func_ + 1), 0),
-                std::make_shared<ManualFunctionResolver>("gpu kernels", functions_));
+            resolvers.gpu_function_resolvers[process_] =
+                std::make_shared<ManualFunctionResolver>("gpu kernels", functions_);
         }
         catch (lo2s::Range::Error& e)
         {

@@ -21,7 +21,23 @@ namespace lo2s
 class RingbufReader
 {
 public:
-    RingbufReader(int fd, clockid_t clockid);
+    RingbufReader(clockid_t clockid);
+
+    RingbufReader(const RingbufReader&) = delete;
+    RingbufReader& operator=(const RingbufReader& other) = delete;
+
+    RingbufReader(RingbufReader&& other) noexcept : rb_(std::move(other.rb_))
+    {
+    }
+
+    RingbufReader& operator=(RingbufReader&& other) noexcept
+    {
+        this->rb_ = std::move(other.rb_);
+
+        return *this;
+    }
+
+    ~RingbufReader() = default;
 
     const struct ringbuf_header* header()
     {
@@ -46,6 +62,11 @@ public:
         }
 
         return ev;
+    }
+
+    int fd() const
+    {
+        return rb_->fd();
     }
 
     uint64_t get_top_event_type();

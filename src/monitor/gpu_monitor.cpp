@@ -18,11 +18,13 @@
 
 #include <cstdint>
 
+#include "lo2s/rb/reader.hpp"
+
 namespace lo2s::monitor
 {
 
-GPUMonitor::GPUMonitor(trace::Trace& trace, int fd)
-: PollMonitor(trace, "GPUMonitor"), ringbuf_reader_(fd, config().perf.clockid.value_or(0)),
+GPUMonitor::GPUMonitor(trace::Trace& trace, RingbufReader&& ringbuf_reader)
+: PollMonitor(trace, "GPUMonitor"), ringbuf_reader_(std::move(ringbuf_reader)),
   process_(ringbuf_reader_.header()->pid), time_converter_(perf::time::Converter::instance()),
   local_cctx_tree_(
       trace.create_local_cctx_tree(MeasurementScope::gpu(ExecutionScope(process_.as_thread()))))

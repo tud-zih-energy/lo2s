@@ -209,8 +209,8 @@ struct Holder<otf2::definition::location_group>
 template <>
 struct Holder<otf2::definition::location>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location, ByExecutionScope,
-                                                ByMeasurementScope, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::location, ByMeasurementScope,
+                                                ByBlockDevice>;
 };
 
 template <>

@@ -21,6 +21,11 @@ class SocketMonitor : public PollMonitor
 {
 public:
     SocketMonitor(trace::Trace& trace);
+    SocketMonitor(SocketMonitor&) = delete;
+    SocketMonitor(SocketMonitor&&) = delete;
+
+    SocketMonitor& operator=(SocketMonitor&) = delete;
+    SocketMonitor& operator=(SocketMonitor&&) = delete;
 
     void finalize_thread() override;
     void monitor(int fd) override;
@@ -38,11 +43,19 @@ public:
         }
     }
 
+    ~SocketMonitor() override
+    {
+        if (socket_ != -1)
+        {
+            close(socket_);
+        }
+    }
+
 private:
     trace::Trace& trace_;
     std::map<int, GPUMonitor> gpu_monitors_;
     std::map<int, OpenMPMonitor> openmp_monitors_;
 
-    int socket = -1;
+    int socket_ = -1;
 };
 } // namespace lo2s::monitor

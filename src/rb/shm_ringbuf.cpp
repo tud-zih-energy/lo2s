@@ -44,7 +44,7 @@ ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
     // another mapping of the ringbuffer using MMAP_FIXED. This way we only touch mappings we
     // control. Also, put the ringbuffer header on a separate page to make life easier.
 
-    size_t const pagesize = get_page_size();
+    size_t const pagesize = sysconf(_SC_PAGESIZE);
 
     first_mapping_ = SharedMemory(fd_, (size * 2) + pagesize, 0);
 
@@ -57,9 +57,12 @@ ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
 
 std::byte* ShmRingbuf::head(size_t ev_size)
 {
-
+    // Always round to the nearest multiple of 8, cause of alignment.
+    ev_size = (ev_size + 7) & ~7;
     uint64_t const head = header_->head.load();
     uint64_t const tail = header_->tail.load();
+    assert(tail % 8 == 0);
+    assert(head % 8 == 0);
 
     if (head >= tail)
     {
@@ -76,35 +79,56 @@ std::byte* ShmRingbuf::head(size_t ev_size)
             return nullptr;
         }
     }
-    return start_ + head;
+    std::byte* res = start_ + head;
+
+    if (reinterpret_cast<uint64_t>(res) % 8 != 0)
+    {
+        throw std::runtime_error("Got non-aligned tail!");
+    }
+    return res;
 }
 
 std::byte* ShmRingbuf::tail(uint64_t ev_size)
 {
+    ev_size = (ev_size + 7) & ~7;
     if (!can_be_loaded(ev_size))
     {
         return nullptr;
     }
-    return start_ + header_->tail.load();
+    std::byte* res = start_ + header_->tail.load();
+
+    if (reinterpret_cast<uint64_t>(res) % 8 != 0)
+    {
+        throw std::runtime_error("Got non-aligned tail!");
+    }
+    return res;
 }
 
 void ShmRingbuf::advance_head(size_t ev_size)
 {
+    ev_size = (ev_size + 7) & ~7;
     header_->head.store((header_->head.load() + ev_size) % header_->size);
 }
 
 void ShmRingbuf::advance_tail(size_t ev_size)
 {
+    ev_size = (ev_size + 7) & ~7;
     // Calling pop() without trying to get() data from the ringbuffer first is an error
     assert(can_be_loaded(ev_size));
 
+    assert((header_->tail.load() + ev_size) % 8 == 0);
     header_->tail.store((header_->tail.load() + ev_size) % header_->size);
 }
 
 bool ShmRingbuf::can_be_loaded(size_t ev_size)
 {
+    ev_size = (ev_size + 7) & ~7;
     uint64_t const head = header_->head.load();
     uint64_t const tail = header_->tail.load();
+
+    assert(tail % 8 == 0);
+    assert(head % 8 == 0);
+
     if (tail <= head)
     {
         return tail + ev_size <= head;

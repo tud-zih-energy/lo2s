@@ -14,11 +14,13 @@
 
 #include <cstdint>
 
+#include "lo2s/rb/reader.hpp"
+
 namespace lo2s::monitor
 {
 
-OpenMPMonitor::OpenMPMonitor(trace::Trace& trace, int fd)
-: PollMonitor(trace, "OpenMPMonitor"), ringbuf_reader_(fd, config().perf.clockid.value_or(0)),
+OpenMPMonitor::OpenMPMonitor(trace::Trace& trace, RingbufReader&& rr)
+: PollMonitor(trace, "OpenMPMonitor"), ringbuf_reader_(std::move(rr)),
   process_(ringbuf_reader_.header()->pid), trace_(trace),
   time_converter_(perf::time::Converter::instance())
 {
