@@ -10,12 +10,48 @@
 #include <cstddef>
 #include <cstdint>
 
+extern "C"
+{
+#include <unistd.h>
+}
+
 namespace lo2s
 {
 class ShmRingbuf
 {
 public:
     ShmRingbuf(int fd);
+    ShmRingbuf(ShmRingbuf&) = delete;
+    ShmRingbuf& operator=(ShmRingbuf&) = delete;
+
+    ShmRingbuf(ShmRingbuf&& other) noexcept
+    : header_(other.header_), fd_(other.fd_), first_mapping_(std::move(other.first_mapping_)),
+      second_mapping_(std::move(other.second_mapping_))
+    {
+        other.header_ = nullptr;
+        other.fd_ = -1;
+    }
+
+    ShmRingbuf& operator=(ShmRingbuf&& other) noexcept
+    {
+        header_ = other.header_;
+        fd_ = other.fd_;
+        first_mapping_ = std::move(other.first_mapping_);
+        second_mapping_ = std::move(other.second_mapping_);
+
+        other.header_ = nullptr;
+        other.fd_ = -1;
+
+        return *this;
+    }
+
+    ~ShmRingbuf()
+    {
+        if (fd_ != -1)
+        {
+            close(fd_);
+        }
+    }
 
     std::byte* head(size_t ev_size);
     std::byte* tail(uint64_t ev_size);

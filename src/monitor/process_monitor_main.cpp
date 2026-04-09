@@ -159,7 +159,6 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     }
 
     env.emplace("LO2S_SOCKET", config().rb.socket_path);
-    env.emplace("LO2S_RB_SIZE", std::to_string(config().rb.size));
 
     const char* ld_cstr = getenv("LD_LIBRARY_PATH");
     if (ld_cstr == nullptr)

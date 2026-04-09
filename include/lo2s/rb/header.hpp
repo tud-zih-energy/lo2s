@@ -24,8 +24,9 @@ constexpr uint64_t RINGBUF_VERSION = 2;
 
 enum class RingbufMeasurementType : uint64_t
 {
-    GPU = 0,
-    OPENMP = 1,
+    UNSET = 0,
+    GPU = 1,
+    OPENMP = 2,
 };
 
 struct ringbuf_header
@@ -36,9 +37,9 @@ struct ringbuf_header
     std::atomic_uint64_t tail;
     // set by the writer side (CUPTI, etc.)
     int64_t pid;
+    uint64_t type;
 
     // set by the reader size (lo2s)
-    std::atomic<uint64_t> lo2s_ready;
     clockid_t clockid;
 };
 

@@ -32,9 +32,9 @@ extern "C"
 namespace lo2s::monitor
 {
 SocketMonitor::SocketMonitor(trace::Trace& trace)
-: PollMonitor(trace, "SocketMonitor"), trace_(trace), socket(::socket(AF_UNIX, SOCK_SEQPACKET, 0))
+: PollMonitor(trace, "SocketMonitor"), trace_(trace), socket_(::socket(AF_UNIX, SOCK_SEQPACKET, 0))
 {
-    if (socket == -1)
+    if (socket_ == -1)
     {
         throw_errno();
     }
@@ -45,70 +45,21 @@ SocketMonitor::SocketMonitor(trace::Trace& trace)
     strncpy(name.sun_path, config().rb.socket_path.c_str(), sizeof(name.sun_path) - 1);
 
     unlink(config().rb.socket_path.c_str());
-    int ret = bind(socket, reinterpret_cast<const struct sockaddr*>(&name), sizeof(name));
+    int ret = bind(socket_, reinterpret_cast<const struct sockaddr*>(&name), sizeof(name));
     if (ret == -1)
     {
         throw_errno();
     }
 
-    ret = listen(socket, 20);
+    ret = listen(socket_, 20);
     if (ret == -1)
     {
         throw_errno();
     }
-    add_fd(socket);
+    add_fd(socket_);
 }
 
-namespace
-{
-std::optional<std::pair<RingbufMeasurementType, int>> read_fd(int socket)
-{
-    union
-    {
-        struct cmsghdr cm;
-        char control[CMSG_SPACE(sizeof(int))];
-    } control_un;
-
-    struct msghdr msg;
-    msg.msg_control = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
-
-    msg.msg_name = nullptr;
-    msg.msg_namelen = 0;
-
-    // We have to send a message together with the fd, so use that to send the type of the
-    // connected measurement
-    RingbufMeasurementType type = RingbufMeasurementType::GPU;
-    struct iovec iov[1];
-    iov[0].iov_base = &type;
-    iov[0].iov_len = 8;
-
-    msg.msg_iov = iov;
-    msg.msg_iovlen = 1;
-
-    if (recvmsg(socket, &msg, 0) <= 0)
-    {
-        throw_errno();
-    }
-
-    struct cmsghdr* cmptr = CMSG_FIRSTHDR(&msg);
-    if (cmptr != nullptr && cmptr->cmsg_len == CMSG_LEN(sizeof(int)))
-    {
-        if (cmptr->cmsg_level != SOL_SOCKET)
-        {
-            return std::nullopt;
-        }
-        if (cmptr->cmsg_type != SCM_RIGHTS)
-        {
-            return std::nullopt;
-        }
-
-        const int recvfd = *reinterpret_cast<int*>(CMSG_DATA(cmptr));
-        return std::pair<RingbufMeasurementType, int>(type, recvfd);
-    }
-    return std::nullopt;
-}
-} // namespace
+// Writes the fd of the shared memory to the Unix Domain Socket
 
 void SocketMonitor::finalize_thread()
 {
@@ -122,47 +73,84 @@ void SocketMonitor::finalize_thread()
         monitor.second.stop();
     }
 
-    close(socket);
+    close(socket_);
+    socket_ = -1;
     unlink(config().rb.socket_path.c_str());
 }
 
 void SocketMonitor::monitor(int fd)
 {
-    if (fd != socket)
+    if (fd != socket_)
     {
         return;
     }
-    const int data_socket = accept(socket, nullptr, nullptr);
+
+    int data_socket = accept(socket_, nullptr, nullptr);
     if (data_socket == -1)
     {
         throw_errno();
     }
 
-    int foo_fd = -1;
-    auto type_fd = read_fd(data_socket);
-
-    if (type_fd.has_value())
+    union // NOLINT
     {
-        if (type_fd.value().first == RingbufMeasurementType::GPU)
-        {
-            auto res =
-                gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
-                                      std::forward_as_tuple(trace_, type_fd.value().second));
-            res.first->second.start();
-        }
-        else if (type_fd.value().first == RingbufMeasurementType::OPENMP)
+        struct cmsghdr cm;
+        char control[CMSG_SPACE(sizeof(int))];
+    } control_un;
 
-        {
-            auto res =
-                openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(foo_fd),
-                                         std::forward_as_tuple(trace_, type_fd.value().second));
-            res.first->second.start();
-        }
-        else
-        {
-            throw std::runtime_error(fmt::format("Invalid ring buffer measurement type: {}",
-                                                 static_cast<uint64_t>(type_fd.value().first)));
-        }
+    struct msghdr msg; // NOLINT
+    msg.msg_control = control_un.control;
+    msg.msg_controllen = sizeof(control_un.control);
+
+    RingbufReader rr(config().perf.clockid.value());
+    struct cmsghdr* cmptr = CMSG_FIRSTHDR(&msg);
+    cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+    cmptr->cmsg_level = SOL_SOCKET;
+    cmptr->cmsg_type = SCM_RIGHTS;
+
+    int send_fd = rr.fd();
+    memcpy(CMSG_DATA(cmptr), &send_fd, sizeof(int));
+
+    msg.msg_name = nullptr;
+    msg.msg_namelen = 0;
+
+    // We need to send some data with the fd anyways, so use that to send
+    // the type of the measurement that we are doing.
+    struct iovec iov[1];
+    uint64_t payload = 42;
+    iov[0].iov_base = &payload;
+    iov[0].iov_len = sizeof(uint64_t);
+
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+
+    if (sendmsg(data_socket, &msg, 0) == -1)
+    {
+        throw_errno();
+    }
+
+    while (rr.header()->type == 0)
+    {
+    }
+
+    if (rr.header()->type == (uint64_t)RingbufMeasurementType::GPU)
+    {
+
+        auto res = gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(rr.fd()),
+                                         std::forward_as_tuple(trace_, std::move(rr)));
+        res.first->second.start();
+    }
+    else if (rr.header()->type == (uint64_t)RingbufMeasurementType::OPENMP)
+
+    {
+        auto res =
+            openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(rr.fd()),
+                                     std::forward_as_tuple(trace_, std::move(rr)));
+        res.first->second.start();
+    }
+    else
+    {
+        throw std::runtime_error(
+            fmt::format("Invalid ring buffer measurement type: {}", rr.header()->type));
     }
     close(data_socket);
 }

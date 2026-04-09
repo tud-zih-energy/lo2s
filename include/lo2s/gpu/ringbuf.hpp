@@ -51,7 +51,7 @@ public:
         next_cctx_ref_++;
 
         commit();
-        return cctx.second;
+        return cctx.first->second;
     }
 
     bool kernel_def(const std::string& func, uint64_t kernel_id)

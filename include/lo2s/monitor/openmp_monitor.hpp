@@ -24,7 +24,7 @@ namespace lo2s::monitor
 class OpenMPMonitor : public PollMonitor
 {
 public:
-    OpenMPMonitor(trace::Trace& trace, int fd);
+    OpenMPMonitor(trace::Trace& trace, RingbufReader&& rr);
 
     void finalize_thread() override;
 

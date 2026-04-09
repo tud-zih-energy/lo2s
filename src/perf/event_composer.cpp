@@ -43,22 +43,16 @@ namespace
 void set_precision(EventAttr& ev)
 {
     uint64_t precise_ip = 3;
-    while (true)
+    while (precise_ip > 0)
     {
-        try
+        if (ev.can_open(ExecutionScope(Thread(0))))
         {
-            auto guard = ev.open(Thread(0));
             return;
         }
-        catch (...)
-        {
-            if (precise_ip == 0)
-            {
-                throw;
-            }
-            ev.set_precise_ip(--precise_ip);
-        }
+        ev.set_precise_ip(--precise_ip);
     }
+    // If all precise_ip settings fail, trigger an exception
+    ev.open(Thread(0));
 }
 } // namespace
 

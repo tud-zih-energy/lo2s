@@ -366,11 +366,12 @@ endif()
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
-    add_library(lo2s_injection SHARED)
+    add_library(lo2s_injection SHARED src/rb/shm_ringbuf.cpp src/rb/writer.cpp src/types/process.cpp src/execution_scope.cpp src/types/cpu.cpp)
+    target_link_options(lo2s_injection PRIVATE "-Wl,-z,defs")
 
-    target_include_directories(lo2s_injection PRIVATE include
+    target_include_directories(lo2s_injection PUBLIC include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
-    target_link_libraries(lo2s_injection PRIVATE fmt::fmt-header-only
+        target_link_libraries(lo2s_injection PUBLIC fmt::fmt-header-only
             Nitro::log
             Nitro::env
             Nitro::dl
@@ -382,10 +383,15 @@ if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
     endif()
 
     install(TARGETS lo2s_injection LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    add_executable(dummy_gpu_events contrib/dummy_gpu_events.cpp)
+    target_link_libraries(dummy_gpu_events lo2s_injection)
+    target_include_directories(dummy_gpu_events PUBLIC include
+            ${CMAKE_CURRENT_BINARY_DIR}/include)
 endif()
 
 if(USE_CUPTI)
-        target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types/process.cpp src/time/time.cpp)
+    target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types/process.cpp src/time/time.cpp)
         if (CUDA_USE_STATIC_LIBS)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
         else()
