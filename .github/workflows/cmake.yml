@@ -15,7 +15,6 @@ jobs:
         build-type: [Debug, RelWithDebInfo]
         nvidia: [ OFF ]
         rocm: [ OFF ]
-        radare: [ OFF ]
         include:
 # One build with everything
           - os: ubuntu-24.04
@@ -23,7 +22,6 @@ jobs:
             build-type: Debug
             nvidia: ON
             rocm: ON
-            radare: ON
           - os: ubuntu-24.04
             compiler: clang++-18
             build-type: Debug
@@ -34,7 +32,6 @@ jobs:
             build-type: Debug
             nvidia: OFF
             rocm: OFF
-            radare: OFF
 
 
     runs-on: ${{ matrix.os }}
@@ -67,15 +64,6 @@ jobs:
 
           sudo apt update
           sudo apt install rocprofiler-sdk rocprofiler rocm-device-libs rocm rocm-dev
-      - name: Install Radare
-        if: matrix.radare == 'ON'
-        run: |
-          wget https://github.com/radareorg/radare2/archive/refs/tags/5.9.8.tar.gz
-          tar xf 5.9.8.tar.gz
-          cd radare2-5.9.8
-          meson build --prefix=/opt/radare2
-          meson compile -C build
-          meson install -C build
       - name: Cache OTF2
         id: cache-otf2
         uses: actions/cache@v4
@@ -119,7 +107,7 @@ jobs:
       - name: Run CMake configure
         env:
           CXX: ${{ matrix.compiler }}
-        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0;/opt/radare2"
+        run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DLO2S_TESTS_MAY_SKIP=ON -DCMAKE_PREFIX_PATH="/opt/x86_adapt;/opt/x86_energy;/opt/rocm-7.2.0"
       - name: Build
         run: make -j 2
       - name: Create source tarball
