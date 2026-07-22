@@ -21,4 +21,9 @@ ExecutionScope Cpu::as_scope() const
     return ExecutionScope(*this);
 }
 
+std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)
+{
+    return stream << fmt::format("{}", cpu);
+}
+
 } // namespace lo2s

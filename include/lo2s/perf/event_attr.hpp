@@ -421,7 +421,7 @@ public:
     template <class T>
     T read()
     {
-        static_assert(std::is_pod_v<T>);
+        static_assert(std::is_standard_layout_v<T> && std::is_trivial_v<T>);
         T val;
 
         if (::read(fd_, &val, sizeof(val)) == -1)

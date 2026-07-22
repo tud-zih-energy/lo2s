@@ -63,10 +63,7 @@ public:
         return Thread(-1);
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const Thread& thread)
-    {
-        return stream << fmt::format("{}", thread);
-    }
+    friend std::ostream& operator<<(std::ostream& stream, const Thread& thread);
 
     int64_t as_int() const
     {
