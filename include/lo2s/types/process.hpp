@@ -81,10 +81,7 @@ public:
     Thread as_thread() const;
     ExecutionScope as_scope() const;
 
-    friend std::ostream& operator<<(std::ostream& stream, const Process& process)
-    {
-        return stream << fmt::format("{}", process);
-    }
+    friend std::ostream& operator<<(std::ostream& stream, const Process& process);
 
 private:
     int64_t pid_;

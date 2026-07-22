@@ -20,4 +20,8 @@ Thread Process::as_thread() const
     return Thread(pid_);
 }
 
+std::ostream& operator<<(std::ostream& stream, const Process& process)
+{
+    return stream << fmt::format("{}", process);
+}
 } // namespace lo2s

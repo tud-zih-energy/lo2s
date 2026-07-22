@@ -18,4 +18,9 @@ Process Thread::as_process() const
 {
     return Process(tid_);
 }
+
+std::ostream& operator<<(std::ostream& stream, const Thread& thread)
+{
+    return stream << fmt::format("{}", thread);
+}
 } // namespace lo2s

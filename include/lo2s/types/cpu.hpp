@@ -45,10 +45,7 @@ public:
         return lhs.cpu_ > rhs.cpu_;
     }
 
-    friend std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)
-    {
-        return stream << fmt::format("{}", cpu);
-    }
+    friend std::ostream& operator<<(std::ostream& stream, const Cpu& cpu);
 
 private:
     int64_t cpu_;

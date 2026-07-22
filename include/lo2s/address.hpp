@@ -83,7 +83,36 @@ public:
 private:
     uint64_t v_;
 };
+} // namespace lo2s
 
+namespace fmt
+{
+template <>
+struct formatter<lo2s::Address>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        const auto* it = ctx.begin();
+        const auto* end = ctx.end();
+        if (it != end && *it != '}')
+        {
+            throw format_error("invalid format");
+        }
+
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const lo2s::Address& addr, FormatContext& ctx) const
+    {
+        return fmt::format_to(ctx.out(), "{:x}", addr.value());
+    }
+};
+
+} // namespace fmt
+
+namespace lo2s
+{
 inline std::ostream& operator<<(std::ostream& os, Address a)
 {
     static_assert(sizeof(a.value()) == sizeof(void*),
@@ -187,28 +216,6 @@ struct Mapping
 
 namespace fmt
 {
-template <>
-struct formatter<lo2s::Address>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        const auto* it = ctx.begin();
-        const auto* end = ctx.end();
-        if (it != end && *it != '}')
-        {
-            throw format_error("invalid format");
-        }
-
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const lo2s::Address& addr, FormatContext& ctx) const
-    {
-        return fmt::format_to(ctx.out(), "{:x}", addr.value());
-    }
-};
-
 template <>
 struct formatter<lo2s::Range>
 {
