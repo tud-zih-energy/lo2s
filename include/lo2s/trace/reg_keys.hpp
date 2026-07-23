@@ -108,6 +108,12 @@ struct ByLineInfoTag
 
 using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
 
+struct ByFunctionInfoTag
+{
+};
+
+using ByFunctionInfo = SimpleKeyType<FunctionInfo, ByFunctionInfoTag>;
+
 struct ByExecutionScopeTag
 {
 };
@@ -217,7 +223,7 @@ template <>
 struct Holder<otf2::definition::region>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::region, ByProcess, ByThread,
-                                                ByLineInfo, BySyscall>;
+                                                ByLineInfo, ByFunctionInfo, BySyscall>;
 };
 
 template <>

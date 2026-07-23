@@ -9,7 +9,8 @@ option(Debuginfod_USE_STATIC_LIBS "Link debuginfod statically." OFF)
 
 UnsetIfUpdated(Debuginfod_LIBRARY Debuginfod_USE_STATIC_LIBS)
 
-find_path(Debuginfod_INCLUDE_DIRS libelf.h
+find_path(Debuginfod_INCLUDE_DIRS
+    NAMES debuginfod.h elfutils/debuginfod.h
     PATHS ENV C_INCLUDE_PATH ENV CPATH
     PATH_SUFFIXES include)
 

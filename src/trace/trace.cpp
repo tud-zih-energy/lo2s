@@ -1105,11 +1105,13 @@ const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& 
 
 const otf2::definition::region& Trace::intern_region(const LineInfo& info)
 {
+    const auto function_info = info.function_info();
     const auto& name_str = intern(info.function);
     const auto& region = registry_.emplace<otf2::definition::region>(
-        ByLineInfo(info), name_str, name_str, name_str, otf2::common::role_type::function,
-        otf2::common::paradigm_type::sampling, otf2::common::flags_type::none, intern(info.file),
-        info.line, 0);
+        ByFunctionInfo(function_info), name_str, name_str, name_str,
+        otf2::common::role_type::function, otf2::common::paradigm_type::sampling,
+        otf2::common::flags_type::none, intern(function_info.file), function_info.begin_line,
+        function_info.end_line);
 
     if (registry_.has<otf2::definition::regions_group>(ByString(info.dso)))
     {
