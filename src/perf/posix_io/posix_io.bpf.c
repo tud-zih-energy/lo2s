@@ -49,9 +49,9 @@ struct
 // space. This saves us from doing this copy a second time, as well as  saves us from some issues
 // with user pointers that we can not copy from BPF (which is, among other things, all variables
 // initialized a compile time)
-SEC("kprobe/do_filp_open")
+SEC("kprobe/do_file_open")
 
-int BPF_KPROBE(do_filp_open, int dfd, struct filename* fn, const struct open_flags* op)
+int BPF_KPROBE(do_file_open, int dfd, struct filename* fn, const struct open_flags* op)
 {
     u32 pid = bpf_get_current_pid_tgid();
 
@@ -59,7 +59,7 @@ int BPF_KPROBE(do_filp_open, int dfd, struct filename* fn, const struct open_fla
         return 0;
 
     char name[256];
-    const char* name_ptr = BPF_CORE_READ(fn, name);
+    const char* name_ptr = BPF_CORE_READ((struct __filename_head*)fn, name);
     bpf_probe_read_kernel_str(name, 256, name_ptr);
 
     // Cache open information for use later in exit of open function event.
