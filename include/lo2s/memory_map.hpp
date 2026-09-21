@@ -187,7 +187,7 @@ public:
         return res;
     }
 
-private:
+protected:
     std::map<Mapping, std::shared_ptr<T>> map_;
 };
 
@@ -205,6 +205,14 @@ public:
         if (perf_map->has_perf_map())
         {
             emplace(perf_map->mapping(), perf_map);
+        }
+    }
+
+    void print()
+    {
+        for (const auto& res : map_)
+        {
+            Log::trace() << res.first.to_string() << " " << res.second->name();
         }
     }
 };

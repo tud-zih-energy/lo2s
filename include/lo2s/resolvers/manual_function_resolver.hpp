@@ -21,7 +21,7 @@ public:
     {
     }
 
-    LineInfo lookup_line_info(Address address) override
+    LineInfo lookup_line_info(Address address, uint64_t offset [[maybe_unused]] = 0) override
     {
         if (functions_.count(address))
         {

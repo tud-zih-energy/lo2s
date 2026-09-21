@@ -751,8 +751,8 @@ otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& 
 
         if (it != fr->second.end())
         {
-            line_info =
-                it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
+            line_info = it->second->lookup_line_info(
+                addr, (it->first.range.start + it->first.pgoff).value());
         }
     }
 
@@ -806,13 +806,21 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
                                                            struct MergeContext& ctx,
                                                            GlobalCctxMap::value_type* global_node)
 {
+    Log::trace() << "Resolving: " << addr << " in " << ctx.p.as_int();
     LineInfo line_info = LineInfo::for_unknown_function();
 
     auto& fr = r.function_resolvers.emplace(ctx.p, ctx.p).first->second;
     auto it = fr.find(addr);
     if (it != fr.end())
     {
-        line_info = it->second->lookup_line_info(addr - it->first.range.start + it->first.pgoff);
+        Log::trace() << "Resolving in object: ";
+        Log::trace() << it->first.to_string() << " " << it->second->name();
+        line_info =
+            it->second->lookup_line_info(addr, (it->first.range.start + it->first.pgoff).value());
+    }
+    else
+    {
+        Log::trace() << "No object found for: " << addr;
     }
 
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
@@ -1142,6 +1150,12 @@ LocalCctxTree& Trace::create_local_cctx_tree(const MeasurementScope& scope)
 
 void Trace::finalize(Resolvers& resolvers)
 {
+    Log::trace() << "Registered resolvers: ";
+    for (auto& resolver : resolvers.function_resolvers)
+    {
+        Log::trace() << resolver.first;
+        resolver.second.print();
+    }
     for (auto& local_cctx : local_cctx_trees_)
     {
         if (local_cctx.num_cctx() > 0)

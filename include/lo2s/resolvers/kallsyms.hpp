@@ -31,7 +31,7 @@ public:
         return start_;
     }
 
-    LineInfo lookup_line_info(Address addr) override
+    LineInfo lookup_line_info(Address addr, uint64_t offset [[maybe_unused]] = 0) override
     {
         auto it = kallsyms_.find(addr + start_);
         if (it != kallsyms_.end())
