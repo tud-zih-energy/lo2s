@@ -12,6 +12,8 @@
 #include <string>
 #include <utility>
 
+#include <bpf/libbpf.h>
+
 namespace lo2s
 {
 class FunctionResolver
@@ -31,7 +33,8 @@ public:
         return BinaryCache<FunctionResolver>::instance()[name];
     }
 
-    virtual LineInfo lookup_line_info(Address addr [[maybe_unused]])
+    virtual LineInfo lookup_line_info(Address addr [[maybe_unused]],
+                                      uint64_t offset [[maybe_unused]] = 0)
     {
         return LineInfo::for_binary(name_);
     }

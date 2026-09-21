@@ -115,9 +115,9 @@ bool Writer::handle(const RecordMmapType* mmap_event)
                     << mmap_event->tid;
     }
 
-    Log::debug() << "encountered mmap event for " << mmap_event->pid << " "
-                 << Address(mmap_event->addr) << " len: " << Address(mmap_event->len)
-                 << " pgoff: " << Address(mmap_event->pgoff) << ", " << mmap_event->filename;
+    Log::trace() << "encountered mmap event for process " << Process(mmap_event->pid) << ": ";
+    Log::trace() << Mapping(mmap_event->addr, mmap_event->addr + mmap_event->len, mmap_event->pgoff)
+                 << " " << mmap_event->filename;
 
     cached_mmap_events_.emplace_back(mmap_event);
 

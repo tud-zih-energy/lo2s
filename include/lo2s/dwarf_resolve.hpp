@@ -37,7 +37,7 @@ public:
     DwarfFunctionResolver& operator=(DwarfFunctionResolver&&) = delete;
 
     ~DwarfFunctionResolver() override;
-    LineInfo lookup_line_info(Address addr) override;
+    LineInfo lookup_line_info(Address addr, uint64_t offset) override;
 
     std::string name()
     {

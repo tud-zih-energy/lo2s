@@ -173,7 +173,7 @@ DwarfFunctionResolver::DwarfFunctionResolver(const std::string& name) : Function
     dwfl_report_begin(dwfl_);
 
     // Open the object file in the current dwfl session
-    mod_ = dwfl_report_offline(dwfl_, name.c_str(), name.c_str(), -1);
+    mod_ = dwfl_report_elf(dwfl_, name.c_str(), name.c_str(), -1, 0, false);
     if (mod_ == nullptr)
     {
         throw std::runtime_error(dwfl_errmsg(dwfl_errno()));
@@ -186,7 +186,7 @@ DwarfFunctionResolver::~DwarfFunctionResolver()
     dwfl_end(dwfl_);
 }
 
-LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
+LineInfo DwarfFunctionResolver::lookup_line_info(Address addr, uint64_t offset)
 {
     if (cache_.count(addr))
     {
@@ -196,6 +196,15 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
     // Get the name of the current module (e.g. "libfoo.so")
     const char* module_name =
         dwfl_module_info(mod_, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+    // if #relocations == 0, then we are dealing with a static binary and all
+    // addresses are already absolute.
+    // Otherwise, we need to adjust the address.
+    if (dwfl_module_relocations(mod_) != 0)
+    {
+        Log::trace() << "Dynamic object, adjusting address to: " << addr - offset;
+        addr = addr - offset;
+    }
     if (config().dwarf.usage != DwarfUsage::NONE)
     {
         Dwarf_Die* cudie = nullptr;
@@ -206,6 +215,8 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
          * the different compilation units. Iterate over the lot of them and check
          * if they contain the instruction pointer we are searching for
          */
+
+        Log::trace() << "Trying to resolve using DWARF";
         while ((cudie = dwfl_module_nextcu(mod_, cudie, &bias)) != nullptr)
         {
             if (dwarf_haspc(cudie, addr.value()))
@@ -226,6 +237,8 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
 
                 if (!arg.name.empty())
                 {
+                    Log::trace() << "Resolved with DWARF" << addr << " in " << module_name << " as "
+                                 << arg.name.c_str();
                     return cache_
                         .emplace(addr, LineInfo::for_function(srcname, arg.name.c_str(), lineno,
                                                               module_name))
@@ -246,14 +259,19 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr)
         const char* name =
             dwfl_module_getsym_info(mod_, i, &sym, &sym_addr, nullptr, nullptr, &bias);
 
-        if (addr.value() >= (sym_addr - bias) && addr.value() < (sym_addr + sym.st_size - bias))
+        Log::trace() << Address(sym_addr) << "::" << Address(sym_addr + sym.st_size) << " "
+                     << module_name << " " << name;
+
+        if (addr.value() >= (sym_addr) && addr.value() < (sym_addr + sym.st_size))
         {
+            Log::trace() << "Resolved with symtab to: " << name;
             return cache_
                 .emplace(Range(sym_addr - bias, sym_addr + sym.st_size - bias),
                          LineInfo::for_function(module_name, name, 1, module_name))
                 .first->second;
         }
     }
+    Log::trace() << "No symbol found for: " << addr;
     return cache_.emplace(addr, LineInfo::for_binary(module_name)).first->second;
 }
 } // namespace lo2s

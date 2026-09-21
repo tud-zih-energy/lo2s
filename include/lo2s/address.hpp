@@ -105,7 +105,7 @@ struct formatter<lo2s::Address>
     template <typename FormatContext>
     auto format(const lo2s::Address& addr, FormatContext& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{:x}", addr.value());
+        return fmt::format_to(ctx.out(), "{:016x}", addr.value());
     }
 };
 
@@ -115,9 +115,7 @@ namespace lo2s
 {
 inline std::ostream& operator<<(std::ostream& os, Address a)
 {
-    static_assert(sizeof(a.value()) == sizeof(void*),
-                  "internal address should be the same bit-width as void*");
-    return os << reinterpret_cast<void*>(a.value());
+    return os << fmt::format("{}", a);
 }
 
 // Range start is inclusive, end is exclusive: [start, end)
@@ -193,6 +191,11 @@ struct Mapping
     bool operator<(const Mapping& other) const
     {
         return range < other.range;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Mapping& m)
+    {
+        return os << m.to_string();
     }
 
     // This is solely for putting it back to the /proc/self/maps format.

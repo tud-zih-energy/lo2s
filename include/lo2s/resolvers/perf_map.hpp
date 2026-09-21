@@ -32,7 +32,7 @@ public:
         return { start_, end_, 0 };
     }
 
-    LineInfo lookup_line_info(Address addr) override
+    LineInfo lookup_line_info(Address addr, uint64_t offset [[maybe_unused]] = 0) override
     {
         auto it = entries_.find(addr + start_);
         if (it != entries_.end())
