@@ -89,7 +89,10 @@ EventAttr EventComposer::create_sampling_event()
     res.set_sample_id_all();
     res.set_comm();
     res.set_task();
-    res.set_context_switch();
+    if (config().perf.sampling.process_recording)
+    {
+        res.set_context_switch();
+    }
 
     if (exclude_kernel_)
     {
