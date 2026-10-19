@@ -402,7 +402,7 @@ void Trace::update_process(Process parent, Process process, const std::string& n
             registry_.get<otf2::definition::comm_group>(ByProcess(process)).name(iname);
             registry_.get<otf2::definition::comm>(ByProcess(process)).name(iname);
 
-            update_thread(process.as_thread(), name);
+            update_thread(process, process.as_thread(), name);
         }
         catch (const std::out_of_range&)
         {
@@ -419,7 +419,7 @@ void Trace::update_process(Process parent, Process process, const std::string& n
     }
 }
 
-void Trace::update_thread(Thread thread, const std::string& name)
+void Trace::update_thread(Process process, Thread thread, const std::string& name)
 {
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
@@ -430,6 +430,11 @@ void Trace::update_thread(Thread thread, const std::string& name)
     }
     try
     {
+        if (!registry_.has<otf2::definition::region>(ByThread(thread)))
+        {
+            emplace_thread_exclusive(process, thread, name, guard);
+            return;
+        }
         const auto& iname = intern(fmt::format("{} ({})", name, thread.as_int()));
         auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread));
         thread_region.name(iname);
@@ -1025,7 +1030,7 @@ void Trace::emplace_thread_exclusive(Process process, Thread thread, const std::
 
     if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
     {
-        update_thread(thread, name);
+        update_thread(process, thread, name);
         return;
     }
 

@@ -285,7 +285,7 @@ private:
     void emplace_thread_exclusive(Process process, Thread thread, const std::string& name,
                                   const std::lock_guard<std::recursive_mutex>& /*unused*/);
     void update_process(Process parent, Process p, const std::string& name);
-    void update_thread(Thread t, const std::string& name);
+    void update_thread(Process p, Thread t, const std::string& name);
 
     struct MergeContext
     {
