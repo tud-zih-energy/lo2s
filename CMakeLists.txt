@@ -118,19 +118,13 @@ find_package(Audit)
 find_package(BpfObject)
 find_package(LibDw REQUIRED)
 find_package(Debuginfod)
+find_package(CUDAToolkit)
+find_package(rocprofiler-sdk NO_MODULE)
+find_package(OpenMP)
 
-# These libraries are used in the lo2s injection shared library
-# so don't search for them in a pure static build, because that would
-# be pretty pointless
-if(NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
-    find_package(CUDAToolkit)
-    find_package(rocprofiler-sdk NO_MODULE)
-    find_package(OpenMP)
-
-    include(CheckIncludeFileCXX)
-    if(OpenMP_CXX_FOUND)
-        check_include_file_cxx("omp-tools.h" OMPT_FOUND CMAKE_REQUIRED_LIBRARIES OpenMP::OpenMP_CXX)
-    endif()
+include(CheckIncludeFileCXX)
+if(OpenMP_CXX_FOUND)
+    check_include_file_cxx("omp-tools.h" OMPT_FOUND CMAKE_REQUIRED_LIBRARIES OpenMP::OpenMP_CXX)
 endif()
 
 CHECK_INCLUDE_FILES(linux/hw_breakpoint.h HAVE_HW_BREAKPOINT_H)
@@ -365,7 +359,7 @@ endif()
 
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
-if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
+if(( USE_CUPTI OR USE_OPENMP OR USE_HIP ) AND NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
     add_library(lo2s_injection SHARED src/rb/shm_ringbuf.cpp src/rb/writer.cpp src/types/process.cpp src/execution_scope.cpp src/types/cpu.cpp)
     target_link_options(lo2s_injection PRIVATE "-Wl,-z,defs")
 
@@ -388,9 +382,8 @@ if(USE_CUPTI OR USE_OPENMP OR USE_HIP)
     target_link_libraries(dummy_gpu_events lo2s_injection)
     target_include_directories(dummy_gpu_events PUBLIC include
             ${CMAKE_CURRENT_BINARY_DIR}/include)
-endif()
 
-if(USE_CUPTI)
+    if(USE_CUPTI)
     target_sources(lo2s_injection PRIVATE src/cuda/lib.cpp src/types/process.cpp src/time/time.cpp)
         if (CUDA_USE_STATIC_LIBS)
             target_link_libraries(lo2s_injection PRIVATE CUDA::cupti_static)
@@ -401,21 +394,23 @@ if(USE_CUPTI)
         if(SHM_OPEN_FOUND_WITH_RT)
             target_link_libraries(lo2s_injection PRIVATE rt)
         endif()
-
         target_compile_definitions(lo2s PUBLIC HAVE_CUDA)
+
+    endif()
+
+    if(USE_OPENMP)
+            target_sources(lo2s_injection PRIVATE src/ompt/lib.cpp)
+            target_link_libraries(lo2s_injection PRIVATE OpenMP::OpenMP_CXX)
+            target_compile_definitions(lo2s PUBLIC HAVE_OPENMP)
+    endif()
+
+    if(USE_HIP)
+            target_sources(lo2s_injection PRIVATE src/hip/lib.cpp)
+            target_link_libraries(lo2s_injection PRIVATE rocprofiler-sdk::rocprofiler-sdk)
+            target_compile_definitions(lo2s PUBLIC HAVE_HIP)
+    endif()
 endif()
 
-if(USE_OPENMP)
-        target_sources(lo2s_injection PRIVATE src/ompt/lib.cpp)
-        target_link_libraries(lo2s_injection PRIVATE OpenMP::OpenMP_CXX)
-        target_compile_definitions(lo2s PUBLIC HAVE_OPENMP)
-endif()
-
-if(USE_HIP)
-        target_sources(lo2s_injection PRIVATE src/hip/lib.cpp)
-        target_link_libraries(lo2s_injection PRIVATE rocprofiler-sdk::rocprofiler-sdk)
-        target_compile_definitions(lo2s PUBLIC HAVE_HIP)
-endif()
 
 # generate version string used in lo2s
 if(Git_FOUND)
