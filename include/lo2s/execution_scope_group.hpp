@@ -14,6 +14,24 @@
 
 namespace lo2s
 {
+
+class ExecutionScopeException : public std::exception
+{
+public:
+    ExecutionScopeException(const std::string& name)
+    : errstr_(fmt::format("Could not get parent of scope: {}, not found!", name))
+    {
+    }
+
+    const char* what() const noexcept override
+    {
+        return errstr_.c_str();
+    }
+
+private:
+    std::string errstr_;
+};
+
 // This class tracks the relation ship between locations for which we can measure things and the
 // group they belong to. For Threads the location group is the process they belong to. CPUs are
 // their own group (for now)
@@ -43,7 +61,14 @@ public:
 
     ExecutionScope get_parent(const ExecutionScope& scope) const
     {
-        return groups_.at(scope);
+        try
+        {
+            return groups_.at(scope);
+        }
+        catch (std::out_of_range& e)
+        {
+            throw ExecutionScopeException(scope.name());
+        }
     }
 
     Process get_process(Thread thread) const

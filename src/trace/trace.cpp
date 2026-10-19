@@ -502,14 +502,29 @@ otf2::writer::local& Trace::sample_writer(const MeasurementScope& scope)
 
     comm_locations_group_.add_member(intern_location);
 
-    if (groups_.get_parent(scope.scope).is_process())
+    try
     {
-        registry_
-            .get<otf2::definition::comm_group>(
-                ByProcess(groups_.get_process(scope.scope.as_thread())))
-            .add_member(intern_location);
+        if (groups_.get_parent(scope.scope).is_process())
+        {
+            if (registry_.has<otf2::definition::comm_group>(
+                    ByProcess(groups_.get_process(scope.scope.as_thread()))))
+            {
+                registry_
+                    .get<otf2::definition::comm_group>(
+                        ByProcess(groups_.get_process(scope.scope.as_thread())))
+                    .add_member(intern_location);
+            }
+            else
+            {
+                Log::warn() << "Can not add sample writer to comm_group of process "
+                            << scope.scope.name() << ", ignoring!";
+            }
+        }
     }
-
+    catch (ExecutionScopeException& e)
+    {
+        Log::warn() << "Can not find parent of " << scope.scope.name();
+    }
     return archive_(intern_location);
 }
 
@@ -522,7 +537,6 @@ otf2::writer::local& Trace::syscall_writer(const ExecutionScope& scope)
         registry_.get<otf2::definition::location_group>(
             ByExecutionScope(groups_.get_parent(scope))),
         otf2::definition::location::location_type::cpu_thread);
-
     return archive_(intern_location);
 }
 
@@ -1095,9 +1109,12 @@ void Trace::emplace_threads(const std::map<Process, std::map<Thread, std::string
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
     for (const auto& process : thread_map)
     {
-
-        emplace_process(Process::no_parent(), process.first,
-                        process.second.at(process.first.as_thread()));
+        std::string name;
+        if (process.second.count(process.first.as_thread()) != 0)
+        {
+            name = process.second.at(process.first.as_thread());
+        }
+        emplace_process(Process::no_parent(), process.first, name);
         for (const auto& thread : process.second)
         {
             emplace_thread_exclusive(process.first, thread.first, thread.second, guard);
