@@ -4,7 +4,6 @@
 
 #pragma once
 #include <lo2s/address.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
@@ -36,6 +35,13 @@
 namespace lo2s::trace
 {
 
+enum class SampleKind
+{
+    OPENMP,
+    GPU,
+    SAMPLE,
+    SYSCALL,
+};
 template <typename KeyType, typename tag>
 struct SimpleKeyType
 {
@@ -102,23 +108,36 @@ struct ByAddressTag
 
 using ByAddress = SimpleKeyType<Address, ByAddressTag>;
 
+struct BySyscallWriterTag
+{
+};
+
+using BySyscallWriter = SimpleKeyType<std::variant<Cpu, Thread>, BySyscallWriterTag>;
+
+struct BySampleWriterTag
+{
+};
+
+using BySampleWriter =
+    SimpleKeyType<std::pair<SampleKind, std::variant<Cpu, Thread>>, BySampleWriterTag>;
+
+struct ByPosixIoWriterTag
+{
+};
+
+using ByPosixIoWriter = SimpleKeyType<Thread, ByPosixIoWriterTag>;
+
+struct ByMetricWriterTag
+{
+};
+
+using ByMetricWriter = SimpleKeyType<std::variant<Cpu, Thread>, ByMetricWriterTag>;
+
 struct ByLineInfoTag
 {
 };
 
 using ByLineInfo = SimpleKeyType<LineInfo, ByLineInfoTag>;
-
-struct ByExecutionScopeTag
-{
-};
-
-using ByExecutionScope = SimpleKeyType<ExecutionScope, ByExecutionScopeTag>;
-
-struct ByMeasurementScopeTag
-{
-};
-
-using ByMeasurementScope = SimpleKeyType<MeasurementScope, ByMeasurementScopeTag>;
 
 struct BySamplingEventName
 {
@@ -131,12 +150,6 @@ struct ByCounterCollectionTag
 };
 
 using ByCounterCollection = SimpleKeyType<perf::counter::CounterCollection, ByCounterCollectionTag>;
-
-struct ByMeasurementScopeTypeTag
-{
-};
-
-using ByMeasurementScopeType = SimpleKeyType<MeasurementScopeType, ByMeasurementScopeTypeTag>;
 
 struct ByThreadFdInstanceTag
 {
@@ -160,15 +173,15 @@ struct Holder<otf2::definition::system_tree_node>
 template <>
 struct Holder<otf2::definition::regions_group>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::regions_group, ByString,
-                                                ByProcess, ByThread>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::regions_group, ByString, ByProcess>;
 };
 
 template <>
 struct Holder<otf2::definition::metric_class>
 {
     using type = otf2::lookup_definition_holder<otf2::definition::metric_class, ByString,
-                                                ByCounterCollection, ByMeasurementScopeType>;
+                                                ByCounterCollection>;
 };
 
 template <>
@@ -201,30 +214,30 @@ struct Holder<otf2::definition::string>
 template <>
 struct Holder<otf2::definition::location_group>
 {
-    using type =
-        otf2::lookup_definition_holder<otf2::definition::location_group, ByMeasurementScope,
-                                       ByExecutionScope, ByBlockDevice>;
+    using type = otf2::lookup_definition_holder<otf2::definition::location_group, ByProcess,
+                                                ByThread, ByCpu, ByBlockDevice>;
 };
 
 template <>
 struct Holder<otf2::definition::location>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::location, ByMeasurementScope,
-                                                ByBlockDevice>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::location, BySyscallWriter, BySampleWriter,
+                                       ByMetricWriter, ByPosixIoWriter, ByBlockDevice>;
 };
 
 template <>
 struct Holder<otf2::definition::region>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::region, ByProcess, ByThread,
-                                                ByLineInfo, BySyscall>;
+    using type =
+        otf2::lookup_definition_holder<otf2::definition::region, ByThread, ByLineInfo, BySyscall>;
 };
 
 template <>
 struct Holder<otf2::definition::calling_context>
 {
-    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByProcess,
-                                                ByThread, ByLineInfo, BySyscall>;
+    using type = otf2::lookup_definition_holder<otf2::definition::calling_context, ByThread,
+                                                ByLineInfo, BySyscall>;
 };
 
 template <>

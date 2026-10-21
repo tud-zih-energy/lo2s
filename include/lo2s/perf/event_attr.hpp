@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/error.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
@@ -44,7 +43,7 @@ enum class Availability
     UNAVAILABLE,
     SYSTEM_MODE,
     PROCESS_MODE,
-    UNIVERSAL
+    UNIVERSAL,
 };
 
 class EventGuard;
@@ -72,13 +71,13 @@ public:
      * returns an opened instance of any Event object
      */
     EventGuard open(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
-    EventGuard open(ExecutionScope location, int cgroup_fd = -1);
 
-    bool can_open(ExecutionScope location) const;
+    bool can_open(std::variant<Cpu, Thread> location) const;
+
     /**
      * returns an opened instance of a Event object after formating it as a leader Event
      */
-    EventGuard open_as_group_leader(ExecutionScope location, int cgroup_fd = -1);
+    EventGuard open_as_group_leader(std::variant<Cpu, Thread> location, int cgroup_fd = -1);
 
     const Availability& availability() const
     {
@@ -278,20 +277,20 @@ public:
 
     bool event_is_openable();
 
-    bool is_available_in(ExecutionScope scope) const
+    bool is_available_in(std::variant<Cpu, Thread> scope) const
     {
         if (availability_ == Availability::UNAVAILABLE)
         {
             return false;
         }
 
-        if (scope.is_thread() || scope.is_process())
+        if (std::holds_alternative<Thread>(scope))
         {
             return availability_ != Availability::SYSTEM_MODE;
         }
 
         return availability_ != Availability::PROCESS_MODE &&
-               (cpus_.empty() || cpus_.count(scope.as_cpu()));
+               (cpus_.empty() || cpus_.count(std::get<Cpu>(scope)));
     }
 
     bool degrade_precision();
@@ -389,7 +388,8 @@ public:
     /**
      * opens child as a counter of the calling (leader) event
      */
-    EventGuard open_child(EventAttr& child, ExecutionScope location, int cgroup_fd = -1) const;
+    EventGuard open_child(EventAttr& child, std::variant<Cpu, Thread> location,
+                          int cgroup_fd = -1) const;
 
     void enable() const;
     void disable() const;

@@ -16,7 +16,6 @@
 namespace lo2s
 {
 
-class ExecutionScope;
 class Process;
 
 class Thread
@@ -56,7 +55,6 @@ public:
     }
 
     Process as_process() const;
-    ExecutionScope as_scope() const;
 
     static Thread invalid()
     {

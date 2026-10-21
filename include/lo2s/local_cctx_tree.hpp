@@ -6,6 +6,8 @@
 #include <lo2s/calling_context.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/trace/fwd.hpp>
+#include <lo2s/trace/reg_keys.hpp>
+#include <lo2s/types/cpu.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
 #include <otf2xx/writer/local.hpp>
@@ -30,7 +32,7 @@ class Trace;
 class LocalCctxTree
 {
 public:
-    LocalCctxTree(trace::Trace& trace, MeasurementScope scope);
+    LocalCctxTree(trace::Trace& trace, trace::SampleKind kind, std::variant<Cpu, Thread> scope);
 
     void finalize()
     {

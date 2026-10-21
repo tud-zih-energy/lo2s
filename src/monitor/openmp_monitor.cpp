@@ -38,8 +38,8 @@ void OpenMPMonitor::finalize_thread()
 
 void OpenMPMonitor::create_thread_writer(otf2::chrono::time_point tp, uint64_t thread)
 {
-    local_cctx_trees_.emplace(thread, &trace_.create_local_cctx_tree(
-                                          MeasurementScope::openmp(Thread(thread).as_scope())));
+    local_cctx_trees_.emplace(
+        thread, &trace_.create_local_cctx_tree(trace::SampleKind::OPENMP, Thread(thread)));
 
     local_cctx_trees_.at(thread)->cctx_enter(tp, CCTX_LEVEL_PROCESS,
                                              CallingContext::process(process_));

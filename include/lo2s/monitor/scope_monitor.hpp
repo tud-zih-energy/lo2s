@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/monitor/fwd.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
@@ -24,7 +23,7 @@ namespace lo2s::monitor
 class ScopeMonitor : public PollMonitor
 {
 public:
-    ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+    ScopeMonitor(std::variant<Cpu, Thread> scope, trace::Trace& trace, bool enable_on_exec);
 
     void initialize_thread() override;
     void finalize_thread() override;
@@ -32,7 +31,7 @@ public:
 
     std::string group() const override
     {
-        if (scope_.is_cpu())
+        if (std::holds_alternative<Cpu>(scope_))
         {
             return "lo2s::CpuMonitor";
         }
@@ -48,7 +47,7 @@ public:
     }
 
 private:
-    ExecutionScope scope_;
+    std::variant<Cpu, Thread> scope_;
     std::unique_ptr<perf::syscall::Writer> syscall_writer_;
     std::unique_ptr<perf::sample::Writer> sample_writer_;
     std::unique_ptr<perf::counter::group::Writer> group_counter_writer_;

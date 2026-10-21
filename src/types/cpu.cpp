@@ -4,8 +4,6 @@
 
 #include <lo2s/types/cpu.hpp>
 
-#include <lo2s/execution_scope.hpp>
-
 #include <cstdint>
 
 namespace lo2s
@@ -14,11 +12,6 @@ namespace lo2s
 int64_t Cpu::as_int() const
 {
     return cpu_;
-}
-
-ExecutionScope Cpu::as_scope() const
-{
-    return ExecutionScope(*this);
 }
 
 std::ostream& operator<<(std::ostream& stream, const Cpu& cpu)

@@ -16,9 +16,10 @@
 
 namespace lo2s
 {
-LocalCctxTree::LocalCctxTree(trace::Trace& trace, MeasurementScope scope)
+LocalCctxTree::LocalCctxTree(trace::Trace& trace, trace::SampleKind kind,
+                             std::variant<Cpu, Thread> scope)
 : tree(CallingContext::root(), LocalCctxNode(0)), trace_(trace),
-  writer_(trace_.sample_writer(scope)), cur_({ &tree })
+  writer_(trace_.sample_writer(kind, scope)), cur_({ &tree })
 {
 }
 

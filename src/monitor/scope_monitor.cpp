@@ -5,7 +5,6 @@
 #include <lo2s/monitor/scope_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
@@ -15,13 +14,14 @@
 #include <lo2s/trace/trace.hpp>
 #include <lo2s/util.hpp>
 
-#include <memory>
+#include <variant>
 
 namespace lo2s::monitor
 {
 
-ScopeMonitor::ScopeMonitor(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: PollMonitor(trace, scope.name()), scope_(scope)
+ScopeMonitor::ScopeMonitor(std::variant<Cpu, Thread> scope, trace::Trace& trace,
+                           bool enable_on_exec)
+: PollMonitor(trace, scope_get_name(scope)), scope_(scope)
 {
     if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
@@ -72,7 +72,7 @@ void ScopeMonitor::finalize_thread()
 
 void ScopeMonitor::monitor(int fd)
 {
-    if (!scope_.is_cpu())
+    if (std::holds_alternative<Thread>(scope_))
     {
         try_pin_to_scope(scope_);
     }

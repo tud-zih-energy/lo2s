@@ -6,7 +6,6 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
@@ -27,9 +26,8 @@ extern "C"
 namespace lo2s::perf::counter::userspace
 {
 template <class T>
-Reader<T>::Reader(ExecutionScope scope)
-: counter_collection_(
-      EventComposer::instance().counters_for(MeasurementScope::userspace_metric(scope))),
+Reader<T>::Reader(std::variant<Cpu, Thread> scope)
+: counter_collection_(EventComposer::instance().userspace_counters_for(scope)),
   counter_buffer_(counter_collection_.counters.size()),
   timer_fd_(timerfd_from_ns(config().perf.userspace.read_interval)),
   data_(counter_collection_.counters.size())

@@ -5,7 +5,6 @@
 #include <lo2s/perf/syscall/writer.hpp>
 
 #include <lo2s/calling_context.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/syscall/reader.hpp>
@@ -19,8 +18,8 @@
 namespace lo2s::perf::syscall
 {
 
-Writer::Writer(ExecutionScope scope, trace::Trace& trace)
-: Reader(scope), local_cctx_tree_(trace.create_local_cctx_tree(MeasurementScope::syscall(scope))),
+Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace)
+: Reader(scope), local_cctx_tree_(trace.create_local_cctx_tree(trace::SampleKind::SYSCALL, scope)),
   time_converter_(perf::time::Converter::instance())
 {
 }

@@ -99,7 +99,7 @@ void ptrace_cont(Thread thread, long signum = 0)
 ProcessController::ProcessController(Process child, const std::string& name, bool spawn,
                                      monitor::AbstractProcessMonitor& monitor)
 : first_child_(child.as_thread()), default_signal_handler(signal(SIGINT, sig_handler)),
-  monitor_(monitor), groups_(ExecutionScopeGroup::instance())
+  monitor_(monitor)
 {
     if (spawn)
     {
@@ -111,7 +111,7 @@ ProcessController::ProcessController(Process child, const std::string& name, boo
     }
     running = true;
 
-    groups_.add_process(child);
+    ThreadGroup::instance().add_process(child);
 
     monitor_.insert_process(Process::no_parent(), child, name, spawn);
 
@@ -159,9 +159,9 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
 
             // Register the newly created process for monitoring:
             // (1) Associate a main thread with this process.
-            groups_.add_process(new_process);
+            ThreadGroup::instance().add_process(new_process);
             // (2) ptrace might report a thread as the parent, find out the real parent process
-            auto parent = groups_.get_process(child);
+            auto parent = ThreadGroup::instance().get_process(child);
             // (3) Tell the process monitor to watch a new process.
             monitor_.insert_process(parent, new_process, command);
             // (4) Update our summary information.
@@ -187,14 +187,14 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
 
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
-            auto process = groups_.get_process(child);
+            auto process = ThreadGroup::instance().get_process(child);
             std::string const command = get_task_comm(process, new_thread);
             Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
                         << " in " << process;
 
             // Register the newly created thread for monitoring:
             // (1) Keep track of the process the new thread was spawned in.
-            groups_.add_thread(new_thread, process);
+            ThreadGroup::instance().add_thread(new_thread, process);
             // (2) Tell the process monitor to watch the new thread.
             monitor_.insert_thread(process, new_thread, command);
             // (3) Update our summary information.

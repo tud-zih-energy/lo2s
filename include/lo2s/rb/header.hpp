@@ -37,7 +37,7 @@ struct ringbuf_header
     std::atomic_uint64_t tail;
     // set by the writer side (CUPTI, etc.)
     int64_t pid;
-    uint64_t type;
+    std::atomic_uint64_t type;
 
     // set by the reader size (lo2s)
     clockid_t clockid;

@@ -49,7 +49,6 @@ run_test "Command should be 'true" "-- true" "'.program_under_test.command[0]'" 
 run_test "Default DWARF mode should be 'local'" "-- true" ".dwarf.usage" "\"local\""
 
 process_mode_default_off "HIP" ".accel.hip"
-process_mode_default_off "NEC" ".accel.nec"
 process_mode_default_off "CUDA" ".accel.nvidia"
 process_mode_default_off "OpenMP" ".accel.openmp"
 process_mode_default_off "x86_adapt" ".x86_adapt.enabled"

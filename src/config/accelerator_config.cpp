@@ -21,12 +21,6 @@ namespace lo2s
 {
 AcceleratorConfig::AcceleratorConfig(nitro::options::arguments& arguments)
 {
-    nec_read_interval =
-        std::chrono::microseconds(arguments.as<std::uint64_t>("nec-readout-interval"));
-
-    nec_check_interval =
-        std::chrono::milliseconds(arguments.as<std::uint64_t>("nec-check-interval"));
-
     for (const auto& accel : arguments.get_all("accel"))
     {
         if (accel == "nvidia")
@@ -83,23 +77,14 @@ void AcceleratorConfig::add_parser(nitro::options::parser& parser)
                         fmt::join(accelerators, ", ")))
         .metavar("ACCEL")
         .optional();
-    accel_options.option("nec-readout-interval", "Accelerator sampling interval")
-        .optional()
-        .metavar("USEC")
-        .default_value("1");
-    accel_options.option("nec-check-interval", "The interval between checks for new VE processes")
-        .optional()
-        .metavar("MSEC")
-        .default_value("100");
 }
 
 void to_json(nlohmann::json& j, const AcceleratorConfig& config)
 {
-    j = nlohmann::json({ { "nvidia", config.nvidia },
-                         { "openmp", config.openmp },
-                         { "hip", config.hip },
-                         { "nec", config.nec },
-                         { "nec_read_interval", config.nec_read_interval.count() },
-                         { "nec_check_interval", config.nec_check_interval.count() } });
+    j = nlohmann::json({
+        { "nvidia", config.nvidia },
+        { "openmp", config.openmp },
+        { "hip", config.hip },
+    });
 }
 } // namespace lo2s

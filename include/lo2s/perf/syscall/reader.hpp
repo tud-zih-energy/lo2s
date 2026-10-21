@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_composer.hpp>
 #include <lo2s/perf/event_reader.hpp>
@@ -54,7 +53,7 @@ public:
     }
 
 protected:
-    static EventGuard create_enter_ev(ExecutionScope scope)
+    static EventGuard create_enter_ev(std::variant<Cpu, Thread> scope)
     {
         tracepoint::TracepointEventAttr enter_event =
             EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_enter");
@@ -64,7 +63,7 @@ protected:
         return enter_event.open(scope, config().perf.cgroup_fd);
     }
 
-    static EventGuard create_exit_ev(ExecutionScope scope)
+    static EventGuard create_exit_ev(std::variant<Cpu, Thread> scope)
     {
         tracepoint::TracepointEventAttr exit_event =
             EventComposer::instance().create_tracepoint_event("raw_syscalls:sys_exit");
@@ -77,7 +76,7 @@ protected:
     uint64_t sys_exit_id = 0;
 
 private:
-    Reader(ExecutionScope scope)
+    Reader(std::variant<Cpu, Thread> scope)
     : scope_(scope), enter_ev_(create_enter_ev(scope)), exit_ev_(create_exit_ev(scope))
     {
 
@@ -116,7 +115,7 @@ private:
 
     friend T;
 
-    ExecutionScope scope_;
+    std::variant<Cpu, Thread> scope_;
     EventGuard enter_ev_;
     EventGuard exit_ev_;
 };

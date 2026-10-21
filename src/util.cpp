@@ -228,19 +228,19 @@ std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads()
     return ret;
 }
 
-void try_pin_to_scope(ExecutionScope scope)
+void try_pin_to_scope(std::variant<Cpu, Thread> scope)
 {
     cpu_set_t cpumask;
     CPU_ZERO(&cpumask);
-    if (scope.is_thread())
+    if (std::holds_alternative<Thread>(scope))
     {
         // Copy affinity from mentioned thread
-        sched_getaffinity(static_cast<pid_t>(scope.as_thread().as_int()), sizeof(cpumask),
+        sched_getaffinity(static_cast<pid_t>(std::get<Thread>(scope).as_int()), sizeof(cpumask),
                           &cpumask);
     }
     else
     {
-        CPU_SET(scope.as_cpu().as_int(), &cpumask);
+        CPU_SET(std::get<Cpu>(scope).as_int(), &cpumask);
     }
     auto ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
     if (ret != 0)

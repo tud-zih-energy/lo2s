@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -23,7 +22,7 @@ namespace lo2s::perf::sample
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec);
+    Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace, bool enable_on_exec);
     ~Writer();
 
     Writer(Writer&) = delete;
@@ -50,7 +49,7 @@ private:
 
     otf2::chrono::time_point adjust_timepoints(otf2::chrono::time_point tp);
 
-    ExecutionScope scope_;
+    std::variant<Cpu, Thread> scope_;
 
     trace::Trace& trace_;
     LocalCctxTree& local_cctx_tree_;

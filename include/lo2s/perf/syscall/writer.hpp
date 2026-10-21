@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/perf/syscall/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
@@ -18,7 +17,7 @@ namespace lo2s::perf::syscall
 class Writer : public Reader<Writer>
 {
 public:
-    Writer(ExecutionScope scope, trace::Trace& trace);
+    Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace);
 
     Writer(const Writer& other) = delete;
 

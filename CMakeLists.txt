@@ -180,7 +180,6 @@ set(SOURCE_FILES
     src/types/cpu.cpp
     src/types/thread.cpp
     src/types/process.cpp
-    src/execution_scope.cpp
 
     src/metric/plugin/plugin.cpp
     src/metric/plugin/channel.cpp
@@ -214,7 +213,6 @@ set(SOURCE_FILES
     src/perf/bio/block_device.cpp
     src/perf/bio/writer.cpp
     src/perf/event_composer.cpp
-    src/perf/counter/metric_writer.cpp
     src/perf/counter/group/reader.cpp
     src/perf/counter/group/writer.cpp
     src/perf/counter/userspace/reader.cpp
@@ -225,6 +223,7 @@ set(SOURCE_FILES
     src/perf/tracepoint/event_attr.cpp
     src/perf/syscall/writer.cpp
 
+    src/trace/handle.cpp
     src/resolvers.cpp
     src/resolvers/kallsyms.cpp
 
@@ -360,7 +359,7 @@ endif()
 set(LO2S_INJECTIONLIB_PATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
 
 if(( USE_CUPTI OR USE_OPENMP OR USE_HIP ) AND NOT ${lo2s_USE_STATIC_LIBS} STREQUAL "ALL")
-    add_library(lo2s_injection SHARED src/rb/shm_ringbuf.cpp src/rb/writer.cpp src/types/process.cpp src/execution_scope.cpp src/types/cpu.cpp)
+    add_library(lo2s_injection SHARED src/rb/shm_ringbuf.cpp src/rb/writer.cpp src/types/process.cpp src/types/cpu.cpp)
     target_link_options(lo2s_injection PRIVATE "-Wl,-z,defs")
 
     target_include_directories(lo2s_injection PUBLIC include

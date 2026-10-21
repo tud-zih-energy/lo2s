@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_composer.hpp>
@@ -75,9 +74,9 @@ protected:
     bool record_callgraph_;
 
 private:
-    static EventGuard create_sampling_event(ExecutionScope scope, bool enable_on_exec)
+    static EventGuard create_sampling_event(std::variant<Cpu, Thread> scope, bool enable_on_exec)
     {
-        Log::debug() << "initializing event_reader for:" << scope.name()
+        Log::debug() << "initializing event_reader for:" << scope_get_name(scope)
                      << ", enable_on_exec: " << enable_on_exec;
         try
         {
@@ -96,12 +95,12 @@ private:
         catch (std::system_error& e)
         {
             throw std::runtime_error(fmt::format("Could not open sampling event '{}' for {}: {}",
-                                                 config().perf.sampling.event, scope.name(),
-                                                 e.what()));
+                                                 config().perf.sampling.event,
+                                                 scope_get_name(scope), e.what()));
         }
     }
 
-    Reader(ExecutionScope scope, bool enable_on_exec)
+    Reader(std::variant<Cpu, Thread> scope, bool enable_on_exec)
     : record_callgraph_(config().perf.sampling.enable_callgraph),
       event_(create_sampling_event(scope, enable_on_exec))
     {

@@ -128,7 +128,7 @@ void SocketMonitor::monitor(int fd)
         throw_errno();
     }
 
-    while (rr.header()->type == 0)
+    while (rr.header()->type.load() == 0)
     {
     }
 
@@ -150,7 +150,7 @@ void SocketMonitor::monitor(int fd)
     else
     {
         throw std::runtime_error(
-            fmt::format("Invalid ring buffer measurement type: {}", rr.header()->type));
+            fmt::format("Invalid ring buffer measurement type: {}", rr.header()->type.load()));
     }
     close(data_socket);
 }

@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
@@ -36,9 +35,8 @@ template <class T>
 class Reader : public EventReader<T>
 {
 public:
-    Reader(ExecutionScope scope, bool enable_on_exec)
-    : counter_collection_(
-          EventComposer::instance().counters_for(MeasurementScope::group_metric(scope))),
+    Reader(std::variant<Cpu, Thread> scope, bool enable_on_exec)
+    : counter_collection_(EventComposer::instance().group_counters_for(scope)),
       counter_buffer_(counter_collection_.counters.size() + 1)
     {
         if (!counter_collection_.leader.has_value())

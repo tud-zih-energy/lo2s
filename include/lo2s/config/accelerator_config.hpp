@@ -8,8 +8,6 @@
 #include <nitro/options/parser.hpp>
 #include <nlohmann/json_fwd.hpp>
 
-#include <chrono>
-
 namespace lo2s
 {
 
@@ -21,9 +19,6 @@ struct AcceleratorConfig
     bool nvidia = false;
     bool openmp = false;
     bool hip = false;
-    bool nec = false;
-    std::chrono::microseconds nec_read_interval;
-    std::chrono::milliseconds nec_check_interval;
 };
 
 void to_json(nlohmann::json& j, const AcceleratorConfig& config);

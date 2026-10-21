@@ -44,23 +44,23 @@ int perf_event_paranoid()
     }
 }
 
-int perf_event_open(const struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                    unsigned long flags, int cgroup_fd)
+int perf_event_open(const struct perf_event_attr* perf_attr, std::variant<Cpu, Thread> scope,
+                    int group_fd, unsigned long flags, int cgroup_fd)
 {
     int cpuid = -1;
     pid_t pid = -1;
-    if (scope.is_cpu())
+    if (std::holds_alternative<Cpu>(scope))
     {
         if (cgroup_fd != -1)
         {
             pid = cgroup_fd;
             flags |= PERF_FLAG_PID_CGROUP;
         }
-        cpuid = static_cast<int>(scope.as_cpu().as_int());
+        cpuid = static_cast<int>(std::get<Cpu>(scope).as_int());
     }
     else
     {
-        pid = static_cast<pid_t>(scope.as_thread().as_int());
+        pid = static_cast<pid_t>(std::get<Thread>(scope).as_int());
     }
     return static_cast<int>(syscall(__NR_perf_event_open, perf_attr, pid, cpuid, group_fd, flags));
 }

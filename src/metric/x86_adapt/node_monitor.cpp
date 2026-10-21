@@ -4,7 +4,6 @@
 
 #include <lo2s/metric/x86_adapt/node_monitor.hpp>
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
@@ -32,8 +31,9 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device,
                          trace::Trace& trace, const otf2::definition::metric_class& metric_class)
 : PollMonitor(trace, std::to_string(device.id())), device_(std::move(device)),
   otf2_writer_(trace.create_metric_writer(name())), configuration_items_(configuration_items),
-  metric_instance_(trace.metric_instance(metric_class, otf2_writer_.location(),
-                                         trace.system_tree_package_node(Package(device_.id())))),
+  metric_instance_(
+      trace.metric_instance(metric_class, otf2_writer_.location(),
+                            trace.package_handle(Package(device_.id())).system_tree_node())),
   event_(otf2::chrono::genesis(), metric_instance_)
 {
     assert(device_.type() == X86_ADAPT_DIE);
@@ -41,8 +41,7 @@ NodeMonitor::NodeMonitor(::x86_adapt::device device,
 
 void NodeMonitor::initialize_thread()
 {
-    try_pin_to_scope(
-        ExecutionScope(Topology::instance().measuring_cpu_for_package(Package(device_.id()))));
+    try_pin_to_scope(Topology::instance().measuring_cpu_for_package(Package(device_.id())));
 }
 
 void NodeMonitor::monitor([[maybe_unused]] int fd)

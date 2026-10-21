@@ -13,8 +13,6 @@
 
 namespace lo2s
 {
-class ExecutionScope;
-
 class Cpu
 {
 public:
@@ -23,7 +21,6 @@ public:
     }
 
     int64_t as_int() const;
-    ExecutionScope as_scope() const;
 
     static Cpu invalid()
     {

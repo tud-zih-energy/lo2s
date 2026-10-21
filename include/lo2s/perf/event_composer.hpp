@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
@@ -33,8 +32,10 @@ public:
         return e;
     }
 
-    counter::CounterCollection counters_for(MeasurementScope scope);
-    bool has_counters_for(MeasurementScope scope);
+    counter::CounterCollection group_counters_for(std::variant<Cpu, Thread> scope);
+    counter::CounterCollection userspace_counters_for(std::variant<Cpu, Thread> scope);
+    bool has_group_counters_for(std::variant<Cpu, Thread> scope);
+    bool has_userspace_counters_for(std::variant<Cpu, Thread> scope);
 
     EventAttr create_time_event(uint64_t local_time);
     EventAttr create_sampling_event();
@@ -42,8 +43,6 @@ public:
     std::vector<perf::tracepoint::TracepointEventAttr> emplace_tracepoints();
 
 private:
-    counter::CounterCollection group_counters_for(ExecutionScope scope);
-    counter::CounterCollection userspace_counters_for(ExecutionScope scope);
 
     void watermark(EventAttr& ev) // NOLINT
     {

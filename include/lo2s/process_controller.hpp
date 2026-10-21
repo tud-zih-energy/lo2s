@@ -26,7 +26,7 @@ class ProcessController
     enum class SignalHandlingState
     {
         KeepRunning,
-        Stop
+        Stop,
     };
 
 public:
@@ -51,6 +51,5 @@ private:
     sighandler_t default_signal_handler;
     monitor::AbstractProcessMonitor& monitor_;
     std::size_t num_wakeups_{ 0 };
-    ExecutionScopeGroup& groups_;
 };
 } // namespace lo2s

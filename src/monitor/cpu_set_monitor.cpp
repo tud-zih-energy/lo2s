@@ -6,7 +6,6 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
@@ -15,6 +14,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -43,28 +43,51 @@ CpuSetMonitor::CpuSetMonitor()
     const std::filesystem::path proc_path("/proc");
     if (config().perf.sampling.enabled)
     {
-        for (const auto& p : std::filesystem::directory_iterator(proc_path))
+        try
         {
-            const std::string path = p.path().string();
-            if (std::regex_match(path, pid_match, proc_regex))
+            for (const auto& p : std::filesystem::directory_iterator(proc_path))
             {
-                const pid_t pid = std::stol(pid_match[1]);
-
-                auto maps = read_maps(Process(pid));
-                Process p(pid);
-                resolvers_.function_resolvers.emplace(
-                    std::piecewise_construct, std::forward_as_tuple(p), std::forward_as_tuple(p));
-                for (auto& map : maps)
+                const std::string path = p.path().string();
+                if (std::regex_match(path, pid_match, proc_regex))
                 {
-                    resolvers_.emplace_mappings_for(p, map.first, map.second);
+                    const pid_t pid = std::stol(pid_match[1]);
+
+                    auto maps = read_maps(Process(pid));
+                    Process p(pid);
+                    resolvers_.function_resolvers.emplace(std::piecewise_construct,
+                                                          std::forward_as_tuple(p),
+                                                          std::forward_as_tuple(p));
+                    for (auto& map : maps)
+                    {
+                        resolvers_.emplace_mappings_for(p, map.first, map.second);
+                    }
                 }
             }
+        }
+        catch (std::exception& e)
+        {
+            Log::debug() << "Traversing /proc failed: " << e.what();
         }
     }
 
     if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
-        trace_.emplace_threads(get_comms_for_running_threads());
+        for (const auto& procs : get_comms_for_running_threads())
+        {
+            auto process = procs.first;
+
+            std::optional<std::string> proc_name = std::nullopt;
+            if (procs.second.count(process.as_thread()))
+            {
+                proc_name = procs.second.at(process.as_thread());
+            }
+            trace_.process_handle(Process::no_parent(), process, proc_name);
+            for (const auto& comm : procs.second)
+
+            {
+                trace_.thread_handle(process, comm.first, comm.second);
+            }
+        }
     }
 
     try
@@ -73,9 +96,8 @@ CpuSetMonitor::CpuSetMonitor()
         {
             Log::debug() << "Create cstate recorder for cpu #" << cpu.as_int();
 
-            auto inserted =
-                monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
-                                  std::forward_as_tuple(ExecutionScope(cpu), trace_, false));
+            auto inserted = monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(cpu),
+                                              std::forward_as_tuple(cpu, trace_, false));
             assert(inserted.second);
             // directly start the measurement thread
             inserted.first->second.start();
@@ -142,7 +164,22 @@ void CpuSetMonitor::run()
 
     if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
-        trace_.emplace_threads(get_comms_for_running_threads());
+        for (const auto& procs : get_comms_for_running_threads())
+        {
+            auto process = procs.first;
+
+            std::optional<std::string> proc_name = std::nullopt;
+            if (procs.second.count(process.as_thread()))
+            {
+                proc_name = procs.second.at(process.as_thread());
+            }
+            trace_.process_handle(Process::no_parent(), process, proc_name);
+            for (const auto& comm : procs.second)
+
+            {
+                trace_.thread_handle(process, comm.first, comm.second);
+            }
+        }
     }
 
     for (auto& monitor_elem : monitors_)

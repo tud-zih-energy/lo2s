@@ -6,7 +6,6 @@
 
 #include <lo2s/build_config.hpp>
 #include <lo2s/error.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
@@ -56,7 +55,7 @@ std::set<Cpu> get_cpu_set_for(const EventAttr& ev)
 
     for (const auto& cpu : Topology::instance().cpus())
     {
-        if (ev.can_open(cpu.as_scope()))
+        if (ev.can_open(cpu))
         {
             cpus.emplace(cpu);
         }
@@ -245,8 +244,8 @@ bool EventAttr::event_is_openable()
 
 void EventAttr::update_availability()
 {
-    bool const proc = can_open(Thread(0).as_scope());
-    bool const system = can_open(supported_cpus().begin()->as_scope());
+    bool const proc = can_open(Thread(0));
+    bool const system = can_open(*supported_cpus().begin());
 
     if (!proc && !system)
     {
@@ -348,7 +347,7 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
         { PERF_FORMAT_TOTAL_TIME_ENABLED, "PERF_FORMAT_TOTAL_TIME_ENABLED" },
         { PERF_FORMAT_TOTAL_TIME_RUNNING, "PERF_FORMAT_TOTAL_TIME_RUNNING" },
         { PERF_FORMAT_ID, "PERF_FORMAT_ID" },
-        { PERF_FORMAT_GROUP, "PERF_FORMAT_GROUP" }
+        { PERF_FORMAT_GROUP, "PERF_FORMAT_GROUP" },
     };
 
     print_bits(stream, "read_format", read_format, event.attr_.read_format);
@@ -356,12 +355,16 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
 #ifndef USE_HW_BREAKPOINT_COMPAT
     if (event.attr_.type == PERF_TYPE_BREAKPOINT)
     {
-        std::map<uint64_t, std::string> const bp_types = { { HW_BREAKPOINT_EMPTY,
-                                                             "HW_BREAKPOINT_EMPTY" },
-                                                           { HW_BREAKPOINT_W, "HW_BREAKPOINT_W" },
-                                                           { HW_BREAKPOINT_R, "HW_BREAKPOINT_R" },
-                                                           { HW_BREAKPOINT_RW, "HW_BREAKPOINT_RW" },
-                                                           { HW_BREAKPOINT_X, "HW_BREAKPOINT_X" } };
+        std::map<uint64_t, std::string> const bp_types = {
+            {
+                HW_BREAKPOINT_EMPTY,
+                "HW_BREAKPOINT_EMPTY",
+            },
+            { HW_BREAKPOINT_W, "HW_BREAKPOINT_W" },
+            { HW_BREAKPOINT_R, "HW_BREAKPOINT_R" },
+            { HW_BREAKPOINT_RW, "HW_BREAKPOINT_RW" },
+            { HW_BREAKPOINT_X, "HW_BREAKPOINT_X" },
+        };
 
         print_bits(stream, "bp_type", bp_types, event.attr_.bp_type);
         stream << "\tbp_addr: 0x" << std::hex << event.attr_.bp_addr << std::dec << "\n";
@@ -401,7 +404,7 @@ std::ostream& operator<<(std::ostream& stream, const EventAttr& event)
         { PERF_SAMPLE_CPU, "PERF_SAMPLE_CPU" },
         { PERF_SAMPLE_TIME, "PERF_SAMPLE_TIME" },
         { PERF_SAMPLE_RAW, "PERF_SAMPLE_RAW" },
-        { PERF_SAMPLE_IDENTIFIER, "PERF_SAMPLE_IDENTIFIER" }
+        { PERF_SAMPLE_IDENTIFIER, "PERF_SAMPLE_IDENTIFIER" },
     };
 
     print_bits(stream, "sample_type", sample_format, event.attr_.sample_type);
@@ -671,17 +674,7 @@ EventGuard EventAttr::open(std::variant<Cpu, Thread> location, int cgroup_fd)
     return { *this, location, -1, cgroup_fd };
 }
 
-EventGuard EventAttr::open(ExecutionScope location, int cgroup_fd)
-{
-    if (location.is_cpu())
-    {
-        return { *this, location.as_cpu(), -1, cgroup_fd };
-    }
-
-    return { *this, location.as_thread(), -1, cgroup_fd };
-}
-
-bool EventAttr::can_open(ExecutionScope location) const
+bool EventAttr::can_open(std::variant<Cpu, Thread> location) const
 {
     int const fd = perf_event_open(&attr(), location, -1, 0, -1);
 
@@ -694,7 +687,7 @@ bool EventAttr::can_open(ExecutionScope location) const
     return true;
 }
 
-EventGuard EventAttr::open_as_group_leader(ExecutionScope location, int cgroup_fd)
+EventGuard EventAttr::open_as_group_leader(std::variant<Cpu, Thread> location, int cgroup_fd)
 {
     attr_.read_format |= PERF_FORMAT_GROUP;
     attr_.sample_type |= PERF_SAMPLE_READ;
@@ -702,25 +695,20 @@ EventGuard EventAttr::open_as_group_leader(ExecutionScope location, int cgroup_f
     return open(location, cgroup_fd);
 }
 
-EventGuard EventGuard::open_child(EventAttr& child, ExecutionScope location, int cgroup_fd) const
+EventGuard EventGuard::open_child(EventAttr& child, std::variant<Cpu, Thread> location,
+                                  int cgroup_fd) const
 {
-    if (location.is_cpu())
-    {
-        return { child, location.as_cpu(), fd_, cgroup_fd };
-    }
-    return { child, location.as_thread(), fd_, cgroup_fd };
+    return { child, location, fd_, cgroup_fd };
 }
 
 EventGuard::EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd,
                        int cgroup_fd)
 {
-    ExecutionScope scope;
-    std::visit([&scope](auto loc) { scope = loc.as_scope(); }, location);
 
-    Log::trace() << "Opening perf event: " << ev.name() << "[" << scope.name()
+    Log::trace() << "Opening perf event: " << ev.name() << "[" << scope_get_name(location)
                  << ", group fd: " << group_fd << ", cgroup fd: " << cgroup_fd << "]";
     Log::trace() << ev;
-    fd_ = perf_event_open(&ev.attr(), scope, group_fd, 0, cgroup_fd);
+    fd_ = perf_event_open(&ev.attr(), location, group_fd, 0, cgroup_fd);
 
     if (fd_ < 0)
     {

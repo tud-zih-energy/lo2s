@@ -5,7 +5,7 @@
 #pragma once
 
 #include <lo2s/address.hpp>
-#include <lo2s/execution_scope.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include <cstdint>
@@ -76,6 +77,18 @@ std::string get_nec_thread_comm(Thread thread);
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
 
+inline std::string scope_get_name(std::variant<Cpu, Thread> scope)
+{
+    if (std::holds_alternative<Cpu>(scope))
+    {
+        return fmt::format("cpu {}", std::get<Cpu>(scope).as_int());
+    }
+    else
+    {
+        return fmt::format("thread {}", std::get<Thread>(scope).as_int());
+    }
+}
+
 const struct ::utsname& get_uname();
 
 template <typename T>
@@ -93,7 +106,7 @@ T get_sysctl(const std::string& group, const std::string& name)
 
 std::map<Process, std::map<Thread, std::string>> get_comms_for_running_threads();
 
-void try_pin_to_scope(ExecutionScope scope);
+void try_pin_to_scope(std::variant<Cpu, Thread> scope);
 
 int get_cgroup_mountpoint_fd(const std::string& cgroup);
 

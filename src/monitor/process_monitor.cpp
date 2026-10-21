@@ -5,7 +5,6 @@
 #include <lo2s/monitor/process_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/monitor/scope_monitor.hpp>
@@ -37,7 +36,7 @@ ProcessMonitor::ProcessMonitor()
 void ProcessMonitor::insert_process(Process parent, Process child, std::string proc_name,
                                     bool spawn)
 {
-    trace_.emplace_process(parent, child, proc_name);
+    trace_.process_handle(parent, child, proc_name);
     insert_thread(child, child.as_thread(), proc_name, spawn);
 
     resolvers_.fork(parent, child);
@@ -52,18 +51,16 @@ void ProcessMonitor::insert_thread(Process parent [[maybe_unused]], Thread child
         posix_monitor_->insert_thread(child);
     }
 #endif
-    trace_.emplace_thread(parent, child, name);
+    trace_.thread_handle(parent, child, name);
 
-    auto scope = ExecutionScope(child);
     if (config().perf.sampling.enabled ||
-        !perf::EventComposer::instance().has_counters_for(MeasurementScope::group_metric(scope)) ||
-        !perf::EventComposer::instance().has_counters_for(
-            MeasurementScope::userspace_metric(scope)))
+        !perf::EventComposer::instance().has_group_counters_for(child) ||
+        !perf::EventComposer::instance().has_userspace_counters_for(child))
     {
         try
         {
             auto inserted = threads_.emplace(std::piecewise_construct, std::forward_as_tuple(child),
-                                             std::forward_as_tuple(scope, trace_, spawn));
+                                             std::forward_as_tuple(child, trace_, spawn));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();
@@ -74,12 +71,11 @@ void ProcessMonitor::insert_thread(Process parent [[maybe_unused]], Thread child
         }
     }
 
-    trace_.emplace_thread(parent, child, name);
 }
 
 void ProcessMonitor::update_process_name(Process process, const std::string& name)
 {
-    trace_.emplace_process(Process::no_parent(), process, name);
+    trace_.process_handle(Process::no_parent(), process, name);
 }
 
 void ProcessMonitor::exit_thread(Thread thread)

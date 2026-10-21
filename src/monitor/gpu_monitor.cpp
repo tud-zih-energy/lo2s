@@ -7,7 +7,6 @@
 #include <lo2s/address.hpp>
 #include <lo2s/calling_context.hpp>
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/gpu/events.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
@@ -26,8 +25,7 @@ namespace lo2s::monitor
 GPUMonitor::GPUMonitor(trace::Trace& trace, RingbufReader&& ringbuf_reader)
 : PollMonitor(trace, "GPUMonitor"), ringbuf_reader_(std::move(ringbuf_reader)),
   process_(ringbuf_reader_.header()->pid), time_converter_(perf::time::Converter::instance()),
-  local_cctx_tree_(
-      trace.create_local_cctx_tree(MeasurementScope::gpu(ExecutionScope(process_.as_thread()))))
+  local_cctx_tree_(trace.create_local_cctx_tree(trace::SampleKind::GPU, process_.as_thread()))
 {
 }
 

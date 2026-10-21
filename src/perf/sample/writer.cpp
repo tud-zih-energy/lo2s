@@ -6,7 +6,6 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/calling_context.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
@@ -24,6 +23,7 @@
 
 #include <exception>
 #include <map>
+#include <optional>
 
 #include <cassert>
 #include <cstdint>
@@ -36,9 +36,9 @@ extern "C"
 namespace lo2s::perf::sample
 {
 
-Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
+Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace, bool enable_on_exec)
 : Reader(scope, enable_on_exec), scope_(scope), trace_(trace),
-  local_cctx_tree_(trace.create_local_cctx_tree(MeasurementScope::sample(scope))),
+  local_cctx_tree_(trace.create_local_cctx_tree(trace::SampleKind::SAMPLE, scope)),
   cpuid_metric_event_(otf2::chrono::genesis(),
                       trace.metric_instance(trace.cpuid_metric_class(),
                                             local_cctx_tree_.writer().location(),
@@ -109,9 +109,10 @@ bool Writer::handle(const Reader::RecordSampleType* sample)
 bool Writer::handle(const RecordMmapType* mmap_event)
 {
     // Since this is an mmap record (as opposed to mmap2), it will only be generated for executable
-    if (!scope_.is_cpu() && scope_ != ExecutionScope(Thread(mmap_event->tid)))
+    if (std::holds_alternative<Thread>(scope_) &&
+        std::get<Thread>(scope_) != Thread(mmap_event->tid))
     {
-        Log::warn() << "Inconsistent mmap expected " << scope_.name() << ", actual "
+        Log::warn() << "Inconsistent mmap expected " << scope_get_name(scope_) << ", actual "
                     << mmap_event->tid;
     }
 
@@ -180,10 +181,15 @@ void Writer::update_calling_context(Process process, Thread thread, otf2::chrono
     }
     else
     {
-        if (first_event_ && !scope_.is_cpu())
+        if (first_event_ && std::holds_alternative<Thread>(scope_))
         {
-            local_cctx_tree_.writer()
-                << otf2::event::thread_begin(tp, trace_.process_comm(thread), -1);
+            local_cctx_tree_.writer() << otf2::event::thread_begin(
+                tp,
+                trace_
+                    .process_handle(Process::no_parent(),
+                                    ThreadGroup::instance().get_process(thread), std::nullopt)
+                    .comm(),
+                -1);
             first_event_ = false;
         }
 
@@ -202,11 +208,11 @@ bool Writer::handle(const Reader::RecordCommType* comm)
     // only update name of process if the main thread changes its name
     if (comm->pid == comm->tid)
     {
-        trace_.emplace_process(Process::no_parent(), Process(comm->pid), new_command);
+        trace_.process_handle(Process::no_parent(), Process(comm->pid), new_command);
     }
     else
     {
-        trace_.emplace_thread(Process(comm->pid), Thread(comm->tid), new_command);
+        trace_.thread_handle(Process(comm->pid), Thread(comm->tid), new_command);
     }
     summary().register_process(Process(comm->pid));
 
@@ -215,7 +221,7 @@ bool Writer::handle(const Reader::RecordCommType* comm)
 
 void Writer::end()
 {
-    if (!scope_.is_cpu())
+    if (std::holds_alternative<Thread>(scope_))
     {
         adjust_timepoints(lo2s::time::now());
         // If we have never written any samples on this scope, we also never
@@ -228,7 +234,13 @@ void Writer::end()
             // the call to time::now() from above.  If any samples were written,
             // the required check has occured in handle() above.
             local_cctx_tree_.writer() << otf2::event::thread_begin(
-                first_time_point_, trace_.process_comm(scope_.as_thread()), -1);
+                first_time_point_,
+                trace_
+                    .process_handle(Process::no_parent(),
+                                    ThreadGroup::instance().get_process(std::get<Thread>(scope_)),
+                                    std::nullopt)
+                    .comm(),
+                -1);
         }
 
         // At this point, transitivity and monotonicity (of lo2s::time::now())
@@ -236,7 +248,13 @@ void Writer::end()
         // on this scope span a non-negative amount of time between the
         // thread_begin and thread_end event.
         local_cctx_tree_.writer() << otf2::event::thread_end(
-            last_time_point_, trace_.process_comm(scope_.as_thread()), -1);
+            last_time_point_,
+            trace_
+                .process_handle(Process::no_parent(),
+                                ThreadGroup::instance().get_process(std::get<Thread>(scope_)),
+                                std::nullopt)
+                .comm(),
+            -1);
     }
 }
 } // namespace lo2s::perf::sample

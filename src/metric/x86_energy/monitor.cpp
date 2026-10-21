@@ -4,7 +4,6 @@
 
 #include <lo2s/metric/x86_energy/monitor.hpp>
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/trace/trace.hpp>
@@ -36,7 +35,7 @@ Monitor::Monitor(::x86_energy::SourceCounter counter, Cpu cpu, trace::Trace& tra
 
 void Monitor::initialize_thread()
 {
-    try_pin_to_scope(ExecutionScope(cpu_));
+    try_pin_to_scope(cpu_);
 }
 
 void Monitor::monitor([[maybe_unused]] int fd)

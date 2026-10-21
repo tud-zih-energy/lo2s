@@ -4,10 +4,8 @@
 
 #include <lo2s/perf/counter/group/writer.hpp>
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/group/reader.hpp>
-#include <lo2s/perf/counter/metric_writer.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <cassert>
@@ -15,8 +13,13 @@
 
 namespace lo2s::perf::counter::group
 {
-Writer::Writer(ExecutionScope scope, trace::Trace& trace, bool enable_on_exec)
-: Reader(scope, enable_on_exec), MetricWriter(MeasurementScope::group_metric(scope), trace)
+Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace, bool enable_on_exec)
+: Reader(scope, enable_on_exec), time_converter_(time::Converter::instance()),
+  writer_(trace.metric_writer(scope)),
+  metric_instance_(
+      trace.metric_instance(trace.perf_group_metric_class(scope), writer_.location(),
+                            trace.sample_writer(trace::SampleKind::SAMPLE, scope).location())),
+  metric_event_(otf2::chrono::genesis(), metric_instance_)
 {
 }
 

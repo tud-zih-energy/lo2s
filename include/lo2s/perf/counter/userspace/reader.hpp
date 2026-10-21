@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/perf/event_attr.hpp>
@@ -34,7 +33,7 @@ protected:
     std::vector<UserspaceReadFormat> data_;
 
 private:
-    Reader(ExecutionScope scope);
+    Reader(std::variant<Cpu, Thread> scope);
     friend T;
 };
 } // namespace lo2s::perf::counter::userspace

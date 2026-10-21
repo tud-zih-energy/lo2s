@@ -4,9 +4,7 @@
 
 #include <lo2s/perf/counter/userspace/writer.hpp>
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/measurement_scope.hpp>
-#include <lo2s/perf/counter/metric_writer.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/time/time.hpp>
@@ -17,10 +15,16 @@
 #include <cassert>
 #include <cstddef>
 
+#include "lo2s/trace/reg_keys.hpp"
+
 namespace lo2s::perf::counter::userspace
 {
-Writer::Writer(ExecutionScope scope, trace::Trace& trace)
-: Reader(scope), MetricWriter(MeasurementScope::userspace_metric(scope), trace)
+Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace)
+: Reader(scope), time_converter_(time::Converter::instance()), writer_(trace.metric_writer(scope)),
+  metric_instance_(
+      trace.metric_instance(trace.perf_userspace_metric_class(scope), writer_.location(),
+                            trace.sample_writer(trace::SampleKind::SAMPLE, scope).location())),
+  metric_event_(otf2::chrono::genesis(), metric_instance_)
 {
 }
 

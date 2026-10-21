@@ -5,7 +5,6 @@
 #include <lo2s/perf/event_composer.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/log.hpp>
 #include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
@@ -13,6 +12,7 @@
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/types/thread.hpp>
+#include <lo2s/util.hpp>
 
 #include <optional>
 #include <vector>
@@ -45,7 +45,7 @@ void set_precision(EventAttr& ev)
     uint64_t precise_ip = 3;
     while (precise_ip > 0)
     {
-        if (ev.can_open(ExecutionScope(Thread(0))))
+        if (ev.can_open(Thread(0)))
         {
             return;
         }
@@ -265,12 +265,17 @@ void EventComposer::emplace_group_counters()
     group_counters_ = res;
 }
 
-bool EventComposer::has_counters_for(MeasurementScope scope)
+bool EventComposer::has_group_counters_for(std::variant<Cpu, Thread> scope)
 {
-    return !counters_for(scope).counters.empty();
+    return !group_counters_for(scope).counters.empty();
 }
 
-counter::CounterCollection EventComposer::group_counters_for(ExecutionScope scope)
+bool EventComposer::has_userspace_counters_for(std::variant<Cpu, Thread> scope)
+{
+    return !userspace_counters_for(scope).counters.empty();
+}
+
+counter::CounterCollection EventComposer::group_counters_for(std::variant<Cpu, Thread> scope)
 {
     counter::CounterCollection res;
     emplace_group_counters();
@@ -304,7 +309,7 @@ counter::CounterCollection EventComposer::group_counters_for(ExecutionScope scop
             }
             else
             {
-                Log::warn() << "Scope " << scope.name() << ": skipping " << ev.name()
+                Log::warn() << "Scope " << scope_get_name(scope) << ": skipping " << ev.name()
                             << ": not available!";
             }
         }
@@ -312,7 +317,7 @@ counter::CounterCollection EventComposer::group_counters_for(ExecutionScope scop
     return res;
 }
 
-counter::CounterCollection EventComposer::userspace_counters_for(ExecutionScope scope)
+counter::CounterCollection EventComposer::userspace_counters_for(std::variant<Cpu, Thread> scope)
 {
     counter::CounterCollection res;
     emplace_userspace_counters();
@@ -329,23 +334,12 @@ counter::CounterCollection EventComposer::userspace_counters_for(ExecutionScope 
         }
         else
         {
-            Log::warn() << "Skipping " << ev.name() << " not availabe in " << scope.name() << "!";
+            Log::warn() << "Skipping " << ev.name() << " not availabe in " << scope_get_name(scope)
+                        << "!";
         }
     }
 
     return res;
-}
-
-counter::CounterCollection EventComposer::counters_for(MeasurementScope scope)
-{
-    assert(scope.type == MeasurementScopeType::GROUP_METRIC ||
-           scope.type == MeasurementScopeType::USERSPACE_METRIC);
-
-    if (scope.type == MeasurementScopeType::GROUP_METRIC)
-    {
-        return group_counters_for(scope.scope);
-    }
-    return userspace_counters_for(scope.scope);
 }
 
 } // namespace lo2s::perf

@@ -128,7 +128,7 @@ private:
 
     static EventGuard create_tracepoint_ev(Cpu cpu, tracepoint::TracepointEventAttr& ev)
     {
-        auto eg = ev.open(cpu.as_scope(), config().perf.cgroup_fd);
+        auto eg = ev.open(cpu, config().perf.cgroup_fd);
         Log::debug() << "Opened perf_sample_tracepoint_reader for " << cpu << " with id "
                      << ev.id();
         return eg;

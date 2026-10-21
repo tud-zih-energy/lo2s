@@ -7,7 +7,6 @@
 #include <lo2s/address.hpp>
 #include <lo2s/calling_context.hpp>
 #include <lo2s/config.hpp>
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/execution_scope_group.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/local_cctx_tree.hpp>
@@ -23,6 +22,7 @@
 #include <lo2s/thread_fd_instance.hpp>
 #include <lo2s/time/time.hpp>
 #include <lo2s/topology.hpp>
+#include <lo2s/trace/handle.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types/core.hpp>
 #include <lo2s/types/package.hpp>
@@ -60,11 +60,13 @@
 #include <filesystem>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <regex>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <cassert>
@@ -104,25 +106,25 @@ Trace::Trace()
 : trace_name_(get_trace_name()), archive_(trace_name_, "traces"), registry_(archive_.registry()),
   calling_context_tree_(CallingContext::root(), GlobalCctxNode(nullptr)),
   interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
-      intern("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
+      to_otf2_string("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
       otf2::common::base_type::decimal, 0, config().perf.sampling.period)),
   comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
-      intern("All pthread locations"), otf2::common::paradigm_type::pthread,
+      to_otf2_string("All pthread locations"), otf2::common::paradigm_type::pthread,
       otf2::common::group_flag_type::none)),
   hardware_comm_locations_group_(registry_.create<otf2::definition::comm_locations_group>(
-      intern("All hardware locations"), otf2::common::paradigm_type::hardware,
+      to_otf2_string("All hardware locations"), otf2::common::paradigm_type::hardware,
       otf2::common::group_flag_type::none)),
   lo2s_regions_group_(registry_.create<otf2::definition::regions_group>(
-      intern("lo2s"), otf2::common::paradigm_type::user, otf2::common::group_flag_type::none)),
+      to_otf2_string("lo2s"), otf2::common::paradigm_type::user,
+      otf2::common::group_flag_type::none)),
   syscall_regions_group_(registry_.create<otf2::definition::regions_group>(
-      intern("<syscalls>"), otf2::common::paradigm_type::user,
+      to_otf2_string("<syscalls>"), otf2::common::paradigm_type::user,
       otf2::common::group_flag_type::none)),
   kernel_regions_group_(registry_.create<otf2::definition::regions_group>(
-      intern("<kernel threads>"), otf2::common::paradigm_type::user,
+      to_otf2_string("<kernel threads>"), otf2::common::paradigm_type::user,
       otf2::common::group_flag_type::none)),
   system_tree_root_node_(registry_.create<otf2::definition::system_tree_node>(
-      intern(nitro::env::hostname()), intern("machine"))),
-  groups_(ExecutionScopeGroup::instance())
+      to_otf2_string(nitro::env::hostname()), to_otf2_string("machine")))
 {
     Log::info() << "Using trace directory: " << trace_name_;
     summary().set_trace_dir(trace_name_);
@@ -138,74 +140,28 @@ Trace::Trace()
     add_lo2s_property("UNAME::MACHINE", std::string{ uname.machine });
 
     registry_.create<otf2::definition::location_group>(
-        ByExecutionScope(ExecutionScope(Thread(METRIC_PID))), intern("Metric Location Group"),
+        ByThread(Thread(Thread(METRIC_PID))), to_otf2_string("Metric Location Group"),
         otf2::definition::location_group::location_group_type::process, system_tree_root_node_);
 
     registry_.create<otf2::definition::system_tree_node_domain>(
         system_tree_root_node_, otf2::common::system_tree_node_domain::shared_memory);
-    const auto& sys = Topology::instance();
-    for (const auto& cpu : sys.cpus())
-    {
-        Core const core = sys.core_of(cpu);
-        Package const package = sys.package_of(cpu);
 
-        Log::debug() << "Registering cpu " << cpu.as_int() << "@" << package.as_int() << ":"
-                     << core.core_as_int();
-
-        auto package_node = registry_.find<otf2::definition::system_tree_node>(ByPackage(package));
-        if (!package_node)
-        {
-            package_node = registry_.emplace<otf2::definition::system_tree_node>(
-                ByPackage(package), intern(std::to_string(package.as_int())), intern("package"),
-                system_tree_root_node_);
-
-            registry_.create<otf2::definition::system_tree_node_domain>(
-                package_node, otf2::common::system_tree_node_domain::socket);
-        }
-
-        auto core_node = registry_.find<otf2::definition::system_tree_node>(ByCore(core));
-        if (!core_node)
-        {
-            core_node = registry_.emplace<otf2::definition::system_tree_node>(
-                ByCore(core), intern(fmt::format("{}:{}", package.as_int(), core.core_as_int())),
-                intern("core"), package_node);
-
-            registry_.create<otf2::definition::system_tree_node_domain>(
-                core_node, otf2::common::system_tree_node_domain::core);
-        }
-
-        const auto& name = intern(fmt::format("{}", cpu.as_int()));
-        const auto& cpu_node = registry_.create<otf2::definition::system_tree_node>(
-            ByCpu(cpu), name, intern("cpu"), core_node);
-        registry_.create<otf2::definition::system_tree_node_domain>(
-            cpu_node, otf2::common::system_tree_node_domain::pu);
-
-        // We need to a different name for the location_group than the system tree node,
-        // because a system_tree_node gets attached its class_name in Vampir.
-        const auto& lg_name = intern(fmt::format("{}", cpu));
-        registry_.create<otf2::definition::location_group>(
-            ByExecutionScope(cpu.as_scope()), lg_name,
-            otf2::definition::location_group::location_group_type::process, cpu_node);
-
-        groups_.add_cpu(cpu);
-    }
-
-    groups_.add_process(Process::no_parent());
+    ThreadGroup::instance().add_process(Process::no_parent());
 
     if (config().perf.block_io.enabled)
     {
         bio_system_tree_node_ = registry_.create<otf2::definition::system_tree_node>(
-            intern("block devices"), intern("hardware"), system_tree_root_node_);
+            to_otf2_string("block devices"), to_otf2_string("hardware"), system_tree_root_node_);
 
         const std::vector<otf2::common::io_paradigm_property_type> properties;
         const std::vector<otf2::attribute_value> values;
         bio_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
-            intern("block_io"), intern("block layer I/O"),
+            to_otf2_string("block_io"), to_otf2_string("block layer I/O"),
             otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
             properties, values);
 
         bio_comm_group_ = registry_.create<otf2::definition::comm_group>(
-            intern("block devices"), otf2::common::paradigm_type::hardware,
+            to_otf2_string("block devices"), otf2::common::paradigm_type::hardware,
             otf2::common::group_flag_type::none);
 
         for (auto& device : get_block_devices())
@@ -218,24 +174,18 @@ Trace::Trace()
         }
     }
 
-    if (config().accel.nec)
-    {
-        nec_interrupt_generator_ = registry_.create<otf2::definition::interrupt_generator>(
-            intern("NEC sampling timer"), otf2::common::interrupt_generator_mode_type::count,
-            otf2::common::base_type::decimal, 0, config().perf.sampling.period);
-    }
-
     if (config().perf.posix_io.enabled)
     {
 
         const std::vector<otf2::common::io_paradigm_property_type> properties;
         const std::vector<otf2::attribute_value> values;
         posix_paradigm_ = registry_.create<otf2::definition::io_paradigm>(
-            intern("POSIX"), intern("POSIX I/O"), otf2::common::io_paradigm_class_type::parallel,
-            otf2::common::io_paradigm_flag_type::os, properties, values);
+            to_otf2_string("POSIX"), to_otf2_string("POSIX I/O"),
+            otf2::common::io_paradigm_class_type::parallel, otf2::common::io_paradigm_flag_type::os,
+            properties, values);
 
         posix_comm_group_ = registry_.create<otf2::definition::comm_group>(
-            intern("POSIX I/O files"), otf2::common::paradigm_type::hardware,
+            to_otf2_string("POSIX I/O files"), otf2::common::paradigm_type::hardware,
             otf2::common::group_flag_type::none);
     }
 }
@@ -272,48 +222,19 @@ Trace::~Trace()
         Log::error()
             << "cctx refs have not been finalized, please report this bug to the developers";
     }
-    for (auto& thread : thread_names_)
+    for (const auto& thread : ThreadNames::instance().names())
     {
-        if (!registry_.has<otf2::definition::region>(ByThread(thread.first)))
-        {
-            continue;
-        }
 
-        auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread.first));
-
-        try
+        if (ThreadGroup::instance().is_process(thread.first))
         {
-            Process const parent = groups_.get_process(thread.first);
+            process_handle(Process::no_parent(), thread.first.as_process(), thread.second);
+        }
+        auto thread_hd = thread_handle(Process::no_parent(), thread.first, thread.second);
 
-            try
-            {
-                auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-                    ByProcess(parent), intern(thread_names_[parent.as_thread()]),
-                    otf2::common::paradigm_type::user, otf2::common::group_flag_type::none);
-                regions_group.add_member(thread_region);
-            }
-            catch (const otf2::exception& e)
-            {
-                Log::error()
-                    << "Can't emplace regions group that we checked does not exist! This is a bug!";
-            }
-        }
-        // If no parent can be found emplace a thread as it's own regions_group
-        catch (const std::out_of_range&)
-        {
-            try
-            {
-                auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-                    ByThread(thread.first), intern(thread.second),
-                    otf2::common::paradigm_type::user, otf2::common::group_flag_type::none);
-                regions_group.add_member(thread_region);
-            }
-            catch (const otf2::exception& e)
-            {
-                Log::error()
-                    << "Can't emplace regions group that we checked does not exist! This is a bug!";
-            }
-        }
+        Process process = ThreadGroup::instance().get_process(thread.first);
+        process_handle(Process::no_parent(), process, std::nullopt)
+            .regions_group()
+            .add_member(thread_hd.region());
     }
 
     if (starting_time_ > stopping_time_)
@@ -344,121 +265,6 @@ Trace::~Trace()
     std::filesystem::create_symlink(trace_name_, symlink_path);
 }
 
-const otf2::definition::system_tree_node& Trace::intern_process_node(Process process)
-{
-    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(process)))
-    {
-        return registry_.get<otf2::definition::system_tree_node>(ByProcess(process));
-    }
-    Log::warn() << "Could not find system tree node for  " << process;
-    return system_tree_root_node_;
-}
-
-void Trace::emplace_process(Process parent, Process process, const std::string& name)
-{
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
-
-    if (registry_.has<otf2::definition::system_tree_node>(ByProcess(process)))
-    {
-        update_process(parent, process, name);
-        return;
-    }
-
-    thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(process.as_thread()),
-                          std::forward_as_tuple(name));
-
-    const auto& iname = intern(name);
-
-    const auto& parent_node =
-        (parent == Process::no_parent()) ? system_tree_root_node_ : intern_process_node(parent);
-
-    const auto& ret = registry_.create<otf2::definition::system_tree_node>(
-        ByProcess(process), iname, intern("process"), parent_node);
-
-    registry_.emplace<otf2::definition::location_group>(
-        ByExecutionScope(ExecutionScope(Process(process))), iname,
-        otf2::definition::location_group::location_group_type::process, ret);
-
-    const auto& comm_group = registry_.emplace<otf2::definition::comm_group>(
-        ByProcess(process), iname, otf2::common::paradigm_type::pthread,
-        otf2::common::group_flag_type::none);
-
-    registry_.emplace<otf2::definition::comm>(ByProcess(process), iname, comm_group,
-                                              otf2::definition::comm::comm_flag_type::none);
-}
-
-void Trace::update_process(Process parent, Process process, const std::string& name)
-{
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
-
-    if (!name.empty())
-    {
-        const auto& iname = intern(name);
-        try
-        {
-            registry_.get<otf2::definition::system_tree_node>(ByProcess(process)).name(iname);
-            registry_.get<otf2::definition::location_group>(ByExecutionScope(process.as_scope()))
-                .name(iname);
-            registry_.get<otf2::definition::comm_group>(ByProcess(process)).name(iname);
-            registry_.get<otf2::definition::comm>(ByProcess(process)).name(iname);
-
-            update_thread(process, process.as_thread(), name);
-        }
-        catch (const std::out_of_range&)
-        {
-            Log::warn() << "Attempting to update name of unknown " << process << " (" << name
-                        << ")";
-        }
-    }
-
-    if (parent != Process::no_parent())
-    {
-        emplace_process(Process::no_parent(), parent, "");
-        registry_.get<otf2::definition::system_tree_node>(ByProcess(process))
-            .parent(registry_.get<otf2::definition::system_tree_node>(ByProcess(parent)));
-    }
-}
-
-void Trace::update_thread(Process process, Thread thread, const std::string& name)
-{
-    // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
-
-    if (name.empty())
-    {
-        return;
-    }
-    try
-    {
-        if (!registry_.has<otf2::definition::region>(ByThread(thread)))
-        {
-            emplace_thread_exclusive(process, thread, name, guard);
-            return;
-        }
-        const auto& iname = intern(fmt::format("{} ({})", name, thread.as_int()));
-        auto& thread_region = registry_.get<otf2::definition::region>(ByThread(thread));
-        thread_region.name(iname);
-        thread_region.canonical_name(iname);
-        thread_region.source_file(iname);
-        thread_region.description(iname);
-
-        if (registry_.has<otf2::definition::location>(
-                ByMeasurementScope(MeasurementScope::sample(thread.as_scope()))))
-        {
-            registry_
-                .get<otf2::definition::location>(
-                    ByMeasurementScope(MeasurementScope::sample(thread.as_scope())))
-                .name(iname);
-        }
-
-        thread_names_[thread] = name;
-    }
-    catch (const std::out_of_range&)
-    {
-        Log::warn() << "Attempting to update name of unknown " << thread << " (" << name << ")";
-    }
-}
-
 void Trace::add_lo2s_property(const std::string& name, const std::string& value)
 {
     std::string property_name{ "LO2S::" };
@@ -471,81 +277,79 @@ void Trace::add_lo2s_property(const std::string& name, const std::string& value)
     // Add to machine-specific properties which are stored in the system tree
     // root node.  This is the correct way (TM).
     registry_.create<otf2::definition::system_tree_node_property>(
-        system_tree_root_node_, intern(property_name), otf2::attribute_value{ intern(value) });
+        system_tree_root_node_, to_otf2_string(property_name),
+        otf2::attribute_value{ to_otf2_string(value) });
 }
 
-otf2::writer::local& Trace::sample_writer(const MeasurementScope& scope)
+otf2::writer::local& Trace::sample_writer(SampleKind kind, std::variant<Cpu, Thread> scope)
 {
-    assert(scope.scope.is_thread() || scope.scope.is_cpu());
-    if (scope.scope.is_thread())
-    {
-        emplace_thread(Process::no_parent(), scope.scope.as_thread(), "");
-    }
-
     // TODO we call this function in a hot-loop, locking doesn't sound like a good idea
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
 
-    // If no process can be found for the thread, emplace it as its own process, this probably
-    // breaks some other lo2s assumptions, but at least it results in lo2s not crashing
-    if (!registry_.has<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(scope.scope))))
+    if (std::holds_alternative<Thread>(scope))
     {
-        emplace_process(Process(scope.scope.as_thread().as_process()), Process::no_parent(),
-                        thread_names_[scope.scope.as_thread()]);
+        auto thread = std::get<Thread>(scope);
+        auto process_hd = process_handle(Process::no_parent(),
+                                         ThreadGroup::instance().get_process(thread), std::nullopt);
+
+        auto& intern_location = registry_.emplace<otf2::definition::location>(
+            BySampleWriter(std::make_pair(kind, scope)), to_otf2_string(scope_get_name(scope)),
+            process_hd.location_group(), otf2::definition::location::location_type::cpu_thread);
+        comm_locations_group_.add_member(intern_location);
+
+        process_hd.comm_group().add_member(intern_location);
+        return archive_(intern_location);
     }
+    auto cpu = std::get<Cpu>(scope);
+
+    auto cpu_hd = cpu_handle(cpu);
 
     auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(scope.scope))),
-        otf2::definition::location::location_type::cpu_thread);
-
+        BySampleWriter(std::make_pair(kind, scope)), to_otf2_string(scope_get_name(scope)),
+        cpu_hd.location_group(), otf2::definition::location::location_type::cpu_thread);
     comm_locations_group_.add_member(intern_location);
-
-    try
-    {
-        if (groups_.get_parent(scope.scope).is_process())
-        {
-            if (registry_.has<otf2::definition::comm_group>(
-                    ByProcess(groups_.get_process(scope.scope.as_thread()))))
-            {
-                registry_
-                    .get<otf2::definition::comm_group>(
-                        ByProcess(groups_.get_process(scope.scope.as_thread())))
-                    .add_member(intern_location);
-            }
-            else
-            {
-                Log::warn() << "Can not add sample writer to comm_group of process "
-                            << scope.scope.name() << ", ignoring!";
-            }
-        }
-    }
-    catch (ExecutionScopeException& e)
-    {
-        Log::warn() << "Can not find parent of " << scope.scope.name();
-    }
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::syscall_writer(const ExecutionScope& scope)
+otf2::writer::local& Trace::syscall_writer(std::variant<Cpu, Thread> scope)
 {
-    MeasurementScope const meas_scope = MeasurementScope::syscall(scope);
+    otf2::definition::location_group* gr = nullptr;
 
+    if (std::holds_alternative<Cpu>(scope))
+    {
+        gr = &cpu_handle(std::get<Cpu>(scope)).location_group();
+    }
+    else
+    {
+        gr = &process_handle(Process::no_parent(),
+                             ThreadGroup::instance().get_process(std::get<Thread>(scope)),
+                             std::nullopt)
+                  .location_group();
+    }
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(meas_scope), intern(meas_scope.name()),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(scope))),
+        BySyscallWriter(scope),
+        to_otf2_string(fmt::format("syscall events for {}", scope_get_name(scope))), *gr,
         otf2::definition::location::location_type::cpu_thread);
     return archive_(intern_location);
 }
 
-otf2::writer::local& Trace::metric_writer(const MeasurementScope& writer_scope)
+otf2::writer::local& Trace::metric_writer(std::variant<Cpu, Thread> scope)
 {
+    otf2::definition::location_group* gr = nullptr;
+
+    if (std::holds_alternative<Cpu>(scope))
+    {
+        gr = &cpu_handle(std::get<Cpu>(scope)).location_group();
+    }
+    else
+    {
+        gr = &process_handle(Process::no_parent(),
+                             ThreadGroup::instance().get_process(std::get<Thread>(scope)),
+                             std::nullopt)
+                  .location_group();
+    }
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(writer_scope), intern(writer_scope.name()),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(writer_scope.scope))),
+        ByMetricWriter(scope), to_otf2_string(scope_get_name(scope)), *gr,
         otf2::definition::location::location_type::metric);
     return archive_(intern_location);
 }
@@ -559,10 +363,11 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
         return archive_(registry_.get<otf2::definition::location>(ByBlockDevice(dev)));
     }
 
-    const auto& name = intern(fmt::format("block I/O events for {}", dev.name));
+    const auto& name = to_otf2_string(fmt::format("block I/O events for {}", dev.name));
 
     const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
-        ByBlockDevice(dev), intern(dev.name), intern("block dev"), bio_system_tree_node_);
+        ByBlockDevice(dev), to_otf2_string(dev.name), to_otf2_string("block dev"),
+        bio_system_tree_node_);
 
     const auto& bio_location_group = registry_.emplace<otf2::definition::location_group>(
         ByBlockDevice(dev), name, otf2::common::location_group_type::process, node);
@@ -577,12 +382,12 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
 
 otf2::writer::local& Trace::posix_io_writer(Thread thread)
 {
-    MeasurementScope const scope = MeasurementScope::posix_io(thread.as_scope());
 
+    auto& loc = process_handle(Process::no_parent(), ThreadGroup::instance().get_process(thread),
+                               std::nullopt)
+                    .location_group();
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
-        ByMeasurementScope(scope), intern(scope.name()),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(groups_.get_parent(thread.as_scope()))),
+        ByPosixIoWriter(thread), to_otf2_string(fmt::format("thread {}", thread.as_int())), loc,
         otf2::definition::location::location_type::cpu_thread);
 
     return archive_(intern_location);
@@ -591,9 +396,8 @@ otf2::writer::local& Trace::posix_io_writer(Thread thread)
 otf2::writer::local& Trace::create_metric_writer(const std::string& name)
 {
     const auto& location = registry_.create<otf2::definition::location>(
-        intern(name),
-        registry_.get<otf2::definition::location_group>(
-            ByExecutionScope(ExecutionScope(Thread(METRIC_PID)))),
+        to_otf2_string(name),
+        registry_.get<otf2::definition::location_group>(ByThread(Thread(METRIC_PID))),
         otf2::definition::location::location_type::metric);
     return archive_(location);
 }
@@ -610,7 +414,7 @@ otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)
         return registry_.get<otf2::definition::io_handle>(ByBlockDevice(dev));
     }
 
-    const auto& device_name = intern(dev.name);
+    const auto& device_name = to_otf2_string(dev.name);
 
     const otf2::definition::system_tree_node& parent = bio_parent_node(dev);
 
@@ -618,7 +422,7 @@ otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)
         (dev.type == BlockDeviceType::PARTITION) ? "partition" : "disk";
 
     const auto& node = registry_.emplace<otf2::definition::system_tree_node>(
-        ByBlockDevice(dev), device_name, intern(device_class), parent);
+        ByBlockDevice(dev), device_name, to_otf2_string(device_class), parent);
 
     const auto& file =
         registry_.emplace<otf2::definition::io_regular_file>(ByBlockDevice(dev), device_name, node);
@@ -650,7 +454,7 @@ otf2::definition::io_handle& Trace::posix_io_handle(Thread thread, int fd, int i
         return registry_.get<otf2::definition::io_handle>(ByThreadFdInstance(id));
     }
 
-    const auto& filename = intern(name);
+    const auto& filename = to_otf2_string(name);
 
     const auto& file = registry_.emplace<otf2::definition::io_regular_file>(
         ByString(name), filename, system_tree_root_node_);
@@ -658,7 +462,9 @@ otf2::definition::io_handle& Trace::posix_io_handle(Thread thread, int fd, int i
     auto& handle = registry_.emplace<otf2::definition::io_handle>(
         ByThreadFdInstance(id), filename, file, posix_paradigm_,
         otf2::common::io_handle_flag_type::none,
-        registry_.get<otf2::definition::comm>(ByProcess(groups_.get_process(thread))));
+        process_handle(Process::no_parent(), ThreadGroup::instance().get_process(thread),
+                       std::nullopt)
+            .comm());
 
     // Mark stdin, stdout and stderr as pre-created, because they are
     if (fd < 3)
@@ -686,8 +492,8 @@ Trace::metric_member(const std::string& name, const std::string& description,
                      const std::string& unit, std::int64_t exponent, otf2::common::base_type base)
 {
     return registry_.create<otf2::definition::metric_member>(
-        intern(name), intern(description), otf2::common::metric_type::other, mode, value_type, base,
-        exponent, intern(unit));
+        to_otf2_string(name), to_otf2_string(description), otf2::common::metric_type::other, mode,
+        value_type, base, exponent, to_otf2_string(unit));
 }
 
 otf2::definition::metric_instance
@@ -777,9 +583,9 @@ otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& 
 
     if (line_info == LineInfo::for_unknown_function())
     {
-        if (thread_names_.count(ctx.p.as_thread()))
+        if (ThreadNames::instance().has(ctx.p.as_thread()))
         {
-            line_info.dso = thread_names_.at(ctx.p.as_thread());
+            line_info.dso = ThreadNames::instance().get(ctx.p.as_thread());
         }
     }
 
@@ -846,7 +652,8 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
         intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
 
     registry_.create<otf2::definition::calling_context_property>(
-        new_cctx, intern("ip"), otf2::attribute_value(intern(std::to_string(addr.value()))));
+        new_cctx, to_otf2_string("ip"),
+        otf2::attribute_value(to_otf2_string(std::to_string(addr.value()))));
 
     return new_cctx;
 }
@@ -854,69 +661,12 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
 otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeContext& ctx)
 {
 
-    emplace_thread(ctx.p, thread, "");
-
-    if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
-    {
-        return registry_.get<otf2::definition::calling_context>(ByThread(thread));
-    }
-
-    auto name = thread_names_.at(thread);
-    const auto& iname = intern(fmt::format("{}FOOBAR ({})", name, thread.as_int()));
-
-    auto& thread_region = registry_.emplace<otf2::definition::region>(
-        ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
-        otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-
-    try
-    {
-        Process const parent = groups_.get_process(thread);
-
-        auto proc_name = thread_names_[parent.as_thread()];
-        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-            ByProcess(parent), intern(proc_name), otf2::common::paradigm_type::user,
-            otf2::common::group_flag_type::none);
-
-        regions_group.add_member(thread_region);
-    }
-    // If no parent can be found emplace a thread as it's own regions_group
-    catch (const std::out_of_range&)
-    {
-        auto& regions_group = registry_.emplace<otf2::definition::regions_group>(
-            ByThread(thread), intern(name), otf2::common::paradigm_type::user,
-            otf2::common::group_flag_type::none);
-
-        regions_group.add_member(thread_region);
-    }
-
-    // create calling context
-    auto& node = registry_.create<otf2::definition::calling_context>(
-        ByThread(thread), thread_region, otf2::definition::source_code_location());
-
-    return node;
+    return thread_handle(ctx.p, thread, std::nullopt).calling_context();
 }
 
 otf2::definition::calling_context& Trace::cctx_for_process(Process process)
 {
-    emplace_process(Process::no_parent(), process, "");
-
-    if (registry_.has<otf2::definition::calling_context>(ByProcess(process)))
-    {
-        return registry_.get<otf2::definition::calling_context>(ByProcess(process));
-    }
-
-    auto name = thread_names_[process.as_thread()];
-    const auto& iname = intern(name);
-
-    auto& thread_region = registry_.emplace<otf2::definition::region>(
-        ByProcess(process), iname, iname, iname, otf2::common::role_type::function,
-        otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-
-    // create calling context
-    auto& node = registry_.create<otf2::definition::calling_context>(
-        ByProcess(process), thread_region, otf2::definition::source_code_location());
-
-    return node;
+    return thread_handle(process, process.as_thread(), std::nullopt).calling_context();
 }
 
 /*
@@ -1029,56 +779,6 @@ otf2::definition::calling_context& Trace::cctx_for_syscall(int64_t syscall_id)
     return ctx;
 }
 
-void Trace::emplace_thread_exclusive(Process process, Thread thread, const std::string& name,
-                                     const std::lock_guard<std::recursive_mutex>& /*unused*/)
-{
-
-    emplace_process(Process::no_parent(), process, "");
-    groups_.add_thread(thread, process);
-
-    std::string thread_name = name;
-    if (thread == Thread(0))
-    {
-        thread_name = "<idle>";
-    }
-
-    if (registry_.has<otf2::definition::calling_context>(ByThread(thread)))
-    {
-        update_thread(process, thread, name);
-        return;
-    }
-
-    thread_names_.emplace(std::piecewise_construct, std::forward_as_tuple(thread),
-                          std::forward_as_tuple(thread_name));
-
-    if (thread != Thread(0))
-    {
-        thread_name = fmt::format("{} ({})", name, thread.as_int());
-    }
-
-    const auto& iname = intern(thread_name);
-
-    auto& thread_region = registry_.emplace<otf2::definition::region>(
-        ByThread(thread), iname, iname, iname, otf2::common::role_type::function,
-        otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-
-    if (is_kernel_thread(thread))
-    {
-        kernel_regions_group_.add_member(thread_region);
-    }
-
-    // create calling context
-    registry_.create<otf2::definition::calling_context>(ByThread(thread), thread_region,
-                                                        otf2::definition::source_code_location());
-}
-
-void Trace::emplace_thread(Process process, Thread thread, const std::string& name)
-{
-    // Lock this to avoid conflict on regions_thread_ with emplace_monitoring_thread
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
-    emplace_thread_exclusive(process, thread, name, guard);
-}
-
 void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
                                       const std::string& group)
 {
@@ -1087,7 +787,7 @@ void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
 
     Log::debug() << "Adding monitoring " << thread << " (" << name << "): group " << group;
-    const auto& iname = intern(fmt::format("lo2s::{}", name));
+    const auto& iname = to_otf2_string(fmt::format("lo2s::{}", name));
 
     // TODO, should be paradigm_type::measurement_system, but that's a bug in Vampir
     if (!registry_.has<otf2::definition::region>(ByThread(thread)))
@@ -1103,43 +803,24 @@ void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
     }
 }
 
-void Trace::emplace_threads(const std::map<Process, std::map<Thread, std::string>>& thread_map)
-{
-    // Lock here to avoid conflicts when writing to regions_thread_
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
-    for (const auto& process : thread_map)
-    {
-        std::string name;
-        if (process.second.count(process.first.as_thread()) != 0)
-        {
-            name = process.second.at(process.first.as_thread());
-        }
-        emplace_process(Process::no_parent(), process.first, name);
-        for (const auto& thread : process.second)
-        {
-            emplace_thread_exclusive(process.first, thread.first, thread.second, guard);
-        }
-    }
-}
-
 const otf2::definition::string& Trace::intern_syscall_str(int64_t syscall_nr)
 {
-    return intern(syscall_name_for_nr(syscall_nr));
+    return to_otf2_string(syscall_name_for_nr(syscall_nr));
 }
 
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
 {
-    return registry_.emplace<otf2::definition::source_code_location>(ByLineInfo(info),
-                                                                     intern(info.file), info.line);
+    return registry_.emplace<otf2::definition::source_code_location>(
+        ByLineInfo(info), to_otf2_string(info.file), info.line);
 }
 
 const otf2::definition::region& Trace::intern_region(const LineInfo& info)
 {
-    const auto& name_str = intern(info.function);
+    const auto& name_str = to_otf2_string(info.function);
     const auto& region = registry_.emplace<otf2::definition::region>(
         ByLineInfo(info), name_str, name_str, name_str, otf2::common::role_type::function,
-        otf2::common::paradigm_type::sampling, otf2::common::flags_type::none, intern(info.file),
-        info.line, 0);
+        otf2::common::paradigm_type::sampling, otf2::common::flags_type::none,
+        to_otf2_string(info.file), info.line, 0);
 
     if (registry_.has<otf2::definition::regions_group>(ByString(info.dso)))
     {
@@ -1147,27 +828,27 @@ const otf2::definition::region& Trace::intern_region(const LineInfo& info)
     }
     else
     {
-        registry_.emplace<otf2::definition::regions_group>(ByString(info.dso), intern(info.dso),
-                                                           otf2::common::paradigm_type::compiler,
-                                                           otf2::common::group_flag_type::none);
+        registry_.emplace<otf2::definition::regions_group>(
+            ByString(info.dso), to_otf2_string(info.dso), otf2::common::paradigm_type::compiler,
+            otf2::common::group_flag_type::none);
     }
     return region;
 }
 
-const otf2::definition::string& Trace::intern(const std::string& name)
+const otf2::definition::string& Trace::to_otf2_string(const std::string& name)
 {
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
 
     return registry_.emplace<otf2::definition::string>(ByString(name), name);
 }
 
-LocalCctxTree& Trace::create_local_cctx_tree(const MeasurementScope& scope)
+LocalCctxTree& Trace::create_local_cctx_tree(SampleKind kind, std::variant<Cpu, Thread> scope)
 {
     std::lock_guard<std::mutex> const guard(local_cctx_trees_mutex_);
 
     assert(!local_cctx_trees_finalized_);
 
-    return local_cctx_trees_.emplace_back(*this, scope);
+    return local_cctx_trees_.emplace_back(*this, kind, scope);
 }
 
 void Trace::finalize(Resolvers& resolvers)
@@ -1186,23 +867,19 @@ void Trace::finalize(Resolvers& resolvers)
             local_cctx.writer() << mapping;
         }
     }
-    for (auto& thread : thread_names_)
+    for (const auto& thread : ThreadNames::instance().names())
     {
-        if (!registry_.has<otf2::definition::calling_context>(ByThread(thread.first)))
-        {
-            continue;
-        }
-
-        auto& cctx = registry_.get<otf2::definition::calling_context>(ByThread(thread.first));
+        auto& cctx =
+            thread_handle(Process::no_parent(), thread.first, std::nullopt).calling_context();
         try
         {
-            Process const process = groups_.get_process(thread.first);
+            Process const process = ThreadGroup::instance().get_process(thread.first);
             if (resolvers.function_resolvers.count(process) == 1)
             {
                 registry_.create<otf2::definition::calling_context_property>(
-                    cctx, intern("MAPS"),
+                    cctx, to_otf2_string("MAPS"),
                     otf2::attribute_value(
-                        intern(resolvers.function_resolvers.at(process).to_string())));
+                        to_otf2_string(resolvers.function_resolvers.at(process).to_string())));
             }
         }
         catch (const std::out_of_range&)
@@ -1217,5 +894,31 @@ void Trace::finalize(Resolvers& resolvers)
         Log::error() << "Trace::merge_calling_contexts was called twice."
                         "This is a bug, please report it to the developers.";
     }
+}
+
+ProcessHandle Trace::process_handle(Process parent, Process process,
+                                    std::optional<std::string> name)
+{
+    return { parent, process, name, *this };
+}
+
+ThreadHandle Trace::thread_handle(Process process, Thread thread, std::optional<std::string> name)
+{
+    return { process, thread, name, *this };
+}
+
+CpuHandle Trace::cpu_handle(Cpu cpu)
+{
+    return { cpu, *this };
+}
+
+CoreHandle Trace::core_handle(Core core)
+{
+    return { core, *this };
+}
+
+PackageHandle Trace::package_handle(Package pkg)
+{
+    return { pkg, *this };
 }
 } // namespace lo2s::trace

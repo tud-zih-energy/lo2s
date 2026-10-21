@@ -120,13 +120,13 @@ Metrics::Metrics(trace::Trace& trace)
             case xe::Granularity::SOCKET:
             case xe::Granularity::DIE:
             case xe::Granularity::MODULE:
-                stn = trace.system_tree_package_node(Topology::instance().package_of(cpu));
+                stn = trace.package_handle(Topology::instance().package_of(cpu)).system_tree_node();
                 break;
             case xe::Granularity::CORE:
-                stn = trace.system_tree_core_node(Topology::instance().core_of(cpu));
+                stn = trace.core_handle(Topology::instance().core_of(cpu)).system_tree_node();
                 break;
             case xe::Granularity::THREAD:
-                stn = trace.system_tree_cpu_node(cpu);
+                stn = trace.cpu_handle(cpu).system_tree_node();
                 break;
             default:
                 Log::warn() << "Cannot determine a suitable system tree node for the " << counter

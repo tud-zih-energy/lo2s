@@ -19,7 +19,6 @@ extern "C"
 namespace lo2s
 {
 
-class ExecutionScope;
 class Thread;
 
 class Process
@@ -79,7 +78,6 @@ public:
     }
 
     Thread as_thread() const;
-    ExecutionScope as_scope() const;
 
     friend std::ostream& operator<<(std::ostream& stream, const Process& process);
 

@@ -26,8 +26,8 @@ Writer::Writer(Cpu cpu, const perf::tracepoint::TracepointEventAttr& event, trac
                const otf2::definition::metric_class& metric_class)
 : Reader(cpu, event),
   writer_(trace_.create_metric_writer(fmt::format("tracepoint metrics for {}", cpu))),
-  metric_instance_(
-      trace_.metric_instance(metric_class, writer_.location(), trace_.system_tree_cpu_node(cpu))),
+  metric_instance_(trace_.metric_instance(metric_class, writer_.location(),
+                                          trace_.cpu_handle(cpu).system_tree_node())),
   time_converter_(perf::time::Converter::instance()),
   metric_event_(otf2::chrono::genesis(), metric_instance_)
 {

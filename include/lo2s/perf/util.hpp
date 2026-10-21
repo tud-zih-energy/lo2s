@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include <lo2s/execution_scope.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 
+#include <variant>
 extern "C"
 {
 #include <linux/perf_event.h>
@@ -14,6 +16,6 @@ extern "C"
 namespace lo2s::perf
 {
 int perf_event_paranoid();
-int perf_event_open(const struct perf_event_attr* perf_attr, ExecutionScope scope, int group_fd,
-                    unsigned long flags, int cgroup_fd = -1);
+int perf_event_open(const struct perf_event_attr* perf_attr, std::variant<Cpu, Thread> scope,
+                    int group_fd, unsigned long flags, int cgroup_fd = -1);
 } // namespace lo2s::perf

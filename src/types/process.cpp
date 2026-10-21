@@ -4,16 +4,11 @@
 
 #include <lo2s/types/process.hpp>
 
-#include <lo2s/execution_scope.hpp>
 #include <lo2s/types/thread.hpp>
 
 namespace lo2s
 {
 
-ExecutionScope Process::as_scope() const
-{
-    return ExecutionScope(*this);
-}
 
 Thread Process::as_thread() const
 {
