@@ -12,8 +12,6 @@
 #include <string>
 #include <utility>
 
-#include <bpf/libbpf.h>
-
 namespace lo2s
 {
 class FunctionResolver
