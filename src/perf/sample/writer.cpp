@@ -142,7 +142,7 @@ otf2::chrono::time_point Writer::adjust_timepoints(otf2::chrono::time_point tp)
 
 bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 {
-    assert(scope_.is_cpu());
+    assert(std::holds_alternative<Cpu>(scope_));
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
@@ -154,7 +154,7 @@ bool Writer::handle(const Reader::RecordSwitchCpuWideType* context_switch)
 
 bool Writer::handle(const Reader::RecordSwitchType* context_switch)
 {
-    assert(!scope_.is_cpu());
+    assert(!std::holds_alternative<Cpu>(scope_));
     auto tp = time_converter_(context_switch->time);
     tp = adjust_timepoints(tp);
 
