@@ -591,9 +591,9 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     const auto it = fr.find(addr);
     if (it != fr.end())
     {
-        Log::error() << "Resolving " << addr << " in object: ";
-        Log::error() << it->first.to_string() << " " << it->second->name() << " " << p.as_int()
-                     << " (" << ThreadNames::instance().get(p.as_thread()) << " )";
+        Log::trace() << "Resolving " << addr << " in object: ";
+        Log::trace() << it->first.to_string() << " " << it->second->name() << "PID: " << p.as_int()
+                     << " (" << ThreadNames::instance().get(p.as_thread()) << ")";
         line_info = it->second->lookup_line_info(
             addr, (it->first.range.start.value() - it->first.pgoff.value()));
     }
