@@ -4,8 +4,8 @@
 
 cmake_minimum_required(VERSION 3.11)
 
-project(lo2s VERSION 1.9.0)
-set(LO2S_COPYRIGHT_YEAR "2025")
+project(lo2s VERSION 1.9.1)
+set(LO2S_COPYRIGHT_YEAR "2026")
 
 # Check if we are running Linux
 if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

@@ -10,7 +10,7 @@ authors:
 - family-names: "Schöne"
   given-names: "Robert"
 title: "lo2s - Lightweight Node-Level Performance Monitoring"
-version: 1.9.0
+version: 1.9.1
 date-released: 2025-10-22
 url: "https://github.com/tud-zih-energy/lo2s"
 preferred-citation:
