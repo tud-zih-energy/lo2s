@@ -264,7 +264,7 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr, uint64_t offset)
                 .first->second;
         }
     }
-    Log::error() << "No symbol found for: " << addr << " in " << module_name;
+    Log::trace() << "No symbol found for: " << addr << " in " << module_name;
     return cache_.emplace(addr, LineInfo::for_binary(module_name)).first->second;
 }
 } // namespace lo2s
