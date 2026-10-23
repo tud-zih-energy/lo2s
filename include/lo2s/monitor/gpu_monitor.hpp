@@ -32,9 +32,6 @@ class GPUMonitor : public PollMonitor
 public:
     GPUMonitor(trace::Trace& trace, RingbufReader&& ringbuf_reader_);
 
-    void finalize_thread() override;
-    void monitor(int fd) override;
-
     std::string group() const override
     {
         return "lo2s::GPUMonitor";
@@ -53,12 +50,16 @@ public:
         }
     }
 
+protected:
+    void finalize_thread() override;
+    void monitor(int fd) override;
+
 private:
     static constexpr int CCTX_LEVEL_PROCESS = 1;
     static constexpr int CCTX_LEVEL_KERNEL = 2;
 
-    RingbufReader ringbuf_reader_;
     Process process_;
+    RingbufReader ringbuf_reader_;
     perf::time::Converter& time_converter_;
     otf2::chrono::time_point last_tp_;
 

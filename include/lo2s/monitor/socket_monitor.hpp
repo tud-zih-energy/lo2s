@@ -20,15 +20,12 @@ namespace lo2s::monitor
 class SocketMonitor : public PollMonitor
 {
 public:
-    SocketMonitor(trace::Trace& trace);
+    explicit SocketMonitor(trace::Trace& trace);
     SocketMonitor(SocketMonitor&) = delete;
     SocketMonitor(SocketMonitor&&) = delete;
 
     SocketMonitor& operator=(SocketMonitor&) = delete;
     SocketMonitor& operator=(SocketMonitor&&) = delete;
-
-    void finalize_thread() override;
-    void monitor(int fd) override;
 
     std::string group() const override
     {
@@ -50,6 +47,10 @@ public:
             close(socket_);
         }
     }
+
+protected:
+    void finalize_thread() override;
+    void monitor(int fd) override;
 
 private:
     trace::Trace& trace_;

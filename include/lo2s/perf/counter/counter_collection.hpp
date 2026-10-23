@@ -27,12 +27,12 @@ struct CounterCollection
 
     double get_scale(int index) const
     {
-        if (index == 0)
+        if (index == 0 && !leader)
         {
-            if (!leader)
-            {
-                throw std::runtime_error("Trying to get scale for non-existent leader!");
-            }
+            throw std::runtime_error("Trying to get scale for non-existent leader!");
+        }
+        if (index == 0 && leader)
+        {
             return leader.value().scale();
         }
         return counters[index - 1].scale();

@@ -25,15 +25,15 @@ template <class Writer>
 class MultiReader
 {
 public:
-    MultiReader(trace::Trace& trace) : writer_(trace)
+    explicit MultiReader(trace::Trace& trace) : writer_(trace)
     {
         for (const auto& cpu : Topology::instance().cpus())
         {
             for (const auto& tp : writer_.get_tracepoints())
             {
                 IoReaderIdentity id(tp, cpu);
-                auto reader = readers_.emplace(std::piecewise_construct, std::forward_as_tuple(id),
-                                               std::forward_as_tuple(id));
+                const auto reader = readers_.emplace(
+                    std::piecewise_construct, std::forward_as_tuple(id), std::forward_as_tuple(id));
                 fds_.emplace_back(reader.first->second.fd());
             }
         }

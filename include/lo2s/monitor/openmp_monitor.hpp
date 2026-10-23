@@ -26,14 +26,15 @@ class OpenMPMonitor : public PollMonitor
 public:
     OpenMPMonitor(trace::Trace& trace, RingbufReader&& rr);
 
-    void finalize_thread() override;
-
-    void monitor(int fd) override;
-
     std::string group() const override
     {
         return "lo2s::OpenMPMonitor";
     }
+
+protected:
+    void finalize_thread() override;
+
+    void monitor(int fd) override;
 
 private:
     void create_thread_writer(otf2::chrono::time_point tp, uint64_t thread);

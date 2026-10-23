@@ -10,28 +10,41 @@
 #include <lo2s/monitor/process_monitor_main.hpp>
 #include <lo2s/monitor/system_process_monitor.hpp>
 #include <lo2s/topology.hpp>
-#include <lo2s/util.hpp>
+#include <lo2s/trace/trace.hpp>
 
 #include <filesystem>
 #include <iostream>
-#include <optional>
 #include <regex>
 #include <stdexcept>
-#include <string>
 #include <system_error>
-#include <tuple>
-#include <utility>
 
 #include <cassert>
 #include <csignal>
 
-extern "C"
-{
-#include <sched.h>
-}
-
 namespace lo2s::monitor
 {
+namespace
+{
+void emplace_all_running(trace::Trace& trace)
+{
+    for (const auto& procs : get_comms_for_running_threads())
+    {
+        const auto process = procs.first;
+
+        std::optional<std::string> proc_name = std::nullopt;
+        if (procs.second.count(process.as_thread()))
+        {
+            proc_name = procs.second.at(process.as_thread());
+        }
+        trace.process_handle(Process::no_parent(), process, proc_name);
+        for (const auto& comm : procs.second)
+
+        {
+            trace.thread_handle(process, comm.first, comm.second);
+        }
+    }
+}
+} // namespace
 CpuSetMonitor::CpuSetMonitor()
 {
     trace_.emplace_monitoring_thread(gettid(), "CpuSetMonitor", "CpuSetMonitor");
@@ -72,22 +85,7 @@ CpuSetMonitor::CpuSetMonitor()
 
     if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
-        for (const auto& procs : get_comms_for_running_threads())
-        {
-            auto process = procs.first;
-
-            std::optional<std::string> proc_name = std::nullopt;
-            if (procs.second.count(process.as_thread()))
-            {
-                proc_name = procs.second.at(process.as_thread());
-            }
-            trace_.process_handle(Process::no_parent(), process, proc_name);
-            for (const auto& comm : procs.second)
-
-            {
-                trace_.thread_handle(process, comm.first, comm.second);
-            }
-        }
+        emplace_all_running(trace_);
     }
 
     try
@@ -127,7 +125,7 @@ void CpuSetMonitor::run()
         sigemptyset(&ss);
         sigaddset(&ss, SIGINT);
 
-        auto ret = pthread_sigmask(SIG_BLOCK, &ss, nullptr);
+        const auto ret = pthread_sigmask(SIG_BLOCK, &ss, nullptr);
         if (ret)
         {
             Log::error() << "Failed to set pthread_sigmask: " << ret;
@@ -164,22 +162,7 @@ void CpuSetMonitor::run()
 
     if (config().perf.sampling.enabled || config().perf.sampling.process_recording)
     {
-        for (const auto& procs : get_comms_for_running_threads())
-        {
-            auto process = procs.first;
-
-            std::optional<std::string> proc_name = std::nullopt;
-            if (procs.second.count(process.as_thread()))
-            {
-                proc_name = procs.second.at(process.as_thread());
-            }
-            trace_.process_handle(Process::no_parent(), process, proc_name);
-            for (const auto& comm : procs.second)
-
-            {
-                trace_.thread_handle(process, comm.first, comm.second);
-            }
-        }
+        emplace_all_running(trace_);
     }
 
     for (auto& monitor_elem : monitors_)

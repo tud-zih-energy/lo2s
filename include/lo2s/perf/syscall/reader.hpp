@@ -76,7 +76,7 @@ protected:
     uint64_t sys_exit_id = 0;
 
 private:
-    Reader(std::variant<Cpu, Thread> scope)
+    explicit Reader(std::variant<Cpu, Thread> scope)
     : scope_(scope), enter_ev_(create_enter_ev(scope)), exit_ev_(create_exit_ev(scope))
     {
 

@@ -72,7 +72,7 @@ struct IoReaderIdentity
 class IoReader : public PullReader
 {
 public:
-    IoReader(IoReaderIdentity identity)
+    explicit IoReader(IoReaderIdentity identity)
     : identity_(identity), event_(identity_.tracepoint().open(identity.cpu))
     {
         Log::debug() << "Opened block_rq_insert_tracing";

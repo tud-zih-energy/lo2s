@@ -16,7 +16,7 @@ namespace lo2s::perf
 {
 struct TracepointConfig
 {
-    TracepointConfig(nitro::options::arguments& arguments);
+    explicit TracepointConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
     static void parse_print_options(nitro::options::arguments& arguments);
 

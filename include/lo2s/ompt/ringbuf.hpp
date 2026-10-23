@@ -18,7 +18,8 @@ namespace lo2s::ompt
 class RingbufWriter : public lo2s::RingbufWriter
 {
 public:
-    RingbufWriter(Process process) : lo2s::RingbufWriter(process, RingbufMeasurementType::OPENMP)
+    explicit RingbufWriter(Process process)
+    : lo2s::RingbufWriter(process, RingbufMeasurementType::OPENMP)
     {
     }
 
@@ -34,7 +35,7 @@ public:
         }
 
         ev->tp = tp;
-        ev->header.type = (uint64_t)EventType::OMPT_ENTER;
+        ev->header.type = static_cast<uint64_t>(EventType::OMPT_ENTER);
         ev->cctx = cctx;
 
         commit();
@@ -53,7 +54,7 @@ public:
             return false;
         }
 
-        ev->header.type = (uint64_t)EventType::OMPT_EXIT;
+        ev->header.type = static_cast<uint64_t>(EventType::OMPT_EXIT);
         ev->tp = tp;
         ev->cctx = cctx;
 

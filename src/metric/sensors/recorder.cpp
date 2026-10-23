@@ -123,7 +123,7 @@ Recorder::Recorder(trace::Trace& trace)
             {
                 // Convention says, that the sub feature ending with "_input" is the measurement.
                 // So naturally we ignore everything else. I don't give a fuck for min/max.
-                auto name = std::string(sub_feature->name);
+                const auto name = std::string(sub_feature->name);
                 if (name.size() <= 6 || name.substr(name.size() - 6) != "_input")
                 { // if only nitro had an "ends_with"
                     // or we could use c++20...
@@ -139,8 +139,8 @@ Recorder::Recorder(trace::Trace& trace)
                 double tmp = NAN;
                 if (sensors_get_value(chip, sub_feature->number, &tmp) == 0)
                 {
-                    items_.emplace_back(
-                        std::make_pair<const void*, int>(chip, int(sub_feature->number)));
+                    items_.emplace_back(std::make_pair<const void*, int>(
+                        chip, static_cast<int>(sub_feature->number)));
                     auto mc = otf2::definition::make_weak_ref(metric_instance_.metric_class());
 
                     mc->add_member(trace.metric_member(
@@ -171,7 +171,7 @@ void Recorder::monitor([[maybe_unused]] int fd)
             throw_errno();
         }
 
-        auto i = index_items.index();
+        const auto i = index_items.index();
         event_->raw_values()[i] = value;
     }
 

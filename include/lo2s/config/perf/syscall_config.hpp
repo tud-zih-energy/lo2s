@@ -19,7 +19,7 @@ namespace lo2s::perf
 struct SyscallConfig
 {
     static void add_parser(nitro::options::parser& parser);
-    SyscallConfig(nitro::options::arguments& arguments);
+    explicit SyscallConfig(nitro::options::arguments& arguments);
 
     std::chrono::nanoseconds read_interval = std::chrono::nanoseconds(0);
     bool enabled = false;

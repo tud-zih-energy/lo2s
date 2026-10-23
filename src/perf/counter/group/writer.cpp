@@ -4,9 +4,15 @@
 
 #include <lo2s/perf/counter/group/writer.hpp>
 
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/group/reader.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
+
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <variant>
 
 #include <cassert>
 #include <cstddef>

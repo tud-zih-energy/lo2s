@@ -7,7 +7,6 @@
 #include <lo2s/execution_scope_group.hpp>
 #include <lo2s/line_info.hpp>
 #include <lo2s/local_cctx_tree.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
@@ -50,15 +49,11 @@
 #include <mutex>
 #include <optional>
 #include <set>
-#include <stdexcept>
 #include <string>
-#include <vector>
 
 #include <cstdint>
 
 #include <sched.h>
-
-#include "otf2xx/fwd.hpp"
 
 namespace lo2s::trace
 {
@@ -67,9 +62,8 @@ namespace lo2s::trace
 class Trace
 {
 public:
-    // parent
     Trace();
-    ~Trace();
+    ~Trace() = default;
 
     Trace(Trace&) = delete;
     Trace(Trace&&) = delete;
@@ -143,72 +137,9 @@ public:
             to_otf2_string(event.unit()));
     }
 
-    otf2::definition::metric_class& perf_group_metric_class(std::variant<Cpu, Thread> scope)
-    {
-        const perf::counter::CounterCollection& counter_collection =
-            perf::EventComposer::instance().group_counters_for(scope);
+    otf2::definition::metric_class& perf_group_metric_class(std::variant<Cpu, Thread> scope);
 
-        if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
-        {
-            return registry_.get<otf2::definition::metric_class>(
-                ByCounterCollection(counter_collection));
-        }
-
-        auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
-            ByCounterCollection(counter_collection), otf2::common::metric_occurence::async,
-            otf2::common::recorder_kind::abstract);
-
-            if (!counter_collection.leader)
-            {
-                throw std::runtime_error("No suitable grouped metrics leader event!");
-            }
-            metric_class.add_member(get_event_metric_member(counter_collection.leader.value()));
-
-        for (const auto& counter : counter_collection.counters)
-        {
-            metric_class.add_member(get_event_metric_member(counter));
-        }
-
-        auto& enabled_metric_member = registry_.emplace<otf2::definition::metric_member>(
-            ByString("time_enabled"), to_otf2_string("time_enabled"),
-            to_otf2_string("time event active"), otf2::common::metric_type::other,
-            otf2::common::metric_mode::accumulated_start, otf2::common::type::uint64,
-            otf2::common::base_type::decimal, 0, to_otf2_string("ns"));
-
-        metric_class.add_member(enabled_metric_member);
-
-        auto& running_metric_member = registry_.emplace<otf2::definition::metric_member>(
-            ByString("time_running"), to_otf2_string("time_running"),
-            to_otf2_string("time event on CPU"), otf2::common::metric_type::other,
-            otf2::common::metric_mode::accumulated_start, otf2::common::type::uint64,
-            otf2::common::base_type::decimal, 0, to_otf2_string("ns"));
-
-        metric_class.add_member(running_metric_member);
-        return metric_class;
-    }
-
-    otf2::definition::metric_class& perf_userspace_metric_class(std::variant<Cpu, Thread> scope)
-    {
-        const perf::counter::CounterCollection& counter_collection =
-            perf::EventComposer::instance().userspace_counters_for(scope);
-
-        if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
-        {
-            return registry_.get<otf2::definition::metric_class>(
-                ByCounterCollection(counter_collection));
-        }
-
-        auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
-            ByCounterCollection(counter_collection), otf2::common::metric_occurence::async,
-            otf2::common::recorder_kind::abstract);
-
-        for (const auto& counter : counter_collection.counters)
-        {
-            metric_class.add_member(get_event_metric_member(counter));
-        }
-
-        return metric_class;
-    }
+    otf2::definition::metric_class& perf_userspace_metric_class(std::variant<Cpu, Thread> scope);
 
     otf2::definition::metric_class&
     tracepoint_metric_class(const perf::tracepoint::TracepointEventAttr& event);
@@ -216,11 +147,6 @@ public:
     const otf2::definition::interrupt_generator& interrupt_generator() const
     {
         return interrupt_generator_;
-    }
-
-    otf2::definition::interrupt_generator nec_interrupt_generator() const
-    {
-        return nec_interrupt_generator_;
     }
 
     const otf2::definition::system_tree_node& system_tree_root_node() const
@@ -248,49 +174,31 @@ public:
     const otf2::definition::string& to_otf2_string(const std::string& /*name*/);
 
 private:
-    struct MergeContext
-    {
-        Process p;
-    };
-
     otf2::definition::calling_context& cctx_for_gpu_kernel(uint64_t kernel_id, Resolvers& r,
-                                                           struct MergeContext& ctx,
-                                                           GlobalCctxMap::value_type* global_node);
+                                                           Process p, GlobalCctxNode& global_node);
     otf2::definition::calling_context& cctx_for_openmp(const CallingContext& context, Resolvers& r,
-                                                       struct MergeContext& ctx,
-                                                       GlobalCctxMap::value_type* global_node);
-    otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r,
-                                                        struct MergeContext& ctx,
-                                                        GlobalCctxMap::value_type* global_node);
-    otf2::definition::calling_context& cctx_for_thread(Thread thread, struct MergeContext& ctx);
+                                                       Process p, GlobalCctxNode& global_node);
+    otf2::definition::calling_context& cctx_for_address(Address addr, Resolvers& r, Process p,
+                                                        GlobalCctxNode& global_node);
+    otf2::definition::calling_context& cctx_for_thread(Thread thread, Process p);
     otf2::definition::calling_context& cctx_for_process(Process process);
     otf2::definition::calling_context& cctx_for_syscall(int64_t syscall_id);
 
-    void merge_nodes(const LocalCctxMap::value_type& local_node,
-                     GlobalCctxMap::value_type* global_node, std::vector<uint32_t>& mapping_table,
-                     Resolvers& resolvers, struct MergeContext& ctx);
-
     otf2::definition::system_tree_node bio_parent_node(BlockDevice& device)
     {
-        if (device.type == BlockDeviceType::PARTITION)
+        if (device.type == BlockDeviceType::PARTITION &&
+            registry_.has<otf2::definition::system_tree_node>(
+                ByBlockDevice(BlockDevice::block_device_for(device.parent))))
         {
-            if (registry_.has<otf2::definition::system_tree_node>(
-                    ByBlockDevice(BlockDevice::block_device_for(device.parent))))
-            {
-                return registry_.get<otf2::definition::system_tree_node>(
-                    ByBlockDevice(BlockDevice::block_device_for(device.parent)));
-            }
+            return registry_.get<otf2::definition::system_tree_node>(
+                ByBlockDevice(BlockDevice::block_device_for(device.parent)));
         }
         return bio_system_tree_node_;
     }
 
-    const otf2::definition::string& intern_syscall_str(int64_t syscall_nr);
-
     const otf2::definition::source_code_location& intern_scl(const LineInfo& /*info*/);
 
     const otf2::definition::region& intern_region(const LineInfo& /*info*/);
-
-    const otf2::definition::system_tree_node& intern_process_node(Process process);
 
     void add_lo2s_property(const std::string& name, const std::string& value);
 
@@ -310,10 +218,6 @@ private:
 
     otf2::definition::interrupt_generator& interrupt_generator_;
 
-    otf2::definition::detail::weak_ref<otf2::definition::interrupt_generator>
-        nec_interrupt_generator_;
-    // TODO add location groups (processes), read path from /proc/self/exe symlink
-
     otf2::definition::comm_locations_group& comm_locations_group_;
     otf2::definition::comm_locations_group& hardware_comm_locations_group_;
     otf2::definition::regions_group& lo2s_regions_group_;
@@ -321,10 +225,6 @@ private:
     otf2::definition::regions_group& kernel_regions_group_;
 
     otf2::definition::detail::weak_ref<otf2::definition::metric_class> cpuid_metric_class_;
-    std::map<std::set<Cpu>, otf2::definition::detail::weak_ref<otf2::definition::metric_class>>
-        perf_group_metric_classes_;
-    std::map<std::set<Cpu>, otf2::definition::detail::weak_ref<otf2::definition::metric_class>>
-        perf_userspace_metric_classes_;
 
     otf2::definition::detail::weak_ref<otf2::definition::system_tree_node> bio_system_tree_node_;
     otf2::definition::detail::weak_ref<otf2::definition::io_paradigm> bio_paradigm_;
@@ -341,46 +241,4 @@ private:
     // I wanted to use atomic_flag, but I need test and that's a C++20 exclusive.
     std::atomic_bool local_cctx_trees_finalized_ = false;
 };
-
-class ThreadNames
-{
-public:
-    static ThreadNames& instance()
-    {
-        static ThreadNames tn;
-        return tn;
-    }
-
-    void set(Thread t, const std::string& name)
-    {
-        std::lock_guard<std::recursive_mutex> g(m_);
-        thread_names_[t] = name;
-    }
-
-    bool has(Thread t)
-    {
-        std::lock_guard<std::recursive_mutex> g(m_);
-        return thread_names_.count(t) != 0;
-    }
-
-    std::string get(Thread t)
-    {
-        std::lock_guard<std::recursive_mutex> g(m_);
-        if (!has(t))
-        {
-            return "<unknown thread>";
-        }
-        return thread_names_.at(t);
-    }
-
-    const std::map<Thread, std::string>& names()
-    {
-        return thread_names_;
-    }
-
-private:
-    std::recursive_mutex m_;
-    std::map<Thread, std::string> thread_names_;
-};
-
 } // namespace lo2s::trace

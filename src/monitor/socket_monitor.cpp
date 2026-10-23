@@ -85,7 +85,7 @@ void SocketMonitor::monitor(int fd)
         return;
     }
 
-    int data_socket = accept(socket_, nullptr, nullptr);
+    const int data_socket = accept(socket_, nullptr, nullptr);
     if (data_socket == -1)
     {
         throw_errno();
@@ -132,18 +132,20 @@ void SocketMonitor::monitor(int fd)
     {
     }
 
-    if (rr.header()->type == (uint64_t)RingbufMeasurementType::GPU)
+    if (rr.header()->type == static_cast<uint64_t>(RingbufMeasurementType::GPU))
     {
 
-        auto res = gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(rr.fd()),
-                                         std::forward_as_tuple(trace_, std::move(rr)));
+        int fd = rr.fd();
+        const auto res = gpu_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(fd),
+                                               std::forward_as_tuple(trace_, std::move(rr)));
         res.first->second.start();
     }
-    else if (rr.header()->type == (uint64_t)RingbufMeasurementType::OPENMP)
+    else if (rr.header()->type == static_cast<uint64_t>(RingbufMeasurementType::OPENMP))
 
     {
-        auto res =
-            openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(rr.fd()),
+        int fd = rr.fd();
+        const auto res =
+            openmp_monitors_.emplace(std::piecewise_construct, std::forward_as_tuple(fd),
                                      std::forward_as_tuple(trace_, std::move(rr)));
         res.first->second.start();
     }

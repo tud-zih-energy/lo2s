@@ -65,8 +65,8 @@ Metrics::Metrics(trace::Trace& trace)
     // okay, we have
     for (int i = 0; i < static_cast<int>(xe::Counter::SIZE); i++)
     {
-        auto counter = static_cast<xe::Counter>(i);
-        auto granularity = mechanism.granularity(counter);
+        const auto counter = static_cast<xe::Counter>(i);
+        const auto granularity = mechanism.granularity(counter);
 
         if (granularity == xe::Granularity::SIZE)
         {
@@ -95,7 +95,8 @@ Metrics::Metrics(trace::Trace& trace)
 
             for (const auto& installed_cpu : lo2s::Topology::instance().cpus())
             {
-                auto node = architecture_.get_arch_for_cpu(granularity, installed_cpu.as_int());
+                const auto node =
+                    architecture_.get_arch_for_cpu(granularity, installed_cpu.as_int());
                 if (node.id() == index)
                 {
                     cpu = installed_cpu;

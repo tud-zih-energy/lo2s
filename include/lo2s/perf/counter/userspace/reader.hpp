@@ -33,7 +33,7 @@ protected:
     std::vector<UserspaceReadFormat> data_;
 
 private:
-    Reader(std::variant<Cpu, Thread> scope);
+    explicit Reader(std::variant<Cpu, Thread> scope);
     friend T;
 };
 } // namespace lo2s::perf::counter::userspace

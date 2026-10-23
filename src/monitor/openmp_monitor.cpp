@@ -5,12 +5,14 @@
 #include <lo2s/monitor/openmp_monitor.hpp>
 
 #include <lo2s/calling_context.hpp>
-#include <lo2s/config.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/ompt/events.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/thread.hpp>
+
+#include <utility>
 
 #include <cstdint>
 
@@ -49,13 +51,13 @@ void OpenMPMonitor::monitor(int fd [[maybe_unused]])
 {
     while (!ringbuf_reader_.empty())
     {
-        auto event_type = static_cast<ompt::EventType>(ringbuf_reader_.get_top_event_type());
+        const auto event_type = static_cast<ompt::EventType>(ringbuf_reader_.get_top_event_type());
 
         if (event_type == ompt::EventType::OMPT_ENTER)
         {
             const auto* kernel = ringbuf_reader_.get<struct ompt::ompt_enter>();
 
-            auto tp = time_converter_(kernel->tp);
+            const auto tp = time_converter_(kernel->tp);
 
             if (local_cctx_trees_.count(kernel->cctx.tid) == 0)
             {
@@ -71,7 +73,7 @@ void OpenMPMonitor::monitor(int fd [[maybe_unused]])
         {
             const auto* kernel = ringbuf_reader_.get<struct ompt::ompt_exit>();
 
-            auto tp = time_converter_(kernel->tp);
+            const auto tp = time_converter_(kernel->tp);
 
             if (local_cctx_trees_.count(kernel->cctx.tid) == 0)
             {

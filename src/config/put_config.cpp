@@ -31,8 +31,10 @@ void ProgramUnderTestConfig::add_parser(nitro::options::parser& parser)
 
 void to_json(nlohmann::json& j, const ProgramUnderTestConfig& config)
 {
-    j = nlohmann::json({ { "as_user", config.as_user },
-                         { "command", config.command },
-                         { "use_python", config.use_python } });
+    j = nlohmann::json({
+        { "as_user", config.as_user },
+        { "command", config.command },
+        { "use_python", config.use_python },
+    });
 }
 } // namespace lo2s

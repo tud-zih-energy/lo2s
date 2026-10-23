@@ -68,7 +68,7 @@ public:
 
                             if (match[2] == ev.name)
                             {
-                                auto event = read_event(cur_instance, &ev);
+                                const auto event = read_event(cur_instance, &ev);
                                 free_pmus(&pmus);
                                 return event;
                             }
@@ -105,7 +105,7 @@ public:
 
                     try
                     {
-                        auto event = read_event(cur_instance, &ev);
+                        const auto event = read_event(cur_instance, &ev);
                         events.emplace_back(event);
                     }
                     catch (EventAttr::InvalidEvent& e)
@@ -151,8 +151,8 @@ private:
                 fmt::format("Can not get perf_event_attr for pmu-events event {}!", ev_name));
         }
 
-        return PredefinedEventAttr(ev_name, (perf_type_id)attr.type, attr.config, attr.config1,
-                                   range_list_to_set(&inst->cpus));
+        return PredefinedEventAttr(ev_name, static_cast<perf_type_id>(attr.type), attr.config,
+                                   attr.config1, range_list_to_set(&inst->cpus));
     }
 };
 

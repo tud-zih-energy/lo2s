@@ -16,7 +16,7 @@ namespace lo2s::monitor
 class SystemProcessMonitor : public AbstractProcessMonitor
 {
 public:
-    SystemProcessMonitor(lo2s::trace::Trace& trace) : trace_(trace)
+    explicit SystemProcessMonitor(lo2s::trace::Trace& trace) : trace_(trace)
     {
     }
 

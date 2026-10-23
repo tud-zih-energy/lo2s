@@ -106,11 +106,13 @@ void GroupConfig::check() const
 
 void to_json(nlohmann::json& j, const GroupConfig& config)
 {
-    j = nlohmann::json({ { "enabled", config.enabled },
-                         { "use_frequency", config.use_frequency },
-                         { "count", config.count },
-                         { "frequency", config.frequency },
-                         { "leader", config.leader },
-                         { "counters", config.counters } });
+    j = nlohmann::json({
+        { "enabled", config.enabled },
+        { "use_frequency", config.use_frequency },
+        { "count", config.count },
+        { "frequency", config.frequency },
+        { "leader", config.leader },
+        { "counters", config.counters },
+    });
 }
 } // namespace lo2s::perf::counter

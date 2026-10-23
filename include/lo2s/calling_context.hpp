@@ -29,7 +29,7 @@ enum class CallingContextType
     SAMPLE_ADDR,
     GPU_KERNEL,
     SYSCALL,
-    OPENMP
+    OPENMP,
 };
 
 // Type that encodes all the different types of CallingContext we can have
@@ -80,7 +80,7 @@ public:
 
     static CallingContext root()
     {
-        return { CallingContextType::ROOT };
+        return CallingContext{ CallingContextType::ROOT };
     }
 
     Address to_addr() const
@@ -245,7 +245,7 @@ public:
     }
 
 private:
-    CallingContext(CallingContextType type) : type(type), addr(0)
+    explicit CallingContext(CallingContextType type) : type(type), addr(0)
     {
     }
 
@@ -263,7 +263,7 @@ private:
 // Node type of the tree containing the CallingContext -> local cctx reference number mappings.
 struct LocalCctxNode
 {
-    LocalCctxNode(otf2::definition::calling_context::reference_type r) : ref(r)
+    explicit LocalCctxNode(otf2::definition::calling_context::reference_type r) : ref(r)
     {
     }
 
@@ -274,7 +274,7 @@ struct LocalCctxNode
 // Node type of the global cctx tree, containing CallingContext -> otf2::cctx mappings.
 struct GlobalCctxNode
 {
-    GlobalCctxNode(const otf2::definition::calling_context* cctx) : cctx(cctx)
+    explicit GlobalCctxNode(const otf2::definition::calling_context* cctx) : cctx(cctx)
     {
     }
 

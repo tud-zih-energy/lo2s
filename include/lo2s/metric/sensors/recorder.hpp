@@ -21,7 +21,7 @@ namespace lo2s::metric::sensors
 class Recorder : public monitor::PollMonitor
 {
 public:
-    Recorder(trace::Trace& trace);
+    explicit Recorder(trace::Trace& trace);
     Recorder(Recorder&) = delete;
     Recorder(Recorder&&) = delete;
 
@@ -29,13 +29,13 @@ public:
     Recorder& operator=(Recorder&&) = delete;
     ~Recorder() override;
 
-protected:
-    void monitor(int fd) override;
-
     std::string group() const override
     {
         return "sensors::Monitor";
     }
+
+protected:
+    void monitor(int fd) override;
 
 private:
     otf2::writer::local& otf2_writer_;

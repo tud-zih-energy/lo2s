@@ -6,10 +6,12 @@
 
 #include <lo2s/calling_context.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/syscall/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <otf2xx/exception.hpp>
 
@@ -26,7 +28,7 @@ Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace)
 
 bool Writer::handle(const Reader::RecordSampleType* sample)
 {
-    auto tp = time_converter_(sample->time);
+    const auto tp = time_converter_(sample->time);
 
     if (sample->id == sys_enter_id)
     {

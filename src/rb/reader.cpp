@@ -5,18 +5,20 @@
 #include <lo2s/rb/reader.hpp>
 
 #include <lo2s/rb/events.hpp>
+#include <lo2s/rb/header.hpp>
 #include <lo2s/rb/shm_ringbuf.hpp>
 
 #include <memory>
 #include <stdexcept>
+#include <system_error>
 
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 
 extern "C"
 {
-#include <linux/memfd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
+#include <sys/mman.h>
 #include <unistd.h>
 }
 
@@ -25,7 +27,7 @@ namespace lo2s
 
 RingbufReader::RingbufReader(clockid_t clockid)
 {
-    int fd = memfd_create("lo2s", 0);
+    const int fd = memfd_create("lo2s", 0);
     if (fd == -1)
     {
         throw ::std::system_error(errno, std::system_category());
@@ -34,7 +36,7 @@ RingbufReader::RingbufReader(clockid_t clockid)
     size_t const pagesize = sysconf(_SC_PAGESIZE);
     int size = 0;
 
-    int pages = 16;
+    const int pages = 16;
 
     size = static_cast<int>(pagesize) * pages;
 
@@ -48,7 +50,7 @@ RingbufReader::RingbufReader(clockid_t clockid)
 
     auto* first_header = header_map.as<struct ringbuf_header>();
 
-    memset((void*)first_header, 0, sizeof(struct ringbuf_header));
+    memset(reinterpret_cast<void*>(first_header), 0, sizeof(struct ringbuf_header));
 
     first_header->version = RINGBUF_VERSION;
     first_header->size = size;
@@ -61,7 +63,8 @@ RingbufReader::RingbufReader(clockid_t clockid)
 
 uint64_t RingbufReader::get_top_event_type()
 {
-    auto* header = reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+    const auto* header =
+        reinterpret_cast<const struct event_header*>(rb_->tail(sizeof(struct event_header)));
 
     if (header == nullptr)
     {
@@ -74,13 +77,15 @@ uint64_t RingbufReader::get_top_event_type()
 // Check if we can atleast load an event header, if not, there are no new events
 bool RingbufReader::empty()
 {
-    auto* header = reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+    const auto* header =
+        reinterpret_cast<const struct event_header*>(rb_->tail(sizeof(struct event_header)));
     return header == nullptr;
 }
 
 void RingbufReader::pop()
 {
-    auto* header = reinterpret_cast<struct event_header*>(rb_->tail(sizeof(struct event_header)));
+    const auto* header =
+        reinterpret_cast<const struct event_header*>(rb_->tail(sizeof(struct event_header)));
     if (header == nullptr)
     {
         return;

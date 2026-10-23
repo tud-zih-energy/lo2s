@@ -22,8 +22,6 @@
 
 #include <fmt/format.h>
 #include <fmt/ranges.h>
-#include <sys/types.h>
-
 namespace lo2s
 {
 
@@ -143,9 +141,11 @@ void GeneralConfig::parse_print_options(nitro::options::arguments& arguments)
 
 void to_json(nlohmann::json& j, const GeneralConfig& config)
 {
-    j = nlohmann::json{ { "quiet", config.quiet },
-                        { "monitor_type", config.monitor_type },
-                        { "process", config.process.as_int() },
-                        { "lo2s_command_line", config.lo2s_command_line } };
+    j = nlohmann::json{
+        { "quiet", config.quiet },
+        { "monitor_type", config.monitor_type },
+        { "process", config.process.as_int() },
+        { "lo2s_command_line", config.lo2s_command_line },
+    };
 };
 } // namespace lo2s

@@ -61,7 +61,7 @@ public:
     class InvalidEvent : public std::runtime_error
     {
     public:
-        InvalidEvent(const std::string& event_description)
+        explicit InvalidEvent(const std::string& event_description)
         : std::runtime_error(std::string{ "Invalid event: " } + event_description)
         {
         }
@@ -119,9 +119,9 @@ public:
         scale_ = scale;
     }
 
-    void unit(std::string unit)
+    void unit(const std::string& unit)
     {
-        unit_ = std::move(unit);
+        unit_ = unit;
     }
 
     void set_clockid(std::optional<clockid_t> clockid)
@@ -332,7 +332,7 @@ public:
 class RawEventAttr : public EventAttr
 {
 public:
-    RawEventAttr(const std::string& name);
+    explicit RawEventAttr(const std::string& name);
 };
 
 #ifndef USE_HW_BREAKPOINT_COMPAT
@@ -358,7 +358,7 @@ class SysfsEventAttr : public EventAttr
 
 {
 public:
-    SysfsEventAttr(const std::string& ev_name);
+    explicit SysfsEventAttr(const std::string& ev_name);
 };
 
 /**

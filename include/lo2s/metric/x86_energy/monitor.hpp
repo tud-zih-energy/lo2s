@@ -30,14 +30,14 @@ public:
             const otf2::definition::metric_class& metric_class,
             const otf2::definition::system_tree_node& stn);
 
-protected:
-    void monitor(int fd) override;
-    void initialize_thread() override;
-
     std::string group() const override
     {
         return "x86_energy::Monitor";
     }
+
+protected:
+    void monitor(int fd) override;
+    void initialize_thread() override;
 
 private:
     ::x86_energy::SourceCounter counter_;

@@ -77,7 +77,6 @@ void DwarfConfig::check()
 NLOHMANN_JSON_SERIALIZE_ENUM(DwarfUsage, { { DwarfUsage::NONE, "none" },
                                            { DwarfUsage::LOCAL, "local" },
                                            { DwarfUsage::FULL, "full" } })
-
 void to_json(nlohmann::json& j, const DwarfConfig& config)
 {
     j = nlohmann::json({ { "usage", config.usage } });

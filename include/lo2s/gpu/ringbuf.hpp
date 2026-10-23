@@ -21,7 +21,8 @@ namespace lo2s::gpu
 class RingbufWriter : public lo2s::RingbufWriter
 {
 public:
-    RingbufWriter(Process process) : lo2s::RingbufWriter(process, RingbufMeasurementType::GPU)
+    explicit RingbufWriter(Process process)
+    : lo2s::RingbufWriter(process, RingbufMeasurementType::GPU)
     {
     }
 
@@ -41,11 +42,11 @@ public:
             return 0;
         }
 
-        auto cctx = cctxs_.emplace(func, next_cctx_ref_);
+        const auto cctx = cctxs_.emplace(func, next_cctx_ref_);
 
         memcpy(ev->function, func.c_str(), func.size());
 
-        ev->header.type = (uint64_t)EventType::KERNEL_DEF;
+        ev->header.type = static_cast<uint64_t>(EventType::KERNEL_DEF);
         ev->kernel_id = cctx.first->second;
 
         next_cctx_ref_++;
@@ -65,7 +66,7 @@ public:
 
         memcpy(ev->function, func.c_str(), func.size());
 
-        ev->header.type = (uint64_t)EventType::KERNEL_DEF;
+        ev->header.type = static_cast<uint64_t>(EventType::KERNEL_DEF);
         ev->kernel_id = kernel_id;
 
         commit();
@@ -80,7 +81,7 @@ public:
         {
             return false;
         }
-        ev->header.type = (uint64_t)EventType::KERNEL;
+        ev->header.type = static_cast<uint64_t>(EventType::KERNEL);
 
         ev->start_tp = start_tp;
         ev->end_tp = end_tp;

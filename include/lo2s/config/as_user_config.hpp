@@ -14,7 +14,7 @@ namespace lo2s
 {
 struct AsUserConfig
 {
-    AsUserConfig(nitro::options::arguments& arguments);
+    explicit AsUserConfig(nitro::options::arguments& arguments);
 
     static void add_parser(nitro::options::parser& parser);
 

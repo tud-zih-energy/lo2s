@@ -12,7 +12,6 @@
 
 #include <cstdint>
 
-#include <fmt/base.h>
 #include <fmt/format.h>
 
 namespace lo2s
@@ -31,7 +30,7 @@ public:
         ss >> v_;
     }
 
-    Address(uint64_t v) : v_(v)
+    explicit Address(uint64_t v) : v_(v)
     {
     }
 
@@ -72,12 +71,17 @@ public:
 
     Address operator+(Address rhs) const
     {
-        return { v_ + rhs.v_ };
+        return Address{ v_ + rhs.v_ };
     }
 
     Address operator-(Address rhs) const
     {
-        return { v_ - rhs.v_ };
+        return Address{ v_ - rhs.v_ };
+    }
+
+    static Address max()
+    {
+        return Address{ UINT64_MAX };
     }
 
 private:
@@ -124,7 +128,7 @@ struct Range
     class Error : public std::runtime_error
     {
     public:
-        Error(const std::string& what) : std::runtime_error(what)
+        explicit Error(const std::string& what) : std::runtime_error(what)
         {
         }
     };
@@ -133,7 +137,8 @@ struct Range
     // If the point is UINT64_MAX, the highest address, we can obviously not do + 1,
     // so do [point, point) instead. This works reasonably well with the operators we have defined,
     // although it is mathematically kinda unsound.
-    Range(Address point) : Range(point, point == UINT64_MAX ? UINT64_MAX : point + 1)
+    explicit Range(Address point)
+    : Range(point, point == Address::max() ? Address::max() : Address{ point.value() + 1 })
     {
     }
 
@@ -168,7 +173,7 @@ struct Range
 
 struct Mapping
 {
-    Mapping() : range(0, 0), pgoff(0)
+    Mapping() : range(Address{ 0 }, Address{ 0 }), pgoff(0)
     {
     }
 
@@ -176,7 +181,7 @@ struct Mapping
     {
     }
 
-    Mapping(Address addr) : range(addr), pgoff(0)
+    explicit Mapping(Address addr) : range(addr), pgoff(0)
     {
     }
 
@@ -207,7 +212,7 @@ struct Mapping
 
     static Mapping max()
     {
-        return { 0, UINT64_MAX, 0 };
+        return { Address{ 0 }, Address{ UINT64_MAX }, Address{ 0 } };
     }
 
     bool in(const Mapping& m) const

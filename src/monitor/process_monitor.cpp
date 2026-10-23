@@ -6,8 +6,6 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
-#include <lo2s/monitor/scope_monitor.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
@@ -15,7 +13,6 @@
 #include <exception>
 #include <tuple>
 #include <utility>
-
 #include <cassert>
 
 namespace lo2s::monitor
@@ -59,8 +56,9 @@ void ProcessMonitor::insert_thread(Process parent [[maybe_unused]], Thread child
     {
         try
         {
-            auto inserted = threads_.emplace(std::piecewise_construct, std::forward_as_tuple(child),
-                                             std::forward_as_tuple(child, trace_, spawn));
+            const auto inserted =
+                threads_.emplace(std::piecewise_construct, std::forward_as_tuple(child),
+                                 std::forward_as_tuple(child, trace_, spawn));
             assert(inserted.second);
             // actually start thread
             inserted.first->second.start();

@@ -17,7 +17,7 @@ namespace lo2s
 class FunctionResolver
 {
 public:
-    FunctionResolver(std::string name) : name_(std::move(name))
+    explicit FunctionResolver(std::string name) : name_(std::move(name))
     {
     }
 
@@ -37,7 +37,7 @@ public:
         return LineInfo::for_binary(name_);
     }
 
-    std::string name()
+    virtual std::string name()
     {
         return name_;
     }

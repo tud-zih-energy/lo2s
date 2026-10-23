@@ -60,7 +60,7 @@ class ClockProvider
 public:
     struct InvalidClock : std::runtime_error
     {
-        InvalidClock(const std::string& what) : std::runtime_error(what)
+        explicit InvalidClock(const std::string& what) : std::runtime_error(what)
         {
         }
     };

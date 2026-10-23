@@ -14,7 +14,7 @@ namespace lo2s::perf
 {
 struct BlockIOConfig
 {
-    BlockIOConfig(nitro::options::arguments& arguments);
+    explicit BlockIOConfig(nitro::options::arguments& arguments);
 
     static void add_parser(nitro::options::parser& parser);
 

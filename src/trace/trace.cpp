@@ -11,9 +11,9 @@
 #include <lo2s/line_info.hpp>
 #include <lo2s/local_cctx_tree.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/ompt/events.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
+#include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
 #include <lo2s/perf/tracepoint/format.hpp>
 #include <lo2s/resolvers.hpp>
@@ -21,10 +21,11 @@
 #include <lo2s/syscalls.hpp>
 #include <lo2s/thread_fd_instance.hpp>
 #include <lo2s/time/time.hpp>
-#include <lo2s/topology.hpp>
 #include <lo2s/trace/handle.hpp>
 #include <lo2s/trace/reg_keys.hpp>
+#include <lo2s/trace/thread_names.hpp>
 #include <lo2s/types/core.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/types/package.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
@@ -53,7 +54,6 @@
 #include <otf2xx/definition/string.hpp>
 #include <otf2xx/definition/system_tree_node.hpp>
 #include <otf2xx/definition/system_tree_node_domain.hpp>
-#include <otf2xx/exception.hpp>
 #include <otf2xx/writer/local.hpp>
 
 #include <chrono>
@@ -61,6 +61,7 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <queue>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -76,6 +77,11 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+extern "C"
+{
+#include <otf2/OTF2_GeneralDefinitions.h>
+}
+
 namespace lo2s::trace
 {
 
@@ -90,8 +96,8 @@ std::string get_trace_name()
     auto result = path;
 
     std::regex const env_re("\\{ENV=([^}]*)\\}");
-    auto env_begin = std::sregex_iterator(path.begin(), path.end(), env_re);
-    auto env_end = std::sregex_iterator();
+    const auto env_begin = std::sregex_iterator(path.begin(), path.end(), env_re);
+    const auto env_end = std::sregex_iterator();
 
     for (std::sregex_iterator it = env_begin; it != env_end; ++it)
     {
@@ -103,7 +109,10 @@ std::string get_trace_name()
 } // namespace
 
 Trace::Trace()
-: trace_name_(get_trace_name()), archive_(trace_name_, "traces"), registry_(archive_.registry()),
+: trace_name_(get_trace_name()),
+  archive_(trace_name_, "traces", OTF2_FILEMODE_WRITE, config().otf2.event_chunk_size,
+           config().otf2.definition_chunk_size),
+  registry_(archive_.registry()),
   calling_context_tree_(CallingContext::root(), GlobalCctxNode(nullptr)),
   interrupt_generator_(registry_.create<otf2::definition::interrupt_generator>(
       to_otf2_string("perf HW_INSTRUCTIONS"), otf2::common::interrupt_generator_mode_type::count,
@@ -164,7 +173,7 @@ Trace::Trace()
             to_otf2_string("block devices"), otf2::common::paradigm_type::hardware,
             otf2::common::group_flag_type::none);
 
-        for (auto& device : get_block_devices())
+        for (const auto& device : get_block_devices())
         {
             if (device.second.type == BlockDeviceType::DISK)
             {
@@ -214,57 +223,6 @@ otf2::chrono::time_point Trace::record_to() const
     return stopping_time_;
 }
 
-Trace::~Trace()
-{
-
-    if (!local_cctx_trees_finalized_)
-    {
-        Log::error()
-            << "cctx refs have not been finalized, please report this bug to the developers";
-    }
-    for (const auto& thread : ThreadNames::instance().names())
-    {
-
-        if (ThreadGroup::instance().is_process(thread.first))
-        {
-            process_handle(Process::no_parent(), thread.first.as_process(), thread.second);
-        }
-        auto thread_hd = thread_handle(Process::no_parent(), thread.first, thread.second);
-
-        Process process = ThreadGroup::instance().get_process(thread.first);
-        process_handle(Process::no_parent(), process, std::nullopt)
-            .regions_group()
-            .add_member(thread_hd.region());
-    }
-
-    if (starting_time_ > stopping_time_)
-    {
-        stopping_time_ = starting_time_;
-    }
-
-    archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_,
-                                                   starting_system_time_);
-
-    std::filesystem::path const symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
-
-    if (symlink_path.empty())
-    {
-        return;
-    }
-
-    if (std::filesystem::is_symlink(symlink_path))
-    {
-        std::filesystem::remove(symlink_path);
-    }
-    else if (std::filesystem::exists(symlink_path))
-    {
-        Log::warn() << "The path " << symlink_path
-                    << " exists and isn't a symlink, refusing to create link to latest trace";
-        return;
-    }
-    std::filesystem::create_symlink(trace_name_, symlink_path);
-}
-
 void Trace::add_lo2s_property(const std::string& name, const std::string& value)
 {
     std::string property_name{ "LO2S::" };
@@ -288,11 +246,11 @@ otf2::writer::local& Trace::sample_writer(SampleKind kind, std::variant<Cpu, Thr
 
     if (std::holds_alternative<Thread>(scope))
     {
-        auto thread = std::get<Thread>(scope);
+        const auto thread = std::get<Thread>(scope);
         auto process_hd = process_handle(Process::no_parent(),
                                          ThreadGroup::instance().get_process(thread), std::nullopt);
 
-        auto& intern_location = registry_.emplace<otf2::definition::location>(
+        const auto& intern_location = registry_.emplace<otf2::definition::location>(
             BySampleWriter(std::make_pair(kind, scope)), to_otf2_string(scope_get_name(scope)),
             process_hd.location_group(), otf2::definition::location::location_type::cpu_thread);
         comm_locations_group_.add_member(intern_location);
@@ -300,11 +258,11 @@ otf2::writer::local& Trace::sample_writer(SampleKind kind, std::variant<Cpu, Thr
         process_hd.comm_group().add_member(intern_location);
         return archive_(intern_location);
     }
-    auto cpu = std::get<Cpu>(scope);
+    const auto cpu = std::get<Cpu>(scope);
 
     auto cpu_hd = cpu_handle(cpu);
 
-    auto& intern_location = registry_.emplace<otf2::definition::location>(
+    const auto& intern_location = registry_.emplace<otf2::definition::location>(
         BySampleWriter(std::make_pair(kind, scope)), to_otf2_string(scope_get_name(scope)),
         cpu_hd.location_group(), otf2::definition::location::location_type::cpu_thread);
     comm_locations_group_.add_member(intern_location);
@@ -382,10 +340,10 @@ otf2::writer::local& Trace::bio_writer(BlockDevice dev)
 
 otf2::writer::local& Trace::posix_io_writer(Thread thread)
 {
-
     auto& loc = process_handle(Process::no_parent(), ThreadGroup::instance().get_process(thread),
                                std::nullopt)
                     .location_group();
+
     const auto& intern_location = registry_.emplace<otf2::definition::location>(
         ByPosixIoWriter(thread), to_otf2_string(fmt::format("thread {}", thread.as_int())), loc,
         otf2::definition::location::location_type::cpu_thread);
@@ -399,12 +357,12 @@ otf2::writer::local& Trace::create_metric_writer(const std::string& name)
         to_otf2_string(name),
         registry_.get<otf2::definition::location_group>(ByThread(Thread(METRIC_PID))),
         otf2::definition::location::location_type::metric);
+
     return archive_(location);
 }
 
 otf2::definition::io_handle& Trace::block_io_handle(BlockDevice dev)
 {
-
     std::lock_guard<std::recursive_mutex> const guard(mutex_);
 
     // io_pre_created_handle can not be emplaced because it has no ref.
@@ -542,51 +500,46 @@ otf2::definition::metric_class& Trace::metric_class()
 }
 
 otf2::definition::calling_context&
-Trace::cctx_for_gpu_kernel(uint64_t kernel_id, Resolvers& r, struct MergeContext& ctx,
-                           GlobalCctxMap::value_type* global_node)
+Trace::cctx_for_gpu_kernel(uint64_t kernel_id, Resolvers& r, Process p, GlobalCctxNode& global_node)
 {
     LineInfo line_info = LineInfo::for_unknown_function();
 
-    auto fr = r.gpu_function_resolvers.find(ctx.p);
+    const auto fr = r.gpu_function_resolvers.find(p);
 
     if (fr != r.gpu_function_resolvers.end())
     {
-        line_info = fr->second->lookup_line_info(kernel_id);
+        line_info = fr->second->lookup_line_info(Address{ kernel_id });
     }
 
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
-        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+        intern_region(line_info), intern_scl(line_info), *global_node.cctx);
 
     return new_cctx;
 }
 
 otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& context,
-                                                          Resolvers& r, struct MergeContext& ctx,
-                                                          GlobalCctxMap::value_type* global_node)
+                                                          Resolvers& r, Process p,
+                                                          GlobalCctxNode& global_node)
 {
     LineInfo line_info = LineInfo::for_unknown_function();
 
     ompt::OMPTCctx cctx = context.to_omp_cctx();
-    auto addr = Address(cctx.addr);
+    const auto addr = Address(cctx.addr);
 
-    auto fr = r.function_resolvers.find(ctx.p);
+    const auto fr = r.function_resolvers.find(p);
     if (fr != r.function_resolvers.end())
     {
-        auto it = fr->second.find(addr);
+        const auto it = fr->second.find(addr);
 
         if (it != fr->second.end())
         {
-            line_info = it->second->lookup_line_info(
-                addr, (it->first.range.start + it->first.pgoff).value());
+            line_info = it->second->lookup_line_info(addr, it->first.range.start.value());
         }
     }
 
-    if (line_info == LineInfo::for_unknown_function())
+    if (line_info == LineInfo::for_unknown_function() && ThreadNames::instance().has(p.as_thread()))
     {
-        if (ThreadNames::instance().has(ctx.p.as_thread()))
-        {
-            line_info.dso = ThreadNames::instance().get(ctx.p.as_thread());
-        }
+        line_info.dso = ThreadNames::instance().get(p.as_thread());
     }
 
     std::string omp_name;
@@ -622,34 +575,36 @@ otf2::definition::calling_context& Trace::cctx_for_openmp(const CallingContext& 
     }
 
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
-        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+        intern_region(line_info), intern_scl(line_info), *global_node.cctx);
 
     return new_cctx;
 }
 
-otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r,
-                                                           struct MergeContext& ctx,
-                                                           GlobalCctxMap::value_type* global_node)
+otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolvers& r, Process p,
+                                                           GlobalCctxNode& global_node)
 {
-    Log::trace() << "Resolving: " << addr << " in " << ctx.p.as_int();
+    Log::trace() << "Resolving: " << addr << " in " << p.as_int();
+
     LineInfo line_info = LineInfo::for_unknown_function();
 
-    auto& fr = r.function_resolvers.emplace(ctx.p, ctx.p).first->second;
-    auto it = fr.find(addr);
+    auto& fr = r.function_resolvers.emplace(p, p).first->second;
+    const auto it = fr.find(addr);
     if (it != fr.end())
     {
-        Log::trace() << "Resolving in object: ";
-        Log::trace() << it->first.to_string() << " " << it->second->name();
-        line_info =
-            it->second->lookup_line_info(addr, (it->first.range.start + it->first.pgoff).value());
+        Log::error() << "Resolving " << addr << " in object: ";
+        Log::error() << it->first.to_string() << " " << it->second->name() << " " << p.as_int()
+                     << " (" << ThreadNames::instance().get(p.as_thread()) << " )";
+        line_info = it->second->lookup_line_info(
+            addr, (it->first.range.start.value() - it->first.pgoff.value()));
     }
     else
     {
-        Log::trace() << "No object found for: " << addr;
+        Log::error() << "No object found for: " << addr << " in " << p.as_int() << " ("
+                     << ThreadNames::instance().get(p.as_thread()) << ")";
     }
 
     auto& new_cctx = registry_.create<otf2::definition::calling_context>(
-        intern_region(line_info), intern_scl(line_info), *global_node->second.cctx);
+        intern_region(line_info), intern_scl(line_info), *global_node.cctx);
 
     registry_.create<otf2::definition::calling_context_property>(
         new_cctx, to_otf2_string("ip"),
@@ -658,10 +613,10 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     return new_cctx;
 }
 
-otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, MergeContext& ctx)
+otf2::definition::calling_context& Trace::cctx_for_thread(Thread thread, Process p)
 {
 
-    return thread_handle(ctx.p, thread, std::nullopt).calling_context();
+    return thread_handle(p, thread, std::nullopt).calling_context();
 }
 
 otf2::definition::calling_context& Trace::cctx_for_process(Process process)
@@ -669,85 +624,104 @@ otf2::definition::calling_context& Trace::cctx_for_process(Process process)
     return thread_handle(process, process.as_thread(), std::nullopt).calling_context();
 }
 
-/*
- * This function merges the nodes of the local calling context tree into the global calling context
- * tree.
- *
- * This is accomplished using a recursive depth first walk of the local calling context tree
- */
-void Trace::merge_nodes(const std::map<CallingContext, LocalCctxNode>::value_type& local_node,
-                        std::map<CallingContext, GlobalCctxNode>::value_type* global_node,
-                        std::vector<uint32_t>& mapping_table, Resolvers& r,
-                        struct MergeContext& ctx)
+namespace
 {
-    for (const auto& local_child : local_node.second.children)
-    {
-        // If there is already a node on the global tree matching the node on the local tree, use
-        // it, Otherwise emplace a new global node
-        auto global_child = global_node->second.children.find(local_child.first);
-        if (global_child == global_node->second.children.end())
-        {
-            otf2::definition::calling_context const* new_cctx = nullptr;
-
-            switch (local_child.first.type)
-            {
-            case lo2s::CallingContextType::SAMPLE_ADDR:
-                new_cctx = &cctx_for_address(local_child.first.to_addr(), r, ctx, global_node);
-                break;
-            case lo2s::CallingContextType::GPU_KERNEL:
-                new_cctx =
-                    &cctx_for_gpu_kernel(local_child.first.to_kernel_id(), r, ctx, global_node);
-                break;
-            case lo2s::CallingContextType::OPENMP:
-                new_cctx = &cctx_for_openmp(local_child.first, r, ctx, global_node);
-                break;
-            case lo2s::CallingContextType::THREAD:
-                new_cctx = &cctx_for_thread(local_child.first.to_thread(), ctx);
-                break;
-            case lo2s::CallingContextType::PROCESS:
-                new_cctx = &cctx_for_process(local_child.first.to_process());
-                break;
-            case lo2s::CallingContextType::SYSCALL:
-                new_cctx = &cctx_for_syscall(local_child.first.to_syscall_id());
-                break;
-            case lo2s::CallingContextType::ROOT:
-                throw std::runtime_error("The cctx tree ROOT should not appear in merge_nodes!");
-            }
-
-            auto r = global_node->second.children.emplace(std::piecewise_construct,
-                                                          std::forward_as_tuple(local_child.first),
-                                                          std::forward_as_tuple(new_cctx));
-            global_child = r.first;
-        }
-
-        // Write a mapping local cctx reference number -> global reference number
-        mapping_table.at(local_child.second.ref) = global_child->second.cctx->ref();
-
-        // If we later want to resolve addresses, we need to know in which process we are,
-        // so if we are currently in a Process node, save the Process for later use.
-        if (global_child->first.type == CallingContextType::PROCESS)
-        {
-            ctx.p = global_child->first.to_process();
-        }
-
-        // Depth first recursive descent
-        merge_nodes(local_child, &(*global_child), mapping_table, r, ctx);
-    }
+struct MergeElememt
+{
+    const CallingContext& local_cctx;
+    const LocalCctxNode& local_node;
+    const CallingContext& global_cctx;
+    GlobalCctxNode& global_node;
+    Process p;
+};
 }
 
 otf2::definition::mapping_table Trace::merge_calling_contexts(const LocalCctxTree& local_cctxs,
                                                               Resolvers& r)
 {
-    std::lock_guard<std::recursive_mutex> const guard(mutex_);
 #ifndef NDEBUG
     std::vector<uint32_t> mappings(local_cctxs.num_cctx(), -1u);
 #else
     std::vector<uint32_t> mappings(local_cctxs.num_cctx());
 #endif
 
-    struct MergeContext ctx;
+    std::queue<struct MergeElememt> to_merge;
 
-    merge_nodes(local_cctxs.get_tree(), &calling_context_tree_, mappings, r, ctx);
+    to_merge.push(MergeElememt{
+        local_cctxs.get_tree().first,
+        local_cctxs.get_tree().second,
+        calling_context_tree_.first,
+        calling_context_tree_.second,
+        Process::invalid(),
+    });
+
+    while (!to_merge.empty())
+    {
+        auto cur_merge = to_merge.front();
+        to_merge.pop();
+        for (const auto& local_child : cur_merge.local_node.children)
+        {
+            // If there is already a node on the global tree matching the node on the local tree,
+            // use it, Otherwise emplace a new global node
+            auto global_child = cur_merge.global_node.children.find(local_child.first);
+            if (global_child == cur_merge.global_node.children.end())
+            {
+                otf2::definition::calling_context const* new_cctx = nullptr;
+
+                switch (local_child.first.type)
+                {
+                case lo2s::CallingContextType::SAMPLE_ADDR:
+                    new_cctx = &cctx_for_address(local_child.first.to_addr(), r, cur_merge.p,
+                                                 cur_merge.global_node);
+                    break;
+                case lo2s::CallingContextType::GPU_KERNEL:
+                    new_cctx = &cctx_for_gpu_kernel(local_child.first.to_kernel_id(), r,
+                                                    cur_merge.p, cur_merge.global_node);
+                    break;
+                case lo2s::CallingContextType::OPENMP:
+                    new_cctx =
+                        &cctx_for_openmp(local_child.first, r, cur_merge.p, cur_merge.global_node);
+                    break;
+                case lo2s::CallingContextType::THREAD:
+                    new_cctx = &cctx_for_thread(local_child.first.to_thread(), cur_merge.p);
+                    break;
+                case lo2s::CallingContextType::PROCESS:
+                    new_cctx = &cctx_for_process(local_child.first.to_process());
+                    break;
+                case lo2s::CallingContextType::SYSCALL:
+                    new_cctx = &cctx_for_syscall(local_child.first.to_syscall_id());
+                    break;
+                case lo2s::CallingContextType::ROOT:
+                    throw std::runtime_error(
+                        "The cctx tree ROOT should not appear in merge_nodes!");
+                }
+
+                const auto r = cur_merge.global_node.children.emplace(
+                    std::piecewise_construct, std::forward_as_tuple(local_child.first),
+                    std::forward_as_tuple(new_cctx));
+                global_child = r.first;
+            }
+
+            // Write a mapping local cctx reference number -> global reference number
+            mappings.at(local_child.second.ref) = global_child->second.cctx->ref();
+
+            if (!local_child.second.children.empty())
+            {
+                Process ctx_p = cur_merge.p;
+                if (global_child->first.type == CallingContextType::PROCESS)
+                {
+                    ctx_p = global_child->first.to_process();
+                }
+                to_merge.push(MergeElememt{
+                    local_child.first,
+                    local_child.second,
+                    global_child->first,
+                    global_child->second,
+                    ctx_p,
+                });
+            }
+        }
+    }
 
 #ifndef NDEBUG
     for (auto id : mappings)
@@ -759,9 +733,76 @@ otf2::definition::mapping_table Trace::merge_calling_contexts(const LocalCctxTre
     return { otf2::definition::mapping_table::mapping_type_type::calling_context, mappings };
 }
 
+otf2::definition::metric_class& Trace::perf_group_metric_class(std::variant<Cpu, Thread> scope)
+{
+    const perf::counter::CounterCollection& counter_collection =
+        perf::EventComposer::instance().group_counters_for(scope);
+
+    if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
+    {
+        return registry_.get<otf2::definition::metric_class>(
+            ByCounterCollection(counter_collection));
+    }
+
+    auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
+        ByCounterCollection(counter_collection), otf2::common::metric_occurence::async,
+        otf2::common::recorder_kind::abstract);
+
+    if (!counter_collection.leader)
+    {
+        throw std::runtime_error("No suitable grouped metrics leader event!");
+    }
+    metric_class.add_member(get_event_metric_member(counter_collection.leader.value()));
+
+    for (const auto& counter : counter_collection.counters)
+    {
+        metric_class.add_member(get_event_metric_member(counter));
+    }
+
+    const auto& enabled_metric_member = registry_.emplace<otf2::definition::metric_member>(
+        ByString("time_enabled"), to_otf2_string("time_enabled"),
+        to_otf2_string("time event active"), otf2::common::metric_type::other,
+        otf2::common::metric_mode::accumulated_start, otf2::common::type::uint64,
+        otf2::common::base_type::decimal, 0, to_otf2_string("ns"));
+
+    metric_class.add_member(enabled_metric_member);
+
+    const auto& running_metric_member = registry_.emplace<otf2::definition::metric_member>(
+        ByString("time_running"), to_otf2_string("time_running"),
+        to_otf2_string("time event on CPU"), otf2::common::metric_type::other,
+        otf2::common::metric_mode::accumulated_start, otf2::common::type::uint64,
+        otf2::common::base_type::decimal, 0, to_otf2_string("ns"));
+
+    metric_class.add_member(running_metric_member);
+    return metric_class;
+}
+
+otf2::definition::metric_class& Trace::perf_userspace_metric_class(std::variant<Cpu, Thread> scope)
+{
+    const perf::counter::CounterCollection& counter_collection =
+        perf::EventComposer::instance().userspace_counters_for(scope);
+
+    if (registry_.has<otf2::definition::metric_class>(ByCounterCollection(counter_collection)))
+    {
+        return registry_.get<otf2::definition::metric_class>(
+            ByCounterCollection(counter_collection));
+    }
+
+    auto& metric_class = registry_.emplace<otf2::definition::metric_class>(
+        ByCounterCollection(counter_collection), otf2::common::metric_occurence::async,
+        otf2::common::recorder_kind::abstract);
+
+    for (const auto& counter : counter_collection.counters)
+    {
+        metric_class.add_member(get_event_metric_member(counter));
+    }
+
+    return metric_class;
+}
+
 otf2::definition::calling_context& Trace::cctx_for_syscall(int64_t syscall_id)
 {
-    const auto& syscall_name = intern_syscall_str(syscall_id);
+    const auto& syscall_name = to_otf2_string(syscall_name_for_nr(syscall_id));
 
     const auto& intern_region = registry_.emplace<otf2::definition::region>(
         BySyscall(syscall_id), syscall_name, syscall_name, syscall_name,
@@ -801,11 +842,6 @@ void Trace::emplace_monitoring_thread(Thread thread, const std::string& name,
         registry_.emplace<otf2::definition::calling_context>(
             ByThread(thread), ret, otf2::definition::source_code_location());
     }
-}
-
-const otf2::definition::string& Trace::intern_syscall_str(int64_t syscall_nr)
-{
-    return to_otf2_string(syscall_name_for_nr(syscall_nr));
 }
 
 const otf2::definition::source_code_location& Trace::intern_scl(const LineInfo& info)
@@ -869,7 +905,7 @@ void Trace::finalize(Resolvers& resolvers)
     }
     for (const auto& thread : ThreadNames::instance().names())
     {
-        auto& cctx =
+        const auto& cctx =
             thread_handle(Process::no_parent(), thread.first, std::nullopt).calling_context();
         try
         {
@@ -888,23 +924,65 @@ void Trace::finalize(Resolvers& resolvers)
         }
     }
     local_cctx_trees_.clear();
-    auto finalized_twice = local_cctx_trees_finalized_.exchange(true);
+    const auto finalized_twice = local_cctx_trees_finalized_.exchange(true);
     if (finalized_twice)
     {
         Log::error() << "Trace::merge_calling_contexts was called twice."
                         "This is a bug, please report it to the developers.";
     }
+
+    for (const auto& thread : ThreadNames::instance().names())
+    {
+
+        if (ThreadGroup::instance().is_process(thread.first))
+        {
+            process_handle(Process::no_parent(), thread.first.as_process(), thread.second);
+        }
+        auto thread_hd = thread_handle(Process::no_parent(), thread.first, thread.second);
+
+        process_handle(Process::no_parent(), ThreadGroup::instance().get_process(thread.first),
+                       std::nullopt)
+            .regions_group()
+            .add_member(thread_hd.region());
+    }
+
+    if (starting_time_ > stopping_time_)
+    {
+        stopping_time_ = starting_time_;
+    }
+
+    archive_ << otf2::definition::clock_properties(starting_time_, stopping_time_,
+                                                   starting_system_time_);
+
+    std::filesystem::path const symlink_path = nitro::env::get("LO2S_OUTPUT_LINK");
+
+    if (symlink_path.empty())
+    {
+        return;
+    }
+
+    if (std::filesystem::is_symlink(symlink_path))
+    {
+        std::filesystem::remove(symlink_path);
+    }
+    else if (std::filesystem::exists(symlink_path))
+    {
+        Log::warn() << "The path " << symlink_path
+                    << " exists and isn't a symlink, refusing to create link to latest trace";
+        return;
+    }
+    std::filesystem::create_symlink(trace_name_, symlink_path);
 }
 
 ProcessHandle Trace::process_handle(Process parent, Process process,
                                     std::optional<std::string> name)
 {
-    return { parent, process, name, *this };
+    return { parent, process, std::move(name), *this };
 }
 
 ThreadHandle Trace::thread_handle(Process process, Thread thread, std::optional<std::string> name)
 {
-    return { process, thread, name, *this };
+    return { process, thread, std::move(name), *this };
 }
 
 CpuHandle Trace::cpu_handle(Cpu cpu)

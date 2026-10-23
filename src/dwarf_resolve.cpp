@@ -18,6 +18,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <cstdint>
+
 #include <elfutils/libdw.h>
 #include <elfutils/libdwfl.h>
 #include <gelf.h>
@@ -72,15 +74,11 @@ std::unique_ptr<Indicator> bar;
  * Use this info to display a nice progress bar if stderr is a tty
  */
 #ifdef HAVE_DEBUGINFOD
-int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b)
+int progress_fn([[maybe_unused]] debuginfod_client* c, long a, long b) // NOLINT
 {
-    if (b != 0)
+    if (b != 0 && logging::get_min_severity_level() <= nitro::log::severity_level::info)
     {
-
-        if (logging::get_min_severity_level() <= nitro::log::severity_level::info)
-        {
-            bar->submit_status(a, b);
-        }
+        bar->submit_status(a, b);
     }
     return 0;
 }
@@ -151,22 +149,17 @@ DwarfFunctionResolver::DwarfFunctionResolver(const std::string& name) : Function
     debuginfod_client* debug_c = dwfl_get_debuginfod_client(dwfl_);
 
     if (logging::get_min_severity_level() <= nitro::log::severity_level::info &&
-        isatty(STDERR_FILENO))
+        isatty(STDERR_FILENO) && debug_c != nullptr)
     {
-        if (debug_c != nullptr)
-        {
-            debuginfod_set_progressfn(debug_c, progress_fn);
-        }
+        debuginfod_set_progressfn(debug_c, progress_fn);
     }
 
-    if (logging::get_min_severity_level() <= nitro::log::severity_level::trace)
+    if (logging::get_min_severity_level() <= nitro::log::severity_level::trace &&
+        debug_c != nullptr)
     {
-        if (debug_c != nullptr)
-        {
-            // This displays quite a lot of additional information from debuginfod, so gate it
-            // behind log level trace
-            debuginfod_set_verbose_fd(debug_c, STDERR_FILENO);
-        }
+        // This displays quite a lot of additional information from debuginfod, so gate it
+        // behind log level trace
+        debuginfod_set_verbose_fd(debug_c, STDERR_FILENO);
     }
 #endif
 
@@ -188,9 +181,9 @@ DwarfFunctionResolver::~DwarfFunctionResolver()
 
 LineInfo DwarfFunctionResolver::lookup_line_info(Address addr, uint64_t offset)
 {
-    if (cache_.count(addr))
+    if (cache_.count(Range(addr)))
     {
-        return cache_.at(addr);
+        return cache_.at(Range(addr));
     }
 
     // Get the name of the current module (e.g. "libfoo.so")
@@ -202,8 +195,8 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr, uint64_t offset)
     // Otherwise, we need to adjust the address.
     if (dwfl_module_relocations(mod_) != 0)
     {
-        Log::trace() << "Dynamic object, adjusting address to: " << addr - offset;
-        addr = addr - offset;
+        addr = Address(addr.value() - offset);
+        Log::trace() << "Dynamic object, adjusting address to: " << addr;
     }
     if (config().dwarf.usage != DwarfUsage::NONE)
     {
@@ -262,16 +255,16 @@ LineInfo DwarfFunctionResolver::lookup_line_info(Address addr, uint64_t offset)
         Log::trace() << Address(sym_addr) << "::" << Address(sym_addr + sym.st_size) << " "
                      << module_name << " " << name;
 
-        if (addr.value() >= (sym_addr) && addr.value() < (sym_addr + sym.st_size))
+        if (addr.value() >= sym_addr && addr.value() < (sym_addr + sym.st_size))
         {
             Log::trace() << "Resolved with symtab to: " << name;
             return cache_
-                .emplace(Range(sym_addr - bias, sym_addr + sym.st_size - bias),
+                .emplace(Range(Address(sym_addr - bias), Address(sym_addr + sym.st_size - bias)),
                          LineInfo::for_function(module_name, name, 1, module_name))
                 .first->second;
         }
     }
-    Log::trace() << "No symbol found for: " << addr;
+    Log::error() << "No symbol found for: " << addr << " in " << module_name;
     return cache_.emplace(addr, LineInfo::for_binary(module_name)).first->second;
 }
 } // namespace lo2s

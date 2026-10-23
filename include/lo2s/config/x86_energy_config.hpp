@@ -12,7 +12,7 @@ namespace lo2s
 {
 struct X86EnergyConfig
 {
-    X86EnergyConfig(nitro::options::arguments& arguments);
+    explicit X86EnergyConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
     void check() const;
 

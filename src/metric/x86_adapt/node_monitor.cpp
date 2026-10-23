@@ -49,8 +49,8 @@ void NodeMonitor::monitor([[maybe_unused]] int fd)
     event_.timestamp(time::now());
     for (const auto& index_ci : nitro::lang::enumerate(configuration_items_))
     {
-        auto i = index_ci.index();
-        auto configuration_item = index_ci.value();
+        const auto i = index_ci.index();
+        const auto configuration_item = index_ci.value();
 
         event_.raw_values()[i] = device_(configuration_item);
     }

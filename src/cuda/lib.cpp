@@ -114,36 +114,28 @@ void CUPTIAPI callbackHandler(void* /*userdata*/, CUpti_CallbackDomain domain,
 
     if (domain == CUPTI_CB_DOMAIN_DRIVER_API)
     {
-        if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStart)
+        if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStart &&
+            cbInfo->callbackSite == CUPTI_API_EXIT)
         {
-            if (cbInfo->callbackSite == CUPTI_API_EXIT)
-            {
-                cuptiActivityEnableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
-            }
+            cuptiActivityEnableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
         }
-        else if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStop)
+        else if (cbid == CUPTI_DRIVER_TRACE_CBID_cuProfilerStop &&
+                 cbInfo->callbackSite == CUPTI_API_ENTER)
         {
-            if (cbInfo->callbackSite == CUPTI_API_ENTER)
-            {
-                cuptiActivityFlushAll(0);
-                cuptiEnableCallback(0, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API,
-                                    CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020);
+            cuptiActivityFlushAll(0);
+            cuptiEnableCallback(0, subscriber, CUPTI_CB_DOMAIN_RUNTIME_API,
+                                CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020);
 
-                cuptiActivityDisableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
-            }
+            cuptiActivityDisableContext(cbInfo->context, CUPTI_ACTIVITY_KIND_CONCURRENT_KERNEL);
         }
     }
 
     // Also flush on CUDA device reset
-    else if (domain == CUPTI_CB_DOMAIN_RUNTIME_API)
+    else if (domain == CUPTI_CB_DOMAIN_RUNTIME_API &&
+             cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020 &&
+             cbInfo->callbackSite == CUPTI_API_ENTER)
     {
-        if (cbid == CUPTI_RUNTIME_TRACE_CBID_cudaDeviceReset_v3020)
-        {
-            if (cbInfo->callbackSite == CUPTI_API_ENTER)
-            {
-                cuptiActivityFlushAll(0);
-            }
-        }
+        cuptiActivityFlushAll(0);
     }
 }
 

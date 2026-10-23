@@ -26,14 +26,14 @@ public:
         return k;
     }
 
-    uint64_t start() const
+    Address start() const
     {
         return start_;
     }
 
     LineInfo lookup_line_info(Address addr, uint64_t offset [[maybe_unused]] = 0) override
     {
-        auto it = kallsyms_.find(addr + start_);
+        const auto it = kallsyms_.find(Range{ addr });
         if (it != kallsyms_.end())
         {
             return LineInfo::for_function("", it->second.c_str(), 1, "[kernel]");
@@ -43,6 +43,6 @@ public:
 
 private:
     std::map<Range, std::string> kallsyms_;
-    uint64_t start_ = UINT64_MAX;
+    Address start_ = Address::max();
 };
 } // namespace lo2s

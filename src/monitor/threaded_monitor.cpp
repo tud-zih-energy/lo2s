@@ -33,7 +33,7 @@ ThreadedMonitor::~ThreadedMonitor()
 void ThreadedMonitor::start()
 {
     assert(!thread_.joinable());
-    thread_ = std::thread([this]() { this->thread_main(); });
+    thread_ = std::thread([this] { this->thread_main(); });
 }
 
 std::string ThreadedMonitor::name() const

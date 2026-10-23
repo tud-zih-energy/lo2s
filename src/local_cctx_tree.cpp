@@ -5,10 +5,14 @@
 #include <lo2s/local_cctx_tree.hpp>
 
 #include <lo2s/calling_context.hpp>
-#include <lo2s/measurement_scope.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
+
+#include <variant>
 
 #include <cstdint>
 
@@ -38,7 +42,7 @@ void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
             }
             continue;
         }
-        node = create_cctx_node(CallingContext::sample(ips[i]), node);
+        node = create_cctx_node(CallingContext::sample(Address{ ips[i] }), node);
     }
 
     writer_.write_calling_context_sample(tp, node->second.ref, num_ips,
@@ -47,7 +51,7 @@ void LocalCctxTree::cctx_sample(otf2::chrono::time_point& tp, uint64_t num_ips,
 
 void LocalCctxTree::cctx_sample(otf2::chrono::time_point tp, uint64_t ip)
 {
-    auto* node = create_cctx_node(CallingContext::sample(ip), cur_.back());
+    const auto* node = create_cctx_node(CallingContext::sample(Address{ ip }), cur_.back());
     writer_.write_calling_context_sample(tp, node->second.ref, 2,
                                          trace_.interrupt_generator().ref());
 }

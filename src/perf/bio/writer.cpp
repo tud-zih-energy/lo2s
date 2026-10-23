@@ -47,7 +47,7 @@ void Writer::write(IoReaderIdentity& identity, TracepointSampleType* header)
 
         otf2::writer::local& writer = trace_.bio_writer(dev);
         const otf2::definition::io_handle& handle = trace_.block_io_handle(dev);
-        auto size = event->nr_sector * SECTOR_SIZE;
+        const auto size = event->nr_sector * SECTOR_SIZE;
 
         sector_cache_[dev][event->sector] += size;
         writer << otf2::event::io_operation_begin(

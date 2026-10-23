@@ -6,6 +6,10 @@
 
 #include <lo2s/types/thread.hpp>
 
+#include <iostream>
+
+#include <fmt/format.h>
+
 namespace lo2s
 {
 

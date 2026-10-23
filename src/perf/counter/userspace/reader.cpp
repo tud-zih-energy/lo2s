@@ -7,12 +7,15 @@
 #include <lo2s/config.hpp>
 #include <lo2s/error.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_composer.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
+
+#include <variant>
 
 #include <cerrno>
 #include <cstdint>

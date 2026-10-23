@@ -68,7 +68,7 @@ int64_t calculate_offset()
 
 void tool_tracing_callback(rocprofiler_context_id_t /*context*/,
                            rocprofiler_buffer_id_t /*buffer_id*/,
-                           rocprofiler_record_header_t** headers, size_t num_headers,
+                           rocprofiler_record_header_t** headers, size_t num_headers, // NOLINT
                            void* /*user_data*/, uint64_t /*drop_count*/)
 {
     std::priority_queue<struct kernel_cache> reorder_buffer;
@@ -80,8 +80,9 @@ void tool_tracing_callback(rocprofiler_context_id_t /*context*/,
         if (header->category == ROCPROFILER_BUFFER_CATEGORY_TRACING &&
             header->kind == ROCPROFILER_BUFFER_TRACING_KERNEL_DISPATCH)
         {
-            auto* record = reinterpret_cast<rocprofiler_buffer_tracing_kernel_dispatch_record_t*>(
-                header->payload);
+            const auto* record =
+                reinterpret_cast<rocprofiler_buffer_tracing_kernel_dispatch_record_t*>(
+                    header->payload);
 
             reorder_buffer.emplace(record->dispatch_info.kernel_id,
                                    record->start_timestamp - offset,
@@ -134,11 +135,12 @@ void code_object_cb(rocprofiler_callback_tracing_record_t record,
         }
         else if (record.operation == ROCPROFILER_CODE_OBJECT_DEVICE_KERNEL_SYMBOL_REGISTER)
         {
-            auto* data = static_cast<
+            const auto* data = static_cast<
                 rocprofiler_callback_tracing_code_object_kernel_symbol_register_data_t*>(
                 record.payload);
 
-            auto kernel_name = std::regex_replace(data->kernel_name, std::regex{ "(\\.kd)$" }, "");
+            const auto kernel_name =
+                std::regex_replace(data->kernel_name, std::regex{ "(\\.kd)$" }, "");
             rb_writer->kernel_def(kernel_name, data->kernel_id);
         }
     }
@@ -194,7 +196,11 @@ rocprofiler_configure(uint32_t /*version*/, const char* /*runtime_version*/, uin
 {
     id->name = "lo2s";
 
-    static rocprofiler_tool_configure_result_t cfg{ sizeof(rocprofiler_tool_configure_result_t),
-                                                    &tool_init, &tool_fini, nullptr };
+    static rocprofiler_tool_configure_result_t cfg{
+        sizeof(rocprofiler_tool_configure_result_t),
+        &tool_init,
+        &tool_fini,
+        nullptr,
+    };
     return &cfg;
 }

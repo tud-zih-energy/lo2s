@@ -74,7 +74,8 @@ string_to_id<cache_op_and_result> CACHE_OPERATION_TABLE[] = {
 constexpr std::uint64_t make_cache_config(perf_hw_cache_id cache, perf_hw_cache_op_id op,
                                           perf_hw_cache_op_result_id op_result)
 {
-    return cache | (op << 8) | (op_result << 16);
+    return static_cast<std::uint64_t>(cache) | (static_cast<uint64_t>(op) << 8ULL) |
+           (static_cast<std::uint64_t>(op_result) << 16ULL);
 }
 
 template <std::size_t N, typename T>
@@ -245,9 +246,9 @@ EventResolver::EventResolver()
     }
 #endif
     std::stringstream name_fmt;
-    for (auto& cache : CACHE_NAME_TABLE)
+    for (const auto& cache : CACHE_NAME_TABLE)
     {
-        for (auto& operation : CACHE_OPERATION_TABLE)
+        for (const auto& operation : CACHE_OPERATION_TABLE)
         {
             name_fmt.str(std::string());
             name_fmt << cache.name << '-' << operation.name;
@@ -335,7 +336,7 @@ EventAttr EventResolver::cache_event(const std::string& name)
  */
 EventAttr EventResolver::get_event_by_name(const std::string& name)
 {
-    auto event_it = event_map_.find(name);
+    const auto event_it = event_map_.find(name);
     if (event_it != event_map_.end())
     {
         if (event_it->second.has_value())
@@ -392,7 +393,7 @@ bool EventResolver::has_event(const std::string& name)
     const auto event_it = event_map_.find(name);
     if (event_it != event_map_.end())
     {
-        return (event_it->second.has_value());
+        return event_it->second.has_value();
     }
     try
     {

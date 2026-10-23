@@ -3,16 +3,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <lo2s/trace/handle.hpp>
 
+#include <lo2s/log.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/core.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/package.hpp>
+#include <lo2s/types/process.hpp>
+#include <lo2s/types/thread.hpp>
 
+#include <otf2xx/common.hpp>
+#include <otf2xx/definition/region.hpp>
 #include <otf2xx/definition/system_tree_node.hpp>
+#include <otf2xx/definition/system_tree_node_domain.hpp>
 
+#include <mutex>
 #include <optional>
 #include <shared_mutex>
+#include <stdexcept>
+#include <string>
 
-#include "lo2s/types/process.hpp"
+#include <fmt/format.h>
 
 namespace lo2s::trace
 {
@@ -35,7 +47,7 @@ ProcessHandle::ProcessHandle(Process parent, Process process, std::optional<std:
     {
         if (name.has_value())
         {
-            std::unique_lock lock(m_);
+            const std::unique_lock lock(m_);
             const auto& iname = t_.to_otf2_string(name.value());
             try
             {
@@ -60,21 +72,19 @@ ProcessHandle::ProcessHandle(Process parent, Process process, std::optional<std:
         if (parent != Process::no_parent())
         {
             auto hd = t_.process_handle(Process::no_parent(), parent, std::nullopt);
-            std::unique_lock lock(m_);
+            const std::unique_lock lock(m_);
             t_.registry()
                 .get<otf2::definition::system_tree_node>(ByProcess(process_))
                 .parent(hd.system_tree_node());
         }
         return;
     }
-    else
-    {
         const auto& par_node =
             parent == Process::no_parent() ?
                 t_.system_tree_root_node() :
                 t_.process_handle(Process::no_parent(), parent, std::nullopt).system_tree_node();
 
-        std::unique_lock lock(m_);
+        const std::unique_lock lock(m_);
         const auto& iname = t_.to_otf2_string(proc_name);
         t_.registry().emplace<otf2::definition::regions_group>(ByProcess(process_), iname,
                                                                otf2::common::paradigm_type::user,
@@ -93,12 +103,11 @@ ProcessHandle::ProcessHandle(Process parent, Process process, std::optional<std:
 
         t_.registry().emplace<otf2::definition::comm>(ByProcess(process_), iname, comm_group,
                                                       otf2::definition::comm::comm_flag_type::none);
-    }
 }
 
 otf2::definition::system_tree_node& ProcessHandle::system_tree_node()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::system_tree_node>(ByProcess(process_));
 }
 
@@ -111,13 +120,13 @@ CpuHandle::CpuHandle(Cpu cpu, trace::Trace& t)
         return;
     }
 
-    auto& topo = Topology::instance();
+    const auto& topo = Topology::instance();
     core_ = topo.core_of(cpu);
     package_ = topo.package_of(cpu);
 
     auto core_hd = t_.core_handle(core_);
 
-    std::unique_lock lock(m_);
+    const std::unique_lock lock(m_);
     Log::debug() << "Registering cpu " << cpu.as_int() << "@" << package_.as_int() << ":"
                  << core_.core_as_int();
 
@@ -168,7 +177,7 @@ ThreadHandle::ThreadHandle(Process process, Thread thread, std::optional<std::st
 
     if (t_.registry().has<otf2::definition::region>(ByThread(thread)))
     {
-        std::unique_lock lock(m_);
+        const std::unique_lock lock(m_);
         const auto& iname = t_.to_otf2_string(thread_name);
         auto& thread_region = t_.registry().get<otf2::definition::region>(ByThread(thread_));
         thread_region.name(iname);
@@ -188,25 +197,22 @@ ThreadHandle::ThreadHandle(Process process, Thread thread, std::optional<std::st
         }
         return;
     }
-    else
+    const std::unique_lock lock(m_);
+
+    const auto& iname = t_.to_otf2_string(thread_name);
+
+    auto& thread_region = t_.registry().emplace<otf2::definition::region>(
+        ByThread(thread_), iname, iname, iname, otf2::common::role_type::function,
+        otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
+
+    if (is_kernel_thread(thread))
     {
-        std::unique_lock lock(m_);
-
-        const auto& iname = t_.to_otf2_string(thread_name);
-
-        auto& thread_region = t_.registry().emplace<otf2::definition::region>(
-            ByThread(thread_), iname, iname, iname, otf2::common::role_type::function,
-            otf2::common::paradigm_type::user, otf2::common::flags_type::none, iname, 0, 0);
-
-        if (is_kernel_thread(thread))
-        {
-            t_.kernel_regions_group().add_member(thread_region);
-        }
+        t_.kernel_regions_group().add_member(thread_region);
+    }
 
         // create calling context
         t_.registry().create<otf2::definition::calling_context>(
             ByThread(thread_), thread_region, otf2::definition::source_code_location());
-    }
 }
 
 PackageHandle::PackageHandle(Package pkg, Trace& t)
@@ -217,7 +223,7 @@ PackageHandle::PackageHandle(Package pkg, Trace& t)
         return;
     }
 
-    std::unique_lock lock(m_);
+    const std::unique_lock lock(m_);
 
     otf2::definition::system_tree_node& package_node =
         t_.registry().emplace<otf2::definition::system_tree_node>(
@@ -240,9 +246,9 @@ CoreHandle::CoreHandle(Core core, Trace& t)
     auto package = Package(core_.package_as_int());
     auto package_hd = t_.package_handle(package);
 
-    std::unique_lock lock(LockMap<Core>::instance().get(core));
+    const std::unique_lock lock(LockMap<Core>::instance().get(core));
 
-    otf2::definition::system_tree_node& core_node =
+    const otf2::definition::system_tree_node& core_node =
         t_.registry().emplace<otf2::definition::system_tree_node>(
             ByCore(core),
             t_.to_otf2_string(fmt::format("{}:{}", package.as_int(), core.core_as_int())),
@@ -254,61 +260,61 @@ CoreHandle::CoreHandle(Core core, Trace& t)
 
 otf2::definition::system_tree_node& CoreHandle::system_tree_node()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::system_tree_node>(ByCore(core_));
 }
 
 otf2::definition::regions_group& ProcessHandle::regions_group()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::regions_group>(ByProcess(process_));
 }
 
 otf2::definition::comm_group& ProcessHandle::comm_group()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::comm_group>(ByProcess(process_));
 }
 
 otf2::definition::calling_context& ThreadHandle::calling_context()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::calling_context>(ByThread(thread_));
 }
 
 otf2::definition::region& ThreadHandle::region()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::region>(ByThread(thread_));
 }
 
 otf2::definition::comm& ProcessHandle::comm()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::comm>(ByProcess(process_));
 }
 
 otf2::definition::location_group& ProcessHandle::location_group()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::location_group>(ByProcess(process_));
 }
 
 otf2::definition::system_tree_node& CpuHandle::system_tree_node()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::system_tree_node>(ByCpu(cpu_));
 }
 
 otf2::definition::location_group& CpuHandle::location_group()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::location_group>(ByCpu(cpu_));
 }
 
 otf2::definition::system_tree_node& PackageHandle::system_tree_node()
 {
-    std::shared_lock lock(m_);
+    const std::shared_lock lock(m_);
     return t_.registry().get<otf2::definition::system_tree_node>(ByPackage(pkg_));
 }
 } // namespace lo2s::trace

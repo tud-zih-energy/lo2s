@@ -10,6 +10,6 @@ namespace lo2s
 enum class MonitorType
 {
     PROCESS,
-    CPU_SET
+    CPU_SET,
 };
 }

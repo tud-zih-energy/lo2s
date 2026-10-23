@@ -22,7 +22,6 @@
 #include <ios>
 #include <iostream>
 #include <map>
-#include <numeric>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -30,13 +29,13 @@
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <cstdint>
 #include <cstring>
 #include <ctime>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
 #include <linux/limits.h>
 #include <sched.h>
@@ -89,9 +88,9 @@ std::chrono::duration<double> get_cpu_time()
 
 std::string get_process_exe(Process process)
 {
-    auto proc_exe_filename = fmt::format("/proc/{}/exe", process.as_int());
+    const auto proc_exe_filename = fmt::format("/proc/{}/exe", process.as_int());
     char exe_cstr[PATH_MAX + 1];
-    auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
+    const auto ret = readlink(proc_exe_filename.c_str(), exe_cstr, PATH_MAX);
 
     if (ret == -1)
     {
@@ -127,7 +126,8 @@ std::string read_file(const std::filesystem::path& path)
 
 std::string get_process_comm(Process process)
 {
-    auto proc_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) / "comm";
+    const auto proc_comm =
+        std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) / "comm";
     try
     {
         return read_file(proc_comm);
@@ -141,8 +141,8 @@ std::string get_process_comm(Process process)
 
 std::string get_task_comm(Process process, Thread thread)
 {
-    auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) / "task" /
-                     std::to_string(thread.as_int()) / "comm";
+    const auto task_comm = std::filesystem::path{ "/proc" } / std::to_string(process.as_int()) /
+                           "task" / std::to_string(thread.as_int()) / "comm";
     try
     {
         return read_file(task_comm);
@@ -156,8 +156,8 @@ std::string get_task_comm(Process process, Thread thread)
 
 std::string get_datetime()
 {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    const auto t = std::time(nullptr);
+    const auto tm = *std::localtime(&t);
 
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y-%m-%dT%H-%M-%S");
@@ -242,7 +242,7 @@ void try_pin_to_scope(std::variant<Cpu, Thread> scope)
     {
         CPU_SET(std::get<Cpu>(scope).as_int(), &cpumask);
     }
-    auto ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
+    const auto ret = sched_setaffinity(0, sizeof(cpumask), &cpumask);
     if (ret != 0)
     {
         Log::error() << "sched_setaffinity failed with: " << make_system_error().what();
@@ -268,21 +268,19 @@ int get_cgroup_mountpoint_fd(const std::string& cgroup)
     std::string line;
     while (std::getline(mtab, line))
     {
-        if (std::regex_match(line, cgroup_match, cgroup_regex))
-        {
+        if (std::regex_match(line, cgroup_match, cgroup_regex) &&
             // For the ancient cgroupfs mount point we have to use the one with perf_event
             // in the options
-            if (cgroup_match[3].str() == "cgroup2" ||
-                (cgroup_match[3].str() == "cgroup" && cgroup_match[4].str().find("perf_event")))
-            {
-                std::filesystem::path const cgroup_path =
-                    std::filesystem::path(cgroup_match[2].str()) / cgroup;
-                int const fd = open(cgroup_path.c_str(), O_RDONLY);
+            (cgroup_match[3].str() == "cgroup2" ||
+             (cgroup_match[3].str() == "cgroup" && cgroup_match[4].str().find("perf_event"))))
+        {
+            std::filesystem::path const cgroup_path =
+                std::filesystem::path(cgroup_match[2].str()) / cgroup;
+            int const fd = open(cgroup_path.c_str(), O_RDONLY);
 
-                if (fd != -1)
-                {
-                    return fd;
-                }
+            if (fd != -1)
+            {
+                return fd;
             }
         }
     }
@@ -299,7 +297,7 @@ std::set<std::uint32_t> parse_list(const std::string& list)
     std::string part;
     while (std::getline(s, part, ','))
     {
-        auto pos = part.find('-');
+        const auto pos = part.find('-');
         if (pos != std::string::npos)
         {
             // is a range
@@ -351,35 +349,13 @@ std::vector<std::string> get_thread_cmdline(Thread thread)
     return args;
 }
 
-std::string get_nec_thread_comm(Thread thread)
-{
-    // We can't use /task/{pid}/comm to get the name of a NEC process because that will contain the
-    // name of the program offloader (ve_exec) instead of the program that is run. Instead, we have
-    // to parse the command line of the offloader. Thankfully, the kernel always puts '--' before
-    // the name of the program run.
-    auto args = get_thread_cmdline(thread);
-    for (std::size_t i = 0; i < args.size(); i++)
-    {
-        if (args[i] == "--")
-        {
-            if (i + 1 < args.size())
-            {
-                return fmt::format("{} ({})", args[i + 1], thread.as_int());
-            }
-        }
-    }
-
-    // If no '--' is found, fall back to the complete commandline as a name
-    return std::accumulate(args.begin(), args.end(), std::string(""));
-}
-
 struct rlimit initial_rlimit_fd()
 {
     static struct rlimit current;
 
     if (current.rlim_cur == 0)
     {
-        auto ret = getrlimit(RLIMIT_NOFILE, &current);
+        const auto ret = getrlimit(RLIMIT_NOFILE, &current);
 
         if (ret == -1)
         {
@@ -454,7 +430,7 @@ bool known_non_executable(const std::string& filename)
 std::map<Mapping, std::string> read_maps(Process p)
 {
     // Supposedly this one is faster than /proc/%d/maps for processes with many threads
-    auto filename = fmt::format("/proc/{}/task/{}/maps", p.as_int(), p.as_int());
+    const auto filename = fmt::format("/proc/{}/task/{}/maps", p.as_int(), p.as_int());
 
     std::map<Mapping, std::string> mappings;
     std::ifstream mapstream(filename);

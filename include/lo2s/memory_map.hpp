@@ -73,7 +73,7 @@ public:
         /* 2. Check if the new_mapping is completely in an existing mapping
          *
          */
-        auto inside_it = std::find_if(map_.begin(), map_.end(), [&new_mapping](auto& elem) {
+        const auto inside_it = std::find_if(map_.begin(), map_.end(), [&new_mapping](auto& elem) {
             return new_mapping.in(elem.first);
         });
 
@@ -91,8 +91,8 @@ public:
             map_.erase(inside_it);
 
             // 3. emplace [existing.start, new_mapping.start] -> existing value
-            Mapping first_old_mapping(existing_mapping.range.start, new_mapping.range.start,
-                                      existing_mapping.pgoff);
+            const Mapping first_old_mapping(existing_mapping.range.start, new_mapping.range.start,
+                                            existing_mapping.pgoff);
             [[maybe_unused]] auto r = map_.emplace(first_old_mapping, content);
             assert(r.second);
 
@@ -101,8 +101,8 @@ public:
             assert(r.second);
 
             //  5. emplace [new_mapping.end, existing_mapping.end] -> existing value
-            Mapping second_old_mapping(new_mapping.range.end, existing_mapping.range.end,
-                                       existing_mapping.pgoff);
+            const Mapping second_old_mapping(new_mapping.range.end, existing_mapping.range.end,
+                                             existing_mapping.pgoff);
             r = map_.emplace(second_old_mapping, content);
             assert(r.second);
 
@@ -111,7 +111,7 @@ public:
 
         // 4. Check for partial overlaps, truncating the beginning/ending of existing mappings
         // 4.1 Partial overlaps at the start of the new mapping
-        auto start_entry = map_.find(new_mapping.range.start);
+        const auto start_entry = map_.find(Mapping(new_mapping.range.start));
         if (start_entry != map_.end())
         {
             Mapping existing_mapping = start_entry->first;
@@ -124,12 +124,12 @@ public:
 
             existing_mapping.range.end = existing_mapping.range.start;
 
-            [[maybe_unused]] auto r = map_.emplace(existing_mapping, content);
+            [[maybe_unused]] const auto r = map_.emplace(existing_mapping, content);
             assert(r.second);
         }
 
         // 4.2 Partial overlaps at the end of the mapping
-        auto end_entry = map_.find(new_mapping.range.end);
+        const auto end_entry = map_.find(Mapping(new_mapping.range.end));
         if (end_entry != map_.end())
         {
             Mapping existing_mapping = end_entry->first;
@@ -141,7 +141,7 @@ public:
                          << new_mapping.range.end;
             existing_mapping.range.start = new_mapping.range.end;
 
-            [[maybe_unused]] auto r = map_.emplace(existing_mapping, content);
+            [[maybe_unused]] const auto r = map_.emplace(existing_mapping, content);
             assert(r.second);
         }
 
@@ -151,17 +151,17 @@ public:
 
     typename std::map<Mapping, std::shared_ptr<T>>::iterator find(const Address& addr)
     {
-        return map_.find(addr);
+        return map_.find(Mapping(addr));
     }
 
     typename std::map<Mapping, std::shared_ptr<T>>::const_iterator find(const Address& addr) const
     {
-        return map_.find(addr);
+        return map_.find(Mapping(addr));
     }
 
     bool has(const Address& addr) const
     {
-        return map_.count(addr) != 0;
+        return map_.count(Mapping(addr)) != 0;
     }
 
     typename std::map<Mapping, std::shared_ptr<T>>::iterator end()
@@ -196,11 +196,11 @@ protected:
 class ProcessFunctionMap : public MemoryMap<FunctionResolver>
 {
 public:
-    ProcessFunctionMap(Process process)
+    explicit ProcessFunctionMap(Process process)
     {
-        auto kall = Kallsyms::cache();
-        emplace(Mapping(Kallsyms::cache()->start(), (uint64_t)-1, 0), kall);
-        auto perf_map = PerfMap::cache(process);
+        const auto kall = Kallsyms::cache();
+        emplace(Mapping(Kallsyms::cache()->start(), Address::max(), Address(0)), kall);
+        const auto perf_map = PerfMap::cache(process);
 
         if (perf_map->has_perf_map())
         {

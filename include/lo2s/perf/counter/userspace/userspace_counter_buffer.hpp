@@ -23,7 +23,7 @@ struct UserspaceReadFormat
 class UserspaceCounterBuffer : public CounterBuffer<UserspaceCounterBuffer>
 {
 public:
-    UserspaceCounterBuffer(std::size_t ncounters)
+    explicit UserspaceCounterBuffer(std::size_t ncounters)
     : CounterBuffer<UserspaceCounterBuffer>(ncounters), current_(ncounters), previous_(ncounters)
     {
     }

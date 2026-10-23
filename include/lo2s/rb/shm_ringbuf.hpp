@@ -20,7 +20,7 @@ namespace lo2s
 class ShmRingbuf
 {
 public:
-    ShmRingbuf(int fd);
+    explicit ShmRingbuf(int fd);
     ShmRingbuf(ShmRingbuf&) = delete;
     ShmRingbuf& operator=(ShmRingbuf&) = delete;
 

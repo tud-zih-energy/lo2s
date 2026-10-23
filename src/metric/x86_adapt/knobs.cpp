@@ -25,7 +25,7 @@ std::map<std::string, std::string> x86_adapt_node_knobs()
     try
     {
         ::x86_adapt::x86_adapt x86_adapt;
-        auto node_cfg_items = x86_adapt.node_configuration_items();
+        const auto node_cfg_items = x86_adapt.node_configuration_items();
 
         for (const auto& item : node_cfg_items)
         {
@@ -46,7 +46,7 @@ std::map<std::string, std::string> x86_adapt_cpu_knobs()
     std::map<std::string, std::string> cpu_knobs;
     ::x86_adapt::x86_adapt x86_adapt;
 
-    auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
+    const auto cpu_cfg_items = x86_adapt.cpu_configuration_items();
     for (const auto& item : cpu_cfg_items)
     {
         cpu_knobs.emplace(std::piecewise_construct, std::forward_as_tuple(item.name()),

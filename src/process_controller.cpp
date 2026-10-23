@@ -22,8 +22,6 @@
 #include <cerrno>
 #include <csignal>
 
-#include <sys/types.h>
-
 extern "C"
 {
 #include <sys/ptrace.h>
@@ -67,8 +65,8 @@ namespace lo2s
 {
 namespace
 {
-void ptrace_checked_call(enum __ptrace_request request, Thread thread, void* addr = nullptr,
-                         void* data = nullptr)
+void ptrace_checked_call(enum __ptrace_request request, Thread thread, const void* addr = nullptr,
+                         const void* data = nullptr)
 {
     long const retval = ptrace(request, thread.as_int(), addr, data);
     if (retval == -1)
@@ -153,7 +151,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
         try
         {
             // we need the pid of the new process
-            auto new_process = Process(ptrace_geteventmsg(child));
+            const auto new_process = Process(ptrace_geteventmsg(child));
             std::string const command = get_process_comm(new_process);
             Log::debug() << "New " << new_process << " (" << command << "): forked from " << child;
 
@@ -161,7 +159,7 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
             // (1) Associate a main thread with this process.
             ThreadGroup::instance().add_process(new_process);
             // (2) ptrace might report a thread as the parent, find out the real parent process
-            auto parent = ThreadGroup::instance().get_process(child);
+            const auto parent = ThreadGroup::instance().get_process(child);
             // (3) Tell the process monitor to watch a new process.
             monitor_.insert_process(parent, new_process, command);
             // (4) Update our summary information.
@@ -183,11 +181,11 @@ void ProcessController::handle_ptrace_event(Thread child, int event)
         try
         {
             // we need the tid of the new process
-            auto new_thread = Thread(ptrace_geteventmsg(child));
+            const auto new_thread = Thread(ptrace_geteventmsg(child));
 
             // Thread may have been clone from another thread, figure out which
             // process they both belong too.
-            auto process = ThreadGroup::instance().get_process(child);
+            const auto process = ThreadGroup::instance().get_process(child);
             std::string const command = get_task_comm(process, new_thread);
             Log::info() << "New " << new_thread << " (" << command << "): cloned from " << child
                         << " in " << process;
@@ -271,8 +269,9 @@ ProcessController::SignalHandlingState ProcessController::handle_stop_signal(Thr
         Log::debug() << "Set ptrace options for " << child;
 
         // we are only interested in fork/join events
-        ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK | PTRACE_O_TRACECLONE |
-                                     PTRACE_O_TRACEEXIT | PTRACE_O_TRACEEXEC);
+        ptrace_setoptions(child, PTRACE_O_TRACEFORK | PTRACE_O_TRACEVFORK |
+                                     PTRACE_O_TRACECLONE |                     // NOLINT
+                                     PTRACE_O_TRACEEXIT | PTRACE_O_TRACEEXEC); // NOLINT
         // FIXME TODO continue this new thread/process ONLY if already registered in the
         // thread map.
         ptrace_cont(child);
@@ -280,7 +279,7 @@ ProcessController::SignalHandlingState ProcessController::handle_stop_signal(Thr
     }
     case SIGTRAP: // maybe a different kind of ptrace-stop
     {
-        auto event = status >> 16;
+        const auto event = status >> 16ULL;
         if (event != 0)
         {
             handle_ptrace_event(child, event);

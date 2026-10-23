@@ -105,7 +105,7 @@ struct hash<lo2s::Thread>
 {
     std::size_t operator()(const lo2s::Thread& t) const
     {
-        return ((std::hash<int64_t>()(static_cast<std::size_t>(t.as_int()))));
+        return std::hash<int64_t>()(static_cast<std::size_t>(t.as_int()));
     }
 };
 } // namespace std

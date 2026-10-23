@@ -15,7 +15,7 @@ namespace lo2s::perf
 
 struct PosixIOConfig
 {
-    PosixIOConfig(nitro::options::arguments& arguments);
+    explicit PosixIOConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     std::chrono::nanoseconds read_interval = std::chrono::nanoseconds(0);

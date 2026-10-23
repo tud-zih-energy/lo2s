@@ -4,19 +4,21 @@
 
 #include <lo2s/perf/counter/userspace/writer.hpp>
 
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/userspace/reader.hpp>
 #include <lo2s/perf/counter/userspace/userspace_counter_buffer.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 
+#include <otf2xx/chrono/time_point.hpp>
+
+#include <variant>
 #include <vector>
 
 #include <cassert>
 #include <cstddef>
-
-#include "lo2s/trace/reg_keys.hpp"
-
 namespace lo2s::perf::counter::userspace
 {
 Writer::Writer(std::variant<Cpu, Thread> scope, trace::Trace& trace)

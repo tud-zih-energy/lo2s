@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 
+#include <lo2s/trace/thread_names.hpp>
 #include <lo2s/types/core.hpp>
 #include <lo2s/types/cpu.hpp>
 #include <lo2s/types/package.hpp>

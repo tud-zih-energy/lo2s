@@ -5,7 +5,6 @@
 #pragma once
 #include <lo2s/address.hpp>
 #include <lo2s/line_info.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/bio/block_device.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>

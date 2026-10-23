@@ -7,6 +7,7 @@
 #include <lo2s/address.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/line_info.hpp>
+#include <lo2s/log.hpp>
 #include <lo2s/types/process.hpp>
 
 #include <map>
@@ -19,7 +20,7 @@ namespace lo2s
 class PerfMap : public FunctionResolver
 {
 public:
-    PerfMap(Process process);
+    explicit PerfMap(Process process);
 
     static std::shared_ptr<PerfMap> cache(Process process)
     {
@@ -29,12 +30,12 @@ public:
 
     Mapping mapping()
     {
-        return { start_, end_, 0 };
+        return { start_, end_, Address{ 0 } };
     }
 
     LineInfo lookup_line_info(Address addr, uint64_t offset [[maybe_unused]] = 0) override
     {
-        auto it = entries_.find(addr + start_);
+        const auto it = entries_.find(Range{ addr });
         if (it != entries_.end())
         {
             return it->second;
@@ -49,7 +50,7 @@ public:
 
 private:
     std::map<Range, LineInfo> entries_;
-    Address start_ = UINT64_MAX;
-    Address end_ = UINT64_MAX;
+    Address start_ = Address::max();
+    Address end_ = Address::max();
 };
 } // namespace lo2s

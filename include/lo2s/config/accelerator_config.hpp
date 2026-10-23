@@ -13,7 +13,7 @@ namespace lo2s
 
 struct AcceleratorConfig
 {
-    AcceleratorConfig(nitro::options::arguments& arguments);
+    explicit AcceleratorConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     bool nvidia = false;

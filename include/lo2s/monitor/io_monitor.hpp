@@ -17,16 +17,22 @@ template <class Writer>
 class IoMonitor : public PollMonitor
 {
 public:
-    IoMonitor(trace::Trace& trace) : monitor::PollMonitor(trace, "IoMonitor"), multi_reader_(trace)
+    explicit IoMonitor(trace::Trace& trace)
+    : monitor::PollMonitor(trace, "IoMonitor"), multi_reader_(trace)
 
     {
-        for (auto fd : multi_reader_.get_fds())
+        for (const auto fd : multi_reader_.get_fds())
         {
             add_fd(fd);
         }
     }
 
-private:
+    std::string group() const override
+    {
+        return "lo2s::IoMonitor";
+    }
+
+protected:
     void monitor(int fd [[maybe_unused]]) override
     {
         multi_reader_.read();
@@ -37,11 +43,7 @@ private:
         multi_reader_.finalize();
     }
 
-    std::string group() const override
-    {
-        return "lo2s::IoMonitor";
-    }
-
+private:
     perf::MultiReader<Writer> multi_reader_;
 };
 

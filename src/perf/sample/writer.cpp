@@ -8,22 +8,28 @@
 #include <lo2s/calling_context.hpp>
 #include <lo2s/function_resolver.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/sample/reader.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/perf/types.hpp>
 #include <lo2s/resolvers.hpp>
 #include <lo2s/summary.hpp>
 #include <lo2s/time/time.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/types/process.hpp>
 #include <lo2s/types/thread.hpp>
 
 #include <otf2xx/chrono/time_point.hpp>
+#include <otf2xx/event/thread_begin.hpp>
+#include <otf2xx/event/thread_end.hpp>
 #include <otf2xx/exception.hpp>
 
 #include <exception>
 #include <map>
 #include <optional>
+#include <string>
+#include <variant>
 
 #include <cassert>
 #include <cstdint>
@@ -68,11 +74,12 @@ void Writer::emplace_resolvers(Resolvers& resolvers)
     {
         try
         {
-            Mapping const m(mmap_event.get()->addr, mmap_event.get()->addr + mmap_event.get()->len,
-                            mmap_event.get()->pgoff);
+            Mapping const m(Address(mmap_event.get()->addr),
+                            Address(mmap_event.get()->addr + mmap_event.get()->len),
+                            Address(mmap_event.get()->pgoff));
             Process p(mmap_event.get()->pid);
 
-            auto fr = function_resolver_for(mmap_event.get()->filename);
+            const auto fr = function_resolver_for(mmap_event.get()->filename);
 
             resolvers.function_resolvers.emplace(p, p);
             if (fr != nullptr)
@@ -117,7 +124,8 @@ bool Writer::handle(const RecordMmapType* mmap_event)
     }
 
     Log::trace() << "encountered mmap event for process " << Process(mmap_event->pid) << ": ";
-    Log::trace() << Mapping(mmap_event->addr, mmap_event->addr + mmap_event->len, mmap_event->pgoff)
+    Log::trace() << Mapping(Address(mmap_event->addr), Address(mmap_event->addr + mmap_event->len),
+                            Address(mmap_event->pgoff))
                  << " " << mmap_event->filename;
 
     cached_mmap_events_.emplace_back(mmap_event);

@@ -12,7 +12,9 @@
 #include <stdexcept>
 #include <string>
 
+#include <cerrno>
 #include <cstdint>
+#include <cstring>
 
 extern "C"
 {
@@ -59,7 +61,7 @@ void PollMonitor::monitor()
 {
     for (const auto& pfd : pfds_)
     {
-        if (pfd.revents & POLLIN)
+        if (static_cast<uint64_t>(pfd.revents) & static_cast<uint64_t>(POLLIN))
         {
             monitor(pfd.fd);
         }
@@ -71,7 +73,7 @@ void PollMonitor::run()
     bool stop_requested = false;
     while (!stop_requested)
     {
-        auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
+        const auto ret = ::poll(pfds_.data(), pfds_.size(), -1);
         num_wakeups_++;
 
         if (ret == 0)
@@ -104,7 +106,7 @@ void PollMonitor::run()
 
         monitor();
 
-        if (stop_pfd().revents & POLLIN)
+        if (static_cast<uint64_t>(stop_pfd().revents) & static_cast<uint64_t>(POLLIN))
         {
             Log::debug() << "Requested stop of PollMonitor";
             stop_requested = true;

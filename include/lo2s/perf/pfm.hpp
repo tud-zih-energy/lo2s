@@ -61,8 +61,8 @@ public:
             throw EventAttr::InvalidEvent("Could not read PFM event encoding");
         }
 
-        EventAttr ev =
-            PredefinedEventAttr(ev_desc, (perf_type_id)attr.type, attr.config, attr.config1);
+        EventAttr ev = PredefinedEventAttr(ev_desc, static_cast<perf_type_id>(attr.type),
+                                           attr.config, attr.config1);
 
         return ev;
     }
@@ -75,7 +75,8 @@ public:
         {
             pfm_event_attr_info_t attr_info;
             memset(&attr_info, 0, sizeof(attr_info));
-            auto ret = pfm_get_event_attr_info(info.idx, attr_id, PFM_OS_PERF_EVENT, &attr_info);
+            const auto ret =
+                pfm_get_event_attr_info(info.idx, attr_id, PFM_OS_PERF_EVENT, &attr_info);
 
             if (ret != PFM_SUCCESS)
             {
@@ -90,7 +91,7 @@ public:
             has_umask = true;
             try
             {
-                auto uevent =
+                const auto uevent =
                     pfm4_read_event(fmt::format("{}:{}", full_event_name, attr_info.name));
                 events.emplace_back(uevent);
             }
@@ -106,7 +107,7 @@ public:
         {
             try
             {
-                auto event = pfm4_read_event(std::string(full_event_name));
+                const auto event = pfm4_read_event(std::string(full_event_name));
                 events.emplace_back(event);
             }
             catch (EventAttr::InvalidEvent& e)
@@ -128,7 +129,7 @@ public:
         {
             memset(&pinfo, 0, sizeof(pinfo));
 
-            if (pfm_get_pmu_info((pfm_pmu_t)pmu_id, &pinfo) != PFM_SUCCESS)
+            if (pfm_get_pmu_info(static_cast<pfm_pmu_t>(pmu_id), &pinfo) != PFM_SUCCESS)
             {
                 continue;
             }
@@ -154,7 +155,7 @@ public:
                 {
                     try
                     {
-                        auto event = pfm4_read_event(std::string(full_event_name));
+                        const auto event = pfm4_read_event(std::string(full_event_name));
                         events.emplace_back(event);
                     }
                     catch (EventAttr::InvalidEvent& e)

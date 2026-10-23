@@ -20,7 +20,7 @@ namespace lo2s::metric::x86_energy
 class Metrics
 {
 public:
-    Metrics(trace::Trace& trace);
+    explicit Metrics(trace::Trace& trace);
 
     void start();
     void stop();

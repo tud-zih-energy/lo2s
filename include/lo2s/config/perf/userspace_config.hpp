@@ -17,7 +17,7 @@ namespace lo2s::perf::counter
 
 struct UserspaceConfig
 {
-    UserspaceConfig(nitro::options::arguments& arguments);
+    explicit UserspaceConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     bool enabled = false;

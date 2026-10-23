@@ -250,7 +250,7 @@ void Config::check()
     }
     for (const auto& event : userspace.counters)
     {
-        auto it = std::find(group.counters.begin(), group.counters.end(), event);
+        const auto it = std::find(group.counters.begin(), group.counters.end(), event);
 
         if (it != group.counters.end())
         {
@@ -267,14 +267,16 @@ void Config::check()
 
 void to_json(nlohmann::json& j, const perf::Config& config)
 {
-    j = nlohmann::json({ { "sampling", config.sampling },
-                         { "tracepoints", config.tracepoints },
-                         { "block_io", config.block_io },
-                         { "posix_io", config.posix_io },
-                         { "use_perf", config.any_perf() },
-                         { "use_tracepoints", config.any_tracepoints() },
-                         { "syscall", config.syscall },
-                         { "group", config.group },
-                         { "userspace", config.userspace } });
+    j = nlohmann::json({
+        { "sampling", config.sampling },
+        { "tracepoints", config.tracepoints },
+        { "block_io", config.block_io },
+        { "posix_io", config.posix_io },
+        { "use_perf", config.any_perf() },
+        { "use_tracepoints", config.any_tracepoints() },
+        { "syscall", config.syscall },
+        { "group", config.group },
+        { "userspace", config.userspace },
+    });
 }
 } // namespace lo2s::perf

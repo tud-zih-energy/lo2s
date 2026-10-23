@@ -18,7 +18,7 @@ struct SensorsConfig
 {
 
     static void add_parser(nitro::options::parser& parser);
-    SensorsConfig(nitro::options::arguments& arguments);
+    explicit SensorsConfig(nitro::options::arguments& arguments);
     void check();
     bool enabled = false;
     std::chrono::milliseconds read_interval = std::chrono::milliseconds(0);

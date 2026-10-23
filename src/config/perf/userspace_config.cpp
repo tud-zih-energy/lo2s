@@ -41,8 +41,10 @@ void UserspaceConfig::add_parser(nitro::options::parser& parser)
 
 void to_json(nlohmann::json& j, const UserspaceConfig& config)
 {
-    j = nlohmann::json({ { "enabled", config.enabled },
-                         { "read_interval", config.read_interval.count() },
-                         { "counters", config.counters } });
+    j = nlohmann::json({
+        { "enabled", config.enabled },
+        { "read_interval", config.read_interval.count() },
+        { "counters", config.counters },
+    });
 }
 } // namespace lo2s::perf::counter

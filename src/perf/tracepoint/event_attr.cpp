@@ -53,8 +53,8 @@ void TracepointEventAttr::parse_format()
     std::ifstream ifs_id;
     std::ifstream ifs_format;
 
-    auto id_path = path_event / "id";
-    auto format_path = path_event / "format";
+    const auto id_path = path_event / "id";
+    const auto format_path = path_event / "format";
 
     ifs_id.open(id_path);
     ifs_id >> id_;
@@ -97,8 +97,8 @@ void TracepointEventAttr::parse_format_line(const std::string& line)
     }
 
     std::string const param = field_match[1];
-    auto offset = stol(field_match[2]);
-    auto size = stol(field_match[3]);
+    const auto offset = stol(field_match[2]);
+    const auto size = stol(field_match[3]);
 
     std::smatch type_name_match;
     if (!std::regex_match(param, type_name_match, type_name_regex))

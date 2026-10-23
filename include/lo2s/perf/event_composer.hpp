@@ -5,7 +5,6 @@
 #pragma once
 
 #include <lo2s/config.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>

@@ -5,15 +5,17 @@
 #include <lo2s/monitor/scope_monitor.hpp>
 
 #include <lo2s/config.hpp>
-#include <lo2s/log.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/counter/group/writer.hpp>
 #include <lo2s/perf/counter/userspace/writer.hpp>
 #include <lo2s/perf/sample/writer.hpp>
 #include <lo2s/perf/syscall/writer.hpp>
 #include <lo2s/trace/trace.hpp>
+#include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
 
+#include <memory>
 #include <variant>
 
 namespace lo2s::monitor

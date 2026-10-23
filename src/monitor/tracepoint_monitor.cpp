@@ -28,7 +28,7 @@ TracepointMonitor::TracepointMonitor(trace::Trace& trace, Cpu cpu)
 
     for (const auto& event : tracepoint_events)
     {
-        auto& mc = trace.tracepoint_metric_class(event);
+        const auto& mc = trace.tracepoint_metric_class(event);
         std::unique_ptr<perf::tracepoint::Writer> writer =
             std::make_unique<perf::tracepoint::Writer>(cpu, event, trace, mc);
 

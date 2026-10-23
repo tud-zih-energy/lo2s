@@ -5,7 +5,6 @@
 #include <lo2s/rb/shm_ringbuf.hpp>
 
 #include <lo2s/rb/header.hpp>
-#include <lo2s/util.hpp>
 
 #include <stdexcept>
 #include <string>
@@ -13,6 +12,11 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+
+extern "C"
+{
+#include <unistd.h>
+}
 
 namespace lo2s
 {
@@ -58,7 +62,7 @@ ShmRingbuf::ShmRingbuf(int fd) : fd_(fd)
 std::byte* ShmRingbuf::head(size_t ev_size)
 {
     // Always round to the nearest multiple of 8, cause of alignment.
-    ev_size = (ev_size + 7) & ~7;
+    ev_size = (ev_size + 7ULL) & ~7ULL;
     uint64_t const head = header_->head.load();
     uint64_t const tail = header_->tail.load();
     assert(tail % 8 == 0);
@@ -90,7 +94,7 @@ std::byte* ShmRingbuf::head(size_t ev_size)
 
 std::byte* ShmRingbuf::tail(uint64_t ev_size)
 {
-    ev_size = (ev_size + 7) & ~7;
+    ev_size = (ev_size + 7ULL) & ~7ULL;
     if (!can_be_loaded(ev_size))
     {
         return nullptr;
@@ -106,13 +110,13 @@ std::byte* ShmRingbuf::tail(uint64_t ev_size)
 
 void ShmRingbuf::advance_head(size_t ev_size)
 {
-    ev_size = (ev_size + 7) & ~7;
+    ev_size = (ev_size + 7ULL) & ~7ULL;
     header_->head.store((header_->head.load() + ev_size) % header_->size);
 }
 
 void ShmRingbuf::advance_tail(size_t ev_size)
 {
-    ev_size = (ev_size + 7) & ~7;
+    ev_size = (ev_size + 7ULL) & ~7ULL;
     // Calling pop() without trying to get() data from the ringbuffer first is an error
     assert(can_be_loaded(ev_size));
 
@@ -122,7 +126,7 @@ void ShmRingbuf::advance_tail(size_t ev_size)
 
 bool ShmRingbuf::can_be_loaded(size_t ev_size)
 {
-    ev_size = (ev_size + 7) & ~7;
+    ev_size = (ev_size + 7ULL) & ~7ULL;
     uint64_t const head = header_->head.load();
     uint64_t const tail = header_->tail.load();
 

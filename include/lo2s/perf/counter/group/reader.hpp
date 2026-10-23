@@ -6,7 +6,6 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/counter/group/group_counter_buffer.hpp>
 #include <lo2s/perf/event_attr.hpp>

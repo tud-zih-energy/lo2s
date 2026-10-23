@@ -65,9 +65,9 @@ protected:
             // diff_running being 0 indicates that the counter did not run during the last sampling
             // interval
 
-            auto diff_enabled = crtp_this->diff_enabled(i);
-            auto diff_running = crtp_this->diff_running(i);
-            auto diff_value = crtp_this->diff_value(i);
+            const auto diff_enabled = crtp_this->diff_enabled(i);
+            const auto diff_running = crtp_this->diff_running(i);
+            const auto diff_value = crtp_this->diff_value(i);
 
             if (diff_enabled == 0 || diff_running == 0 || diff_value == 0)
             {
@@ -91,7 +91,7 @@ private:
     CounterBuffer(CounterBuffer&&) = default;
     ~CounterBuffer() = default;
 
-    CounterBuffer(std::size_t ncounters) : accumulated_(ncounters, 0)
+    explicit CounterBuffer(std::size_t ncounters) : accumulated_(ncounters, 0)
     {
     }
 

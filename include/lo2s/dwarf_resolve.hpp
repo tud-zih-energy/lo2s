@@ -23,7 +23,7 @@ namespace lo2s
 class DwarfFunctionResolver : public FunctionResolver
 {
 public:
-    DwarfFunctionResolver(const std::string& name);
+    explicit DwarfFunctionResolver(const std::string& name);
 
     static std::shared_ptr<FunctionResolver> cache(const std::string& name)
     {
@@ -39,7 +39,7 @@ public:
     ~DwarfFunctionResolver() override;
     LineInfo lookup_line_info(Address addr, uint64_t offset) override;
 
-    std::string name()
+    std::string name() override
     {
         return name_;
     }

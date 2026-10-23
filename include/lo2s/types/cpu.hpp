@@ -8,7 +8,6 @@
 
 #include <cstdint>
 
-#include <fmt/base.h>
 #include <fmt/format.h>
 
 namespace lo2s

@@ -31,14 +31,14 @@ public:
                 const std::vector<::x86_adapt::configuration_item>& configuration_items,
                 trace::Trace& trace, const otf2::definition::metric_class& metric_class);
 
-protected:
-    void monitor(int fd) override;
-    void initialize_thread() override;
-
     std::string group() const override
     {
         return "x86_adapt::NodeMonitor";
     }
+
+protected:
+    void monitor(int fd) override;
+    void initialize_thread() override;
 
 private:
     ::x86_adapt::device device_;

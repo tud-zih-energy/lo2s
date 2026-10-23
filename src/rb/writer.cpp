@@ -4,26 +4,22 @@
 
 #include <lo2s/rb/writer.hpp>
 
+#include <lo2s/error.hpp>
 #include <lo2s/rb/header.hpp>
 #include <lo2s/rb/shm_ringbuf.hpp>
 #include <lo2s/types/process.hpp>
 
 #include <memory>
 #include <stdexcept>
-#include <string>
 #include <system_error>
 
 #include <cassert>
 #include <cerrno>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 
 #include <sys/mman.h>
-#include <unistd.h>
-
-#include "lo2s/error.hpp"
 
 extern "C"
 {
@@ -106,7 +102,7 @@ RingbufWriter::RingbufWriter(Process process, RingbufMeasurementType type)
         rb_ = std::make_unique<ShmRingbuf>(recvfd);
 
         rb_->header()->pid = process.as_int();
-        rb_->header()->type = (uint64_t)type;
+        rb_->header()->type = static_cast<uint64_t>(type);
     }
     else
     {

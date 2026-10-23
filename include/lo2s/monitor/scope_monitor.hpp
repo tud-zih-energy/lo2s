@@ -25,9 +25,6 @@ class ScopeMonitor : public PollMonitor
 public:
     ScopeMonitor(std::variant<Cpu, Thread> scope, trace::Trace& trace, bool enable_on_exec);
 
-    void initialize_thread() override;
-    void finalize_thread() override;
-    void monitor(int fd) override;
 
     std::string group() const override
     {
@@ -45,6 +42,11 @@ public:
             sample_writer_->emplace_resolvers(resolvers);
         }
     }
+
+protected:
+    void initialize_thread() override;
+    void finalize_thread() override;
+    void monitor(int fd) override;
 
 private:
     std::variant<Cpu, Thread> scope_;

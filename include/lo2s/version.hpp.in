@@ -10,7 +10,7 @@ namespace lo2s
 {
 static const std::string& version()
 {
-    static std::string version_string = "@LO2S_VERSION_STRING@"
+    static const std::string version_string = "@LO2S_VERSION_STRING@"
                                         " (" __DATE__ ")";
 
     return version_string;

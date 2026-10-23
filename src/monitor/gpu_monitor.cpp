@@ -6,25 +6,25 @@
 
 #include <lo2s/address.hpp>
 #include <lo2s/calling_context.hpp>
-#include <lo2s/config.hpp>
 #include <lo2s/gpu/events.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/monitor/poll_monitor.hpp>
 #include <lo2s/perf/time/converter.hpp>
+#include <lo2s/rb/reader.hpp>
+#include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/trace/trace.hpp>
 
 #include <algorithm>
+#include <string>
+#include <utility>
 
 #include <cstdint>
-
-#include "lo2s/rb/reader.hpp"
 
 namespace lo2s::monitor
 {
 
 GPUMonitor::GPUMonitor(trace::Trace& trace, RingbufReader&& ringbuf_reader)
-: PollMonitor(trace, "GPUMonitor"), ringbuf_reader_(std::move(ringbuf_reader)),
-  process_(ringbuf_reader_.header()->pid), time_converter_(perf::time::Converter::instance()),
+: PollMonitor(trace, "GPUMonitor"), process_(ringbuf_reader.header()->pid),
+  ringbuf_reader_(std::move(ringbuf_reader)), time_converter_(perf::time::Converter::instance()),
   local_cctx_tree_(trace.create_local_cctx_tree(trace::SampleKind::GPU, process_.as_thread()))
 {
 }
@@ -46,8 +46,8 @@ void GPUMonitor::monitor(int fd [[maybe_unused]])
         {
             const auto* kernel = ringbuf_reader_.get<struct gpu::kernel>();
 
-            auto start_tp = time_converter_(kernel->start_tp);
-            auto end_tp = time_converter_(kernel->end_tp);
+            const auto start_tp = time_converter_(kernel->start_tp);
+            const auto end_tp = time_converter_(kernel->end_tp);
 
             local_cctx_tree_.cctx_enter(start_tp, CCTX_LEVEL_PROCESS,
                                         CallingContext::process(process_),

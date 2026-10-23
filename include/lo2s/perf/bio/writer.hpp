@@ -62,7 +62,7 @@ struct __attribute((__packed__)) RecordBioQueue
 class Writer
 {
 public:
-    Writer(trace::Trace& trace);
+    explicit Writer(trace::Trace& trace);
     void write(IoReaderIdentity& identity, TracepointSampleType* header);
     std::vector<perf::tracepoint::TracepointEventAttr> get_tracepoints();
 
@@ -75,7 +75,7 @@ private:
         // bitshifts as documented in block/block_rq_*/format So first convert the dev field
         // into major:minor numbers and then use the makedev macro to get an unbroken dev_t.
         return BlockDevice::block_device_for(
-            makedev(event->dev >> 20, event->dev & ((1U << 20) - 1)));
+            makedev(event->dev >> 20ULL, event->dev & ((1U << 20ULL) - 1)));
     }
 
     std::map<BlockDevice, std::map<uint64_t, uint64_t>> sector_cache_;

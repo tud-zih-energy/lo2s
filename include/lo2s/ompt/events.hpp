@@ -25,13 +25,13 @@ enum class OMPType : uint64_t
     SYNC = 2,
     LOOP = 3,
     WORKSHARE = 4,
-    OTHER = 5
+    OTHER = 5,
 };
 
 enum class EventType : uint64_t
 {
     OMPT_ENTER = 0,
-    OMPT_EXIT = 1
+    OMPT_EXIT = 1,
 };
 
 struct OMPTCctx

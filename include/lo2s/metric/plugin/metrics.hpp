@@ -17,7 +17,7 @@ class Plugin;
 class Metrics
 {
 public:
-    Metrics(trace::Trace& trace);
+    explicit Metrics(trace::Trace& trace);
 
     Metrics(Metrics&) = delete;
     Metrics(Metrics&&) = delete;

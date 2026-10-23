@@ -72,8 +72,6 @@ std::string get_process_comm(Process process);
 std::vector<std::string> get_thread_cmdline(Thread thread);
 std::string get_task_comm(Process process, Thread thread);
 
-std::string get_nec_thread_comm(Thread thread);
-
 std::chrono::duration<double> get_cpu_time();
 std::string get_datetime();
 
@@ -83,10 +81,8 @@ inline std::string scope_get_name(std::variant<Cpu, Thread> scope)
     {
         return fmt::format("cpu {}", std::get<Cpu>(scope).as_int());
     }
-    else
-    {
-        return fmt::format("thread {}", std::get<Thread>(scope).as_int());
-    }
+
+    return fmt::format("thread {}", std::get<Thread>(scope).as_int());
 }
 
 const struct ::utsname& get_uname();
@@ -94,7 +90,7 @@ const struct ::utsname& get_uname();
 template <typename T>
 T get_sysctl(const std::string& group, const std::string& name)
 {
-    auto sysctl_path = std::filesystem::path("/proc/sys") / group / name;
+    const auto sysctl_path = std::filesystem::path("/proc/sys") / group / name;
     std::ifstream sysctl_stream;
     sysctl_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     sysctl_stream.open(sysctl_path);

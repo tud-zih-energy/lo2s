@@ -60,8 +60,9 @@ public:
 
     Cpu measuring_cpu_for_package(Package package) const
     {
-        auto package_it = std::find_if(cpu_to_package_.begin(), cpu_to_package_.end(),
-                                       [package](auto elem) { return elem.second == package; });
+        const auto package_it =
+            std::find_if(cpu_to_package_.begin(), cpu_to_package_.end(),
+                         [package](auto elem) { return elem.second == package; });
 
         if (package_it != cpu_to_package_.end())
         {

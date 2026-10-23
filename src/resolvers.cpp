@@ -22,7 +22,7 @@ void Resolvers::fork(Process parent, Process process)
 
 void Resolvers::emplace_mappings_for(Process p, const Mapping& m, const std::string& binary_name)
 {
-    auto fr = function_resolver_for(binary_name);
+    const auto fr = function_resolver_for(binary_name);
     if (fr != nullptr)
     {
         function_resolvers.at(p).emplace(m, fr);

@@ -17,7 +17,7 @@ namespace lo2s::perf::counter
 {
 struct GroupConfig
 {
-    GroupConfig(nitro::options::arguments& arguments);
+    explicit GroupConfig(nitro::options::arguments& arguments);
 
     static void add_parser(nitro::options::parser& parser);
 

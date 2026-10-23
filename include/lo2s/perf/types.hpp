@@ -40,7 +40,8 @@ public:
         return *this;
     }
 
-    PerfEventCache(const T* event) : data_(std::make_unique<std::byte[]>(event->header.size))
+    explicit PerfEventCache(const T* event)
+    : data_(std::make_unique<std::byte[]>(event->header.size))
     {
         memcpy(data_.get(), event, event->header.size);
     }

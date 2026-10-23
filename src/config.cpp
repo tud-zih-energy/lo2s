@@ -37,18 +37,12 @@
 #ifdef HAVE_X86_ADAPT
 #endif
 
-#include <nitro/log/severity.hpp>
-#include <nitro/options/exception.hpp>
 #include <nitro/options/parser.hpp>
 
 #include <cstdlib>
 
-#include <fmt/core.h>
-#include <fmt/format.h>
-
 extern "C"
 {
-#include <sys/types.h>
 #include <unistd.h>
 }
 
@@ -141,15 +135,12 @@ void Config::add_parser(nitro::options::parser& parser)
 
 void Config::check() const
 {
-    if (perf.posix_io.enabled)
+    if (perf.posix_io.enabled && getuid() != 0)
     {
-        if (getuid() != 0)
-        {
-            std::cerr << "POSIX I/O recording makes use of BPF" << std::endl;
-            std::cerr << "BPF is currently only available to root" << std::endl;
-            std::cerr << "please re-run lo2s as root." << std::endl;
-            std::exit(EXIT_FAILURE);
-        }
+        std::cerr << "POSIX I/O recording makes use of BPF" << std::endl;
+        std::cerr << "BPF is currently only available to root" << std::endl;
+        std::cerr << "please re-run lo2s as root." << std::endl;
+        std::exit(EXIT_FAILURE);
     }
 
     if (perf.cgroup_fd != -1 && general.monitor_type == MonitorType::PROCESS)
@@ -158,25 +149,19 @@ void Config::check() const
         std::exit(EXIT_FAILURE);
     }
 
-    if (perf.any_perf())
+    if (perf.any_perf() && general.monitor_type == MonitorType::CPU_SET &&
+        perf::perf_event_paranoid() > 0)
     {
-        if (general.monitor_type == MonitorType::CPU_SET)
-        {
-            if (perf::perf_event_paranoid() > 0)
-            {
-                std::cerr << "You requested system-wide perf measurements, but "
-                             "kernel.perf_event_paranoid > 0, "
-                          << std::endl;
-                std::cerr
-                    << "To be able to do system-wide perf measurements in lo2s, do one of the "
-                       "following:"
-                    << std::endl;
-                std::cerr << " * sysctl kernel.perf_event_paranoid=0" << std::endl;
-                std::cerr << " * run lo2s as root" << std::endl;
+        std::cerr << "You requested system-wide perf measurements, but "
+                     "kernel.perf_event_paranoid > 0, "
+                  << std::endl;
+        std::cerr << "To be able to do system-wide perf measurements in lo2s, do one of the "
+                     "following:"
+                  << std::endl;
+        std::cerr << " * sysctl kernel.perf_event_paranoid=0" << std::endl;
+        std::cerr << " * run lo2s as root" << std::endl;
 
-                std::exit(1);
-            }
-        }
+        std::exit(1);
     }
     if (general.monitor_type == lo2s::MonitorType::PROCESS &&
         general.process == Process::invalid() && put.command.empty())
@@ -186,7 +171,7 @@ void Config::check() const
         std::exit(EXIT_FAILURE);
     }
 
-    if (put.as_user.drop_root && (std::getenv("SUDO_UID") == nullptr) && (put.as_user.user.empty()))
+    if (put.as_user.drop_root && std::getenv("SUDO_UID") == nullptr && put.as_user.user.empty())
     {
         Log::error() << "-u was specified but no sudo was detected.";
         std::exit(EXIT_FAILURE);
@@ -201,16 +186,18 @@ void Config::check() const
 
 void to_json(nlohmann::json& j, const Config& config)
 {
-    j = nlohmann::json({ { "general", config.general },
-                         { "otf2", config.otf2 },
-                         { "program_under_test", config.put },
-                         { "perf", config.perf },
-                         { "dwarf", config.dwarf },
-                         { "x86_energy", config.x86_energy },
-                         { "x86_adapt", config.x86_adapt },
-                         { "sensors", config.sensors },
-                         { "accel", config.accel },
-                         { "ringbuf", config.rb } });
+    j = nlohmann::json({
+        { "general", config.general },
+        { "otf2", config.otf2 },
+        { "program_under_test", config.put },
+        { "perf", config.perf },
+        { "dwarf", config.dwarf },
+        { "x86_energy", config.x86_energy },
+        { "x86_adapt", config.x86_adapt },
+        { "sensors", config.sensors },
+        { "accel", config.accel },
+        { "ringbuf", config.rb },
+    });
 }
 } // namespace lo2s
 

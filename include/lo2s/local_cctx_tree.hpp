@@ -4,7 +4,6 @@
 #pragma once
 
 #include <lo2s/calling_context.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/trace/fwd.hpp>
 #include <lo2s/trace/reg_keys.hpp>
 #include <lo2s/types/cpu.hpp>
@@ -166,7 +165,7 @@ private:
     LocalCctxMap::value_type* create_cctx_node(const CallingContext& cctx,
                                                LocalCctxMap::value_type* node)
     {
-        auto ret =
+        const auto ret =
             node->second.children.emplace(std::piecewise_construct, std::forward_as_tuple(cctx),
                                           std::forward_as_tuple(next_cctx_ref_));
 

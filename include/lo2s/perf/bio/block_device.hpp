@@ -21,7 +21,7 @@ namespace lo2s
 enum class BlockDeviceType
 {
     PARTITION,
-    DISK
+    DISK,
 };
 
 struct BlockDevice

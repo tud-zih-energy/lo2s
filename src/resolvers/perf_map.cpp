@@ -13,8 +13,6 @@
 #include <regex>
 #include <string>
 
-#include <cstdint>
-
 #include <fmt/format.h>
 
 namespace lo2s
@@ -43,7 +41,7 @@ PerfMap::PerfMap(Process process) : FunctionResolver(fmt::format("JIT functions 
             LineInfo info = LineInfo::for_unknown_function();
             Address const start(perf_map_match[1]);
 
-            if (start_ == UINT64_MAX)
+            if (start_ == Address::max())
             {
                 start_ = start;
             }

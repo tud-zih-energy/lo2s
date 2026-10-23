@@ -6,7 +6,10 @@
 
 #include <lo2s/log.hpp>
 #include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
+
+#include <variant>
 
 #include <cassert>
 

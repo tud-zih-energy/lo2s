@@ -62,7 +62,7 @@ enum class ValueType
 {
     INT64,
     UINT64,
-    DOUBLE
+    DOUBLE,
 };
 
 inline otf2::common::type convert_type(wrapper::ValueType value_type)
@@ -83,7 +83,7 @@ inline otf2::common::type convert_type(wrapper::ValueType value_type)
 enum class ValueBase
 {
     BINARY = 0,
-    DECIMAL = 1
+    DECIMAL = 1,
 };
 
 inline otf2::common::base_type convert_base(wrapper::ValueBase value_base)
@@ -104,7 +104,7 @@ enum class Per
     THREAD = 0,
     PROCESS,
     HOST,
-    ONCE
+    ONCE,
 };
 
 enum class Synchronicity
@@ -112,14 +112,14 @@ enum class Synchronicity
     STRICTLY_SYNC = 0,
     SYNC,
     ASYNC_EVENT,
-    ASYNC
+    ASYNC,
 };
 
 enum SynchronizationMode // NOLINT
 {
     BEGIN,
     BEGIN_MPP,
-    END
+    END,
 };
 
 struct Properties

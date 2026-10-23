@@ -21,7 +21,7 @@ namespace lo2s
 class RingbufReader
 {
 public:
-    RingbufReader(clockid_t clockid);
+    explicit RingbufReader(clockid_t clockid);
 
     RingbufReader(const RingbufReader&) = delete;
     RingbufReader& operator=(const RingbufReader& other) = delete;

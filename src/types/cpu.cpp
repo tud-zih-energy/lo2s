@@ -4,8 +4,11 @@
 
 #include <lo2s/types/cpu.hpp>
 
+#include <iostream>
+
 #include <cstdint>
 
+#include <fmt/format.h>
 namespace lo2s
 {
 

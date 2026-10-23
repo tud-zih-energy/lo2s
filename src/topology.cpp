@@ -22,7 +22,7 @@ namespace lo2s
 void Topology::read_proc()
 {
     const std::filesystem::path base_path = "/sys/devices/system/cpu";
-    auto online = parse_list_from_file(base_path / "online");
+    const auto online = parse_list_from_file(base_path / "online");
 
     for (auto cpu_id : online)
     {
@@ -48,13 +48,10 @@ void Topology::read_proc()
     while (std::getline(cpuinfo, line))
     {
         // if only C++14 had starts_with :(
-        if (line.find("flags") == 0)
+        if (line.find("flags") == 0 && line.find("hypervisor") != std::string::npos)
         {
-            if (line.find("hypervisor") != std::string::npos)
-            {
-                hypervised_ = true;
-                break;
-            }
+            hypervised_ = true;
+            break;
         }
     }
 }

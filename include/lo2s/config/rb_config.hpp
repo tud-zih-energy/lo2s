@@ -19,7 +19,7 @@ namespace lo2s
 {
 struct RingbufConfig
 {
-    RingbufConfig(nitro::options::arguments& arguments);
+    explicit RingbufConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     std::string socket_path;

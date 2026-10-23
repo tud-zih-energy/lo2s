@@ -16,7 +16,7 @@ namespace lo2s::perf
 {
 struct SamplingConfig
 {
-    SamplingConfig(nitro::options::arguments& arguments);
+    explicit SamplingConfig(nitro::options::arguments& arguments);
 
     static void add_parser(nitro::options::parser& parser);
 

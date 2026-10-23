@@ -20,9 +20,7 @@
 #include <string>
 #include <utility>
 
-namespace lo2s
-{
-namespace logging
+namespace lo2s::logging
 {
 
 using Record = nitro::log::record<nitro::log::message_attribute,
@@ -68,5 +66,7 @@ inline void set_min_severity_level(std::string verbosity)
 
 } // namespace logging
 
+namespace lo2s
+{
 using Log = logging::Logging;
 } // namespace lo2s

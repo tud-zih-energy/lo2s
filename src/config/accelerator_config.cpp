@@ -11,7 +11,6 @@
 #include <iostream>
 #include <vector>
 
-#include <cstdint>
 #include <cstdlib>
 
 #include <fmt/format.h>

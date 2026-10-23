@@ -43,11 +43,8 @@ void TracepointConfig::parse_print_options(nitro::options::arguments& arguments)
             std::cout << "For more information, see the section TRACEPOINT in the man-page\n";
             std::exit(EXIT_FAILURE);
         }
-        else
-        {
             list_arguments_sorted(std::cout, "Kernel tracepoint events", tracepoints);
             std::exit(EXIT_SUCCESS);
-        }
     }
 }
 

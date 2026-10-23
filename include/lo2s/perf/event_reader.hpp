@@ -25,7 +25,7 @@ extern "C"
 }
 
 /* perf sample has 16 bits size limit */
-#define PERF_SAMPLE_MAX_SIZE (1 << 16)
+#define PERF_SAMPLE_MAX_SIZE (1ULL << 16ULL)
 
 namespace lo2s::perf
 {
@@ -115,9 +115,9 @@ public:
         // struct sample_id sample_id;
     };
 
-    /**
+    /*
      * \brief structure for PERF_RECORD_COMM events
-     **/
+     */
     struct RecordCommType
     {
         struct perf_event_header header;
@@ -191,16 +191,17 @@ public:
             switch (event_header_p->type)
             {
             case PERF_RECORD_MMAP:
-                stop = crtp_this->handle((const RecordMmapType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordMmapType*>(event_header_p));
                 break;
             case PERF_RECORD_MMAP2:
-                stop = crtp_this->handle((const RecordMmap2Type*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordMmap2Type*>(event_header_p));
                 break;
             case PERF_RECORD_SWITCH:
-                stop = crtp_this->handle((const RecordSwitchType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordSwitchType*>(event_header_p));
                 break;
             case PERF_RECORD_SWITCH_CPU_WIDE:
-                stop = crtp_this->handle((const RecordSwitchCpuWideType*)event_header_p);
+                stop =
+                    crtp_this->handle(reinterpret_cast<RecordSwitchCpuWideType*>(event_header_p));
                 break;
             case PERF_RECORD_THROTTLE: /* fall-through */
             case PERF_RECORD_UNTHROTTLE:
@@ -208,7 +209,7 @@ public:
                 break;
             case PERF_RECORD_LOST:
             {
-                auto lost = (const RecordLostType*)event_header_p;
+                auto lost = reinterpret_cast<RecordLostType*>(event_header_p);
                 lost_samples += lost->lost;
                 Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
                 break;
@@ -216,7 +217,7 @@ public:
 #ifdef HAVE_PERF_RECORD_LOST_SAMPLES
             case PERF_RECORD_LOST_SAMPLES:
             {
-                auto lost = (const RecordLostSamplesType*)event_header_p;
+                auto lost = reinterpret_cast<RecordLostSamplesType*>(event_header_p);
                 lost_samples += lost->lost;
                 Log::warn() << "Lost " << lost->lost << " samples during this chunk.";
                 break;
@@ -227,20 +228,20 @@ public:
                 // when using HW_BREAKPOINT_COMPAT, so ignore
                 break;
             case PERF_RECORD_FORK:
-                stop = crtp_this->handle((const RecordForkType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordForkType*>(event_header_p));
                 break;
             case PERF_RECORD_SAMPLE:
             {
                 // Use CRTP here because the struct type depends on the perf attr
                 using ActualSampleType = typename CRTP::RecordSampleType;
-                stop = crtp_this->handle((const ActualSampleType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<ActualSampleType*>(event_header_p));
                 break;
             }
             case PERF_RECORD_COMM:
-                stop = crtp_this->handle((const RecordCommType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordCommType*>(event_header_p));
                 break;
             default:
-                stop = crtp_this->handle((const RecordUnknownType*)event_header_p);
+                stop = crtp_this->handle(reinterpret_cast<RecordUnknownType*>(event_header_p));
             }
             pop();
             if (stop)
@@ -253,7 +254,7 @@ public:
 
     void pop()
     {
-        auto* ev = get();
+        const auto* ev = get();
         data_tail(data_tail() + ev->size);
     }
 
@@ -264,8 +265,8 @@ public:
 
     perf_event_header* get()
     {
-        auto cur_head = data_head();
-        auto cur_tail = data_tail();
+        const auto cur_head = data_head();
+        const auto cur_tail = data_tail();
 
         assert(cur_tail <= cur_head);
         Log::trace() << "head: " << cur_head << ", tail: " << cur_tail;
@@ -277,15 +278,15 @@ public:
 
         auto d = data();
 
-        auto index = cur_tail % data_size();
-        auto* event_header_p = (struct perf_event_header*)(d + index);
-        auto len = event_header_p->size;
+        const auto index = cur_tail % data_size();
+        const auto* event_header_p = reinterpret_cast<const struct perf_event_header*>(d + index);
+        const auto len = event_header_p->size;
 
         // Event spans the wrap-around of the ring buffer
         if (index + len > data_size())
         {
-            size_t before_wrap = data_size() - index;
-            size_t after_wrap = len - before_wrap;
+            const size_t before_wrap = data_size() - index;
+            const size_t after_wrap = len - before_wrap;
             std::memcpy(event_copy, data() + index, before_wrap);
             std::memcpy(event_copy + before_wrap, data(), after_wrap);
 
@@ -307,12 +308,12 @@ private:
 
     uint64_t data_head() const
     {
-        return __atomic_load_n(&(header()->data_head), __ATOMIC_ACQUIRE);
+        return __atomic_load_n(&header()->data_head, __ATOMIC_ACQUIRE);
     }
 
     void data_tail(uint64_t tail)
     {
-        __atomic_store_n(&(header()->data_tail), tail, __ATOMIC_RELEASE);
+        __atomic_store_n(&header()->data_tail, tail, __ATOMIC_RELEASE);
     }
 
     // data_tail is only read in the kernel, so reads to data_tail in userspace do not have to be
@@ -352,7 +353,7 @@ public:
     template <class UNKNOWN_RECORD_TYPE>
     bool handle(const UNKNOWN_RECORD_TYPE* record)
     {
-        const auto* header = (perf_event_header*)record;
+        const auto* header = reinterpret_cast<const perf_event_header*>(record);
         Log::warn() << "unknown perf record type: " << header->type;
         return false;
     }

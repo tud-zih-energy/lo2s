@@ -52,7 +52,7 @@ void drop_privileges()
 
     if (config().put.as_user.user.empty())
     {
-        auto* orig_user = getpwnam(config().put.as_user.user.c_str());
+        const auto* orig_user = getpwnam(config().put.as_user.user.c_str());
         if (orig_user == nullptr)
         {
             Log::error() << "No user found with username '" + config().put.as_user.user + ".";
@@ -91,13 +91,10 @@ void drop_privileges()
     }
 
     // drop ancillary group if root is to be dropped, this needs root permissions
-    if (getuid() == 0 || getgid() == 0)
+    if ((getuid() == 0 || getgid() == 0) && setgroups(1, &original_gid) != 0)
     {
-        if (setgroups(1, &original_gid) != 0)
-        {
-            Log::error() << "Dropping ancillary group failed.";
-            throw_errno();
-        }
+        Log::error() << "Dropping ancillary group failed.";
+        throw_errno();
     }
 
     if (setgid(original_gid) != 0)
@@ -219,7 +216,7 @@ std::vector<char*> to_vector_of_c_str(const std::vector<std::string>& vec)
     execvp(c_args[0], c_args.data());
 
     // should not be executed -> exec failed, let's clean up anyway.
-    for (auto* cp : c_args)
+    for (const auto* cp : c_args)
     {
         delete[] cp;
     }
@@ -256,13 +253,13 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
         Log::error() << "Fork failed.";
         throw_errno();
     }
-    else if (process.as_int() == 0)
+
+    if (process.as_int() == 0)
     {
         assert(spawn);
         run_command(config().put.command);
     }
-    else
-    {
+
         std::string proc_name;
         if (spawn)
         {
@@ -275,6 +272,5 @@ void process_monitor_main(AbstractProcessMonitor& monitor)
 
         ProcessController controller(process, proc_name, spawn, monitor);
         controller.run();
-    }
 }
 } // namespace lo2s::monitor

@@ -32,10 +32,12 @@ struct GroupReadFormat
 class GroupCounterBuffer : public CounterBuffer<GroupCounterBuffer>
 {
 public:
-    GroupCounterBuffer(std::size_t ncounters)
+    explicit GroupCounterBuffer(std::size_t ncounters)
     : CounterBuffer<GroupCounterBuffer>(ncounters),
-      buf_({ std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)),
-             std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)) }),
+      buf_({
+          std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)),
+          std::make_unique<std::byte[]>(GroupReadFormat::total_size(ncounters)),
+      }),
       current_(reinterpret_cast<GroupReadFormat*>(buf_.front().get())),
       previous_(reinterpret_cast<GroupReadFormat*>(buf_.back().get()))
     {

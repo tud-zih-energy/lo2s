@@ -18,7 +18,7 @@ namespace lo2s
 
 struct ProgramUnderTestConfig
 {
-    ProgramUnderTestConfig(nitro::options::arguments& arguments);
+    explicit ProgramUnderTestConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     // Program-under-test

@@ -6,15 +6,17 @@
 
 #include <lo2s/config.hpp>
 #include <lo2s/log.hpp>
-#include <lo2s/measurement_scope.hpp>
 #include <lo2s/perf/counter/counter_collection.hpp>
 #include <lo2s/perf/event_attr.hpp>
 #include <lo2s/perf/event_resolver.hpp>
 #include <lo2s/perf/tracepoint/event_attr.hpp>
+#include <lo2s/types/cpu.hpp>
 #include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
 
 #include <optional>
+#include <string>
+#include <variant>
 #include <vector>
 
 #include <cassert>
@@ -102,7 +104,8 @@ EventAttr EventComposer::create_sampling_event()
     watermark(res);
 
     // TODO see if we can remove remove tid
-    res.set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_CPU);
+    res.set_sample_type(PERF_SAMPLE_TIME | PERF_SAMPLE_IP | PERF_SAMPLE_TID |
+                        PERF_SAMPLE_CPU); // NOLINT
 
     if (config().perf.sampling.enable_callgraph)
     {
@@ -228,8 +231,9 @@ void EventComposer::emplace_group_counters()
 
     res.leader->set_clockid(config().perf.clockid);
 
-    res.leader->set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING |
-                                PERF_FORMAT_GROUP);
+    res.leader->set_read_format(PERF_FORMAT_TOTAL_TIME_ENABLED |
+                                PERF_FORMAT_TOTAL_TIME_RUNNING | // NOLINT
+                                PERF_FORMAT_GROUP);              // NOLINT
 
     watermark(res.leader.value());
 
@@ -301,7 +305,7 @@ counter::CounterCollection EventComposer::group_counters_for(std::variant<Cpu, T
     {
         res.leader = group_counters.leader.value();
 
-        for (auto& ev : group_counters.counters)
+        for (const auto& ev : group_counters.counters)
         {
             if (ev.is_available_in(scope))
             {
@@ -326,7 +330,7 @@ counter::CounterCollection EventComposer::userspace_counters_for(std::variant<Cp
     {
         return {};
     }
-    for (auto& ev : userspace_counters_->counters)
+    for (const auto& ev : userspace_counters_->counters)
     {
         if (ev.is_available_in(scope))
         {

@@ -48,9 +48,11 @@ void RingbufConfig::add_parser(nitro::options::parser& parser)
 
 void to_json(nlohmann::json& j, const RingbufConfig& config)
 {
-    j = nlohmann::json({ { "socket_path", config.socket_path },
-                         { "injectionlib_path", config.injectionlib_path },
-                         { "size", config.size },
-                         { "read_interval", config.read_interval.count() } });
+    j = nlohmann::json({
+        { "socket_path", config.socket_path },
+        { "injectionlib_path", config.injectionlib_path },
+        { "size", config.size },
+        { "read_interval", config.read_interval.count() },
+    });
 }
 }; // namespace lo2s

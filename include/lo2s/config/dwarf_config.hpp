@@ -14,13 +14,13 @@ enum class DwarfUsage
 {
     NONE,
     LOCAL,
-    FULL
+    FULL,
 };
 
 struct DwarfConfig
 {
 
-    DwarfConfig(nitro::options::arguments& arguments);
+    explicit DwarfConfig(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
     void check();
 

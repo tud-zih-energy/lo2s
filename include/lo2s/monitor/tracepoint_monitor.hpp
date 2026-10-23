@@ -21,16 +21,17 @@ class TracepointMonitor : public PollMonitor
 public:
     TracepointMonitor(trace::Trace& trace, Cpu cpu);
 
-private:
-    void monitor(int fd) override;
-    void initialize_thread() override;
-    void finalize_thread() override;
-
     std::string group() const override
     {
         return "tracepoint::TracepointMonitor";
     }
 
+protected:
+    void monitor(int fd) override;
+    void initialize_thread() override;
+    void finalize_thread() override;
+
+private:
     Cpu cpu_;
     std::map<int, std::unique_ptr<perf::tracepoint::Writer>> perf_writers_;
 };

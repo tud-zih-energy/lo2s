@@ -10,6 +10,7 @@
 #include <lo2s/perf/util.hpp>
 #include <lo2s/topology.hpp>
 #include <lo2s/types/cpu.hpp>
+#include <lo2s/types/thread.hpp>
 #include <lo2s/util.hpp>
 
 #include <algorithm>
@@ -89,11 +90,11 @@ std::uint64_t parse_bitmask(const std::string& format)
     for (std::sregex_iterator i = { format.begin(), format.end(), bit_mask_regex }; i != end; ++i)
     {
         const auto& match = *i;
-        int const start = std::stoi(match[BM_BEGIN]);
-        int const end = (match[BM_END].length() == 0) ? start : std::stoi(match[BM_END]);
+        unsigned int const start = std::stoul(match[BM_BEGIN]);
+        unsigned int const end = (match[BM_END].length() == 0) ? start : std::stoul(match[BM_END]);
 
-        const auto len = (end + 1) - start;
-        if (start < 0 || end > 64 - 1 || len > 64)
+        const uint64_t len = (end + 1) - start;
+        if (end > 64 - 1 || len > 64)
         {
             throw EventAttr::InvalidEvent("invalid config mask");
         }
@@ -121,11 +122,11 @@ std::uint64_t parse_bitmask(const std::string& format)
 constexpr std::uint64_t apply_mask(std::uint64_t value, std::uint64_t mask)
 {
     std::uint64_t res = 0;
-    for (int mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
+    for (uint64_t mask_bit = 0, value_bit = 0; mask_bit < 64; mask_bit++)
     {
         if (mask & (1ULL << mask_bit))
         {
-            res |= ((value >> value_bit) & (1ULL << 0)) << mask_bit;
+            res |= ((value >> value_bit) & (1ULL << 0ULL)) << mask_bit;
             value_bit++;
         }
     }
@@ -225,15 +226,14 @@ bool EventAttr::event_is_openable()
 
         if (availability_ == Availability::UNAVAILABLE)
         {
-            switch (errno)
+            if (errno == ENOTSUP)
             {
-            case ENOTSUP:
                 Log::debug() << "perf event not supported by the running kernel: " << name_;
-                break;
-            default:
+            }
+            else
+            {
                 Log::debug() << "perf event " << name_
                              << " not available: " << std::string(std::strerror(errno));
-                break;
             }
 
             return false;
@@ -703,13 +703,13 @@ EventGuard EventGuard::open_child(EventAttr& child, std::variant<Cpu, Thread> lo
 
 EventGuard::EventGuard(EventAttr& ev, std::variant<Cpu, Thread> location, int group_fd,
                        int cgroup_fd)
+: fd_(perf_event_open(&ev.attr(), location, group_fd, 0, cgroup_fd))
+
 {
 
     Log::trace() << "Opening perf event: " << ev.name() << "[" << scope_get_name(location)
                  << ", group fd: " << group_fd << ", cgroup fd: " << cgroup_fd << "]";
     Log::trace() << ev;
-    fd_ = perf_event_open(&ev.attr(), location, group_fd, 0, cgroup_fd);
-
     if (fd_ < 0)
     {
         Log::trace() << "Couldn't open event!: " << strerror(errno);

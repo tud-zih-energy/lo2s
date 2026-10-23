@@ -14,10 +14,12 @@ namespace lo2s
 {
 struct Otf2Config
 {
-    Otf2Config(nitro::options::arguments& arguments);
+    explicit Otf2Config(nitro::options::arguments& arguments);
     static void add_parser(nitro::options::parser& parser);
 
     std::string trace_path;
+    std::size_t definition_chunk_size;
+    std::size_t event_chunk_size;
 };
 
 void to_json(nlohmann::json& j, const Otf2Config& config);

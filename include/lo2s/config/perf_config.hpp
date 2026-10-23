@@ -27,7 +27,7 @@ struct Config
 {
     static void add_parser(nitro::options::parser& parser);
     static void parse_print_options(nitro::options::arguments& arguments);
-    Config(nitro::options::arguments& arguments);
+    explicit Config(nitro::options::arguments& arguments);
 
     bool any_tracepoints() const
     {

@@ -41,7 +41,7 @@ std::string entry_name(const std::string& name)
     return std::string("SCOREP_MetricPlugin_") + name + "_get_info";
 }
 
-void parse_properties(std::vector<Channel>& channels, wrapper::Properties* props,
+void parse_properties(std::vector<Channel>& channels, const wrapper::Properties* props,
                       trace::Trace& trace)
 {
     if (props == nullptr)
@@ -94,7 +94,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
     }
 
     plugin_.set_clock_function(&get_time_wrapper);
-    auto ret = plugin_.initialize();
+    const auto ret = plugin_.initialize();
     if (ret)
     {
         Log::error() << "Plugin '" << plugin_name_ << "' failed to initialize: " << ret;
@@ -105,8 +105,9 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
     {
         Log::debug() << "Plugin '" << plugin_name_ << "' calling get_event_info with: " << token;
 
-        auto info = std::unique_ptr<wrapper::Properties, memory::MallocDelete<wrapper::Properties>>(
-            plugin_.get_event_info(token.c_str()));
+        const auto info =
+            std::unique_ptr<wrapper::Properties, memory::MallocDelete<wrapper::Properties>>(
+                plugin_.get_event_info(token.c_str()));
 
         parse_properties(channels_, info.get(), trace);
     }
@@ -115,7 +116,7 @@ Plugin::Plugin(const std::string& plugin_name, const std::vector<std::string>& p
 
     for (auto& channel : channels_)
     {
-        auto id = plugin_.add_counter(channel.name().c_str());
+        const auto id = plugin_.add_counter(channel.name().c_str());
 
         if (id == -1)
         {
@@ -150,7 +151,7 @@ void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
         }
 
         wrapper::TimeValuePair* tv_list = nullptr;
-        auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
+        const auto num_entries = plugin_.get_all_values(channel.id(), &tv_list);
         std::unique_ptr<wrapper::TimeValuePair, memory::MallocDelete<wrapper::TimeValuePair>> const
             tv_list_owner(tv_list);
 
@@ -159,7 +160,8 @@ void Plugin::fetch_data(otf2::chrono::time_point from, otf2::chrono::time_point 
 
         for (std::size_t i = 0; i < num_entries; ++i)
         {
-            auto timestamp = otf2::chrono::time_point(otf2::chrono::duration(tv_list[i].timestamp));
+            const auto timestamp =
+                otf2::chrono::time_point(otf2::chrono::duration(tv_list[i].timestamp));
             if (from <= timestamp && timestamp <= to)
             {
                 channel.write_value(tv_list[i]);

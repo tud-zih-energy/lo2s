@@ -31,7 +31,7 @@ Metrics::Metrics(trace::Trace& trace, const std::vector<std::string>& item_names
 
     for (auto item_name : item_names)
     {
-        auto mode = guess_mode(item_name);
+        const auto mode = guess_mode(item_name);
 
         bool found = false;
 

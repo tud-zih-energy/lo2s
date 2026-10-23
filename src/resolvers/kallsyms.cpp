@@ -58,18 +58,18 @@ Kallsyms::Kallsyms() : FunctionResolver("[kernel]")
     }
 
     std::string sym_str;
-    Address prev = 0;
+    Address prev = Address{ 0 };
 
-    for (auto& entry : entries)
+    for (const auto& entry : entries)
     {
-        if (prev != 0 && prev != entry.first)
+        if (prev != Address{ 0 } && prev != entry.first)
         {
             kallsyms_.emplace(std::piecewise_construct, std::forward_as_tuple(prev, entry.first),
                               std::forward_as_tuple(sym_str));
         }
         else
         {
-            start_ = entry.first.value();
+            start_ = entry.first;
         }
         sym_str = entry.second;
         prev = entry.first;

@@ -107,12 +107,14 @@ void SamplingConfig::check()
 
 void to_json(nlohmann::json& j, const perf::SamplingConfig& config)
 {
-    j = nlohmann::json({ { "enabled", config.enabled },
-                         { "process_recording", config.process_recording },
-                         { "period", config.period },
-                         { "event", config.event },
-                         { "exclude_kernel", config.exclude_kernel },
-                         { "enable_callgraph", config.enable_callgraph },
-                         { "use_pebs", config.use_pebs } });
+    j = nlohmann::json({
+        { "enabled", config.enabled },
+        { "process_recording", config.process_recording },
+        { "period", config.period },
+        { "event", config.event },
+        { "exclude_kernel", config.exclude_kernel },
+        { "enable_callgraph", config.enable_callgraph },
+        { "use_pebs", config.use_pebs },
+    });
 }
 } // namespace lo2s::perf
