@@ -173,14 +173,21 @@ macro(bpf_object name input)
   endforeach()
   
   # Build BPF object file
+  if(BPF_EXTRA_COMPILE_DEFINITIONS)
+    set(_BPF_DEFS ${BPF_EXTRA_COMPILE_DEFINITIONS})
+  else()
+    set(_BPF_DEFS "")
+  endif()
   add_custom_command(OUTPUT ${BPF_O_FILE}
     COMMAND ${BPFOBJECT_CLANG_EXE} -g -O2 -target bpf -D__TARGET_ARCH_${ARCH}
+    ${_BPF_DEFS}
     ${CLANG_SYSTEM_INCLUDES} -I${GENERATED_VMLINUX_DIR} -I${CMAKE_CURRENT_SOURCE_DIR}/include
     "${ISYSTEM_STRING}" -c ${BPF_C_FILE} -o ${BPF_O_FILE}
     COMMAND_EXPAND_LISTS
     VERBATIM
     DEPENDS ${BPF_C_FILE} ${BPF_H_FILES} ${BPFOBJECT_VMLINUX_H}
     COMMENT "[clang] Building BPF object: ${name}")
+  unset(_BPF_DEFS)
 
   # Build BPF skeleton header
   add_custom_command(OUTPUT ${BPF_SKEL_FILE}
