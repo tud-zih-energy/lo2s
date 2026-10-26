@@ -66,7 +66,14 @@ int BPF_KPROBE(do_filp_open, int dfd, struct filename* fn, const struct open_fla
         return 0;
 
     char name[256];
+#ifdef USE_NEW_FILENAME_LAYOUT
+    // Kernel >= 8c888b31903cc: the filename pointer is no longer a direct
+    // member of struct filename, but lives inside an embedded __filename_head
+    // member (which is still the first member of struct filename, at offset 0).
+    const char* name_ptr = BPF_CORE_READ((struct __filename_head*)fn, name);
+#else
     const char* name_ptr = BPF_CORE_READ(fn, name);
+#endif
     bpf_probe_read_kernel_str(name, 256, name_ptr);
 
     // Cache open information for use later in exit of open function event.
@@ -99,7 +106,7 @@ int handle_openat_ret(struct syscalls_sys_exit_openat* ctx)
         return 0;
     }
 
-    __builtin_memcpy(e->filename, filename, 256);
+    __builtin_memcpy_inline(e->filename, filename, 256);
     e->header.type = OPEN;
     e->header.pid = pid;
     e->header.fd = ctx->ret;
