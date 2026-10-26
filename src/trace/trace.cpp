@@ -599,7 +599,7 @@ otf2::definition::calling_context& Trace::cctx_for_address(Address addr, Resolve
     }
     else
     {
-        Log::error() << "No object found for: " << addr << " in " << p.as_int() << " ("
+        Log::trace() << "No object found for: " << addr << " in " << p.as_int() << " ("
                      << ThreadNames::instance().get(p.as_thread()) << ")";
     }
 
