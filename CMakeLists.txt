@@ -26,6 +26,7 @@ include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
 include(cmake/CheckKernelSymbol.cmake)
+include(cmake/CheckKernelBtfStruct.cmake)
 include(cmake/PkgConfigWrapper.cmake)
 
 # Intialize git submodules if not done already
@@ -458,13 +459,27 @@ if (USE_BPF)
     target_compile_definitions(lo2s PUBLIC HAVE_BPF)
     target_sources(lo2s PRIVATE src/monitor/posix_monitor.cpp)
 
+    set(BPF_EXTRA_COMPILE_DEFINITIONS "")
+
     # Detect whether the running kernel uses do_file_open (>= 6.13) or do_filp_open
     CHECK_KERNEL_SYMBOL_EXISTS(do_file_open KERNEL_HAS_DO_FILE_OPEN)
     if(KERNEL_HAS_DO_FILE_OPEN)
-        set(BPF_EXTRA_COMPILE_DEFINITIONS -DUSE_DO_FILE_OPEN)
+        list(APPEND BPF_EXTRA_COMPILE_DEFINITIONS -DUSE_DO_FILE_OPEN)
         message(STATUS "Running kernel uses do_file_open (kernel >= 6.13)")
     else()
         message(STATUS "Running kernel uses do_filp_open")
+    endif()
+
+    # Detect whether the running kernel uses the new struct filename layout
+    # (introduced by kernel commit 8c888b31903cc, where the filename pointer
+    # moved from a direct struct member into an embedded __filename_head
+    # member) or the old layout with a direct name field.
+    CHECK_KERNEL_BTF_HAS_STRUCT(__filename_head KERNEL_HAS_NEW_FILENAME_LAYOUT ${BPFOBJECT_BPFTOOL_EXE})
+    if(KERNEL_HAS_NEW_FILENAME_LAYOUT)
+        list(APPEND BPF_EXTRA_COMPILE_DEFINITIONS -DUSE_NEW_FILENAME_LAYOUT)
+        message(STATUS "Running kernel uses the new struct filename layout (filename->__filename_head.name)")
+    else()
+        message(STATUS "Running kernel uses the old struct filename layout (filename->name)")
     endif()
 
     bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
