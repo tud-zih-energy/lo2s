@@ -25,6 +25,7 @@ include(cmake/DefaultBuildType.cmake)
 include(cmake/UnsetIfUpdated.cmake)
 include(cmake/CheckNameExists.cmake)
 include(cmake/CheckStructHasBitField.cmake)
+include(cmake/CheckKernelSymbol.cmake)
 include(cmake/PkgConfigWrapper.cmake)
 
 # Intialize git submodules if not done already
@@ -456,6 +457,16 @@ configure_file(include/lo2s/build_config.hpp.in include/lo2s/build_config.hpp)
 if (USE_BPF)
     target_compile_definitions(lo2s PUBLIC HAVE_BPF)
     target_sources(lo2s PRIVATE src/monitor/posix_monitor.cpp)
+
+    # Detect whether the running kernel uses do_file_open (>= 6.13) or do_filp_open
+    CHECK_KERNEL_SYMBOL_EXISTS(do_file_open KERNEL_HAS_DO_FILE_OPEN)
+    if(KERNEL_HAS_DO_FILE_OPEN)
+        set(BPF_EXTRA_COMPILE_DEFINITIONS -DUSE_DO_FILE_OPEN)
+        message(STATUS "Running kernel uses do_file_open (kernel >= 6.13)")
+    else()
+        message(STATUS "Running kernel uses do_filp_open")
+    endif()
+
     bpf_object(posix_io src/perf/posix_io/posix_io.bpf.c)
     add_dependencies(lo2s posix_io_skel)
     target_link_libraries(lo2s PUBLIC posix_io_skel)

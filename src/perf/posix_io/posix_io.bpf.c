@@ -44,14 +44,21 @@ struct
     __type(value, char);
 } pids SEC(".maps");
 
-// Do not attach to the open(at) tracepoint, rather attach to the do_filp_open kernel function.
-// do_file_open is the first kernel function after it has copied the filename from user to kernel
-// space. This saves us from doing this copy a second time, as well as  saves us from some issues
-// with user pointers that we can not copy from BPF (which is, among other things, all variables
-// initialized a compile time)
+// Do not attach to the open(at) tracepoint, rather attach to the do_file_open
+// (formerly do_filp_open, kernel < 6.13) kernel function. This is the first
+// kernel function after the filename has been copied from user to kernel
+// space. This saves us from doing this copy a second time, as well as saves
+// us from some issues with user pointers that we can not copy from BPF
+// (which is, among other things, all variables initialized at compile time)
+#ifdef USE_DO_FILE_OPEN
+SEC("kprobe/do_file_open")
+
+int BPF_KPROBE(do_file_open, int dfd, struct filename* fn, const struct open_flags* op)
+#else
 SEC("kprobe/do_filp_open")
 
 int BPF_KPROBE(do_filp_open, int dfd, struct filename* fn, const struct open_flags* op)
+#endif
 {
     u32 pid = bpf_get_current_pid_tgid();
 
