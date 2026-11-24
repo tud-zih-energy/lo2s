@@ -190,7 +190,7 @@ void PosixMonitor::handle_event(void* data, size_t datasz [[maybe_unused]])
         otf2::definition::io_handle& handle =
             trace_.posix_io_handle(thread, event->header.fd, instance_[thread_fd], filename);
 
-        // OTF-2 requires IoOperation's to contain a matching_id so that it can match a
+        // OTF2 requires IoOperation's to contain a matching_id so that it can match a
         // IoOperationBegin to the correct IoOperationComplete event. The matching_id of all
         // IoOperation's currently in flight has to be unique. As a matching_id, we use the
         // address of the source/destination memory buffer of the read/write. A thread should

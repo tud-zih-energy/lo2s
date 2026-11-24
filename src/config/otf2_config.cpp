@@ -23,7 +23,7 @@ Otf2Config::Otf2Config(nitro::options::arguments& arguments)
 
 void Otf2Config::add_parser(nitro::options::parser& parser)
 {
-    auto& trace_options = parser.group("OTF-2 trace options");
+    auto& trace_options = parser.group("OTF2 trace options");
     trace_options.option("output-trace", "Output trace directory.")
         .default_value("lo2s_trace_{DATE}")
         .env("LO2S_OUTPUT_TRACE")
@@ -31,14 +31,14 @@ void Otf2Config::add_parser(nitro::options::parser& parser)
 
     trace_options
         .option("definition-chunk-size",
-                "Size of the chunks in which OTF-2 definition are written. Increases this if OTF-2 "
+                "Size of the chunks in which OTF2 definition are written. Increases this if OTF2 "
                 "trace writing fails due to chunk size.")
         .default_value(std::to_string(4 * 1024 * 1024))
         .metavar("CHUNKSIZE");
 
     trace_options
         .option("event-chunk-size",
-                "Size of the chunks in which OTF-2 events are written. Increases this if OTF-2 "
+                "Size of the chunks in which OTF2 events are written. Increases this if OTF2 "
                 "trace writing fails due to chunk size..")
         .default_value(std::to_string(1024 * 1024))
         .metavar("CHUNKSIZE");
